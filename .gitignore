@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Test coverage
+coverage/
+
+# Android
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android/.gradle/
+android/local.properties
+*.apk
+*.aab
+*.keystore
+
+# iOS
+ios/Pods/
+ios/*.xcworkspace
+ios/build/
+*.ipa
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# GeoTiff test files
+*.tif
+*.tiff

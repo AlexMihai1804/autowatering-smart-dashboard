@@ -1,0 +1,44 @@
+[
+    {
+        "id": 0,
+        "name": "Sand",
+        "field_capacity": 0.10,
+        "wilting_point": 0.05,
+        "infiltration_rate": 30.0
+    },
+    {
+        "id": 1,
+        "name": "Loamy Sand",
+        "field_capacity": 0.12,
+        "wilting_point": 0.06,
+        "infiltration_rate": 25.0
+    },
+    {
+        "id": 2,
+        "name": "Sandy Loam",
+        "field_capacity": 0.18,
+        "wilting_point": 0.08,
+        "infiltration_rate": 20.0
+    },
+    {
+        "id": 3,
+        "name": "Loam",
+        "field_capacity": 0.28,
+        "wilting_point": 0.14,
+        "infiltration_rate": 15.0
+    },
+    {
+        "id": 4,
+        "name": "Silt Loam",
+        "field_capacity": 0.30,
+        "wilting_point": 0.16,
+        "infiltration_rate": 10.0
+    },
+    {
+        "id": 5,
+        "name": "Clay Loam",
+        "field_capacity": 0.32,
+        "wilting_point": 0.18,
+        "infiltration_rate": 8.0
+    }
+]

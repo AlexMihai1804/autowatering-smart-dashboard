@@ -1,0 +1,152 @@
+[
+  {
+    "id": 0,
+    "soil_type": "Sand",
+    "texture": "Coarse sand",
+    "field_capacity_pct": 16,
+    "wilting_point_pct": 6,
+    "available_water_mm_m": 100,
+    "infiltration_rate_mm_h": 25,
+    "p_raw": 0.3
+  },
+  {
+    "id": 1,
+    "soil_type": "LoamySand",
+    "texture": "Loamy sand",
+    "field_capacity_pct": 18,
+    "wilting_point_pct": 8,
+    "available_water_mm_m": 100,
+    "infiltration_rate_mm_h": 20,
+    "p_raw": 0.35
+  },
+  {
+    "id": 2,
+    "soil_type": "SandyLoam",
+    "texture": "Sandy loam",
+    "field_capacity_pct": 23,
+    "wilting_point_pct": 10,
+    "available_water_mm_m": 130,
+    "infiltration_rate_mm_h": 15,
+    "p_raw": 0.4
+  },
+  {
+    "id": 3,
+    "soil_type": "Loam",
+    "texture": "Loam",
+    "field_capacity_pct": 35,
+    "wilting_point_pct": 17,
+    "available_water_mm_m": 180,
+    "infiltration_rate_mm_h": 11,
+    "p_raw": 0.5
+  },
+  {
+    "id": 4,
+    "soil_type": "SiltLoam",
+    "texture": "Silt loam",
+    "field_capacity_pct": 39,
+    "wilting_point_pct": 19,
+    "available_water_mm_m": 200,
+    "infiltration_rate_mm_h": 9,
+    "p_raw": 0.5
+  },
+  {
+    "id": 5,
+    "soil_type": "SandyClayLoam",
+    "texture": "Sandy clay loam",
+    "field_capacity_pct": 33,
+    "wilting_point_pct": 18,
+    "available_water_mm_m": 150,
+    "infiltration_rate_mm_h": 8,
+    "p_raw": 0.45
+  },
+  {
+    "id": 6,
+    "soil_type": "ClayLoam",
+    "texture": "Clay loam",
+    "field_capacity_pct": 37,
+    "wilting_point_pct": 21,
+    "available_water_mm_m": 160,
+    "infiltration_rate_mm_h": 6,
+    "p_raw": 0.5
+  },
+  {
+    "id": 7,
+    "soil_type": "SiltyClayLoam",
+    "texture": "Silty clay loam",
+    "field_capacity_pct": 41,
+    "wilting_point_pct": 27,
+    "available_water_mm_m": 140,
+    "infiltration_rate_mm_h": 5,
+    "p_raw": 0.55
+  },
+  {
+    "id": 8,
+    "soil_type": "SandyClay",
+    "texture": "Sandy clay",
+    "field_capacity_pct": 38,
+    "wilting_point_pct": 25,
+    "available_water_mm_m": 130,
+    "infiltration_rate_mm_h": 5,
+    "p_raw": 0.55
+  },
+  {
+    "id": 9,
+    "soil_type": "SiltyClay",
+    "texture": "Silty clay",
+    "field_capacity_pct": 44,
+    "wilting_point_pct": 30,
+    "available_water_mm_m": 140,
+    "infiltration_rate_mm_h": 4,
+    "p_raw": 0.55
+  },
+  {
+    "id": 10,
+    "soil_type": "Clay",
+    "texture": "Heavy clay",
+    "field_capacity_pct": 48,
+    "wilting_point_pct": 31,
+    "available_water_mm_m": 170,
+    "infiltration_rate_mm_h": 3,
+    "p_raw": 0.6
+  },
+  {
+    "id": 11,
+    "soil_type": "PeatOrganic",
+    "texture": "High organic peat",
+    "field_capacity_pct": 65,
+    "wilting_point_pct": 40,
+    "available_water_mm_m": 250,
+    "infiltration_rate_mm_h": 6,
+    "p_raw": 0.6
+  },
+  {
+    "id": 12,
+    "soil_type": "GravellyLoam",
+    "texture": "Stony/gravelly loam",
+    "field_capacity_pct": 30,
+    "wilting_point_pct": 19,
+    "available_water_mm_m": 110,
+    "infiltration_rate_mm_h": 18,
+    "p_raw": 0.4
+  },
+  {
+    "id": 13,
+    "soil_type": "PottingMix",
+    "texture": "Container soilless mix",
+    "field_capacity_pct": 60,
+    "wilting_point_pct": 40,
+    "available_water_mm_m": 200,
+    "infiltration_rate_mm_h": 16,
+    "p_raw": 0.5
+  },
+  {
+    "id": 14,
+    "soil_type": "Hydroponic",
+    "texture": "No soil (solution)",
+    "field_capacity_pct": false,
+    "wilting_point_pct": false,
+    "available_water_mm_m": false,
+    "infiltration_rate_mm_h": false,
+    "p_raw": 0.25
+  }
+]

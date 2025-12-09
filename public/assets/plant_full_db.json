@@ -1,0 +1,52 @@
+[
+  {
+    "id": 1,
+    "name": "Tomato",
+    "type": "Vegetable",
+    "kc_init": 0.6,
+    "kc_mid": 1.15,
+    "kc_end": 0.8,
+    "root_depth_max": 1.0,
+    "height_max": 0.6
+  },
+  {
+    "id": 2,
+    "name": "Cucumber",
+    "type": "Vegetable",
+    "kc_init": 0.5,
+    "kc_mid": 1.0,
+    "kc_end": 0.75,
+    "root_depth_max": 0.8,
+    "height_max": 0.5
+  },
+  {
+    "id": 3,
+    "name": "Lettuce",
+    "type": "Vegetable",
+    "kc_init": 0.7,
+    "kc_mid": 1.0,
+    "kc_end": 0.95,
+    "root_depth_max": 0.3,
+    "height_max": 0.3
+  },
+  {
+    "id": 4,
+    "name": "Strawberry",
+    "type": "Fruit",
+    "kc_init": 0.4,
+    "kc_mid": 0.85,
+    "kc_end": 0.7,
+    "root_depth_max": 0.3,
+    "height_max": 0.2
+  },
+  {
+    "id": 5,
+    "name": "Pepper (Sweet)",
+    "type": "Vegetable",
+    "kc_init": 0.6,
+    "kc_mid": 1.05,
+    "kc_end": 0.9,
+    "root_depth_max": 0.7,
+    "height_max": 0.5
+  }
+]

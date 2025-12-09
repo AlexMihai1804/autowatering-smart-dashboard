@@ -1,0 +1,52 @@
+[
+    {
+        "id": 0,
+        "name": "Tomato (Solanum lycopersicum)",
+        "type": "Vegetable",
+        "kc_init": 0.6,
+        "kc_mid": 1.15,
+        "kc_end": 0.8,
+        "root_depth_max": 1.0,
+        "height_max": 0.6
+    },
+    {
+        "id": 1,
+        "name": "Pepper (Capsicum annuum)",
+        "type": "Vegetable",
+        "kc_init": 0.6,
+        "kc_mid": 1.05,
+        "kc_end": 0.9,
+        "root_depth_max": 0.7,
+        "height_max": 0.5
+    },
+    {
+        "id": 2,
+        "name": "Lettuce (Lactuca sativa)",
+        "type": "Vegetable",
+        "kc_init": 0.7,
+        "kc_mid": 1.00,
+        "kc_end": 0.95,
+        "root_depth_max": 0.3,
+        "height_max": 0.3
+    },
+    {
+        "id": 3,
+        "name": "Strawberry (Fragaria)",
+        "type": "Fruit",
+        "kc_init": 0.4,
+        "kc_mid": 0.85,
+        "kc_end": 0.75,
+        "root_depth_max": 0.3,
+        "height_max": 0.2
+    },
+    {
+        "id": 20,
+        "name": "Basil (Ocimum basilicum)",
+        "type": "Herb",
+        "kc_init": 0.5,
+        "kc_mid": 1.0,
+        "kc_end": 0.9,
+        "root_depth_max": 0.4,
+        "height_max": 0.4
+    }
+]
