@@ -290,6 +290,18 @@ export const WIZARD_TOOLTIPS: Record<string, TooltipContent> = {
         example: 'Tomate la fructificare: Kc=1.15, Gazon: Kc=1.0',
         icon: '📊'
     },
+    'kc': {
+        title: 'Coeficient Kc',
+        description: 'Raportul dintre consumul de apă al plantei tale și cel al gazonului de referință. Valori >1 = consumă mai mult decât gazonul.',
+        example: 'Tomate la fructificare: Kc=1.15, Gazon: Kc=1.0',
+        icon: '📊'
+    },
+    'irrigation_method': {
+        title: 'Metodă de irigare',
+        description: 'Modul în care apa este distribuită plantelor. Alegerea corectă depinde de tipul plantei și de sol.',
+        example: 'Picurare pentru legume, Sprinkler pentru gazon',
+        icon: '🚿'
+    },
     'et0': {
         title: 'Evapotranspirație (ET₀)',
         description: 'Cantitatea de apă care se evaporă din sol + transpirată de plante. Depinde de temperatură, vânt, umiditate. Vara: mare, iarna: mică.',

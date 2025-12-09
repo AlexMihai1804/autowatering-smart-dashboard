@@ -269,6 +269,11 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
     // Duration/Volume: 0=mode, 1=settings, 5=schedule
     const [zoneSubStep, setZoneSubStep] = useState(0);
     
+    // NEW: Zone Grid Selection State
+    const [showZoneGrid, setShowZoneGrid] = useState(true);
+    const [showCopyPopover, setShowCopyPopover] = useState(false);
+    const [isTestingValve, setIsTestingValve] = useState(false);
+
     // Date picker modal state
     const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -874,8 +879,10 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
         
         if (phase === 1) {
             await saveSystemConfig();
-            // After system config, start zone configuration (first zone)
+            // After system config, show zone grid selection
             setCurrentZoneIndex(0);
+            setPhase(2);
+            setShowZoneGrid(true);
             return;
         }
         
@@ -967,24 +974,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
     // Handle "Add another zone" from popup
     const handleAddAnotherZone = () => {
         setShowZoneCompleteAlert(false);
+        setShowZoneGrid(true); // Return to grid to show progress
         
-        // Find next incomplete zone starting from current index + 1
-        let nextIndex = -1;
-        for (let i = currentZoneIndex + 1; i < 8; i++) {
-            if (!isChannelComplete(i)) {
-                nextIndex = i;
-                break;
-            }
-        }
-        
-        if (nextIndex === -1) {
-            // All remaining zones are complete, finish setup
-            setPhase(4);
-            return;
-        }
-        
-        setCurrentZoneIndex(nextIndex);
-        setZoneSubStep(0);
         setSearchText('');
         setSelectedCategory('all');
         setShowScheduleOptions(false);
@@ -1006,6 +997,18 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
         if (phase === 1) {
             setPhase(0);
         } else if (phase === 2) {
+            // NEW: Handle Grid Back Navigation
+            if (showZoneGrid) {
+                setPhase(1);
+                return;
+            }
+            
+            // If at start of zone config, go back to grid
+            if (zoneSubStep === 0) {
+                setShowZoneGrid(true);
+                return;
+            }
+
             const zone = zoneConfigs[currentZoneIndex];
             const isFao56 = zone.wateringMode === 'fao56_auto' || zone.wateringMode === 'fao56_eco';
             
@@ -1076,6 +1079,57 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
     const toggleDay = (dayBit: number) => {
         const current = scheduleConfigs[currentZoneIndex].daysMask;
         updateCurrentSchedule({ daysMask: current ^ (1 << dayBit) });
+    };
+
+    // NEW: Helper functions for new features
+    const handleTestValve = async () => {
+        setIsTestingValve(true);
+        try {
+            // Turn ON (Manual mode, 1 minute safety timeout)
+            await bleService.writeValveControl(currentZoneIndex, 1, 1); 
+            
+            // Turn OFF after 5 seconds
+            setTimeout(async () => {
+                try {
+                    await bleService.writeValveControl(currentZoneIndex, 0, 0);
+                } catch (e) {
+                    console.error('Failed to stop valve after test:', e);
+                } finally {
+                    setIsTestingValve(false);
+                }
+            }, 5000);
+        } catch (e) {
+            console.error('Failed to start valve test:', e);
+            setIsTestingValve(false);
+        }
+    };
+
+    const handleCopyConfig = (sourceIndex: number) => {
+        const source = zoneConfigs[sourceIndex];
+        updateCurrentZone({
+            wateringMode: source.wateringMode,
+            plant: source.plant,
+            soil: source.soil,
+            irrigationMethod: source.irrigationMethod,
+            location: source.location,
+            coverageType: source.coverageType,
+            coverageValue: source.coverageValue,
+            sunExposure: source.sunExposure,
+            enableCycleSoak: source.enableCycleSoak,
+            cycleSoakWateringMin: source.cycleSoakWateringMin,
+            cycleSoakPauseMin: source.cycleSoakPauseMin,
+            maxVolumeLimit: source.maxVolumeLimit,
+            rainCompEnabled: source.rainCompEnabled,
+            rainCompSensitivity: source.rainCompSensitivity,
+            rainCompSkipThreshold: source.rainCompSkipThreshold,
+            rainCompLookbackHours: source.rainCompLookbackHours,
+            tempCompEnabled: source.tempCompEnabled,
+            tempCompBaseTemp: source.tempCompBaseTemp,
+            tempCompSensitivity: source.tempCompSensitivity,
+            durationMinutes: source.durationMinutes,
+            volumeLiters: source.volumeLiters
+        });
+        setShowCopyPopover(false);
     };
 
     // ========================================================================
@@ -1345,7 +1399,103 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
     
     const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+    // NEW: Copy Zone Configuration
+    const copyZoneConfig = (sourceIndex: number) => {
+        const sourceZone = zoneConfigs[sourceIndex];
+        const targetZone = zoneConfigs[currentZoneIndex];
+        
+        const newZone = {
+            ...sourceZone,
+            channel_id: targetZone.channel_id,
+            name: targetZone.name, // Keep original name
+            enabled: true
+        };
+        
+        const newConfigs = [...zoneConfigs];
+        newConfigs[currentZoneIndex] = newZone;
+        setZoneConfigs(newConfigs);
+        setShowCopyPopover(false);
+        
+        // Copy Schedule
+        const sourceSchedule = scheduleConfigs[sourceIndex];
+        const targetSchedule = scheduleConfigs[currentZoneIndex];
+        const newSchedule = {
+            ...sourceSchedule,
+            channel_id: targetSchedule.channel_id
+        };
+        const newSchedules = [...scheduleConfigs];
+        newSchedules[currentZoneIndex] = newSchedule;
+        setScheduleConfigs(newSchedules);
+    };
+
+    // NEW: Test Valve
+    const testValve = async () => {
+        if (isTestingValve) return;
+        setIsTestingValve(true);
+        try {
+            // Open valve (Action 1), 60s safety duration
+            await bleService.writeValveControl(currentZoneIndex, 1, 60); 
+            
+            // Wait 5s
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            // Close valve (Action 0)
+            await bleService.writeValveControl(currentZoneIndex, 0, 0);
+        } catch (e) {
+            console.error('Valve test failed', e);
+        } finally {
+            setIsTestingValve(false);
+        }
+    };
+
+    // NEW: Render Zone Grid
+    const renderZoneGrid = () => (
+        <div className="p-4">
+            <div className="text-center mb-6">
+                <IonIcon icon={appsOutline} className="text-5xl text-cyber-emerald mb-2" />
+                <h2 className="text-2xl font-bold text-white">Select Zone</h2>
+                <p className="text-gray-400">Choose a zone to configure</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                {zoneConfigs.map((zone, idx) => {
+                    const status = getChannelStatus(idx);
+                    const isConfigured = status.hasPlant || status.hasSoil || status.hasSchedule;
+                    
+                    return (
+                        <IonCard 
+                            key={idx} 
+                            button 
+                            onClick={() => {
+                                setCurrentZoneIndex(idx);
+                                setShowZoneGrid(false);
+                                setZoneSubStep(0);
+                            }}
+                            className={`m-0 ${zone.enabled ? 'glass-panel' : 'opacity-50'}`}
+                            style={{ 
+                                border: isConfigured ? '1px solid var(--ion-color-success)' : undefined,
+                                backgroundColor: isConfigured ? 'rgba(0, 200, 83, 0.1)' : undefined
+                            }}
+                        >
+                            <IonCardContent className="text-center py-4">
+                                <div className="text-2xl font-bold mb-1 text-white">{idx + 1}</div>
+                                <div className="text-xs truncate text-gray-300 mb-2">{zone.name}</div>
+                                {isConfigured ? (
+                                    <IonIcon icon={checkmarkCircle} color="success" />
+                                ) : (
+                                    <IonIcon icon={settingsOutline} color="medium" />
+                                )}
+                            </IonCardContent>
+                        </IonCard>
+                    );
+                })}
+            </div>
+        </div>
+    );
+
     const renderPhase2 = () => {
+        // NEW: Show Grid if active
+        if (showZoneGrid) return renderZoneGrid();
+
         const isFao56 = currentZone.wateringMode === 'fao56_auto' || currentZone.wateringMode === 'fao56_eco';
         // Get channel configuration status from firmware flags
         const channelStatus = getChannelStatus(currentZoneIndex);
@@ -1381,6 +1531,51 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                 style={{ '--padding-start': '0', '--padding-end': '0', fontSize: '1.1rem' }}
                             />
                         </div>
+
+                        {/* NEW: Action Buttons */}
+                        <IonButton 
+                            fill="clear" 
+                            size="small" 
+                            id={`copy-trigger-${currentZoneIndex}`}
+                            onClick={() => setShowCopyPopover(true)}
+                        >
+                            <IonIcon icon={copyOutline} slot="icon-only" />
+                        </IonButton>
+                        <IonPopover 
+                            trigger={`copy-trigger-${currentZoneIndex}`} 
+                            isOpen={showCopyPopover} 
+                            onDidDismiss={() => setShowCopyPopover(false)}
+                        >
+                            <IonContent class="ion-padding">
+                                <IonList>
+                                    <IonItem lines="none">
+                                        <IonLabel><strong>Copy from...</strong></IonLabel>
+                                    </IonItem>
+                                    {zoneConfigs.map((z, i) => (
+                                        i !== currentZoneIndex && (z.plant || z.soil) ? (
+                                            <IonItem button key={i} onClick={() => copyZoneConfig(i)}>
+                                                <IonLabel>Zone {i + 1}: {z.name}</IonLabel>
+                                            </IonItem>
+                                        ) : null
+                                    ))}
+                                </IonList>
+                            </IonContent>
+                        </IonPopover>
+
+                        <IonButton 
+                            fill="outline" 
+                            size="small" 
+                            color={isTestingValve ? "warning" : "primary"}
+                            onClick={testValve}
+                            disabled={isTestingValve}
+                        >
+                            {isTestingValve ? (
+                                <IonSpinner name="crescent" style={{ width: '1rem', height: '1rem' }} />
+                            ) : (
+                                <IonIcon icon={flashOutline} slot="icon-only" />
+                            )}
+                        </IonButton>
+
                         {/* Show mode badge after step 0 */}
                         {currentZone.enabled && zoneSubStep > 0 && (
                             <IonChip 
@@ -1460,6 +1655,46 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
             {/* Step 0: Zone Name + Mode Selection */}
             {currentZone.enabled && zoneSubStep === 0 && (
                 <>
+                    {/* NEW: Test Valve & Copy Config Buttons */}
+                    <div className="flex gap-2 mb-4">
+                        <IonButton 
+                            expand="block" 
+                            className="flex-1" 
+                            color="warning" 
+                            fill="outline"
+                            onClick={handleTestValve}
+                            disabled={isTestingValve}
+                        >
+                            <IonIcon slot="start" icon={waterOutline} />
+                            {isTestingValve ? 'Testing...' : 'Test (5s)'}
+                        </IonButton>
+                        <IonButton 
+                            expand="block" 
+                            className="flex-1" 
+                            color="secondary"
+                            fill="outline"
+                            onClick={() => setShowCopyPopover(true)}
+                            id="copy-config-trigger"
+                        >
+                            <IonIcon slot="start" icon={copyOutline} />
+                            Copy Config
+                        </IonButton>
+                        <IonPopover trigger="copy-config-trigger" isOpen={showCopyPopover} onDidDismiss={() => setShowCopyPopover(false)}>
+                            <IonContent>
+                                <IonList>
+                                    <IonListHeader>Copy from:</IonListHeader>
+                                    {zoneConfigs.map((z, i) => (
+                                        i !== currentZoneIndex && z.enabled && (z.plant || z.wateringMode !== 'fao56_auto') ? (
+                                            <IonItem button key={i} onClick={() => handleCopyConfig(i)}>
+                                                <IonLabel>{z.name}</IonLabel>
+                                            </IonItem>
+                                        ) : null
+                                    ))}
+                                </IonList>
+                            </IonContent>
+                        </IonPopover>
+                    </div>
+
                     {/* 2.5: Clone zone feature - copy from previous configured zone */}
                     {(() => {
                         const previousConfiguredZone = zoneConfigs
@@ -2042,34 +2277,16 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                         </IonCardContent>
                     </IonCard>
 
-                    {/* Max Volume Limit */}
-                    <IonCard className="glass-panel">
-                        <IonCardContent className="py-3">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-red-500/20">
-                                    <IonIcon icon={speedometerOutline} className="text-xl text-red-400" />
-                                </div>
-                                <div className="flex-1">
-                                    <span className="text-white font-medium">Limită volum maxim</span>
-                                    <p className="text-gray-400 text-xs m-0">
-                                        Siguranță anti-supraîncărcare
-                                    </p>
-                                </div>
-                                <IonInput
-                                    type="number"
-                                    min={5}
-                                    max={500}
-                                    value={currentZone.maxVolumeLimit}
-                                    onIonInput={e => updateCurrentZone({ 
-                                        maxVolumeLimit: parseInt(e.detail.value || '50') 
-                                    })}
-                                    style={{ '--color': 'white', maxWidth: '70px' }}
-                                    className="ion-text-center"
-                                />
-                                <span className="text-gray-400 text-sm">litri</span>
-                            </div>
-                        </IonCardContent>
-                    </IonCard>
+                    {/* Max Volume Limit - Auto Calculated */}
+                    <MaxVolumeConfig
+                        soil={currentZone.soil}
+                        plant={currentZone.plant}
+                        rootDepth={currentZone.plant?.root_depth_max || 500}
+                        maxVolumeLimit={currentZone.maxVolumeLimit}
+                        coverageType={currentZone.coverageType}
+                        coverageValue={currentZone.coverageValue}
+                        onChange={(liters) => updateCurrentZone({ maxVolumeLimit: liters })}
+                    />
                 </>
             )}
 
@@ -3106,7 +3323,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                         handler: handleFinishSetup
                     },
                     {
-                        text: `Add Zone ${currentZoneIndex + 2}`,
+                        text: 'Configure More Zones',
                         handler: handleAddAnotherZone
                     }
                 ] : [

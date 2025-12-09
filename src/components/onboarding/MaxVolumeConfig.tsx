@@ -31,6 +31,7 @@ import {
     informationCircleOutline,
     leafOutline,
     layersOutline,
+    appsOutline,
 } from 'ionicons/icons';
 
 import { SoilDBEntry, PlantDBEntry } from '../../services/DatabaseService';
@@ -43,15 +44,14 @@ interface MaxVolumeConfigProps {
     plant: PlantDBEntry | null;
     /** Root depth in mm */
     rootDepth: number;
-    /** Current max volume value in mm */
-    maxVolume: number;
-    /** Whether auto-calculation is enabled */
-    autoCalculated: boolean;
+    /** Current max volume limit in Liters */
+    maxVolumeLimit: number;
+    /** Coverage type */
+    coverageType: 'area' | 'plants';
+    /** Coverage value (m2 or count) */
+    coverageValue: number;
     /** Callback for changes */
-    onChange: (config: {
-        maxVolume: number;
-        autoCalculated: boolean;
-    }) => void;
+    onChange: (liters: number) => void;
     /** Whether component is disabled */
     disabled?: boolean;
 }
@@ -60,28 +60,33 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
     soil,
     plant,
     rootDepth,
-    maxVolume,
-    autoCalculated,
+    maxVolumeLimit,
+    coverageType,
+    coverageValue,
     onChange,
     disabled = false,
 }) => {
-    const [manualValue, setManualValue] = useState<number>(maxVolume);
+    const [autoCalculated, setAutoCalculated] = useState(true);
 
     // Calculate recommended max volume
     const recommendation = useMemo(() => {
+        if (coverageType === 'plants') {
+            // Simple formula for plants: 2L per plant (as per plan)
+            // Or maybe scale by plant size? For now, stick to plan.
+            const volumeLiters = Math.max(1, Math.round(coverageValue * 2));
+            return {
+                volumeLiters,
+                details: '2L per plant',
+                depthMm: 0
+            };
+        }
+
+        // Area based calculation
         if (!soil) return null;
 
         const awc = typeof soil.available_water_mm_m === 'number' 
             ? soil.available_water_mm_m 
             : 150; // Default mm per meter
-
-        const fc = typeof soil.field_capacity_pct === 'number'
-            ? soil.field_capacity_pct
-            : 25; // Default %
-
-        const wp = typeof soil.wilting_point_pct === 'number'
-            ? soil.wilting_point_pct
-            : 12; // Default %
 
         // Calculate using FAO-56 formula
         // RAW = AWC × Root Depth × MAD (50%)
@@ -89,67 +94,46 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
         const totalAvailableWater = awc * depthM; // mm
         const mad = 0.5; // 50% Management Allowable Depletion (default)
         const readilyAvailableWater = totalAvailableWater * mad;
-        const calculatedVolume = Math.max(5, Math.round(readilyAvailableWater * 10) / 10);
+        
+        // Volume (L) = Depth (mm) * Area (m²)
+        const volumeLiters = Math.max(5, Math.round(readilyAvailableWater * coverageValue));
 
         return {
-            volume: calculatedVolume,
+            volumeLiters,
+            details: `RAW (${readilyAvailableWater.toFixed(1)}mm) × Area (${coverageValue}m²)`,
+            depthMm: readilyAvailableWater,
             awc,
-            fc,
-            wp,
             rootDepthMm: rootDepth,
             totalAvailable: totalAvailableWater,
-            readilyAvailable: readilyAvailableWater,
         };
-    }, [soil, rootDepth]);
+    }, [soil, rootDepth, coverageType, coverageValue]);
 
     // Auto-apply when recommendation changes
     useEffect(() => {
         if (!recommendation || !autoCalculated) return;
         
-        if (Math.abs(recommendation.volume - maxVolume) > 0.5) {
-            onChange({
-                maxVolume: recommendation.volume,
-                autoCalculated: true,
-            });
+        if (Math.abs(recommendation.volumeLiters - maxVolumeLimit) > 1) {
+            onChange(recommendation.volumeLiters);
         }
-    }, [recommendation?.volume, autoCalculated]);
+    }, [recommendation?.volumeLiters, autoCalculated]);
 
     const handleManualChange = (value: number) => {
-        setManualValue(value);
-        onChange({
-            maxVolume: value,
-            autoCalculated: false,
-        });
-    };
-
-    const handleAutoToggle = (auto: boolean) => {
-        if (auto && recommendation) {
-            onChange({
-                maxVolume: recommendation.volume,
-                autoCalculated: true,
-            });
-        } else {
-            onChange({
-                maxVolume: manualValue || maxVolume,
-                autoCalculated: false,
-            });
-        }
+        setAutoCalculated(false);
+        onChange(value);
     };
 
     const resetToAuto = () => {
         if (!recommendation) return;
-        onChange({
-            maxVolume: recommendation.volume,
-            autoCalculated: true,
-        });
+        setAutoCalculated(true);
+        onChange(recommendation.volumeLiters);
     };
 
     // Get severity color based on how much we're deviating from recommendation
     const getDeviationSeverity = (): 'success' | 'warning' | 'danger' => {
         if (!recommendation || autoCalculated) return 'success';
         
-        const diff = Math.abs(maxVolume - recommendation.volume);
-        const percentDiff = diff / recommendation.volume;
+        const diff = Math.abs(maxVolumeLimit - recommendation.volumeLiters);
+        const percentDiff = diff / recommendation.volumeLiters;
         
         if (percentDiff < 0.2) return 'success';
         if (percentDiff < 0.5) return 'warning';
@@ -163,13 +147,13 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
                     <div className="flex items-center gap-2">
                         <IonIcon icon={beakerOutline} className="text-blue-400 text-xl" />
                         <LabelWithHelp 
-                            label="Volum maxim per udare" 
+                            label="Limită Volum Maxim" 
                             tooltipKey="max_volume"
                             className="font-bold text-white"
                         />
                     </div>
                     <IonBadge color={getDeviationSeverity()} className="text-lg px-3 py-1">
-                        {maxVolume.toFixed(1)} mm
+                        {maxVolumeLimit} L
                     </IonBadge>
                 </div>
             </IonCardHeader>
@@ -188,7 +172,7 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
                     </div>
                     <IonToggle
                         checked={autoCalculated}
-                        onIonChange={(e) => handleAutoToggle(e.detail.checked)}
+                        onIonChange={(e) => setAutoCalculated(e.detail.checked)}
                         disabled={disabled || !recommendation}
                     />
                 </div>
@@ -202,40 +186,44 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
                         </h4>
                         
                         <div className="space-y-3">
-                            {/* Input parameters */}
-                            <div className="grid grid-cols-2 gap-2">
-                                <div className="bg-white/5 rounded p-2">
-                                    <div className="flex items-center gap-1 mb-1">
-                                        <IonIcon icon={layersOutline} className="text-xs text-gray-400" />
-                                        <span className="text-xs text-gray-400">Apă disponibilă</span>
+                            {coverageType === 'area' ? (
+                                <>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="bg-white/5 rounded p-2">
+                                            <div className="flex items-center gap-1 mb-1">
+                                                <IonIcon icon={layersOutline} className="text-xs text-gray-400" />
+                                                <span className="text-xs text-gray-400">Apă disponibilă</span>
+                                            </div>
+                                            <p className="text-white font-medium m-0">
+                                                {recommendation.awc} mm/m
+                                            </p>
+                                        </div>
+                                        <div className="bg-white/5 rounded p-2">
+                                            <div className="flex items-center gap-1 mb-1">
+                                                <IonIcon icon={leafOutline} className="text-xs text-gray-400" />
+                                                <span className="text-xs text-gray-400">Adâncime rădăcini</span>
+                                            </div>
+                                            <p className="text-white font-medium m-0">
+                                                {recommendation.rootDepthMm} mm
+                                            </p>
+                                        </div>
                                     </div>
-                                    <p className="text-white font-medium m-0">
-                                        {recommendation.awc} mm/m
+                                    <div className="text-sm text-gray-300 space-y-1">
+                                        <p className="m-0">
+                                            1. RAW (mm): {recommendation.depthMm?.toFixed(1)} mm
+                                        </p>
+                                        <p className="m-0">
+                                            2. Volum: {recommendation.depthMm?.toFixed(1)} mm × {coverageValue} m² = <strong>{recommendation.volumeLiters} L</strong>
+                                        </p>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="text-sm text-gray-300">
+                                    <p className="m-0">
+                                        Calcul simplificat: 2 Litri × {coverageValue} plante = <strong>{recommendation.volumeLiters} L</strong>
                                     </p>
                                 </div>
-                                <div className="bg-white/5 rounded p-2">
-                                    <div className="flex items-center gap-1 mb-1">
-                                        <IonIcon icon={leafOutline} className="text-xs text-gray-400" />
-                                        <span className="text-xs text-gray-400">Adâncime rădăcini</span>
-                                    </div>
-                                    <p className="text-white font-medium m-0">
-                                        {recommendation.rootDepthMm} mm
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Calculation steps */}
-                            <div className="text-sm text-gray-300 space-y-1">
-                                <p className="m-0">
-                                    1. Apă totală disponibilă: {recommendation.awc} × {(recommendation.rootDepthMm / 1000).toFixed(2)} m = <strong>{recommendation.totalAvailable.toFixed(1)} mm</strong>
-                                </p>
-                                <p className="m-0">
-                                    2. Cu 50% MAD (depletion acceptabil): {recommendation.totalAvailable.toFixed(1)} × 0.5 = <strong>{recommendation.readilyAvailable.toFixed(1)} mm</strong>
-                                </p>
-                                <p className="m-0">
-                                    3. Rotunjit: <strong>{recommendation.volume.toFixed(1)} mm</strong>
-                                </p>
-                            </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -247,23 +235,23 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
                             <span className="text-gray-300 text-sm">Ajustează manual:</span>
                             {recommendation && (
                                 <span className="text-xs text-gray-500">
-                                    Recomandat: {recommendation.volume.toFixed(1)} mm
+                                    Recomandat: {recommendation.volumeLiters} L
                                 </span>
                             )}
                         </div>
                         <IonRange
                             min={5}
-                            max={50}
-                            step={0.5}
-                            value={maxVolume}
+                            max={500}
+                            step={5}
+                            value={maxVolumeLimit}
                             onIonChange={(e) => handleManualChange(e.detail.value as number)}
                             disabled={disabled}
                             pin
-                            pinFormatter={(value) => `${value} mm`}
+                            pinFormatter={(value) => `${value} L`}
                         />
                         <div className="flex justify-between text-xs text-gray-500">
-                            <span>5 mm</span>
-                            <span>50 mm</span>
+                            <span>5 L</span>
+                            <span>500 L</span>
                         </div>
 
                         {/* Deviation warning */}
@@ -276,7 +264,7 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
                                 }
                             `}>
                                 <p className={`text-xs m-0 ${getDeviationSeverity() === 'warning' ? 'text-amber-300' : 'text-red-300'}`}>
-                                    ⚠️ Valoarea diferă semnificativ de cea recomandată ({recommendation.volume.toFixed(1)} mm)
+                                    ⚠️ Valoarea diferă semnificativ de cea recomandată ({recommendation.volumeLiters} L)
                                 </p>
                             </div>
                         )}
@@ -303,18 +291,18 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
                         <span className="text-gray-400 text-sm">Sau introdu direct:</span>
                         <IonInput
                             type="number"
-                            value={maxVolume}
+                            value={maxVolumeLimit}
                             onIonChange={(e) => {
                                 const val = parseFloat(e.detail.value || '0');
-                                if (val > 0 && val <= 100) {
+                                if (val > 0 && val <= 1000) {
                                     handleManualChange(val);
                                 }
                             }}
                             className="w-24 bg-white/5 rounded text-center"
-                            placeholder="mm"
+                            placeholder="L"
                             disabled={disabled}
                         />
-                        <span className="text-gray-400 text-sm">mm</span>
+                        <span className="text-gray-400 text-sm">L</span>
                     </div>
                 )}
 
@@ -330,33 +318,12 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
                         <div slot="content" className="px-4 pb-4">
                             <div className="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 rounded-lg p-4">
                                 <p className="text-gray-300 text-sm m-0 mb-3">
-                                    <strong>Volumul maxim per udare</strong> reprezintă cantitatea maximă de apă ce poate fi aplicată într-o singură sesiune de irigare.
+                                    <strong>Limita de volum</strong> este o măsură de siguranță pentru a preveni udarea excesivă în caz de erori de calcul sau senzori.
                                 </p>
                                 
-                                <div className="space-y-2 mb-3">
-                                    <div className="flex items-start gap-2">
-                                        <span className="text-blue-400">📊</span>
-                                        <p className="text-gray-400 text-sm m-0">
-                                            <strong>Prea mult:</strong> Apa se scurge sub zona rădăcinilor (risipă)
-                                        </p>
-                                    </div>
-                                    <div className="flex items-start gap-2">
-                                        <span className="text-blue-400">📉</span>
-                                        <p className="text-gray-400 text-sm m-0">
-                                            <strong>Prea puțin:</strong> Rădăcinile rămân superficiale
-                                        </p>
-                                    </div>
-                                    <div className="flex items-start gap-2">
-                                        <span className="text-green-400">✅</span>
-                                        <p className="text-gray-400 text-sm m-0">
-                                            <strong>Optim:</strong> Apa ajunge la adâncimea rădăcinilor
-                                        </p>
-                                    </div>
-                                </div>
-
                                 <div className="p-2 bg-cyan-500/10 rounded border border-cyan-500/20">
                                     <p className="text-cyan-300 text-xs m-0">
-                                        💡 <strong>Formula FAO-56:</strong> RAW = AWC × Adâncime × MAD (50%)
+                                        💡 <strong>Sfat:</strong> Setează această valoare cu 20-30% mai mare decât necesarul zilnic maxim estimat.
                                     </p>
                                 </div>
                             </div>
