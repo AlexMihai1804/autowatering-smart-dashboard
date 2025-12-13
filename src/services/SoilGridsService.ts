@@ -9,7 +9,7 @@
  * License: CC-BY 4.0
  */
 
-import { CapacitorHttp, HttpResponse } from '@capacitor/core';
+import { CapacitorHttp } from '@capacitor/core';
 import { SoilDBEntry } from './DatabaseService';
 import { useAppStore } from '../store/useAppStore';
 
@@ -22,6 +22,7 @@ export interface SoilGridsResult {
     sand: number;      // Sand content 0-100%
     silt: number;      // Silt content 0-100%
     textureClass: string;  // USDA texture class name
+    rootDepthCm: number;   // Root depth used for aggregation
     confidence: 'high' | 'medium' | 'low';
     matchedSoil: SoilDBEntry | null;
     source: 'api' | 'cache' | 'fallback';
@@ -46,8 +47,21 @@ export interface SoilGridsAPIResponse {
     };
 }
 
+interface SoilLayerValue {
+    label: string;
+    top: number;    // cm
+    bottom: number; // cm
+    value: number;  // percentage 0-100
+}
+
+interface SoilProfile {
+    clay: SoilLayerValue[];
+    sand: SoilLayerValue[];
+    silt: SoilLayerValue[];
+}
+
 interface CacheEntry {
-    result: SoilGridsResult;
+    profile: SoilProfile;
     timestamp: number;
     lat: number;
     lon: number;
@@ -57,16 +71,17 @@ interface CacheEntry {
 // Constants
 // ============================================================================
 
-const SOILGRIDS_WMS_URL = 'https://maps.isric.org/mapserv';
+const SOILGRIDS_PROPERTIES_URL = 'https://rest.isric.org/soilgrids/v2.0/properties/query';
 const CACHE_KEY = 'soilgrids_cache';
 const API_STATUS_KEY = 'soilgrids_api_status';
 const CACHE_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const CACHE_DISTANCE_THRESHOLD_M = 500; // Use cached result if within 500m
-const API_TIMEOUT_MS = 10000; // 10 second timeout for WMS
+const API_TIMEOUT_MS = 10000; // 10 second timeout
 const API_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes cooldown when API is down
-
-// Properties we need from SoilGrids (topsoil 0-5cm for simplicity, WMS only supports one layer at a time)
-const SOIL_DEPTH = '0-5cm';
+const DEFAULT_ROOT_DEPTH_CM = 30; // Used when plant root depth is unknown
+const MAX_ROOT_DEPTH_CM = 200;
+const MIN_ROOT_DEPTH_CM = 5;
+const PROPERTY_DEPTHS = ['0-5cm', '5-15cm', '15-30cm', '30-60cm', '60-100cm', '100-200cm'];
 
 // API status tracking
 interface APIStatus {
@@ -243,7 +258,8 @@ function getCache(): CacheEntry[] {
     try {
         const cached = localStorage.getItem(CACHE_KEY);
         if (!cached) return [];
-        return JSON.parse(cached) as CacheEntry[];
+        const parsed = JSON.parse(cached) as CacheEntry[];
+        return Array.isArray(parsed) ? parsed.filter(e => (e as CacheEntry)?.profile) : [];
     } catch {
         return [];
     }
@@ -264,20 +280,18 @@ function saveCache(entries: CacheEntry[]): void {
 
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 6371000; // Earth radius in meters
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
+    const lat1Rad = lat1 * Math.PI / 180;
+    const lat2Rad = lat2 * Math.PI / 180;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
 
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c;
 }
 
-function findCachedResult(lat: number, lon: number): CacheEntry | null {
+function findCachedProfile(lat: number, lon: number): CacheEntry | null {
     const cache = getCache();
     const now = Date.now();
 
@@ -295,85 +309,45 @@ function findCachedResult(lat: number, lon: number): CacheEntry | null {
     return null;
 }
 
-function addToCache(lat: number, lon: number, result: SoilGridsResult): void {
+function addToCache(lat: number, lon: number, profile: SoilProfile): void {
     const cache = getCache();
     cache.push({
-        result,
+        profile,
         timestamp: Date.now(),
         lat,
         lon
     });
     saveCache(cache);
 }
-
 // ============================================================================
-// API Calls
+// API Calls & Aggregation
 // ============================================================================
 
-/**
- * Fetches a single soil property using WMS GetFeatureInfo
- * Returns value in g/kg (divide by 10 to get percentage)
- */
-async function fetchSoilProperty(lat: number, lon: number, property: string): Promise<number> {
-    // Create a small bounding box around the point (0.2 degrees = ~20km)
-    const delta = 0.1;
-    const bbox = `${lon - delta},${lat - delta},${lon + delta},${lat + delta}`;
-    
-    // WMS GetFeatureInfo URL
-    const url = `${SOILGRIDS_WMS_URL}?map=/map/${property}.map&SERVICE=WMS&VERSION=1.1.1&REQUEST=GetFeatureInfo&LAYERS=${property}_${SOIL_DEPTH}_mean&QUERY_LAYERS=${property}_${SOIL_DEPTH}_mean&STYLES=&INFO_FORMAT=text/html&X=50&Y=50&WIDTH=100&HEIGHT=100&SRS=EPSG:4326&BBOX=${bbox}`;
-    
-    console.log(`[SoilGrids] Fetching ${property} from WMS...`);
-    
-    const response: HttpResponse = await CapacitorHttp.get({
-        url,
-        headers: {
-            'Accept': 'text/html'
-        },
-        connectTimeout: API_TIMEOUT_MS,
-        readTimeout: API_TIMEOUT_MS
-    });
-
-    if (response.status < 200 || response.status >= 300) {
-        throw new Error(`WMS error for ${property}: ${response.status}`);
-    }
-
-    // Parse HTML response to extract value
-    // Format: <span id="value">503</span>
-    const html = response.data as string;
-    const valueMatch = html.match(/<span id="value">(\d+)<\/span>/);
-    
-    if (!valueMatch) {
-        console.warn(`[SoilGrids] Could not parse ${property} value from response`);
-        throw new Error(`Could not parse ${property} value`);
-    }
-    
-    const value = parseInt(valueMatch[1], 10);
-    console.log(`[SoilGrids] ${property} = ${value} g/kg (${value / 10}%)`);
-    return value;
+function normalizeRootDepth(rootDepthCm?: number): number {
+    if (!rootDepthCm || Number.isNaN(rootDepthCm)) return DEFAULT_ROOT_DEPTH_CM;
+    return Math.min(MAX_ROOT_DEPTH_CM, Math.max(MIN_ROOT_DEPTH_CM, rootDepthCm));
 }
 
 /**
- * Fetches soil data from SoilGrids using WMS GetFeatureInfo (bypasses CORS with CapacitorHttp)
- * Makes 3 parallel requests for clay, sand, silt
+ * Fetches full soil profile (all supported depths) from SoilGrids properties API.
  */
-async function fetchFromSoilGridsWMS(lat: number, lon: number): Promise<{ clay: number; sand: number; silt: number }> {
-    console.log('[SoilGrids] Fetching soil data via WMS GetFeatureInfo...');
-    
-    // Fetch all three properties in parallel
-    const [clayRaw, sandRaw, siltRaw] = await Promise.all([
-        fetchSoilProperty(lat, lon, 'clay'),
-        fetchSoilProperty(lat, lon, 'sand'),
-        fetchSoilProperty(lat, lon, 'silt')
-    ]);
-    
-    // Convert from g/kg to percentage
-    const clay = clayRaw / 10;
-    const sand = sandRaw / 10;
-    const silt = siltRaw / 10;
-    
-    console.log(`[SoilGrids] Final values: clay=${clay}%, sand=${sand}%, silt=${silt}%`);
-    
-    return { clay, sand, silt };
+async function fetchSoilProfile(lat: number, lon: number): Promise<SoilProfile> {
+    const depthParam = PROPERTY_DEPTHS.join(',');
+    const url = `${SOILGRIDS_PROPERTIES_URL}?lon=${lon}&lat=${lat}&property=clay,sand,silt&depth=${depthParam}`;
+
+    console.log('[SoilGrids] Fetching soil profile via properties API...');
+
+    const response = await CapacitorHttp.get({
+        url,
+        connectTimeout: API_TIMEOUT_MS,
+        readTimeout: API_TIMEOUT_MS,
+    });
+
+    if (response.status < 200 || response.status >= 300) {
+        throw new Error(`SoilGrids error: ${response.status}`);
+    }
+
+    return parseAPIResponse(response.data as SoilGridsAPIResponse);
 }
 
 /**
@@ -396,43 +370,92 @@ function estimateFromTextureClass(textureClass: string): { clay: number; sand: n
         'Sand': { clay: 3, sand: 90, silt: 7 },
     };
     
-    // Try to match
     for (const [key, value] of Object.entries(estimates)) {
         if (textureClass.toLowerCase().includes(key.toLowerCase())) {
             return value;
         }
     }
     
-    return estimates['Loam']; // Default
+    return estimates['Loam'];
 }
 
 /**
- * Parses SoilGrids API response to extract clay/sand/silt values
+ * Parses SoilGrids properties API response into per-depth profiles (values in %).
  */
-function parseAPIResponse(response: SoilGridsAPIResponse): { clay: number; sand: number; silt: number } {
-    const result = { clay: 0, sand: 0, silt: 0 };
+function parseAPIResponse(response: SoilGridsAPIResponse): SoilProfile {
+    const profile: SoilProfile = { clay: [], sand: [], silt: [] };
 
     for (const layer of response.properties?.layers || []) {
-        const depth = layer.depths?.find(d => d.label === SOIL_DEPTH);
-        if (!depth) continue;
+        if (!['clay', 'sand', 'silt'].includes(layer.name)) continue;
 
-        // Values are in g/kg, convert to percentage
-        const value = (depth.values?.mean || 0) / 10;
+        for (const depth of layer.depths || []) {
+            const top = depth.range?.top_depth ?? 0;
+            const bottom = depth.range?.bottom_depth ?? 0;
+            const mean = depth.values?.mean ?? 0;
+            const valuePct = mean / 10; // g/kg to %
 
-        switch (layer.name) {
-            case 'clay':
-                result.clay = value;
-                break;
-            case 'sand':
-                result.sand = value;
-                break;
-            case 'silt':
-                result.silt = value;
-                break;
+            const entry: SoilLayerValue = {
+                label: depth.label,
+                top,
+                bottom,
+                value: valuePct,
+            };
+
+            if (layer.name === 'clay') profile.clay.push(entry);
+            if (layer.name === 'sand') profile.sand.push(entry);
+            if (layer.name === 'silt') profile.silt.push(entry);
         }
     }
 
-    return result;
+    // Ensure sorted by depth
+    (['clay', 'sand', 'silt'] as const).forEach(key => {
+        profile[key] = profile[key].sort((a, b) => a.top - b.top);
+    });
+
+    return profile;
+}
+
+/**
+ * Aggregates clay/sand/silt across the requested root depth using thickness weighting.
+ */
+function aggregateTextureByRootDepth(profile: SoilProfile, rootDepthCm: number): { clay: number; sand: number; silt: number } {
+    const targetDepth = normalizeRootDepth(rootDepthCm);
+    const reference = profile.clay.length ? profile.clay : (profile.sand.length ? profile.sand : profile.silt);
+
+    if (!reference.length) {
+        return { clay: 20, sand: 40, silt: 40 };
+    }
+
+    let thicknessSum = 0;
+    let claySum = 0;
+    let sandSum = 0;
+    let siltSum = 0;
+
+    for (let i = 0; i < reference.length; i++) {
+        const layer = reference[i];
+        const overlap = Math.max(0, Math.min(targetDepth, layer.bottom) - layer.top);
+        if (overlap <= 0) continue;
+
+        thicknessSum += overlap;
+
+        const clayLayer = profile.clay[i] || layer;
+        const sandLayer = profile.sand[i] || layer;
+        const siltLayer = profile.silt[i] || layer;
+
+        claySum += (clayLayer.value || 0) * overlap;
+        sandSum += (sandLayer.value || 0) * overlap;
+        siltSum += (siltLayer.value || 0) * overlap;
+    }
+
+    if (!thicknessSum) {
+        return { clay: 20, sand: 40, silt: 40 };
+    }
+
+    return {
+        clay: claySum / thicknessSum,
+        sand: sandSum / thicknessSum,
+        silt: siltSum / thicknessSum,
+    };
 }
 
 /**
@@ -441,11 +464,9 @@ function parseAPIResponse(response: SoilGridsAPIResponse): { clay: number; sand:
 function determineConfidence(clay: number, sand: number, silt: number): 'high' | 'medium' | 'low' {
     const total = clay + sand + silt;
     
-    // If total is way off from 100%, data quality is questionable
     if (total < 80 || total > 120) return 'low';
     if (total < 90 || total > 110) return 'medium';
     
-    // If any component is 0, might be missing data
     if (clay === 0 || sand === 0 || silt === 0) return 'medium';
     
     return 'high';
@@ -475,70 +496,72 @@ export class SoilGridsService {
      * @param lon Longitude in degrees
      * @returns SoilGridsResult with detected soil info
      */
-    public async detectSoilFromLocation(lat: number, lon: number): Promise<SoilGridsResult> {
-        console.log(`[SoilGrids] Detecting soil for coordinates: ${lat}, ${lon}`);
+    public async detectSoilFromLocation(lat: number, lon: number, rootDepthCm: number = DEFAULT_ROOT_DEPTH_CM): Promise<SoilGridsResult> {
+        const targetDepth = normalizeRootDepth(rootDepthCm);
+        console.log(`[SoilGrids] Detecting soil for coordinates: ${lat}, ${lon} at depth ${targetDepth}cm`);
 
-        // Check cache first
-        const cached = findCachedResult(lat, lon);
+        // Check cache first (profile reused for any root depth)
+        const cached = findCachedProfile(lat, lon);
         if (cached) {
-            console.log('[SoilGrids] Using cached result');
-            return {
-                ...cached.result,
-                source: 'cache'
-            };
+            console.log('[SoilGrids] Using cached profile');
+            const aggregated = aggregateTextureByRootDepth(cached.profile, targetDepth);
+            return this.buildResult(aggregated, targetDepth, 'cache');
         }
 
         // Check if API is known to be down (skip to save time)
         if (shouldSkipAPI()) {
             console.log('[SoilGrids] API marked as down, using fallback immediately');
-            return this.createFallbackResult();
+            return this.createFallbackResult(targetDepth);
         }
 
-        // Try SoilGrids WMS
         try {
-            const { clay, sand, silt } = await fetchFromSoilGridsWMS(lat, lon);
-            
-            console.log(`[SoilGrids] WMS returned: clay=${clay}%, sand=${sand}%, silt=${silt}%`);
+            const profile = await fetchSoilProfile(lat, lon);
             markAPISuccess();
 
-            // Classify using USDA triangle
-            const textureClass = classifyUSDATexture(clay, sand, silt);
-            console.log(`[SoilGrids] Classified as: ${textureClass}`);
+            // Cache raw profile so we can reuse for multiple root depths
+            addToCache(lat, lon, profile);
 
-            // Map to our soil DB
-            const matchedSoil = mapTextureToSoilDB(textureClass);
-
-            const result: SoilGridsResult = {
-                clay,
-                sand,
-                silt,
-                textureClass,
-                confidence: determineConfidence(clay, sand, silt),
-                matchedSoil,
-                source: 'api'
-            };
-
-            // Cache the result
-            addToCache(lat, lon, result);
-
-            return result;
+            const aggregated = aggregateTextureByRootDepth(profile, targetDepth);
+            return this.buildResult(aggregated, targetDepth, 'api');
         } catch (error) {
             console.warn('[SoilGrids] API failed:', error);
             markAPIFailure();
-            return this.createFallbackResult();
+            return this.createFallbackResult(targetDepth);
         }
+    }
+
+    private buildResult(
+        aggregated: { clay: number; sand: number; silt: number },
+        rootDepthCm: number,
+        source: 'api' | 'cache' | 'fallback'
+    ): SoilGridsResult {
+        const { clay, sand, silt } = aggregated;
+        const textureClass = classifyUSDATexture(clay, sand, silt);
+        const matchedSoil = mapTextureToSoilDB(textureClass);
+
+        return {
+            clay,
+            sand,
+            silt,
+            textureClass,
+            rootDepthCm,
+            confidence: determineConfidence(clay, sand, silt),
+            matchedSoil,
+            source
+        };
     }
 
     /**
      * Creates a fallback result when API is unavailable
      */
-    private createFallbackResult(): SoilGridsResult {
+    private createFallbackResult(rootDepthCm: number): SoilGridsResult {
         const fallbackSoil = mapTextureToSoilDB('Loam');
         return {
             clay: 20,
             sand: 40,
             silt: 40,
             textureClass: 'Loam',
+            rootDepthCm,
             confidence: 'low',
             matchedSoil: fallbackSoil,
             source: 'fallback'

@@ -190,7 +190,7 @@ const HistoryDashboard: React.FC = () => {
     // Handlers
     // ========================================================================
 
-    const handleRefresh = async (event?: CustomEvent<RefresherEventDetail>) => {
+    const handleRefresh = useCallback(async (event?: CustomEvent<RefresherEventDetail>) => {
         if (!isConnected) {
             event?.detail.complete();
             return;
@@ -207,7 +207,7 @@ const HistoryDashboard: React.FC = () => {
             setLoading(false);
             event?.detail.complete();
         }
-    };
+    }, [historyService, isConnected]);
 
     const showToast = (message: string, color: string = 'dark') => {
         setToastMessage(message);
@@ -259,11 +259,25 @@ const HistoryDashboard: React.FC = () => {
     // Load data on mount
     // ========================================================================
 
+    // Avoid double auto-refresh (React StrictMode mounts effects twice)
+    const hasAutoRefreshed = React.useRef(false);
     useEffect(() => {
-        if (isConnected && wateringHistory.length === 0) {
+        if (isConnected && wateringHistory.length === 0 && !hasAutoRefreshed.current) {
+            hasAutoRefreshed.current = true;
             handleRefresh();
         }
-    }, [isConnected]);
+    }, [isConnected, wateringHistory.length, handleRefresh]);
+
+    // Low-frequency background refresh while connected (every 10 minutes)
+    useEffect(() => {
+        if (!isConnected) return;
+        const id = setInterval(() => {
+            if (!loading) {
+                handleRefresh();
+            }
+        }, 10 * 60 * 1000);
+        return () => clearInterval(id);
+    }, [isConnected, loading, handleRefresh]);
 
     // ========================================================================
     // Render helpers
@@ -512,17 +526,41 @@ const HistoryDashboard: React.FC = () => {
                         <IonSegment 
                             value={activeTab} 
                             onIonChange={e => setActiveTab(e.detail.value as ViewTab)}
-                            className="bg-gray-900/60"
+                            style={{
+                                '--background': 'rgba(31, 41, 55, 0.92)',
+                                '--indicator-color': '#22d3ee',
+                                '--color': '#cbd5e1',
+                                '--color-checked': '#22d3ee'
+                            } as React.CSSProperties}
+                            className="bg-gray-900/60 border border-gray-700/70 rounded-xl"
                         >
-                            <IonSegmentButton value="watering">
+                            <IonSegmentButton 
+                                value="watering"
+                                style={{
+                                    '--color': '#cbd5e1',
+                                    '--color-checked': '#22d3ee'
+                                } as React.CSSProperties}
+                            >
                                 <IonIcon icon={water} />
                                 <IonLabel>Watering</IonLabel>
                             </IonSegmentButton>
-                            <IonSegmentButton value="environment">
+                            <IonSegmentButton 
+                                value="environment"
+                                style={{
+                                    '--color': '#cbd5e1',
+                                    '--color-checked': '#22d3ee'
+                                } as React.CSSProperties}
+                            >
                                 <IonIcon icon={thermometer} />
                                 <IonLabel>Environment</IonLabel>
                             </IonSegmentButton>
-                            <IonSegmentButton value="rain">
+                            <IonSegmentButton 
+                                value="rain"
+                                style={{
+                                    '--color': '#cbd5e1',
+                                    '--color-checked': '#22d3ee'
+                                } as React.CSSProperties}
+                            >
                                 <IonIcon icon={rainy} />
                                 <IonLabel>Rainfall</IonLabel>
                             </IonSegmentButton>

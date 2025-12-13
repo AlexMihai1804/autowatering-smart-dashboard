@@ -93,16 +93,17 @@ export class BleFragmentationManager {
         }
 
         const header = this.parseUnifiedHeader(data);
-        const derivedPayloadLen = header.fragment_size || (data.byteLength - UNIFIED_HEADER_SIZE);
+        const availablePayload = Math.max(0, data.byteLength - UNIFIED_HEADER_SIZE);
+        const totalFragments = header.total_fragments > 0 ? header.total_fragments : 1;
+        const fragmentSize = header.fragment_size > 0 ? header.fragment_size : availablePayload;
+        const fragmentIndex = header.fragment_index || 0;
+        const normalizedHeader = { ...header, total_fragments: totalFragments, fragment_size: fragmentSize };
+        const derivedPayloadLen = Math.min(fragmentSize, availablePayload);
         
-        // Validate header - check if it looks like a valid unified header
-        // data_type should be 0-5 (known types), total_fragments should be >= 1
-        // fragment_size should be > 0 for valid notifications with payload
-        const isValidHeader = header.data_type <= 5 && 
-                              header.total_fragments >= 1 && 
-                              header.fragment_index < header.total_fragments &&
-                              derivedPayloadLen > 0 &&
-                              derivedPayloadLen <= (data.byteLength - UNIFIED_HEADER_SIZE);
+        // Validate header - accept status/error frames even if entry_count=0/fragment_size=0
+        const isValidHeader = 
+            fragmentIndex < Math.max(totalFragments, 1) &&
+            derivedPayloadLen <= availablePayload;
         
         if (!isValidHeader) {
             // This doesn't look like a valid fragmented notification
@@ -112,15 +113,15 @@ export class BleFragmentationManager {
             return { complete: true, payload };
         }
         
-        console.log(`[FRAG] ${characteristicUuid.slice(-4)}: idx=${header.fragment_index}/${header.total_fragments}, size=${header.fragment_size}, dataLen=${data.byteLength}`);
+        console.log(`[FRAG] ${characteristicUuid.slice(-4)}: idx=${fragmentIndex}/${totalFragments}, size=${fragmentSize}, dataLen=${data.byteLength}`);
         
         // Extract payload correctly using slice to get a clean copy
         const payloadStart = data.byteOffset + UNIFIED_HEADER_SIZE;
         const payloadLength = derivedPayloadLen;
         const payload = new Uint8Array(data.buffer.slice(payloadStart, payloadStart + payloadLength));
         
-        if (header.total_fragments <= 1) {
-            return { complete: true, payload, header };
+        if (totalFragments <= 1) {
+            return { complete: true, payload, header: normalizedHeader };
         }
 
         // Multi-fragment reassembly
@@ -128,9 +129,9 @@ export class BleFragmentationManager {
         let state = this.reassemblyBuffers.get(key);
 
         // If this is the first fragment (index 0) or we don't have state, init state
-        if (header.fragment_index === 0 || !state) {
+        if (fragmentIndex === 0 || !state) {
             state = {
-                totalFragments: header.total_fragments,
+                totalFragments,
                 receivedFragments: 0,
                 buffer: new Uint8Array(0), 
                 timestamp: Date.now()
@@ -150,7 +151,7 @@ export class BleFragmentationManager {
 
         if (state.receivedFragments === state.totalFragments) {
             this.reassemblyBuffers.delete(key);
-            return { complete: true, payload: state.buffer, header };
+            return { complete: true, payload: state.buffer, header: normalizedHeader };
         }
 
         return { complete: false };

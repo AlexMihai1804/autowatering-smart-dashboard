@@ -143,9 +143,14 @@ export class HistoryService {
     private static instance: HistoryService | null = null;
     private bleService: BleService;
     private isSyncing: boolean = false;
+    private currentSync: Promise<void> | null = null;
 
     private constructor() {
         this.bleService = BleService.getInstance();
+    }
+
+    private async delay(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     public static getInstance(): HistoryService {
@@ -370,10 +375,9 @@ export class HistoryService {
         this.isSyncing = true;
         
         try {
-            await Promise.all([
-                this.bleService.getRainHourlyHistory(24),
-                this.bleService.getRainDailyHistory(7)
-            ]);
+            await this.bleService.getRainHourlyHistory(24);
+            await this.delay(120);
+            await this.bleService.getRainDailyHistory(7);
             
             const { useAppStore } = await import('../store/useAppStore');
             const state = useAppStore.getState();
@@ -795,20 +799,27 @@ export class HistoryService {
      * Sync all history data from device
      */
     async syncAllHistory(): Promise<void> {
+        if (this.currentSync) return this.currentSync;
+
         this.isSyncing = true;
-        
-        try {
-            await Promise.all([
-                this.fetchWateringHistory(),
-                this.fetchEnvHistory(24),
-                this.fetchEnvDailyHistory(7),
-                this.fetchRainHistory()
-            ]);
-            
-            console.log('[HistoryService] All history synced');
-        } finally {
-            this.isSyncing = false;
-        }
+        this.currentSync = (async () => {
+            try {
+                await this.fetchWateringHistory();
+                await this.delay(150);
+                await this.fetchEnvHistory(24);
+                await this.delay(150);
+                await this.fetchEnvDailyHistory(7);
+                await this.delay(150);
+                await this.fetchRainHistory();
+                
+                console.log('[HistoryService] All history synced');
+            } finally {
+                this.isSyncing = false;
+                this.currentSync = null;
+            }
+        })();
+
+        return this.currentSync;
     }
 }
 

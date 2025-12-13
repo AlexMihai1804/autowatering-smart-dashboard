@@ -800,8 +800,14 @@ export class BleService {
                         console.log(`[BLE] Parsed ${entries.length} detailed watering history entries`);
                     }
                     // TODO: Add parsing for daily, monthly, annual if needed
-                } else if (header && header.status !== 0) {
-                    console.warn(`[BLE] History query error: status=0x${header.status.toString(16)}`);
+                } else if (header) {
+                    if (header.status === 0x07) {
+                        console.info('[BLE] History query rate limited (status=0x07). Backing off.');
+                    } else if (header.status === 0) {
+                        console.info('[BLE] History query returned no data.');
+                    } else {
+                        console.warn(`[BLE] History query error: status=0x${header.status.toString(16)}`);
+                    }
                 }
                 break;
 
@@ -857,8 +863,14 @@ export class BleService {
                             // TODO: Store trends if needed
                             break;
                     }
-                } else if (header && header.status !== 0) {
-                    console.warn(`[BLE] Env History error: status=0x${header.status.toString(16)}`);
+                } else if (header) {
+                    if (header.status === 0x03) {
+                        console.info('[BLE] Env history returned no data (status=0x03).');
+                    } else if (header.status === 0) {
+                        console.info('[BLE] Env history returned no entries.');
+                    } else {
+                        console.warn(`[BLE] Env History error: status=0x${header.status.toString(16)}`);
+                    }
                 }
                 break;
 
@@ -895,8 +907,14 @@ export class BleService {
                             console.log('[BLE] Rain sensor calibration acknowledged');
                             break;
                     }
-                } else if (header && header.status !== 0) {
-                    console.warn(`[BLE] Rain History error: status=0x${header.status.toString(16)}`);
+                } else if (header) {
+                    if (header.status === 0x03) {
+                        console.info('[BLE] Rain history returned no data (status=0x03).');
+                    } else if (header.status === 0) {
+                        console.info('[BLE] Rain history returned no entries.');
+                    } else {
+                        console.warn(`[BLE] Rain History error: status=0x${header.status.toString(16)}`);
+                    }
                 }
                 // TODO: Parse and store rain history entries
                 // store.appendRainHistory(...)
@@ -2793,8 +2811,8 @@ export class BleService {
     ): Promise<void> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
 
-        // 20-byte request
-        const data = new Uint8Array(20);
+        // 12-byte request (match firmware expectation)
+        const data = new Uint8Array(12);
         const view = new DataView(data.buffer);
 
         data[0] = command;
