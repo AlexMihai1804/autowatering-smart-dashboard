@@ -1,4 +1,22 @@
 # AutoWatering App — Implemented Features (cod verificate)
+---
+
+## Future (Roadmap)
+
+Roadmap-ul comun (firmware + app) este ținut în GitHub Project:
+- https://github.com/users/AlexMihai1804/projects/2
+
+Task-uri app (legate de marketplace/packs + UI/AI):
+- Marketplace MVP: https://github.com/AlexMihai1804/autowatering-smart-dashboard/issues/1, https://github.com/AlexMihai1804/autowatering-smart-dashboard/issues/2, https://github.com/AlexMihai1804/autowatering-smart-dashboard/issues/3, https://github.com/AlexMihai1804/autowatering-smart-dashboard/issues/4
+- Update installed packs/plants: https://github.com/AlexMihai1804/autowatering-smart-dashboard/issues/5
+- Design & UI refactor (Stitch): https://github.com/AlexMihai1804/autowatering-smart-dashboard/issues/6, https://github.com/AlexMihai1804/autowatering-smart-dashboard/issues/7
+- AI: https://github.com/AlexMihai1804/autowatering-smart-dashboard/issues/8, https://github.com/AlexMihai1804/autowatering-smart-dashboard/issues/9
+- Cycle & Soak auto-tuning (app-side): https://github.com/AlexMihai1804/autowatering-smart-dashboard/issues/10
+
+Dependențe firmware cheie pentru features noi:
+- Packs pe LittleFS + BLE install/list: https://github.com/AlexMihai1804/AutoWatering/issues/10, https://github.com/AlexMihai1804/AutoWatering/issues/6, https://github.com/AlexMihai1804/AutoWatering/issues/7, https://github.com/AlexMihai1804/AutoWatering/issues/8
+- Update packs/plants (atomic replace): https://github.com/AlexMihai1804/AutoWatering/issues/13
+- Cycle & Soak settings + BLE (pentru auto-tuning din app): https://github.com/AlexMihai1804/AutoWatering/issues/14
 *Raport detaliat al funcționalităților livrate în aplicația mobilă/Web, aliniate la firmware-ul embedded. Toate punctele fac referire la implementări din codul sursă (Ionic/React/TypeScript).*
 
 ## Conectivitate & sincronizare BLE
