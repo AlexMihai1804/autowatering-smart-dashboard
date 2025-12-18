@@ -19,6 +19,23 @@ Dependențe firmware cheie pentru features noi:
 - Cycle & Soak settings + BLE (pentru auto-tuning din app): https://github.com/AlexMihai1804/AutoWatering/issues/14
 *Raport detaliat al funcționalităților livrate în aplicația mobilă/Web, aliniate la firmware-ul embedded. Toate punctele fac referire la implementări din codul sursă (Ionic/React/TypeScript).*
 
+## Feature map (where in code)
+
+Scop: pentru fiecare zonă majoră din aplicație, lista de mai jos indică *ce face* și *unde* se află implementarea principală.
+
+- BLE connect/sync + read/notify truth model: src/services/BleService.ts, src/services/ble/*, src/services/BleFragmentationManager.ts
+- Global state (single source of truth): src/store/useAppStore.ts
+- DB local (plante/soluri/metode) + căutare/filtre: src/services/DatabaseService.ts
+- SoilGrids (WMS) + cache + mapare în soil/custom-soil: src/services/SoilGridsService.ts
+- Onboarding wizard (setup pe flag-uri firmware): src/components/OnboardingWizard.tsx, src/components/onboarding/*
+- Zone config (FAO/manual, cycle&soak, coverage, schedule): src/components/ZoneConfigModal.tsx (+ sub-componente onboarding)
+- Dashboard/Pages: src/pages/Dashboard.tsx, src/pages/Zones.tsx, src/pages/HistoryDashboard.tsx, src/pages/Analytics.tsx, src/pages/Settings.tsx
+- History fetch + cache + agregări/statistici: src/services/HistoryService.ts
+- Calibration/Reset flows: src/components/CalibrationWizard.tsx, src/services/CalibrationService.ts, src/components/ResetModal.tsx, src/services/ResetService.ts
+
+Notă: Marketplace/Packs (catalog, install, update) sunt în roadmap și vor introduce servicii/flow-uri noi; vezi secțiunea **Future (Roadmap)** de mai sus.
+
+---
 ## Conectivitate & sincronizare BLE
 - Scanare și bonding: `BleService.scan()` folosește `BleClient.requestDevice` cu filtre pe nume și servicii, creează bond automat pe Android și reîncearcă pairing dacă eșuează prima lectură (`BleService.connect`).
 - Subscrieri notificări: configurează 15+ caracteristici (status, valve, calibrare, reset, task curent, istoric, onboarding, env, rain, flow, task queue, statistici, alarmă, diagnostic, RTC, configs, timezone, growing env, schedule, auto-calc, compensații) cu pacing și loguri.
