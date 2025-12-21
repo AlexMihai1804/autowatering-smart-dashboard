@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Zone Details: Overview</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                        "surface-dark": "#1c271d", // Extracted from provided component for consistency
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem", 
+                        "lg": "2rem", 
+                        "xl": "3rem", 
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        /* Custom utilities for the glow effect */
+        .glow-text {
+            text-shadow: 0 0 20px rgba(19, 236, 55, 0.5);
+        }
+        .glow-ring {
+            box-shadow: 0 0 15px rgba(19, 236, 55, 0.3);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased overflow-x-hidden selection:bg-primary selection:text-background-dark">
+<div class="relative flex min-h-screen flex-col pb-24">
+<!-- TopAppBar -->
+<div class="sticky top-0 z-50 flex items-center bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md p-4 pb-2 justify-between">
+<button class="text-slate-900 dark:text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">arrow_back_ios_new</span>
+</button>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">Zone Details</h2>
+<div class="absolute right-4 flex w-12 items-center justify-end">
+<button class="flex size-12 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-transparent text-slate-900 dark:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</div>
+<!-- Headline & Meta -->
+<div class="flex flex-col items-center pt-2 pb-6 px-4">
+<h1 class="text-slate-900 dark:text-white tracking-tight text-[32px] font-extrabold leading-tight text-center">Backyard Veggies</h1>
+<div class="flex items-center gap-2 mt-2">
+<span class="inline-flex items-center justify-center rounded-full bg-surface-dark px-2.5 py-0.5 text-xs font-medium text-[#9db9a1] border border-[#2a382b]">
+                    Vegetables
+                </span>
+<p class="text-[#9db9a1] text-sm font-medium leading-normal">High Water Need</p>
+</div>
+</div>
+<!-- Hero Status Card (Modified Card Component) -->
+<div class="px-4 mb-6">
+<div class="relative overflow-hidden rounded-[2rem] bg-surface-dark shadow-[0_0_15px_rgba(0,0,0,0.2)] border border-[#2a382b]">
+<!-- Background Image with Overlay -->
+<div class="absolute inset-0 opacity-20 bg-cover bg-center" data-alt="Abstract green gradient pattern representing healthy garden" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA74kd53E82J8gHxUxr-44twMzTWm-vZQiP0XbzFJBc4y6Q__5w_TosFk2ZDyZFoVeLPOssTXGnOZxMUKtthDgESO_GNXkQBIiYkaAEAwNOBZ_6AQTH1Wr-ukyVIEP_eWAD4ITnNU8aVqEnIeuX3Vdsm0kpR_0cjL0mKutqrRszJoi-cBB1MqAxf2gFZtv-lbpdQnZXCmc8o4FG4Tf53FUZworqXPZRv4uAxSO7vEy4pMkqy0GXSsc8OYajXG1PAR8DFEructx94O9h");'>
+</div>
+<div class="relative flex flex-col items-center justify-center p-8 z-10">
+<!-- Status Badge -->
+<div class="mb-6 flex items-center gap-2 rounded-full bg-primary/20 px-4 py-1.5 backdrop-blur-sm border border-primary/30">
+<span class="relative flex h-2.5 w-2.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+</span>
+<span class="text-primary text-sm font-bold tracking-wide uppercase">Watering Active</span>
+</div>
+<!-- Timer Visual -->
+<div class="relative mb-4 flex items-center justify-center">
+<!-- Progress Ring SVG Simulation -->
+<div class="size-48 rounded-full border-[6px] border-[#2a382b] flex items-center justify-center relative">
+<svg class="absolute inset-0 size-full -rotate-90 transform" viewbox="0 0 100 100">
+<circle cx="50" cy="50" fill="transparent" r="46" stroke="#13ec37" stroke-dasharray="290" stroke-dashoffset="70" stroke-linecap="round" stroke-width="6"></circle>
+</svg>
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined text-primary text-4xl mb-1">water_drop</span>
+<span class="text-5xl font-black text-white tracking-tighter glow-text font-display">03:00</span>
+<span class="text-[#9db9a1] text-sm font-medium mt-1">remaining</span>
+</div>
+</div>
+</div>
+<p class="text-center text-white/70 text-sm max-w-[200px]">Next schedule: Tomorrow at 6:00 AM</p>
+</div>
+</div>
+</div>
+<!-- Quick Actions Row -->
+<div class="px-4 mb-8">
+<h3 class="text-slate-900 dark:text-white text-base font-bold mb-4 px-1">Quick Actions</h3>
+<div class="grid grid-cols-3 gap-3">
+<!-- Stop Button (Primary) -->
+<button class="group flex flex-col items-center justify-center gap-2 rounded-[1.5rem] bg-surface-dark p-4 hover:bg-[#253226] transition-all active:scale-95 border border-[#2a382b]">
+<div class="flex size-12 items-center justify-center rounded-full bg-red-500/10 text-red-500 group-hover:bg-red-500 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[28px]">stop_circle</span>
+</div>
+<span class="text-[#9db9a1] text-xs font-bold group-hover:text-white">Stop</span>
+</button>
+<!-- Skip Button -->
+<button class="group flex flex-col items-center justify-center gap-2 rounded-[1.5rem] bg-surface-dark p-4 hover:bg-[#253226] transition-all active:scale-95 border border-[#2a382b]">
+<div class="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-background-dark transition-colors">
+<span class="material-symbols-outlined text-[28px]">skip_next</span>
+</div>
+<span class="text-[#9db9a1] text-xs font-bold group-hover:text-white">Skip Next</span>
+</button>
+<!-- Edit Schedule -->
+<button class="group flex flex-col items-center justify-center gap-2 rounded-[1.5rem] bg-surface-dark p-4 hover:bg-[#253226] transition-all active:scale-95 border border-[#2a382b]">
+<div class="flex size-12 items-center justify-center rounded-full bg-white/5 text-white group-hover:bg-white group-hover:text-background-dark transition-colors">
+<span class="material-symbols-outlined text-[28px]">calendar_clock</span>
+</div>
+<span class="text-[#9db9a1] text-xs font-bold group-hover:text-white">Schedule</span>
+</button>
+</div>
+</div>
+<!-- Metrics Grid -->
+<div class="px-4 mb-6">
+<h3 class="text-slate-900 dark:text-white text-base font-bold mb-4 px-1">Health &amp; Stats</h3>
+<div class="grid grid-cols-2 gap-4">
+<!-- Moisture Card -->
+<div class="flex flex-col rounded-[1.5rem] bg-surface-dark p-5 border border-[#2a382b]">
+<div class="flex items-start justify-between mb-4">
+<div class="flex size-10 items-center justify-center rounded-full bg-blue-500/20 text-blue-400">
+<span class="material-symbols-outlined">humidity_percentage</span>
+</div>
+<span class="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-full">+2%</span>
+</div>
+<div class="flex flex-col">
+<span class="text-3xl font-bold text-white">45%</span>
+<span class="text-sm text-[#9db9a1]">Soil Moisture</span>
+</div>
+</div>
+<!-- Water Usage Card -->
+<div class="flex flex-col rounded-[1.5rem] bg-surface-dark p-5 border border-[#2a382b]">
+<div class="flex items-start justify-between mb-4">
+<div class="flex size-10 items-center justify-center rounded-full bg-primary/20 text-primary">
+<span class="material-symbols-outlined">water_drop</span>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="text-3xl font-bold text-white">12<span class="text-lg font-medium text-[#9db9a1] ml-1">gal</span></span>
+<span class="text-sm text-[#9db9a1]">Last Run Usage</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Manual Start Button (Big CTA) -->
+<div class="flex px-4 py-3 justify-center mb-4">
+<button class="w-full flex cursor-pointer items-center justify-center overflow-hidden rounded-full h-14 bg-primary hover:bg-green-400 text-background-dark gap-3 text-lg font-bold leading-normal tracking-[0.015em] transition-all active:scale-95 shadow-[0_0_20px_rgba(19,236,55,0.3)]">
+<span class="material-symbols-outlined">play_circle</span>
+<span>Start Manual Cycle</span>
+</button>
+</div>
+<div class="h-10"></div>
+</div>
+<!-- Bottom Navigation -->
+<div class="fixed bottom-0 left-0 right-0 z-50 border-t border-white/5 bg-[#102213]/80 backdrop-blur-lg pb-6 pt-2">
+<div class="flex items-center justify-around px-2">
+<button class="flex flex-col items-center gap-1 p-2 text-[#9db9a1] hover:text-white transition-colors">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="text-[10px] font-medium">Dashboard</span>
+</button>
+<button class="flex flex-col items-center gap-1 p-2 text-primary">
+<span class="material-symbols-outlined fill-1">yard</span>
+<span class="text-[10px] font-bold">Zones</span>
+</button>
+<button class="flex flex-col items-center gap-1 p-2 text-[#9db9a1] hover:text-white transition-colors">
+<span class="material-symbols-outlined">calendar_month</span>
+<span class="text-[10px] font-medium">Schedule</span>
+</button>
+<button class="flex flex-col items-center gap-1 p-2 text-[#9db9a1] hover:text-white transition-colors">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-medium">Settings</span>
+</button>
+</div>
+</div>
+</body></html>

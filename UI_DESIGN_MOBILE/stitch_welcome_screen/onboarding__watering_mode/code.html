@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Watering Mode Onboarding</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                        "surface-dark": "#16281a",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px",
+                    },
+                    boxShadow: {
+                        "neon": "0 0 20px rgba(19, 236, 55, 0.2)",
+                        "card": "0 4px 20px rgba(0,0,0,0.2)",
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white min-h-screen flex flex-col overflow-x-hidden selection:bg-primary selection:text-black antialiased">
+<!-- Top Navigation -->
+<div class="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-black/5 dark:border-white/5">
+<button class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<span class="text-sm font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Zone 1 Setup</span>
+<div class="w-10"></div> <!-- Spacer for optical centering -->
+</div>
+<!-- Progress Indicator -->
+<div class="px-6 py-4">
+<div class="flex gap-2 w-full max-w-md mx-auto">
+<div class="h-1.5 flex-1 rounded-full bg-primary shadow-neon"></div>
+<div class="h-1.5 flex-1 rounded-full bg-primary shadow-neon"></div>
+<div class="h-1.5 flex-1 rounded-full bg-slate-200 dark:bg-white/10"></div>
+<div class="h-1.5 flex-1 rounded-full bg-slate-200 dark:bg-white/10"></div>
+</div>
+</div>
+<!-- Main Content Area -->
+<main class="flex-1 px-5 pb-40 flex flex-col max-w-lg mx-auto w-full">
+<!-- Header Text -->
+<div class="space-y-3 mb-8 px-1">
+<h1 class="text-3xl md:text-4xl font-extrabold tracking-tight leading-[1.1]">Watering Mode</h1>
+<p class="text-slate-600 dark:text-slate-400 text-lg font-medium leading-relaxed">
+                Choose how Zone 1 is watered based on your landscape needs.
+            </p>
+</div>
+<!-- Selection Cards -->
+<div class="flex flex-col gap-5">
+<!-- Smart Auto Card (Active/Selected) -->
+<label class="relative group cursor-pointer w-full select-none">
+<input checked="" class="peer sr-only" name="watering_mode" type="radio"/>
+<!-- Card Container -->
+<div class="relative overflow-hidden rounded-[2rem] bg-white dark:bg-surface-dark border-2 border-transparent p-6 transition-all duration-300 ease-out shadow-card peer-checked:border-primary peer-checked:bg-slate-50 dark:peer-checked:bg-[#13ec37]/5">
+<!-- Subtle Glow (Only visible in dark mode when active) -->
+<div class="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-primary/20 blur-[60px] opacity-0 peer-checked:opacity-100 transition-opacity duration-500 hidden dark:block"></div>
+<!-- Card Header Content -->
+<div class="flex items-start justify-between gap-4 relative z-10">
+<div class="flex items-start gap-4">
+<!-- Icon Box -->
+<div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white transition-colors peer-checked:bg-primary peer-checked:text-black">
+<span class="material-symbols-outlined text-[28px]">psychology</span>
+</div>
+<!-- Text Content -->
+<div class="space-y-1.5 pt-0.5">
+<div class="flex flex-wrap items-center gap-2">
+<h3 class="text-xl font-bold">Smart Auto</h3>
+<span class="rounded-full bg-primary px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-black shadow-neon">Recommended</span>
+</div>
+<p class="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+                                    Automatically adjusts based on weather, soil, and plant needs. Saves up to 50% water.
+                                </p>
+</div>
+</div>
+<!-- Radio Indicator -->
+<div class="text-slate-300 dark:text-slate-600 peer-checked:text-primary transition-colors">
+<span class="material-symbols-outlined text-[28px] icon-filled hidden peer-checked:block">radio_button_checked</span>
+<span class="material-symbols-outlined text-[28px] block peer-checked:hidden">radio_button_unchecked</span>
+</div>
+</div>
+<!-- Dynamic Sub-options (Expands when checked) -->
+<div class="grid grid-rows-[0fr] peer-checked:grid-rows-[1fr] transition-[grid-template-rows] duration-300 ease-out">
+<div class="overflow-hidden">
+<div class="mt-6 pt-5 border-t border-slate-100 dark:border-white/10">
+<p class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4 ml-1">Configuration</p>
+<!-- Setting 1 -->
+<div class="flex items-center justify-between py-2 pl-1 pr-1 mb-2">
+<div class="flex items-center gap-3">
+<div class="p-1.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined text-[20px]">eco</span>
+</div>
+<span class="text-sm font-semibold">Eco-Friendly Mode</span>
+</div>
+<!-- Toggle Switch -->
+<button class="relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out bg-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75">
+<span class="sr-only">Use setting</span>
+<span aria-hidden="true" class="translate-x-5 pointer-events-none inline-block h-6 w-6 transform rounded-full bg-black shadow-lg ring-0 transition duration-200 ease-in-out"></span>
+</button>
+</div>
+<!-- Setting 2 -->
+<div class="flex items-center justify-between py-2 pl-1 pr-1">
+<div class="flex items-center gap-3">
+<div class="p-1.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined text-[20px]">water_drop</span>
+</div>
+<span class="text-sm font-semibold">Cycle &amp; Soak</span>
+</div>
+<!-- Toggle Switch Off -->
+<button class="relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out bg-slate-200 dark:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75">
+<span class="sr-only">Use setting</span>
+<span aria-hidden="true" class="translate-x-0 pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out"></span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</label>
+<!-- Fixed Schedule Card (Unselected) -->
+<label class="relative group cursor-pointer w-full select-none">
+<input class="peer sr-only" name="watering_mode" type="radio"/>
+<div class="relative overflow-hidden rounded-[2rem] bg-white dark:bg-surface-dark border-2 border-transparent p-6 transition-all duration-300 ease-out shadow-card peer-checked:border-primary peer-checked:bg-slate-50 dark:peer-checked:bg-[#13ec37]/5 hover:bg-slate-50 dark:hover:bg-white/5">
+<div class="flex items-start justify-between gap-4 relative z-10">
+<div class="flex items-start gap-4">
+<div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white transition-colors peer-checked:bg-primary peer-checked:text-black">
+<span class="material-symbols-outlined text-[28px]">calendar_month</span>
+</div>
+<div class="space-y-1.5 pt-0.5">
+<h3 class="text-xl font-bold">Fixed Schedule</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+                                    You set specific days and times. Watering occurs regardless of weather conditions.
+                                </p>
+</div>
+</div>
+<div class="text-slate-300 dark:text-slate-600 peer-checked:text-primary transition-colors">
+<span class="material-symbols-outlined text-[28px] icon-filled hidden peer-checked:block">radio_button_checked</span>
+<span class="material-symbols-outlined text-[28px] block peer-checked:hidden">radio_button_unchecked</span>
+</div>
+</div>
+<!-- Dynamic Sub-options (Expands when checked - empty here for demo as per default state) -->
+<div class="grid grid-rows-[0fr] peer-checked:grid-rows-[1fr] transition-[grid-template-rows] duration-300 ease-out">
+<div class="overflow-hidden">
+<!-- Placeholder for schedule options -->
+<div class="mt-6 pt-5 border-t border-slate-100 dark:border-white/10">
+<p class="text-sm text-slate-500 dark:text-slate-400 italic">Schedule settings will appear here...</p>
+</div>
+</div>
+</div>
+</div>
+</label>
+</div>
+</main>
+<!-- Fixed Bottom Navigation -->
+<div class="fixed bottom-0 left-0 right-0 p-4 pt-6 bg-gradient-to-t from-background-light via-background-light to-transparent dark:from-background-dark dark:via-background-dark dark:to-transparent z-40 pb-8">
+<div class="max-w-lg mx-auto w-full flex items-center justify-between gap-4">
+<button class="px-8 py-4 rounded-full text-base font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+                Back
+            </button>
+<button class="flex-1 bg-primary text-black rounded-full py-4 px-6 text-base font-bold tracking-tight hover:bg-[#32f551] active:scale-[0.98] transition-all shadow-neon hover:shadow-[0_0_30px_rgba(19,236,55,0.4)]">
+                Next: Configure Zone
+            </button>
+</div>
+<!-- IOS Home Indicator Spacer -->
+<div class="h-1 w-full"></div>
+</div>
+</body></html>

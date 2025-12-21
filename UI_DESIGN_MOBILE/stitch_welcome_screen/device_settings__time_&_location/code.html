@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Device Settings: Time &amp; Location</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                        "surface-dark": "#1c271d", // Derived from example input bg
+                        "border-dark": "#3b543f", // Derived from example border
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar hiding for clean UI */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Map Pin Pulse Animation */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.33); }
+            80%, 100% { opacity: 0; }
+        }
+        @keyframes pulse-dot {
+            0% { transform: scale(0.8); }
+            50% { transform: scale(1); }
+            100% { transform: scale(0.8); }
+        }
+        .pin-ring {
+            animation: pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        .pin-dot {
+            animation: pulse-dot 1.25s cubic-bezier(0.455, 0.03, 0.515, 0.955) -0.4s infinite;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased text-slate-900 dark:text-white">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl">
+<!-- Header -->
+<header class="sticky top-0 z-50 flex items-center bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md p-4 pb-2 justify-between border-b border-gray-200 dark:border-border-dark">
+<button class="text-slate-900 dark:text-white flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined" style="font-size: 24px;">arrow_back_ios_new</span>
+</button>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Time &amp; Location</h2>
+<div class="size-10"></div> <!-- Spacer for centering -->
+</header>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col p-4 gap-6">
+<!-- Location Map Card -->
+<section class="flex flex-col gap-3">
+<div class="flex justify-between items-end px-1">
+<h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Device Location</h3>
+</div>
+<div class="relative w-full aspect-video rounded-2xl overflow-hidden shadow-lg border border-gray-200 dark:border-border-dark group">
+<!-- Map Image -->
+<div class="absolute inset-0 bg-center bg-no-repeat bg-cover transform transition-transform duration-700 group-hover:scale-105" data-alt="Dark stylized map interface showing city streets and park areas" data-location="Los Angeles" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCHRvKKTOTJji8IJH__ybbvVLAHtXvg5rGNieaEDFMQd0hhy-UOKBem7lmlsUovpdMZBPmJp7fbW1HSwFWhL6HYj6B5DnhSENqmCDhAuJKC_131YzV8pBEdiE_Wyo69siy3RSrV6IYKjFxlhycKABW9RYm-m4f9PPzgWz13xEHrMIno9EqhBduWpFUmxRwkZeH2ittiT2tWoicoB9lGWph8FxHqZUZMvOO4ohpocD7NPR_SlIRGgvlQAvi1XkeeZ72AmLG8w1wOdU3T"); filter: grayscale(100%) invert(90%) contrast(120%);'>
+</div>
+<!-- Dark Mode Overlay fix for map image to look "dark mode" -->
+<div class="absolute inset-0 bg-slate-900/40 mix-blend-multiply"></div>
+<!-- Location Pin -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
+<div class="absolute w-12 h-12 bg-primary/30 rounded-full pin-ring"></div>
+<div class="relative w-4 h-4 bg-primary rounded-full border-2 border-white dark:border-background-dark shadow-sm pin-dot"></div>
+<!-- Pin stem/icon -->
+<div class="absolute -bottom-8 left-1/2 -translate-x-1/2">
+<span class="material-symbols-outlined text-primary drop-shadow-md" style="font-size: 32px; font-variation-settings: 'FILL' 1;">location_on</span>
+</div>
+</div>
+<!-- Map Controls -->
+<button class="absolute bottom-3 right-3 bg-white dark:bg-surface-dark text-slate-900 dark:text-white p-2 rounded-full shadow-lg border border-gray-200 dark:border-border-dark flex items-center justify-center hover:bg-gray-50 dark:hover:bg-white/10 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-size: 20px;">my_location</span>
+</button>
+</div>
+</section>
+<!-- Time Settings Group (iOS List Style) -->
+<section class="flex flex-col gap-2">
+<h3 class="px-1 text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Time Settings</h3>
+<div class="bg-white dark:bg-surface-dark rounded-2xl overflow-hidden shadow-sm border border-gray-200 dark:border-border-dark">
+<!-- Timezone Row -->
+<div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-border-dark cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+<span class="material-symbols-outlined" style="font-size: 18px;">schedule</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-medium">Timezone</span>
+<span class="text-xs text-gray-500 dark:text-gray-400">America/Los_Angeles</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm text-gray-400 dark:text-gray-500">GMT-7</span>
+<span class="material-symbols-outlined text-gray-400" style="font-size: 20px;">chevron_right</span>
+</div>
+</div>
+<!-- Auto-Sync Toggle Row -->
+<div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-border-dark">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+<span class="material-symbols-outlined" style="font-size: 18px;">sync</span>
+</div>
+<span class="text-sm font-medium">Auto-Sync Time</span>
+</div>
+<!-- Toggle Switch -->
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/20 rounded-full peer dark:bg-black peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Sunrise/Sunset Read-only Row -->
+<div class="flex items-center justify-between p-4 bg-gray-50/50 dark:bg-black/20">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400">
+<span class="material-symbols-outlined" style="font-size: 18px;">wb_twilight</span>
+</div>
+<span class="text-sm font-medium">Daylight Cycle</span>
+</div>
+<div class="flex gap-4 text-xs font-medium">
+<div class="flex items-center gap-1 text-gray-600 dark:text-gray-300">
+<span class="material-symbols-outlined text-orange-400" style="font-size: 14px;">wb_sunny</span>
+                                06:12 AM
+                            </div>
+<div class="flex items-center gap-1 text-gray-600 dark:text-gray-300">
+<span class="material-symbols-outlined text-indigo-400" style="font-size: 14px;">bedtime</span>
+                                07:45 PM
+                            </div>
+</div>
+</div>
+</div>
+</section>
+<!-- Coordinates Section -->
+<section class="flex flex-col gap-2">
+<h3 class="px-1 text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Coordinates</h3>
+<div class="flex flex-wrap items-end gap-3">
+<label class="flex flex-col min-w-[140px] flex-1">
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400 pb-1.5 pl-1">Latitude</p>
+<div class="relative">
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-slate-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-gray-200 dark:border-border-dark bg-white dark:bg-surface-dark focus:border-primary h-12 placeholder:text-gray-400 dark:placeholder:text-[#9db9a1] px-4 text-base font-normal leading-normal shadow-sm" value="34.0522"/>
+<span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-xs">N</span>
+</div>
+</label>
+<label class="flex flex-col min-w-[140px] flex-1">
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400 pb-1.5 pl-1">Longitude</p>
+<div class="relative">
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-slate-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-gray-200 dark:border-border-dark bg-white dark:bg-surface-dark focus:border-primary h-12 placeholder:text-gray-400 dark:placeholder:text-[#9db9a1] px-4 text-base font-normal leading-normal shadow-sm" value="118.2437"/>
+<span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-xs">W</span>
+</div>
+</label>
+</div>
+<div class="flex justify-end pt-2">
+<button class="group flex cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-5 bg-transparent border border-gray-300 dark:border-border-dark text-slate-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-all gap-2 text-sm font-bold tracking-[0.015em]">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors" style="font-size: 18px;">phonelink_ring</span>
+<span class="truncate">Sync from Phone</span>
+</button>
+</div>
+</section>
+<!-- Spacer for scroll -->
+<div class="h-20"></div>
+</main>
+<!-- Footer / Floating Action Button -->
+<footer class="fixed bottom-0 left-0 right-0 z-40 p-4 bg-gradient-to-t from-background-light via-background-light to-transparent dark:from-background-dark dark:via-background-dark dark:to-transparent pt-10 flex flex-col items-center gap-3">
+<p class="text-xs text-gray-500 dark:text-gray-400 font-medium">Last Synced: Today, 10:42 AM</p>
+<div class="w-full max-w-md">
+<button class="w-full flex cursor-pointer items-center justify-center overflow-hidden rounded-full h-14 px-4 bg-primary text-background-dark shadow-[0_0_20px_rgba(19,236,55,0.3)] hover:shadow-[0_0_30px_rgba(19,236,55,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all gap-2 text-base font-bold leading-normal tracking-wide">
+<span class="material-symbols-outlined" style="font-size: 24px;">save</span>
+<span class="truncate">Update Device</span>
+</button>
+</div>
+</footer>
+</div>
+</body></html>

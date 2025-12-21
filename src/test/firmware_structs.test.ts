@@ -218,9 +218,9 @@ describe('firmware_structs - Constants', () => {
 
     it('should have correct chunk and fragment sizes', () => {
         expect(MAX_CHUNK_SIZE).toBe(20);
-        expect(RAIN_HISTORY_FRAGMENT_SIZE).toBe(240);
+        expect(RAIN_HISTORY_FRAGMENT_SIZE).toBe(232);
         expect(ENV_HISTORY_FRAGMENT_SIZE).toBe(232);
-        expect(RAIN_HISTORY_MAX_FRAGMENTS).toBe(20);
+        expect(RAIN_HISTORY_MAX_FRAGMENTS).toBe(255);
     });
 
     describe('CHANNEL_FLAG constants', () => {

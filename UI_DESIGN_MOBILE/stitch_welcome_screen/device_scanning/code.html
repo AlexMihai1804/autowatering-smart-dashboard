@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Device Scanning - AutoWatering</title>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1337ec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101322",
+                        "surface-dark": "#1c1e2d",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Spline Sans", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom pulsing animation for the scanner */
+        @keyframes ripple {
+            0% {
+                transform: scale(0.8);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(2.5);
+                opacity: 0;
+            }
+        }
+        .animate-ripple {
+            animation: ripple 2s linear infinite;
+        }
+        .animate-ripple-delay {
+            animation: ripple 2s linear infinite;
+            animation-delay: 1s;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white transition-colors duration-200">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl">
+<!-- Header -->
+<header class="flex items-center justify-between p-4 bg-background-light dark:bg-background-dark z-10 sticky top-0">
+<h2 class="text-lg font-bold leading-tight tracking-tight flex-1">Add New Device</h2>
+<button class="flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-[24px]">close</span>
+</button>
+</header>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col p-4 pb-24">
+<!-- Scanning Visualizer -->
+<div class="flex flex-col items-center justify-center py-10 relative">
+<!-- Radar Animation Background -->
+<div class="absolute flex items-center justify-center inset-0 z-0 overflow-hidden">
+<div class="absolute size-32 rounded-full border border-primary/30 animate-ripple"></div>
+<div class="absolute size-32 rounded-full border border-primary/20 animate-ripple-delay"></div>
+</div>
+<!-- Center Icon -->
+<div class="relative z-10 bg-surface-light dark:bg-surface-dark shadow-xl rounded-full size-24 flex items-center justify-center mb-6 ring-4 ring-primary/10">
+<span class="material-symbols-outlined text-primary text-[40px]">bluetooth_searching</span>
+</div>
+<div class="relative z-10 text-center space-y-2">
+<h3 class="text-xl font-bold tracking-tight">Scanning for devices...</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400 max-w-[280px] mx-auto leading-relaxed">
+                        Ensure your AutoWatering controller is powered on and within 10m range.
+                    </p>
+</div>
+</div>
+<!-- Found Devices Section -->
+<div class="mt-4 flex flex-col gap-4">
+<div class="flex items-center justify-between px-2">
+<h4 class="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Available Devices</h4>
+<!-- Subtle spinner to show ongoing background scan -->
+<div class="size-4 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
+</div>
+<!-- Device Card 1 -->
+<div class="group flex items-center gap-4 bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-transparent hover:border-primary/50 transition-all shadow-sm">
+<div class="flex items-center justify-center rounded-full bg-primary/10 shrink-0 size-12 text-primary">
+<span class="material-symbols-outlined text-[24px]">water_drop</span>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<p class="text-base font-bold leading-tight truncate">Garden Main (A1:B2)</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-[16px] text-green-500">wifi</span>
+<span class="text-slate-500 dark:text-slate-400 text-xs font-medium">Signal: Strong</span>
+</div>
+</div>
+<button class="shrink-0 flex items-center justify-center rounded-full h-9 px-5 bg-primary hover:bg-blue-600 active:scale-95 text-white text-sm font-bold transition-all shadow-lg shadow-blue-500/20">
+                        Connect
+                    </button>
+</div>
+<!-- Device Card 2 -->
+<div class="group flex items-center gap-4 bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-transparent hover:border-primary/50 transition-all shadow-sm">
+<div class="flex items-center justify-center rounded-full bg-primary/10 shrink-0 size-12 text-primary">
+<span class="material-symbols-outlined text-[24px]">yard</span>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<p class="text-base font-bold leading-tight truncate">Backyard Veggies (C3:D4)</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-[16px] text-yellow-500">wifi_2_bar</span>
+<span class="text-slate-500 dark:text-slate-400 text-xs font-medium">Signal: Fair</span>
+</div>
+</div>
+<button class="shrink-0 flex items-center justify-center rounded-full h-9 px-5 bg-surface-light dark:bg-[#282b39] hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 text-sm font-bold transition-all">
+                        Connect
+                    </button>
+</div>
+<!-- Device Card 3 (Weak Signal) -->
+<div class="group flex items-center gap-4 bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-transparent hover:border-primary/50 transition-all shadow-sm opacity-60">
+<div class="flex items-center justify-center rounded-full bg-primary/10 shrink-0 size-12 text-primary">
+<span class="material-symbols-outlined text-[24px]">potted_plant</span>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<p class="text-base font-bold leading-tight truncate">Front Porch (E5:F6)</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-[16px] text-red-400">wifi_1_bar</span>
+<span class="text-slate-500 dark:text-slate-400 text-xs font-medium">Signal: Weak</span>
+</div>
+</div>
+<button class="shrink-0 flex items-center justify-center rounded-full h-9 px-5 bg-surface-light dark:bg-[#282b39] hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 text-sm font-bold transition-all">
+                        Connect
+                    </button>
+</div>
+</div>
+<!-- Helper Text / Troubleshooting -->
+<div class="mt-8 flex justify-center">
+<button class="text-sm font-medium text-primary hover:text-blue-400 flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[18px]">help</span>
+                    Can't find your device?
+                </button>
+</div>
+</main>
+<!-- Sticky Bottom Action (Scan Again) -->
+<div class="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background-light via-background-light to-transparent dark:from-background-dark dark:via-background-dark pt-12 max-w-md mx-auto">
+<button class="w-full h-12 flex items-center justify-center gap-2 rounded-full bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-[0.98] transition-all shadow-lg text-slate-900 dark:text-white font-bold text-base">
+<span class="material-symbols-outlined text-[20px]">refresh</span>
+                Restart Scan
+            </button>
+</div>
+</div>
+</body></html>

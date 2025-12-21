@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>App Settings: General</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+            extend: {
+                colors: {
+                "primary": "#13ec37",
+                "background-light": "#f6f8f6",
+                "background-dark": "#102213",
+                "surface-dark": "#1c2e20",
+                "surface-light": "#ffffff",
+                },
+                fontFamily: {
+                "display": ["Manrope", "sans-serif"]
+                },
+                borderRadius: {"DEFAULT": "1rem", "lg": "1.5rem", "xl": "2rem", "full": "9999px"},
+            },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar hide for cleaner UI */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #13ec37;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #13ec37;
+        }
+        
+        /* Material Icon Alignment Fix */
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 24px;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white min-h-screen flex flex-col antialiased selection:bg-primary selection:text-black">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-white/5">
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-slate-900 dark:text-white">arrow_back_ios_new</span>
+</button>
+<h1 class="text-lg font-bold tracking-tight">General Settings</h1>
+<div class="w-10"></div> <!-- Spacer for centering -->
+</header>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto pb-24 px-4 w-full max-w-md mx-auto">
+<!-- Section: Appearance -->
+<div class="mt-6">
+<h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 ml-2">Appearance</h3>
+<div class="bg-surface-light dark:bg-surface-dark rounded-lg overflow-hidden shadow-sm">
+<!-- Dark Mode Item -->
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 dark:bg-[#28392b] text-slate-700 dark:text-primary">
+<span class="material-symbols-outlined">dark_mode</span>
+</div>
+<span class="text-base font-medium">Dark Mode</span>
+</div>
+<!-- Toggle Switch -->
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-12 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 dark:peer-focus:ring-primary/30 rounded-full peer dark:bg-[#28392b] peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</div>
+<!-- Section: Preferences -->
+<div class="mt-8">
+<h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 ml-2">Preferences</h3>
+<div class="bg-surface-light dark:bg-surface-dark rounded-lg overflow-hidden shadow-sm flex flex-col divide-y divide-gray-100 dark:divide-white/5">
+<!-- Push Notifications -->
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 dark:bg-[#28392b] text-slate-700 dark:text-primary">
+<span class="material-symbols-outlined">notifications</span>
+</div>
+<span class="text-base font-medium">Push Notifications</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-12 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 dark:peer-focus:ring-primary/30 rounded-full peer dark:bg-[#28392b] peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Units -->
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 dark:bg-[#28392b] text-slate-700 dark:text-primary">
+<span class="material-symbols-outlined">straighten</span>
+</div>
+<span class="text-base font-medium">Units</span>
+</div>
+<!-- Segmented Control -->
+<div class="flex bg-gray-100 dark:bg-[#28392b] p-1 rounded-full">
+<button class="px-3 py-1 text-sm font-bold rounded-full bg-white dark:bg-primary text-slate-900 shadow-sm transition-all">
+                            Metric
+                        </button>
+<button class="px-3 py-1 text-sm font-medium rounded-full text-gray-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white transition-all">
+                            Imperial
+                        </button>
+</div>
+</div>
+<!-- Language -->
+<div class="flex items-center justify-between p-4 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 dark:bg-[#28392b] text-slate-700 dark:text-primary">
+<span class="material-symbols-outlined">language</span>
+</div>
+<span class="text-base font-medium">Language</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm text-gray-500 dark:text-gray-400">English (US)</span>
+<span class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-[20px]">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+<!-- App Version Footer -->
+<div class="mt-8 mb-6 text-center">
+<p class="text-xs text-gray-400 dark:text-gray-600">AutoWatering App v2.4.0 (Build 302)</p>
+<p class="text-xs text-gray-400 dark:text-gray-600 mt-1">© 2024 GreenTech Solutions</p>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full bg-surface-light/80 dark:bg-[#102213]/90 backdrop-blur-xl border-t border-gray-200 dark:border-white/5 pb-5 pt-3 px-6 z-50">
+<ul class="flex justify-between items-center max-w-md mx-auto">
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">dashboard</span>
+<span class="text-[10px] font-medium">Home</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">calendar_month</span>
+<span class="text-[10px] font-medium">Schedules</span>
+</a>
+</li>
+<li>
+<a class="relative -top-5 bg-primary text-black p-3.5 rounded-full shadow-[0_0_15px_rgba(19,236,55,0.4)] hover:shadow-[0_0_25px_rgba(19,236,55,0.6)] transition-all hover:scale-105 active:scale-95" href="#">
+<span class="material-symbols-outlined">water_drop</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">bar_chart</span>
+<span class="text-[10px] font-medium">Stats</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-primary transition-colors group" href="#">
+<span class="material-symbols-outlined icon-fill group-hover:scale-110 transition-transform">settings</span>
+<span class="text-[10px] font-medium">Settings</span>
+</a>
+</li>
+</ul>
+</nav>
+</body></html>

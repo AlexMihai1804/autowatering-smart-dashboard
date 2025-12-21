@@ -5,11 +5,11 @@ Part of the **Custom Configuration Service** (`12345678-1234-5678-9abc-def123456
 ## Quick overview
 - **Properties**: Read, Write, Notify (no fragmentation).
 - **Security**: Read/Write Encrypt (pairing required).
-- **Size**: 76 B fixed (`custom_soil_config_data`).
+- **Size**: 70 B fixed (`custom_soil_config_data`).
 - **CCC**: single CCC for this characteristic.
 - **Flow**: client writes with `operation` = {read/create/update/delete}; firmware replies with populated struct + `status`. If CCC is ON, it also notifies with the same final payload.
 
-## Payload structure (`custom_soil_config_data`)
+## Payload structure (`custom_soil_config_data`, 70 B)
 | Offset | Field | Type | Notes |
 |--------|-------|------|------|
 | 0 | `channel_id` | u8 | 0-7 |

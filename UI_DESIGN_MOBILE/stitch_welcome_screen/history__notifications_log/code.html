@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>History: Notifications Log</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                        "surface-dark": "#1A2C1E",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem", 
+                        "lg": "2rem", 
+                        "xl": "3rem", 
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen flex flex-col font-display antialiased text-slate-900 dark:text-white pb-24 relative overflow-x-hidden selection:bg-primary selection:text-black">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md px-4 pt-12 pb-2">
+<div class="flex items-center justify-between mb-4">
+<h1 class="text-3xl font-extrabold tracking-tight">History Log</h1>
+<button class="text-emerald-700 dark:text-[#9db9a1] text-sm font-bold hover:text-primary transition-colors">
+                Clear All
+            </button>
+</div>
+<!-- Filter Chips -->
+<div class="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+<button class="flex h-9 shrink-0 items-center justify-center rounded-full bg-primary text-black px-5 transition-transform active:scale-95">
+<span class="text-sm font-bold">All</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-surface-dark border border-transparent dark:border-white/10 px-5 transition-transform active:scale-95 hover:border-primary/50">
+<span class="text-slate-600 dark:text-gray-300 text-sm font-medium">Errors</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-surface-dark border border-transparent dark:border-white/10 px-5 transition-transform active:scale-95 hover:border-primary/50">
+<span class="text-slate-600 dark:text-gray-300 text-sm font-medium">Warnings</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-surface-dark border border-transparent dark:border-white/10 px-5 transition-transform active:scale-95 hover:border-primary/50">
+<span class="text-slate-600 dark:text-gray-300 text-sm font-medium">Info</span>
+</button>
+</div>
+</header>
+<!-- Content List -->
+<main class="flex-1 px-4 flex flex-col gap-2">
+<!-- Section: Today -->
+<div class="mt-4 mb-2">
+<h3 class="text-slate-500 dark:text-gray-400 text-sm font-bold uppercase tracking-wider px-2">Today</h3>
+</div>
+<!-- List Item: Success -->
+<div class="group relative flex items-center gap-4 bg-white dark:bg-surface-dark p-4 rounded hover:bg-slate-50 dark:hover:bg-[#1f3524] transition-colors shadow-sm dark:shadow-none border border-slate-100 dark:border-white/5">
+<div class="relative flex items-center justify-center rounded-full bg-primary/10 shrink-0 h-12 w-12 text-primary">
+<span class="material-symbols-outlined text-[24px]">water_drop</span>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<div class="flex justify-between items-start">
+<p class="text-slate-900 dark:text-white text-base font-bold leading-tight line-clamp-1">Irrigation Completed</p>
+<span class="text-slate-400 dark:text-[#9db9a1] text-xs font-medium whitespace-nowrap ml-2">7:00 AM</span>
+</div>
+<p class="text-slate-500 dark:text-gray-400 text-sm font-medium leading-normal line-clamp-1 mt-0.5">Front Lawn • 15 mins • Saved 2 gal</p>
+</div>
+<!-- Status Indicator Dot -->
+<div class="absolute right-2 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<!-- List Item: Warning -->
+<div class="group relative flex items-center gap-4 bg-white dark:bg-surface-dark p-4 rounded hover:bg-slate-50 dark:hover:bg-[#1f3524] transition-colors shadow-sm dark:shadow-none border border-slate-100 dark:border-white/5">
+<div class="relative flex items-center justify-center rounded-full bg-amber-500/10 shrink-0 h-12 w-12 text-amber-500">
+<span class="material-symbols-outlined text-[24px]">warning</span>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<div class="flex justify-between items-start">
+<p class="text-slate-900 dark:text-white text-base font-bold leading-tight line-clamp-1">Moisture Sensor Alert</p>
+<span class="text-slate-400 dark:text-[#9db9a1] text-xs font-medium whitespace-nowrap ml-2">6:45 AM</span>
+</div>
+<p class="text-slate-500 dark:text-gray-400 text-sm font-medium leading-normal line-clamp-1 mt-0.5">Moisture levels below 15% threshold</p>
+</div>
+</div>
+<!-- Section: Yesterday -->
+<div class="mt-6 mb-2">
+<h3 class="text-slate-500 dark:text-gray-400 text-sm font-bold uppercase tracking-wider px-2">Yesterday</h3>
+</div>
+<!-- List Item: Info (Skipped) -->
+<div class="group relative flex items-center gap-4 bg-white dark:bg-surface-dark p-4 rounded hover:bg-slate-50 dark:hover:bg-[#1f3524] transition-colors shadow-sm dark:shadow-none border border-slate-100 dark:border-white/5">
+<div class="relative flex items-center justify-center rounded-full bg-blue-500/10 shrink-0 h-12 w-12 text-blue-400">
+<span class="material-symbols-outlined text-[24px]">water</span>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<div class="flex justify-between items-start">
+<p class="text-slate-900 dark:text-white text-base font-bold leading-tight line-clamp-1">Schedule Skipped</p>
+<span class="text-slate-400 dark:text-[#9db9a1] text-xs font-medium whitespace-nowrap ml-2">5:30 PM</span>
+</div>
+<p class="text-slate-500 dark:text-gray-400 text-sm font-medium leading-normal line-clamp-1 mt-0.5">Rain detected in local forecast</p>
+</div>
+</div>
+<!-- List Item: System -->
+<div class="group relative flex items-center gap-4 bg-white dark:bg-surface-dark p-4 rounded hover:bg-slate-50 dark:hover:bg-[#1f3524] transition-colors shadow-sm dark:shadow-none border border-slate-100 dark:border-white/5">
+<div class="relative flex items-center justify-center rounded-full bg-slate-500/10 shrink-0 h-12 w-12 text-slate-400">
+<span class="material-symbols-outlined text-[24px]">system_update</span>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<div class="flex justify-between items-start">
+<p class="text-slate-900 dark:text-white text-base font-bold leading-tight line-clamp-1">Firmware Updated</p>
+<span class="text-slate-400 dark:text-[#9db9a1] text-xs font-medium whitespace-nowrap ml-2">2:00 PM</span>
+</div>
+<p class="text-slate-500 dark:text-gray-400 text-sm font-medium leading-normal line-clamp-1 mt-0.5">Version 2.4.1 installed successfully</p>
+</div>
+</div>
+<!-- Section: Last Week -->
+<div class="mt-6 mb-2">
+<h3 class="text-slate-500 dark:text-gray-400 text-sm font-bold uppercase tracking-wider px-2">Last Week</h3>
+</div>
+<!-- List Item: Success -->
+<div class="group relative flex items-center gap-4 bg-white dark:bg-surface-dark p-4 rounded hover:bg-slate-50 dark:hover:bg-[#1f3524] transition-colors shadow-sm dark:shadow-none border border-slate-100 dark:border-white/5 opacity-60">
+<div class="relative flex items-center justify-center rounded-full bg-primary/10 shrink-0 h-12 w-12 text-primary">
+<span class="material-symbols-outlined text-[24px]">water_drop</span>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<div class="flex justify-between items-start">
+<p class="text-slate-900 dark:text-white text-base font-bold leading-tight line-clamp-1">Irrigation Completed</p>
+<span class="text-slate-400 dark:text-[#9db9a1] text-xs font-medium whitespace-nowrap ml-2">Mon</span>
+</div>
+<p class="text-slate-500 dark:text-gray-400 text-sm font-medium leading-normal line-clamp-1 mt-0.5">Backyard Garden • 20 mins</p>
+</div>
+</div>
+<!-- Empty state spacer for visual balance -->
+<div class="h-8"></div>
+</main>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-[#152016]/90 backdrop-blur-lg border-t border-slate-200 dark:border-white/5 pb-6 pt-3 px-6 flex justify-between items-center z-50 rounded-t-lg">
+<a class="flex flex-col items-center gap-1 group w-16" href="#">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors text-[28px]">home</span>
+<span class="text-[10px] font-medium text-slate-400 group-hover:text-primary transition-colors">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 group w-16" href="#">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors text-[28px]">grid_view</span>
+<span class="text-[10px] font-medium text-slate-400 group-hover:text-primary transition-colors">Zones</span>
+</a>
+<a class="flex flex-col items-center gap-1 group w-16" href="#">
+<!-- Active State -->
+<div class="relative">
+<span class="material-symbols-outlined text-primary text-[28px] fill-1" style="font-variation-settings: 'FILL' 1;">history</span>
+<span class="absolute -top-0.5 -right-0.5 h-2 w-2 bg-primary rounded-full shadow-[0_0_8px_rgba(19,236,55,0.6)]"></span>
+</div>
+<span class="text-[10px] font-bold text-primary">History</span>
+</a>
+<a class="flex flex-col items-center gap-1 group w-16" href="#">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors text-[28px]">settings</span>
+<span class="text-[10px] font-medium text-slate-400 group-hover:text-primary transition-colors">Settings</span>
+</a>
+</nav>
+</body></html>

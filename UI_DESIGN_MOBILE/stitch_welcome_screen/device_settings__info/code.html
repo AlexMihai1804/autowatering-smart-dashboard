@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Device Info</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark text-[#111812] dark:text-white min-h-screen flex flex-col">
+<!-- Top App Bar -->
+<div class="sticky top-0 z-50 flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between">
+<button class="text-[#111812] dark:text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">arrow_back_ios_new</span>
+</button>
+<h2 class="text-[#111812] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">Device Info</h2>
+</div>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col px-4 gap-6 pb-8 overflow-y-auto">
+<!-- Device Identity Card -->
+<div class="flex flex-col items-center pt-4 pb-2">
+<div class="relative group cursor-pointer">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-32 w-32 shadow-lg ring-4 ring-white dark:ring-white/5" data-alt="Close up of lush green garden bed with irrigation drippers" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDSnq-ZL4S6zQ9yZoJTtVkzlnF5mHPh2J4KJEcdxYHxOQNrRYN9hha0Fr0oOveq45eqfb6Qil4OBnpftB7Tg-1tdRQfkEQGNXEkofj-Ylbz89W_Tm38LXdiBT_qICbdl-iVT6YuuRWabPgrguoSdgKxxpIt5Jfn__GidH5AzlydC4FmWziI1v900uI93InbxofSte-ULZ8jGQsMd8LawHe3DN2ap5GV-vZf_x2wATB8p6_Hcyms3AT62v696NY_9i6bXRCnNLL5BOT0");'>
+</div>
+<div class="absolute bottom-0 right-0 bg-background-light dark:bg-[#1a2e1d] p-2 rounded-full shadow-md border border-gray-200 dark:border-white/10">
+<span class="material-symbols-outlined text-primary text-[20px]">edit</span>
+</div>
+</div>
+<div class="flex flex-col items-center mt-4 gap-1">
+<h1 class="text-2xl font-bold leading-tight tracking-tight text-center">Backyard Garden Bed</h1>
+<div class="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
+<div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+<span class="text-primary text-sm font-semibold">Online</span>
+</div>
+</div>
+</div>
+<!-- Section 1: Network & System -->
+<div class="flex flex-col gap-2">
+<h3 class="px-2 text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">System Status</h3>
+<div class="bg-white dark:bg-white/5 rounded-2xl overflow-hidden shadow-sm dark:shadow-none border border-gray-100 dark:border-white/5 divide-y divide-gray-100 dark:divide-white/5">
+<!-- Signal Strength -->
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
+<span class="material-symbols-outlined text-[20px]">wifi</span>
+</div>
+<span class="text-base font-medium">Signal Strength</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-primary text-sm font-semibold">Excellent</span>
+<span class="text-gray-400 text-sm">(-42 dBm)</span>
+</div>
+</div>
+<!-- Uptime -->
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400">
+<span class="material-symbols-outlined text-[20px]">timer</span>
+</div>
+<span class="text-base font-medium">Uptime</span>
+</div>
+<span class="text-sm font-medium text-gray-600 dark:text-gray-300">14d 3h 12m</span>
+</div>
+<!-- Model -->
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-green-50 dark:bg-green-500/10 flex items-center justify-center text-green-600 dark:text-green-400">
+<span class="material-symbols-outlined text-[20px]">router</span>
+</div>
+<span class="text-base font-medium">Model</span>
+</div>
+<span class="text-sm font-medium text-gray-600 dark:text-gray-300">AutoWater Pro V2</span>
+</div>
+</div>
+</div>
+<!-- Section 2: Software -->
+<div class="flex flex-col gap-2">
+<h3 class="px-2 text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Software &amp; Hardware</h3>
+<div class="bg-white dark:bg-white/5 rounded-2xl overflow-hidden shadow-sm dark:shadow-none border border-gray-100 dark:border-white/5 divide-y divide-gray-100 dark:divide-white/5">
+<!-- Firmware -->
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400">
+<span class="material-symbols-outlined text-[20px]">memory</span>
+</div>
+<span class="text-base font-medium">Firmware Version</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm font-medium text-gray-600 dark:text-gray-300">v2.4.1</span>
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+</div>
+</div>
+<!-- Serial Number -->
+<div class="flex items-center justify-between p-4 active:bg-gray-50 dark:active:bg-white/10 cursor-pointer transition-colors group">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-500/10 flex items-center justify-center text-gray-600 dark:text-gray-400">
+<span class="material-symbols-outlined text-[20px]">fingerprint</span>
+</div>
+<span class="text-base font-medium">Serial Number</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm font-mono text-gray-500 dark:text-gray-400">88:A1:C5:9E:2B</span>
+<span class="material-symbols-outlined text-[16px] text-gray-400 group-hover:text-primary transition-colors">content_copy</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex flex-col gap-3 mt-4">
+<button class="relative flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-full h-14 px-5 bg-primary hover:bg-primary/90 active:scale-[0.98] transition-all text-[#111812] text-base font-bold leading-normal tracking-[0.015em] shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined mr-2">system_update</span>
+<span class="truncate">Check for Updates</span>
+</button>
+<button class="relative flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-full h-14 px-5 bg-white dark:bg-white/5 border border-transparent hover:border-red-500/30 text-red-500 dark:text-red-400 text-base font-semibold leading-normal active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined mr-2">restart_alt</span>
+<span class="truncate">Reboot Device</span>
+</button>
+</div>
+<div class="h-8"></div> <!-- Bottom Spacer -->
+</main>
+</body></html>

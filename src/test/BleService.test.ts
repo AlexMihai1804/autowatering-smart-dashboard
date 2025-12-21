@@ -312,6 +312,58 @@ describe('BleService', () => {
                 expect(result[0].pressure_pa).toBe(101500);
             });
         });
+
+        describe('Auto Calc Status decoding (READ vs NOTIFY)', () => {
+            it('should decode next_irrigation_time from READ payload (64 bytes)', () => {
+                // Build a minimal 64B auto_calc_status_data payload
+                const payload = new Uint8Array(64);
+                const view = new DataView(payload.buffer);
+
+                const channelId = 2;
+                const nextIrrigationEpoch = 1734739200; // example UTC epoch seconds
+
+                view.setUint8(0, channelId);           // channel_id
+                view.setUint8(1, 1);                   // calculation_active
+                view.setUint8(2, 1);                   // irrigation_needed
+                view.setUint32(31, nextIrrigationEpoch, true); // next_irrigation_time @ 31
+
+                // @ts-expect-error - accessing private method
+                bleService.dispatchToStore(CHAR_UUIDS.AUTO_CALC_STATUS, payload);
+
+                const stored = useAppStore.getState().autoCalcStatus.get(channelId);
+                expect(stored).toBeTruthy();
+                expect(stored?.next_irrigation_time).toBe(nextIrrigationEpoch);
+            });
+
+            it('should decode next_irrigation_time from NOTIFY frame (8B header + 64B payload)', () => {
+                // Header (history_fragment_header_t / unified header):
+                // 00 00 01 00 00 01 40 00
+                const header = new Uint8Array([0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0x40, 0x00]);
+
+                const payload = new Uint8Array(64);
+                const payloadView = new DataView(payload.buffer);
+
+                const channelId = 3;
+                const nextIrrigationEpoch = 1734825600; // another example
+
+                payloadView.setUint8(0, channelId);
+                payloadView.setUint8(1, 1);
+                payloadView.setUint8(2, 1);
+                payloadView.setUint32(31, nextIrrigationEpoch, true);
+
+                const frame = new Uint8Array(72);
+                frame.set(header, 0);
+                frame.set(payload, 8);
+
+                // Simulate an edge-case path: dispatch receives header+payload.
+                // @ts-expect-error - accessing private method
+                bleService.dispatchToStore(CHAR_UUIDS.AUTO_CALC_STATUS, frame);
+
+                const stored = useAppStore.getState().autoCalcStatus.get(channelId);
+                expect(stored).toBeTruthy();
+                expect(stored?.next_irrigation_time).toBe(nextIrrigationEpoch);
+            });
+        });
     });
 
     describe('Store Updates from Notifications', () => {

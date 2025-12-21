@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Connection Success</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1337ec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101322",
+                        "card-dark": "#1a1a1d",
+                        "success": "#22c55e",
+                    },
+                    fontFamily: {
+                        "display": ["Spline Sans", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"],
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased selection:bg-primary/30 selection:text-primary">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-hidden max-w-md mx-auto shadow-2xl">
+<!-- Top App Bar: Minimalist with just spacing/branding if needed -->
+<div class="flex items-center p-4 pt-12 pb-2 justify-between z-10">
+<div class="w-10 h-10 flex items-center justify-center rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined">water_drop</span>
+</div>
+<!-- Settings or Help Icon could go here -->
+<button class="text-gray-500 dark:text-gray-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">help</span>
+</button>
+</div>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col items-center justify-center px-6 -mt-10">
+<!-- Success Animation/Icon -->
+<div class="relative mb-8 group">
+<!-- Outer pulsing ring -->
+<div class="absolute inset-0 rounded-full bg-primary/20 blur-xl scale-150 animate-pulse"></div>
+<!-- Middle ring -->
+<div class="relative flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-tr from-primary/20 to-primary/5 border border-primary/30 shadow-[0_0_30px_rgba(19,55,236,0.3)]">
+<!-- Icon Container -->
+<div class="flex items-center justify-center w-20 h-20 rounded-full bg-primary shadow-lg shadow-primary/40">
+<span class="material-symbols-outlined text-white text-5xl font-bold">check</span>
+</div>
+</div>
+</div>
+<!-- Headline -->
+<h1 class="text-slate-900 dark:text-white tracking-tight text-[32px] font-bold leading-tight px-4 text-center mb-2">
+                Success!
+            </h1>
+<!-- Body Text -->
+<p class="text-slate-500 dark:text-gray-400 text-base font-normal leading-relaxed px-4 text-center max-w-[280px]">
+                Your AutoWatering controller is paired and ready.
+            </p>
+<!-- Device Identity Card -->
+<div class="w-full mt-10">
+<div class="flex items-stretch justify-between gap-4 rounded-[2rem] bg-white dark:bg-card-dark p-4 shadow-sm border border-slate-200 dark:border-white/5">
+<!-- Left: Device Info -->
+<div class="flex flex-col justify-center gap-1.5 flex-[2_2_0px] pl-2">
+<div class="flex items-center gap-1.5 mb-1">
+<span class="w-2 h-2 rounded-full bg-success shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
+<p class="text-success text-xs font-semibold uppercase tracking-wider">Online</p>
+</div>
+<p class="text-slate-900 dark:text-white text-lg font-bold leading-tight">AutoWater One</p>
+<p class="text-slate-400 dark:text-gray-500 text-xs font-mono">ID: AW-8839-X</p>
+</div>
+<!-- Right: Device Image -->
+<div class="w-24 h-24 bg-center bg-no-repeat bg-cover rounded-xl flex-shrink-0 relative overflow-hidden bg-slate-100 dark:bg-slate-800" data-alt="Modern sleek black rectangular smart device floating on a dark background">
+<!-- Placeholder overlay for visual context if image fails or for styling -->
+<div class="absolute inset-0 bg-gradient-to-br from-transparent to-black/40"></div>
+<div class="w-full h-full" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBdjtXJhR23LkB5pqm2nnYcVSRUJFMXatcb-xBOfxx7uEQLQhiDeR7LbqIMUhJnE7UYyKFLkQ9KD1rMuzHxtr9qt5S5mesArKbuCJZrBMzYP7tkTdxvjlIIXPov0AE2VJCTwLBHykyLRLCp0S7o4my5Nw4bM7JV-PcY_NbJiY1AJt-y_UhtKM2JvdyJXZj1szC-Je1zsKjKg4FG_lIMQwmh8-0p4W8slzYWrspGfXagRQgRH9sjvnYL0si6LALYOfiStif3xDeSuQYG"); background-size: cover; background-position: center;'></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Action Area -->
+<div class="p-6 pb-10 w-full bg-background-light dark:bg-background-dark">
+<button class="w-full py-4 px-6 bg-primary hover:bg-blue-600 active:scale-[0.98] transition-all rounded-full shadow-lg shadow-primary/25 flex items-center justify-center group">
+<span class="text-white text-lg font-bold mr-2">Continue to Setup</span>
+<span class="material-symbols-outlined text-white transition-transform group-hover:translate-x-1">arrow_forward</span>
+</button>
+<p class="text-center mt-4 text-sm text-slate-400 dark:text-gray-600 font-medium cursor-pointer hover:text-primary transition-colors">
+                Skip setup and go to Dashboard
+            </p>
+</div>
+</div>
+</body></html>

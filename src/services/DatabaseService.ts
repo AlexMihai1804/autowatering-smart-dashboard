@@ -1,5 +1,23 @@
 import { useAppStore } from '../store/useAppStore';
 
+function getIrrigationPopularityScore(codeEnum: string): number {
+    const c = (codeEnum || '').toUpperCase();
+
+    // Broad heuristic popularity ordering (most common first)
+    // Drip > Sprinkler > Micro/Soaker > Pivot/LEPA > Surface/Furrow > Other
+    if (c.includes('DRIP')) return 100;
+    if (c.includes('SPRINKLER')) return 85;
+    if (c.includes('MICRO')) return 80;
+    if (c.includes('SOAKER')) return 78;
+    if (c.includes('PIVOT') || c.includes('LEPA') || c.includes('LINEAR')) return 70;
+    if (c.includes('MANUAL')) return 55;
+    if (c.includes('SURFACE')) return 45;
+    if (c.includes('FURROW')) return 40;
+    if (c.includes('FLOOD') || c.includes('BASIN') || c.includes('BORDER')) return 38;
+
+    return 10;
+}
+
 // ============================================================================
 // Plant Database Entry - Full FAO-56 compatible structure
 // ============================================================================
@@ -155,7 +173,19 @@ export class DatabaseService {
             const soilData: SoilDBEntry[] = await soilResponse.json();
             const irrigationData: IrrigationMethodEntry[] = await irrigationResponse.json();
 
-            useAppStore.getState().setDatabase(plantData, soilData, irrigationData);
+            // Sort irrigation methods in a user-friendly way (most common first).
+            const irrigationSorted = [...irrigationData].sort((a, b) => {
+                const sa = getIrrigationPopularityScore(a.code_enum);
+                const sb = getIrrigationPopularityScore(b.code_enum);
+                if (sb !== sa) return sb - sa;
+                // Tie-breakers: higher efficiency first, then name.
+                const ea = typeof a.efficiency_pct === 'number' ? a.efficiency_pct : -1;
+                const eb = typeof b.efficiency_pct === 'number' ? b.efficiency_pct : -1;
+                if (eb !== ea) return eb - ea;
+                return (a.name || '').localeCompare(b.name || '');
+            });
+
+            useAppStore.getState().setDatabase(plantData, soilData, irrigationSorted);
             
             console.log(`[DB] Loaded: ${plantData.length} plants, ${soilData.length} soils, ${irrigationData.length} irrigation methods`);
 

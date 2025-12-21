@@ -125,7 +125,9 @@ export class BleFragmentationManager {
         }
 
         // Multi-fragment reassembly
-        const key = characteristicUuid; 
+        // Key by characteristic + data_type to avoid collisions when different query types
+        // are in flight on the same characteristic (e.g. rain hourly then rain daily).
+        const key = `${characteristicUuid}:${normalizedHeader.data_type}`;
         let state = this.reassemblyBuffers.get(key);
 
         // If this is the first fragment (index 0) or we don't have state, init state

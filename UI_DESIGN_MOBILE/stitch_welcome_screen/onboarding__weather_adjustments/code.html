@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Onboarding: Weather Adjustments</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                        "surface-dark": "#1a3020", 
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display antialiased">
+<!-- Main Container -->
+<div class="relative flex h-full min-h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden text-[#111812] dark:text-white pb-6">
+<!-- Top App Bar -->
+<div class="flex items-center px-4 pt-6 pb-2 justify-between">
+<button class="flex size-12 shrink-0 items-center justify-center rounded-full active:bg-black/5 dark:active:bg-white/10 transition-colors text-[#111812] dark:text-white">
+<span class="material-symbols-outlined text-[24px]">arrow_back_ios_new</span>
+</button>
+<div class="flex-1"></div>
+<!-- Optional Settings/Skip button could go here -->
+</div>
+<!-- Page Indicators -->
+<div class="flex w-full flex-row items-center justify-center gap-3 py-4">
+<div class="h-2 w-2 rounded-full bg-gray-300 dark:bg-[#3b543f]"></div>
+<div class="h-2 w-2 rounded-full bg-gray-300 dark:bg-[#3b543f]"></div>
+<div class="h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_rgba(19,236,55,0.6)]"></div>
+<div class="h-2 w-2 rounded-full bg-gray-300 dark:bg-[#3b543f]"></div>
+<div class="h-2 w-2 rounded-full bg-gray-300 dark:bg-[#3b543f]"></div>
+</div>
+<!-- Headline & Body -->
+<div class="px-6 pt-2 pb-6">
+<h1 class="text-[#111812] dark:text-white tracking-tight text-[32px] font-bold leading-tight text-left mb-2">
+                Weather Intelligence
+            </h1>
+<p class="text-gray-600 dark:text-[#9db9a1] text-base font-normal leading-normal">
+                Save water by adapting to local forecasts. Optimize Zone 1 for local conditions.
+            </p>
+</div>
+<!-- Feature Cards List -->
+<div class="flex flex-col gap-4 px-4 flex-1">
+<!-- Card 1: Rain Skip -->
+<div class="group flex flex-col gap-4 bg-white dark:bg-surface-dark p-5 rounded-lg shadow-sm border border-gray-100 dark:border-white/5">
+<div class="flex items-start justify-between gap-4">
+<div class="flex gap-4">
+<div class="text-white flex items-center justify-center rounded-full bg-green-100 dark:bg-[#28392b] shrink-0 size-12">
+<span class="material-symbols-outlined text-green-700 dark:text-primary text-[24px]">water_drop</span>
+</div>
+<div class="flex flex-col justify-center pt-1">
+<div class="flex items-center gap-2">
+<p class="text-[#111812] dark:text-white text-lg font-bold leading-tight">Rain Skip</p>
+<span class="material-symbols-outlined text-gray-400 text-[18px] cursor-help">info</span>
+</div>
+</div>
+</div>
+<div class="shrink-0 pt-1">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full border-none bg-gray-200 dark:bg-[#28392b] p-0.5 has-[:checked]:justify-end has-[:checked]:bg-primary transition-colors duration-200">
+<div class="h-full w-[27px] rounded-full bg-white shadow-sm"></div>
+<input checked="" class="invisible absolute" type="checkbox"/>
+</label>
+</div>
+</div>
+<div>
+<p class="text-gray-500 dark:text-[#9db9a1] text-sm font-medium leading-relaxed">
+                        Automatically skip watering if rainfall is detected in your area.
+                    </p>
+</div>
+</div>
+<!-- Card 2: Temperature Adjust -->
+<div class="group flex flex-col gap-4 bg-white dark:bg-surface-dark p-5 rounded-lg shadow-sm border border-gray-100 dark:border-white/5">
+<div class="flex items-start justify-between gap-4">
+<div class="flex gap-4">
+<div class="text-white flex items-center justify-center rounded-full bg-orange-100 dark:bg-[#392e28] shrink-0 size-12">
+<span class="material-symbols-outlined text-orange-600 dark:text-[#ecaa13] text-[24px]">thermostat</span>
+</div>
+<div class="flex flex-col justify-center pt-1">
+<div class="flex items-center gap-2">
+<p class="text-[#111812] dark:text-white text-lg font-bold leading-tight">Temperature Adjust</p>
+<span class="material-symbols-outlined text-gray-400 text-[18px] cursor-help">info</span>
+</div>
+</div>
+</div>
+<div class="shrink-0 pt-1">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full border-none bg-gray-200 dark:bg-[#28392b] p-0.5 has-[:checked]:justify-end has-[:checked]:bg-primary transition-colors duration-200">
+<div class="h-full w-[27px] rounded-full bg-white shadow-sm"></div>
+<input checked="" class="invisible absolute" type="checkbox"/>
+</label>
+</div>
+</div>
+<div>
+<p class="text-gray-500 dark:text-[#9db9a1] text-sm font-medium leading-relaxed">
+                        Increase duration in high heat and reduce it during cooler days.
+                    </p>
+</div>
+</div>
+<!-- Visual Decoration (Optional Background Graphic) -->
+<div class="relative w-full h-32 mt-4 opacity-10 dark:opacity-20 flex justify-center items-center pointer-events-none overflow-hidden rounded-lg">
+<!-- Abstract gradient/pattern representing weather -->
+<div class="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent blur-3xl" data-alt="Abstract green gradient glow effect representing eco-friendly smart features"></div>
+<span class="material-symbols-outlined text-6xl text-primary animate-pulse">eco</span>
+</div>
+</div>
+<!-- Footer Action -->
+<div class="mt-auto px-4 pt-4 pb-8 w-full bg-background-light dark:bg-background-dark z-10">
+<button class="w-full bg-primary hover:bg-green-400 text-[#102213] font-bold text-lg py-4 rounded-full shadow-[0_4px_14px_0_rgba(19,236,55,0.39)] transition-all transform active:scale-[0.98]">
+                Continue
+            </button>
+</div>
+</div>
+</body></html>

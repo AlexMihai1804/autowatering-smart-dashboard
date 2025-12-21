@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Zone Details: Schedule Controls</title>
+<!-- Fonts and Icons -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "primary-dark": "#0fb82b",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                        "surface-dark": "#1a2c1d",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem", 
+                        "lg": "1.5rem", 
+                        "xl": "2rem", 
+                        "2xl": "3rem", 
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom Scrollbar hide for clean mobile look */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark text-gray-900 dark:text-white antialiased transition-colors duration-200">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl bg-background-light dark:bg-background-dark">
+<!-- Top App Bar -->
+<header class="flex items-center px-4 py-4 pb-2 justify-between sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm">
+<button class="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-gray-900 dark:text-white" style="font-size: 24px;">arrow_back_ios_new</span>
+</button>
+<h2 class="text-gray-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center truncate px-2">
+                Zone 1: Front Lawn
+            </h2>
+<button class="flex size-10 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-gray-900 dark:text-white" style="font-size: 24px;">settings</span>
+</button>
+</header>
+<!-- Main Content Scrollable Area -->
+<main class="flex-1 flex flex-col px-4 pb-24 space-y-6 pt-2">
+<!-- Next Run Headline -->
+<div class="flex flex-col gap-1">
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Next Scheduled Run</span>
+<h3 class="text-gray-900 dark:text-white tracking-tight text-3xl font-bold leading-tight">
+                    Tomorrow, <span class="text-primary">6:00 AM</span>
+</h3>
+</div>
+<!-- Segmented Control Mode Switcher -->
+<div class="bg-gray-200 dark:bg-surface-dark p-1 rounded-full flex relative">
+<!-- Smart Mode Active State -->
+<label class="flex-1 relative z-10 cursor-pointer">
+<input checked="" class="peer sr-only" name="mode" type="radio" value="smart"/>
+<div class="w-full h-10 flex items-center justify-center gap-2 rounded-full text-sm font-bold transition-all duration-300 text-gray-500 dark:text-gray-400 peer-checked:bg-white dark:peer-checked:bg-[#2A4030] peer-checked:text-gray-900 dark:peer-checked:text-white peer-checked:shadow-sm">
+<span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+<span>Smart</span>
+</div>
+</label>
+<!-- Manual Mode -->
+<label class="flex-1 relative z-10 cursor-pointer">
+<input class="peer sr-only" name="mode" type="radio" value="manual"/>
+<div class="w-full h-10 flex items-center justify-center gap-2 rounded-full text-sm font-bold transition-all duration-300 text-gray-500 dark:text-gray-400 peer-checked:bg-white dark:peer-checked:bg-[#2A4030] peer-checked:text-gray-900 dark:peer-checked:text-white peer-checked:shadow-sm">
+<span class="material-symbols-outlined text-[18px]">schedule</span>
+<span>Manual</span>
+</div>
+</label>
+</div>
+<!-- Smart Mode Status Card (Active View) -->
+<div class="relative overflow-hidden rounded-2xl bg-white dark:bg-surface-dark shadow-sm ring-1 ring-gray-900/5 dark:ring-white/10">
+<!-- Background Image with Overlay -->
+<div class="absolute inset-0 z-0">
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10 z-10"></div>
+<img alt="Background" class="h-full w-full object-cover opacity-60 dark:opacity-50" data-alt="Close up of water droplets on green grass blades" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCTqmjUqRIerIcruB1NJ9M_PiUkbEVv2H4mE--dLdtNeIcSUryPqAFbn-4QCcmAfh8NNmrKsupYYWGorfCNYAIh3zXfII8Xyqjhnts6XvkTD67_RCL5Om5UlAx_U3KX4QWcPX4B8J8GJSfUYoFWt-gWaseDRAgOsdy18cORuKFLWTNDlo2EbZw_xI5wndI0LreZPlbrBb7WJm1rijJLmDmGuhWM35Bb3NiTdXcNPjeiXwfKxLSq4JJe8Dhe4eGJJZiaV-qWlrdft81v"/>
+</div>
+<div class="relative z-20 p-5 pt-32 flex flex-col gap-3">
+<div class="flex items-center gap-2 mb-1">
+<div class="flex items-center justify-center size-6 rounded-full bg-primary/20 backdrop-blur-md">
+<span class="material-symbols-outlined text-primary text-[14px]">water_drop</span>
+</div>
+<p class="text-white text-xs font-bold uppercase tracking-wider">Optimization Active</p>
+</div>
+<div>
+<p class="text-white text-2xl font-bold leading-tight mb-2">Saved 30% Water</p>
+<p class="text-gray-200 text-sm font-medium leading-relaxed opacity-90">
+                            Based on local weather forecasts, we skipped today's cycle. Rain is expected later this afternoon.
+                        </p>
+</div>
+</div>
+</div>
+<!-- Timeline / Schedule Visualization -->
+<div class="flex flex-col gap-4">
+<div class="flex items-center justify-between px-1">
+<h4 class="text-lg font-bold text-gray-900 dark:text-white">Upcoming Schedule</h4>
+<button class="text-sm font-medium text-primary hover:text-primary-dark transition-colors">See full calendar</button>
+</div>
+<div class="bg-white dark:bg-surface-dark rounded-2xl p-4 shadow-sm ring-1 ring-gray-900/5 dark:ring-white/5">
+<!-- Timeline Item 1 -->
+<div class="grid grid-cols-[40px_1fr] gap-x-3">
+<div class="flex flex-col items-center pt-1">
+<div class="flex items-center justify-center size-8 rounded-full bg-blue-500/20 text-blue-400">
+<span class="material-symbols-outlined text-[18px]">cloud_queue</span>
+</div>
+<div class="w-[2px] bg-gray-200 dark:bg-gray-700 h-full mt-2 rounded-full"></div>
+</div>
+<div class="pb-6 pt-1">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-gray-900 dark:text-white text-base font-bold">Today, 6:00 AM</p>
+<p class="text-gray-500 dark:text-gray-400 text-sm mt-0.5">Skipped (Rain Predicted)</p>
+</div>
+<span class="text-xs font-semibold bg-gray-100 dark:bg-white/10 px-2 py-1 rounded text-gray-600 dark:text-gray-300">0 min</span>
+</div>
+</div>
+</div>
+<!-- Timeline Item 2 -->
+<div class="grid grid-cols-[40px_1fr] gap-x-3">
+<div class="flex flex-col items-center pt-1">
+<div class="flex items-center justify-center size-8 rounded-full bg-primary/20 text-primary">
+<span class="material-symbols-outlined text-[18px]">water_drop</span>
+</div>
+<div class="w-[2px] bg-gray-200 dark:bg-gray-700 h-full mt-2 rounded-full"></div>
+</div>
+<div class="pb-6 pt-1">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-gray-900 dark:text-white text-base font-bold">Tomorrow, 6:00 AM</p>
+<p class="text-gray-500 dark:text-gray-400 text-sm mt-0.5">Smart Cycle (Standard)</p>
+</div>
+<span class="text-xs font-semibold bg-primary/10 px-2 py-1 rounded text-primary">20 min</span>
+</div>
+</div>
+</div>
+<!-- Timeline Item 3 -->
+<div class="grid grid-cols-[40px_1fr] gap-x-3">
+<div class="flex flex-col items-center pt-1">
+<div class="flex items-center justify-center size-8 rounded-full bg-orange-500/20 text-orange-400">
+<span class="material-symbols-outlined text-[18px]">wb_sunny</span>
+</div>
+</div>
+<div class="pt-1">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-gray-900 dark:text-white text-base font-bold">Friday, 6:00 AM</p>
+<p class="text-gray-500 dark:text-gray-400 text-sm mt-0.5">Scheduled (High Temp)</p>
+</div>
+<span class="text-xs font-semibold bg-gray-100 dark:bg-white/10 px-2 py-1 rounded text-gray-600 dark:text-gray-300">25 min</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Manual Schedule Fallback (Hidden by default logic in this static mockup, but styled for completeness if needed) -->
+<!-- <div class="hidden">...Manual Items...</div> -->
+</main>
+<!-- Floating Bottom Actions -->
+<div class="fixed bottom-6 left-0 right-0 px-4 flex justify-center z-40 max-w-md mx-auto pointer-events-none">
+<div class="w-full flex gap-3 pointer-events-auto">
+<button class="flex-1 bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white h-14 rounded-full font-bold text-base shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-transform">
+<span class="material-symbols-outlined">edit_calendar</span>
+                    Edit Schedule
+                </button>
+<button class="flex-[1.5] bg-primary text-black h-14 rounded-full font-bold text-base shadow-[0_0_20px_rgba(19,236,55,0.3)] flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-primary-dark">
+<span class="material-symbols-outlined">play_arrow</span>
+                    Run Now
+                </button>
+</div>
+</div>
+<!-- Bottom gradient fade for scroll -->
+<div class="fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background-light dark:from-background-dark to-transparent pointer-events-none z-30 max-w-md mx-auto"></div>
+</div>
+</body></html>

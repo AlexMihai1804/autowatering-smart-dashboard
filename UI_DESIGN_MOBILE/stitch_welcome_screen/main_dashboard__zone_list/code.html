@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AutoWatering Dashboard</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Manrope -->
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                        "card-dark": "#1a2c1f", // Slightly lighter than background-dark for cards
+                        "card-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar hiding for clean UI */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white antialiased">
+<!-- Mobile Container -->
+<div class="relative min-h-screen w-full flex flex-col mx-auto max-w-[480px] overflow-x-hidden shadow-2xl pb-24">
+<!-- Header -->
+<header class="flex items-center justify-between p-6 pb-2 bg-background-light dark:bg-background-dark sticky top-0 z-10">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">water_drop</span>
+</div>
+<div>
+<h1 class="text-xl font-bold leading-tight">Dashboard</h1>
+<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Welcome back, Alex</p>
+</div>
+</div>
+<button class="flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors relative">
+<span class="material-symbols-outlined text-slate-700 dark:text-white">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-background-light dark:border-background-dark"></span>
+</button>
+</header>
+<!-- Status Summary -->
+<div class="px-6 pt-4 pb-2">
+<h2 class="text-2xl font-bold tracking-tight mb-4">All Systems Normal</h2>
+<!-- Weather Widget -->
+<div class="flex items-center justify-between bg-card-light dark:bg-card-dark rounded-xl p-4 shadow-sm border border-slate-100 dark:border-white/5">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="text-3xl font-bold">72°F</span>
+<span class="material-symbols-outlined text-yellow-500 text-3xl">sunny</span>
+</div>
+<p class="text-slate-500 dark:text-[#9db9a1] text-sm font-medium">Mostly Sunny</p>
+<p class="text-slate-400 dark:text-slate-500 text-xs mt-1">No rain expected for 3 days.</p>
+</div>
+<div class="h-16 w-px bg-slate-200 dark:bg-white/10 mx-2"></div>
+<div class="flex flex-col items-end gap-1">
+<div class="text-right">
+<p class="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider font-bold">Next Run</p>
+<p class="text-sm font-bold text-slate-900 dark:text-white">4:00 AM</p>
+</div>
+<div class="bg-primary/20 text-primary text-xs font-bold px-2 py-1 rounded-full mt-1">
+                        -15% Water Save
+                    </div>
+</div>
+</div>
+</div>
+<!-- Zones List Section -->
+<div class="px-6 pt-6">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-bold">Irrigation Zones</h3>
+<button class="text-primary text-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">add</span>
+                    Add Zone
+                </button>
+</div>
+<div class="flex flex-col gap-4">
+<!-- Zone Card 1: Active Watering -->
+<div class="relative bg-card-light dark:bg-card-dark rounded-xl p-4 shadow-sm border-2 border-primary overflow-hidden group">
+<!-- Active Indicator Background -->
+<div class="absolute inset-0 bg-primary/5 pointer-events-none"></div>
+<div class="relative flex justify-between items-start mb-4">
+<div class="flex gap-3 items-center">
+<div class="size-10 rounded-full bg-primary text-background-dark flex items-center justify-center">
+<span class="material-symbols-outlined">potted_plant</span>
+</div>
+<div>
+<h4 class="font-bold text-base leading-tight">Veggie Patch</h4>
+<div class="flex items-center gap-1 text-primary text-xs font-bold mt-0.5">
+<span class="material-symbols-outlined text-sm animate-pulse">water_drop</span>
+<span>Watering Now</span>
+</div>
+</div>
+</div>
+<div class="bg-primary text-background-dark px-3 py-1 rounded-full text-xs font-extrabold">
+                            12:30 LEFT
+                        </div>
+</div>
+<!-- Progress Bar -->
+<div class="w-full bg-slate-200 dark:bg-white/10 h-1.5 rounded-full mb-4 overflow-hidden">
+<div class="bg-primary h-full rounded-full w-[65%]"></div>
+</div>
+<div class="flex items-center justify-between">
+<div class="text-xs text-slate-500 dark:text-[#9db9a1]">
+                            Started: 8:00 AM
+                        </div>
+<div class="flex gap-2">
+<button class="size-9 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-xl">pause</span>
+</button>
+<button class="size-9 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 hover:bg-red-500/30 transition-colors">
+<span class="material-symbols-outlined text-xl">stop</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Zone Card 2: Idle / Auto -->
+<div class="bg-card-light dark:bg-card-dark rounded-xl p-4 shadow-sm border border-slate-100 dark:border-white/5">
+<div class="flex gap-4">
+<!-- Image -->
+<div class="w-20 h-20 shrink-0 rounded-lg bg-cover bg-center" data-alt="Green manicured front lawn in sunlight" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCl3k8BBUjuyxTBpPJzAjF7hCrTuMRxUoYg526y5oxiawVQXakZ4w_RDSENtfdPLgqLpof0OQG0fTQx1DQfZSV6npDNJSgW0JGv3OC4xJx4M3FPQnfiiT8kNGJtkWFC3iwFqwzmcgQOpyCy1PSN0ftnIJRqdrHK9NC6tftijdR5vWxLXvacA2FZ1GWfMlIGo8cSq4-1_IU2A_K1-rsWB-8_t5_0Jc9goLA0x5Y8jVgi5a_Eyp-GM51-134fRgoelcnQdAu9E-M2p_LH");'></div>
+<div class="flex-1 flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<h4 class="font-bold text-base leading-tight">Front Lawn</h4>
+<span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wide">Auto</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-[#9db9a1]">Next: Tomorrow, 6:00 AM</p>
+</div>
+</div>
+<div class="flex justify-between items-end mt-2">
+<p class="text-[10px] text-slate-400 dark:text-slate-500">Last: Yesterday (20m)</p>
+<button class="flex items-center gap-1 bg-primary text-background-dark px-3 py-1.5 rounded-full text-xs font-bold hover:brightness-110 transition-all">
+<span class="material-symbols-outlined text-sm">play_arrow</span>
+                                    Water
+                                </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Zone Card 3: Alert / Connection Issue -->
+<div class="bg-card-light dark:bg-card-dark rounded-xl p-4 shadow-sm border border-slate-100 dark:border-white/5 opacity-90">
+<div class="flex gap-4">
+<!-- Image -->
+<div class="w-20 h-20 shrink-0 rounded-lg bg-cover bg-center grayscale opacity-70" data-alt="Backyard garden with wooden fence" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDRAQQvNzG1suiIfMG0abMfRDEcF4odxK-optx44lcKdJQ8uUZHBGkoE_7zzaf0HKwIT9mcqVHNuRmA_OnWUk3DIAWvUSrxwADKaT0SnWn-DjZBgUrPDs1bbjKWrcx8T6lwvABpTKc_ocKj6ACJqZRdBIrNRgXKhNd88Uu8eCPIHjXP750_IuhSe3bBt_CJFhR79QB7vbxvLBQ2GHvk1C0-oUu8Ss7m1vKfQkNeO_H2UivyAQh_lCEJLrq3Zm52yehlQpCX_azsN9A-");'></div>
+<div class="flex-1 flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<h4 class="font-bold text-base leading-tight text-slate-400 dark:text-slate-300">Back Garden</h4>
+<span class="px-2 py-0.5 rounded-full bg-orange-500/20 text-[10px] font-bold uppercase text-orange-500 tracking-wide">Alert</span>
+</div>
+<p class="text-xs text-orange-600 dark:text-orange-400 font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">wifi_off</span>
+                                        Connection Lost
+                                    </p>
+</div>
+</div>
+<div class="flex justify-between items-end mt-2">
+<p class="text-[10px] text-slate-400 dark:text-slate-500">Last: 2 days ago</p>
+<button class="size-8 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 dark:text-slate-500 cursor-not-allowed">
+<span class="material-symbols-outlined text-lg">settings</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Zone Card 4: Rain Skip -->
+<div class="bg-card-light dark:bg-card-dark rounded-xl p-4 shadow-sm border border-slate-100 dark:border-white/5">
+<div class="flex gap-4">
+<!-- Image -->
+<div class="w-20 h-20 shrink-0 rounded-lg bg-cover bg-center" data-alt="Flower bed with colorful flowers" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAhzsOHwy6cqzXs2oBJ2up3AKPZWutqYj_yInXDuBF2p_XEqEaEW_c6-WkKW0o0dZ_wew1rC62TDjcbdYGN7a4-YElwarkf6kMHjk6MqE5PQH9QDXMOVwx03KAm1Vq2pSrHyZ5LVUrUPstNLeT_bCJqRRalsgCllG1OAL5PeoPpF0KvqEvsPgvFuW1KgFM3nBKMdB2BPGeaZnZWZd883ar6SzK9ykihHw07iHu_Dtd0JC6FStmX7S6DMcwcAqPb5uPasGwU8sUEEXMW");'></div>
+<div class="flex-1 flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<h4 class="font-bold text-base leading-tight">Flower Beds</h4>
+<span class="px-2 py-0.5 rounded-full bg-blue-500/20 text-[10px] font-bold uppercase text-blue-500 tracking-wide">Rain Skip</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-[#9db9a1]">Rescheduled: Wed, 5:00 AM</p>
+</div>
+</div>
+<div class="flex justify-between items-end mt-2">
+<p class="text-[10px] text-slate-400 dark:text-slate-500">Last: 3 days ago</p>
+<button class="flex items-center gap-1 bg-primary/20 text-primary dark:text-primary px-3 py-1.5 rounded-full text-xs font-bold hover:bg-primary/30 transition-all">
+<span class="material-symbols-outlined text-sm">play_arrow</span>
+                                    Force
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Spacer for Bottom Nav -->
+<div class="h-24"></div>
+</div>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-[#102213]/90 backdrop-blur-md border-t border-slate-200 dark:border-white/5 max-w-[480px] mx-auto">
+<div class="flex items-center justify-around h-[84px] pb-4 px-2">
+<button class="flex flex-col items-center justify-center gap-1 w-16 group">
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform filled">dashboard</span>
+<span class="text-[10px] font-bold text-primary">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 w-16 group">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-white transition-colors">calendar_month</span>
+<span class="text-[10px] font-medium text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-white transition-colors">Schedule</span>
+</button>
+<!-- Quick Action FAB (Center) -->
+<button class="size-12 rounded-full bg-primary text-background-dark shadow-lg shadow-primary/30 flex items-center justify-center -mt-8 border-4 border-background-light dark:border-background-dark hover:brightness-110 transition-all">
+<span class="material-symbols-outlined text-2xl">water_drop</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 w-16 group">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-white transition-colors">bar_chart</span>
+<span class="text-[10px] font-medium text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-white transition-colors">Usage</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 w-16 group">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-white transition-colors">settings</span>
+<span class="text-[10px] font-medium text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-white transition-colors">Settings</span>
+</button>
+</div>
+</nav>
+<script>
+        // Simple dark mode toggle logic for preview purposes if needed, 
+        // though theme is set to force dark in html class
+    </script>
+</body></html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AutoWatering Onboarding - Device Naming</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+            extend: {
+                colors: {
+                "primary": "#1337ec",
+                "background-light": "#f6f6f8",
+                "background-dark": "#101322",
+                },
+                fontFamily: {
+                "display": ["Space Grotesk", "sans-serif"],
+                "body": ["Noto Sans", "sans-serif"]
+                },
+                borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+            },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased text-slate-900 dark:text-white">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-hidden max-w-md mx-auto shadow-2xl">
+<!-- TopAppBar -->
+<div class="flex items-center p-4 pb-2 justify-between z-10">
+<button class="text-slate-900 dark:text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-2xl">arrow_back_ios_new</span>
+</button>
+<div class="h-10 w-20 flex items-center justify-center">
+<!-- Logo Placeholder if needed, or keeping clean -->
+</div>
+<div class="size-12"></div> <!-- Spacer for alignment -->
+</div>
+<!-- Progress Indicators -->
+<div class="flex w-full flex-row items-center justify-center gap-2 py-4 px-8">
+<div class="h-1.5 flex-1 rounded-full bg-primary"></div>
+<div class="h-1.5 flex-1 rounded-full bg-primary"></div>
+<div class="h-1.5 flex-1 rounded-full bg-white dark:bg-white border border-slate-200 dark:border-none shadow-sm"></div>
+<div class="h-1.5 flex-1 rounded-full bg-slate-300 dark:bg-[#3b3f54]"></div>
+<div class="h-1.5 flex-1 rounded-full bg-slate-300 dark:bg-[#3b3f54]"></div>
+</div>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col px-6 pt-4">
+<!-- Headline -->
+<h1 class="text-slate-900 dark:text-white tracking-tight text-[32px] font-bold leading-tight text-left pb-2 pt-4">
+                Name your AutoWatering
+            </h1>
+<!-- Body Text -->
+<p class="text-slate-500 dark:text-slate-400 text-base font-normal leading-relaxed pb-8 pt-2">
+                Give your controller a unique name. This helps you identify different zones if you add more devices later.
+            </p>
+<!-- Input Field Group -->
+<div class="flex flex-col gap-6">
+<label class="flex flex-col w-full relative group">
+<span class="text-slate-900 dark:text-white text-sm font-medium leading-normal pb-3 ml-1">Device Name</span>
+<div class="relative flex items-center w-full">
+<input class="form-input flex w-full min-w-0 resize-none overflow-hidden rounded-full text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary border border-slate-200 dark:border-[#3b3f54] bg-white dark:bg-[#1c1d27] h-16 placeholder:text-slate-400 dark:placeholder:text-[#9da1b9] pl-6 pr-14 text-lg font-medium leading-normal transition-all shadow-sm" placeholder="e.g. Front Yard" type="text" value="My Garden"/>
+<!-- Randomize Button -->
+<button class="absolute right-2 top-2 bottom-2 aspect-square flex items-center justify-center text-primary hover:bg-primary/10 rounded-full transition-colors" title="Generate random name">
+<span class="material-symbols-outlined">shuffle</span>
+</button>
+</div>
+<p class="text-xs text-slate-400 dark:text-slate-500 mt-3 ml-4 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">info</span>
+                        Visible in HomeKit and Google Home
+                    </p>
+</label>
+</div>
+<!-- Visualization / Spacer -->
+<div class="flex-1 flex items-center justify-center py-8 opacity-60">
+<!-- Abstract visual representing a 'tag' or 'chip' -->
+<div class="relative w-full max-w-[200px] aspect-square rounded-full border border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center">
+<div class="absolute inset-4 bg-gradient-to-br from-primary/20 to-transparent rounded-full blur-xl"></div>
+<span class="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-700">edit_note</span>
+</div>
+</div>
+</main>
+<!-- Bottom Action Area -->
+<div class="p-6 pb-10 bg-transparent">
+<button class="w-full h-14 rounded-full bg-primary hover:bg-blue-700 text-white font-bold text-lg shadow-lg shadow-primary/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+                Next Step
+                <span class="material-symbols-outlined text-xl">arrow_forward</span>
+</button>
+</div>
+</div>
+</body></html>

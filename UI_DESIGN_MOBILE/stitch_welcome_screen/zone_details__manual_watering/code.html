@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Zone Details: Manual Watering</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "primary-content": "#102213",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                        "surface-dark": "#1b2a1e", 
+                        "surface-light": "#ffffff",
+                        "accent-green": "#28392b",
+                        "text-secondary": "#9db9a1",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem", 
+                        "lg": "1.5rem", 
+                        "xl": "2rem", 
+                        "2xl": "2.5rem",
+                        "full": "9999px"
+                    },
+                    boxShadow: {
+                        'glow': '0 0 20px -5px rgba(19, 236, 55, 0.3)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar hiding */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-gray-100 dark:bg-black flex justify-center items-center min-h-screen font-display">
+<!-- Mobile Device Container -->
+<div class="relative flex flex-col h-[850px] w-full max-w-[400px] bg-background-light dark:bg-background-dark shadow-2xl overflow-hidden rounded-[40px] border-[8px] border-gray-900">
+<!-- Status Bar Area (Decorative) -->
+<div class="h-14 w-full bg-transparent flex items-end justify-between px-6 pb-2 text-white/80 z-20 absolute top-0">
+<span class="text-xs font-medium">9:41</span>
+<div class="flex gap-1.5">
+<span class="material-symbols-outlined text-[16px]">signal_cellular_alt</span>
+<span class="material-symbols-outlined text-[16px]">wifi</span>
+<span class="material-symbols-outlined text-[16px]">battery_full</span>
+</div>
+</div>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto no-scrollbar pt-14 pb-24 relative z-10">
+<!-- Top Navigation -->
+<div class="flex items-center px-4 py-4 justify-between sticky top-0 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md z-30">
+<button class="text-slate-800 dark:text-white flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<div class="flex flex-col items-center">
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Front Garden</h2>
+<span class="text-xs font-medium text-slate-500 dark:text-text-secondary">Zone 1</span>
+</div>
+<button class="text-slate-800 dark:text-white flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-[24px]">more_vert</span>
+</button>
+</div>
+<!-- Status Headline -->
+<div class="px-4 pb-2 pt-4 text-center">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 mb-3">
+<span class="size-2 rounded-full bg-primary animate-pulse"></span>
+<span class="text-primary text-xs font-bold uppercase tracking-wide">Ready</span>
+</div>
+<h2 class="text-slate-900 dark:text-white tracking-tight text-[32px] font-bold leading-tight">Zone is Idle</h2>
+<p class="text-slate-500 dark:text-text-secondary text-sm mt-1">Next schedule starts tomorrow at 6:00 AM</p>
+</div>
+<!-- Charts Section -->
+<div class="px-4 py-6">
+<div class="flex flex-col gap-2 bg-white dark:bg-surface-dark rounded-xl p-6 shadow-sm border border-slate-100 dark:border-white/5">
+<div class="flex justify-between items-end mb-2">
+<div>
+<p class="text-slate-500 dark:text-text-secondary text-sm font-medium leading-normal mb-1">Soil Moisture</p>
+<p class="text-slate-900 dark:text-white tracking-tight text-4xl font-bold leading-tight">45<span class="text-2xl text-slate-400 dark:text-text-secondary">%</span></p>
+</div>
+<div class="text-right">
+<p class="text-primary text-sm font-bold flex items-center gap-1 justify-end">
+<span class="material-symbols-outlined text-[16px]">trending_up</span>
+                                Optimal
+                            </p>
+</div>
+</div>
+<div class="h-[140px] w-full relative mt-2">
+<!-- Decorative Graph Line -->
+<svg class="w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 350 100">
+<defs>
+<lineargradient id="gradient" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" style="stop-color:#13ec37;stop-opacity:0.2"></stop>
+<stop offset="100%" style="stop-color:#13ec37;stop-opacity:0"></stop>
+</lineargradient>
+</defs>
+<path class="dark:stroke-white/10 stroke-slate-200" d="M0,80 Q30,75 50,60 T100,50 T150,45 T200,60 T250,55 T300,40 T350,30" fill="none" stroke="#28392b" stroke-dasharray="4 4" stroke-width="2"></path>
+<path d="M0,70 Q30,65 50,50 T100,40 T150,35 T200,50 T250,45 T300,30 T350,20" fill="url(#gradient)" stroke="#13ec37" stroke-linecap="round" stroke-width="3"></path>
+</svg>
+<!-- Axis Labels -->
+<div class="flex justify-between mt-2 text-xs font-medium text-slate-400 dark:text-white/30">
+<span>6AM</span>
+<span>12PM</span>
+<span>6PM</span>
+<span>Now</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Stats Grid -->
+<div class="grid grid-cols-2 gap-4 px-4">
+<div class="flex flex-col gap-2 rounded-xl p-5 bg-white dark:bg-surface-dark border border-slate-100 dark:border-white/5">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-slate-400 dark:text-text-secondary text-[20px]">history</span>
+<p class="text-slate-500 dark:text-text-secondary text-xs font-bold uppercase tracking-wider">Last Run</p>
+</div>
+<p class="text-slate-900 dark:text-white tracking-tight text-xl font-bold leading-tight">Yesterday</p>
+<p class="text-slate-400 dark:text-white/40 text-xs">20 mins duration</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-5 bg-white dark:bg-surface-dark border border-slate-100 dark:border-white/5">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-slate-400 dark:text-text-secondary text-[20px]">event</span>
+<p class="text-slate-500 dark:text-text-secondary text-xs font-bold uppercase tracking-wider">Next Run</p>
+</div>
+<p class="text-slate-900 dark:text-white tracking-tight text-xl font-bold leading-tight">Tomorrow</p>
+<p class="text-slate-400 dark:text-white/40 text-xs">6:00 AM</p>
+</div>
+</div>
+<!-- Manual Control Section -->
+<div class="mt-8 px-4">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-slate-900 dark:text-white text-lg font-bold">Manual Control</h3>
+<button class="text-primary text-sm font-bold">Settings</button>
+</div>
+<!-- Duration Presets -->
+<div class="flex gap-3 mb-6 overflow-x-auto no-scrollbar pb-2">
+<button class="flex-1 min-w-[80px] py-3 rounded-lg bg-slate-200 dark:bg-white/5 border border-transparent hover:border-primary/50 text-slate-600 dark:text-white font-semibold text-sm transition-all group active:scale-95">
+<span class="block text-xs text-slate-400 mb-0.5">Quick</span>
+                        5m
+                    </button>
+<button class="flex-1 min-w-[80px] py-3 rounded-lg bg-primary/20 border border-primary text-primary font-bold text-sm transition-all shadow-[0_0_15px_rgba(19,236,55,0.1)] active:scale-95">
+<span class="block text-xs text-primary/70 mb-0.5">Standard</span>
+                        10m
+                    </button>
+<button class="flex-1 min-w-[80px] py-3 rounded-lg bg-slate-200 dark:bg-white/5 border border-transparent hover:border-primary/50 text-slate-600 dark:text-white font-semibold text-sm transition-all group active:scale-95">
+<span class="block text-xs text-slate-400 mb-0.5">Deep</span>
+                        20m
+                    </button>
+<button class="flex-1 min-w-[80px] py-3 rounded-lg bg-slate-200 dark:bg-white/5 border border-transparent hover:border-primary/50 text-slate-600 dark:text-white font-semibold text-sm transition-all group active:scale-95">
+<span class="block text-xs text-slate-400 mb-0.5">Custom</span>
+                        ...
+                    </button>
+</div>
+<!-- Main Action Button -->
+<button class="group relative w-full overflow-hidden rounded-full h-16 bg-primary text-primary-content shadow-glow hover:shadow-[0_0_30px_rgba(19,236,55,0.4)] transition-all active:scale-[0.98]">
+<div class="absolute inset-0 bg-white/20 group-hover:bg-transparent transition-colors"></div>
+<div class="relative flex items-center justify-center gap-3">
+<span class="material-symbols-outlined text-[28px] font-bold">water_drop</span>
+<span class="text-lg font-extrabold tracking-wide uppercase">Water Now</span>
+</div>
+</button>
+<p class="text-center text-slate-400 dark:text-white/30 text-xs mt-4">Tap to start 10m cycle immediately</p>
+</div>
+<div class="h-10"></div>
+</div>
+<!-- Bottom Navigation (Glassmorphism) -->
+<div class="absolute bottom-0 w-full h-[88px] bg-white/80 dark:bg-[#102213]/80 backdrop-blur-xl border-t border-slate-200 dark:border-white/5 z-40">
+<div class="flex justify-around items-center h-full pb-4 px-2">
+<button class="flex flex-col items-center gap-1 p-2 w-16 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[24px]">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</button>
+<button class="flex flex-col items-center gap-1 p-2 w-16 text-primary transition-colors">
+<div class="bg-primary/10 px-4 py-1 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-[24px] fill-current">sprinkler</span>
+</div>
+<span class="text-[10px] font-bold">Zones</span>
+</button>
+<button class="flex flex-col items-center gap-1 p-2 w-16 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[24px]">calendar_month</span>
+<span class="text-[10px] font-medium">Schedule</span>
+</button>
+<button class="flex flex-col items-center gap-1 p-2 w-16 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[24px]">settings</span>
+<span class="text-[10px] font-medium">Settings</span>
+</button>
+</div>
+</div>
+<!-- Home Indicator -->
+<div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-[120px] h-1 bg-slate-900 dark:bg-white/20 rounded-full z-50"></div>
+</div>
+</body></html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Zone Details: Configuration</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                        "surface-dark": "#1A2C1E",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem", 
+                        "lg": "2rem", 
+                        "xl": "3rem", 
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased selection:bg-primary selection:text-background-dark">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden pb-24">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-10 flex items-center bg-background-light dark:bg-background-dark/95 backdrop-blur-md p-4 pb-2 justify-between border-b border-gray-200 dark:border-white/5 transition-colors duration-300">
+<button class="text-slate-900 dark:text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined" style="font-size: 24px;">arrow_back_ios_new</span>
+</button>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">Configuration</h2>
+</header>
+<!-- MetaText / Context -->
+<div class="w-full bg-background-light dark:bg-background-dark pt-2 pb-6">
+<p class="text-slate-500 dark:text-[#9db9a1] text-sm font-medium leading-normal px-4 text-center uppercase tracking-wider">
+                Zone 1: Front Garden
+            </p>
+</div>
+<!-- Configuration List -->
+<main class="flex-1 flex flex-col gap-4 px-4 sm:px-6 w-full max-w-md mx-auto">
+<!-- Plant Type -->
+<div class="group relative flex items-center gap-4 bg-surface-light dark:bg-surface-dark p-4 rounded-lg justify-between shadow-sm hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-primary/30">
+<div class="flex items-center gap-4 flex-1">
+<div class="text-primary flex items-center justify-center rounded-full bg-primary/10 shrink-0 size-12 group-hover:bg-primary group-hover:text-background-dark transition-colors duration-300">
+<span class="material-symbols-outlined">local_florist</span>
+</div>
+<div class="flex flex-col gap-0.5">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wide">Plant Type</p>
+<p class="text-slate-900 dark:text-white text-lg font-bold leading-tight">Roses</p>
+</div>
+</div>
+<div class="shrink-0 text-primary opacity-80 group-hover:opacity-100 group-hover:translate-x-1 transition-all">
+<span class="material-symbols-outlined">edit</span>
+</div>
+</div>
+<!-- Soil Type -->
+<div class="group relative flex items-center gap-4 bg-surface-light dark:bg-surface-dark p-4 rounded-lg justify-between shadow-sm hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-primary/30">
+<div class="flex items-center gap-4 flex-1">
+<div class="text-primary flex items-center justify-center rounded-full bg-primary/10 shrink-0 size-12 group-hover:bg-primary group-hover:text-background-dark transition-colors duration-300">
+<span class="material-symbols-outlined">layers</span>
+</div>
+<div class="flex flex-col gap-0.5">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wide">Soil Type</p>
+<p class="text-slate-900 dark:text-white text-lg font-bold leading-tight">Sandy Loam</p>
+</div>
+</div>
+<div class="shrink-0 text-primary opacity-80 group-hover:opacity-100 group-hover:translate-x-1 transition-all">
+<span class="material-symbols-outlined">edit</span>
+</div>
+</div>
+<!-- Irrigation Method -->
+<div class="group relative flex items-center gap-4 bg-surface-light dark:bg-surface-dark p-4 rounded-lg justify-between shadow-sm hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-primary/30">
+<div class="flex items-center gap-4 flex-1">
+<div class="text-primary flex items-center justify-center rounded-full bg-primary/10 shrink-0 size-12 group-hover:bg-primary group-hover:text-background-dark transition-colors duration-300">
+<span class="material-symbols-outlined">water_drop</span>
+</div>
+<div class="flex flex-col gap-0.5">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wide">Irrigation Method</p>
+<p class="text-slate-900 dark:text-white text-lg font-bold leading-tight">Drip Line</p>
+</div>
+</div>
+<div class="shrink-0 text-primary opacity-80 group-hover:opacity-100 group-hover:translate-x-1 transition-all">
+<span class="material-symbols-outlined">edit</span>
+</div>
+</div>
+<!-- Sun Exposure -->
+<div class="group relative flex items-center gap-4 bg-surface-light dark:bg-surface-dark p-4 rounded-lg justify-between shadow-sm hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-primary/30">
+<div class="flex items-center gap-4 flex-1">
+<div class="text-primary flex items-center justify-center rounded-full bg-primary/10 shrink-0 size-12 group-hover:bg-primary group-hover:text-background-dark transition-colors duration-300">
+<span class="material-symbols-outlined">wb_sunny</span>
+</div>
+<div class="flex flex-col gap-0.5">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wide">Sun Exposure</p>
+<p class="text-slate-900 dark:text-white text-lg font-bold leading-tight">Full Sun (8h+)</p>
+</div>
+</div>
+<div class="shrink-0 text-primary opacity-80 group-hover:opacity-100 group-hover:translate-x-1 transition-all">
+<span class="material-symbols-outlined">edit</span>
+</div>
+</div>
+<!-- Coverage -->
+<div class="group relative flex items-center gap-4 bg-surface-light dark:bg-surface-dark p-4 rounded-lg justify-between shadow-sm hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-primary/30">
+<div class="flex items-center gap-4 flex-1">
+<div class="text-primary flex items-center justify-center rounded-full bg-primary/10 shrink-0 size-12 group-hover:bg-primary group-hover:text-background-dark transition-colors duration-300">
+<span class="material-symbols-outlined">crop_square</span>
+</div>
+<div class="flex flex-col gap-0.5">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wide">Coverage Area</p>
+<p class="text-slate-900 dark:text-white text-lg font-bold leading-tight">45 sq ft</p>
+</div>
+</div>
+<div class="shrink-0 text-primary opacity-80 group-hover:opacity-100 group-hover:translate-x-1 transition-all">
+<span class="material-symbols-outlined">edit</span>
+</div>
+</div>
+<!-- Planting Date -->
+<div class="group relative flex items-center gap-4 bg-surface-light dark:bg-surface-dark p-4 rounded-lg justify-between shadow-sm hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-primary/30">
+<div class="flex items-center gap-4 flex-1">
+<div class="text-primary flex items-center justify-center rounded-full bg-primary/10 shrink-0 size-12 group-hover:bg-primary group-hover:text-background-dark transition-colors duration-300">
+<span class="material-symbols-outlined">calendar_today</span>
+</div>
+<div class="flex flex-col gap-0.5">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wide">Planting Date</p>
+<p class="text-slate-900 dark:text-white text-lg font-bold leading-tight">Oct 12, 2023</p>
+</div>
+</div>
+<div class="shrink-0 text-primary opacity-80 group-hover:opacity-100 group-hover:translate-x-1 transition-all">
+<span class="material-symbols-outlined">edit</span>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 right-0 z-50 bg-background-light dark:bg-[#0c1a0e] border-t border-gray-200 dark:border-white/5 pb-5 pt-3 px-6 shadow-2xl">
+<div class="flex items-center justify-between max-w-md mx-auto">
+<button class="flex flex-col items-center gap-1 group w-16">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500 group-hover:text-primary transition-colors text-2xl">home</span>
+<span class="text-[10px] font-medium text-slate-400 dark:text-slate-500 group-hover:text-primary transition-colors">Home</span>
+</button>
+<button class="flex flex-col items-center gap-1 group w-16">
+<span class="material-symbols-outlined text-primary text-2xl drop-shadow-[0_0_8px_rgba(19,236,55,0.5)]">grid_view</span>
+<span class="text-[10px] font-bold text-primary">Zones</span>
+</button>
+<button class="flex flex-col items-center gap-1 group w-16">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500 group-hover:text-primary transition-colors text-2xl">calendar_month</span>
+<span class="text-[10px] font-medium text-slate-400 dark:text-slate-500 group-hover:text-primary transition-colors">Schedule</span>
+</button>
+<button class="flex flex-col items-center gap-1 group w-16">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500 group-hover:text-primary transition-colors text-2xl">settings</span>
+<span class="text-[10px] font-medium text-slate-400 dark:text-slate-500 group-hover:text-primary transition-colors">Settings</span>
+</button>
+</div>
+</nav>
+</div>
+</body></html>

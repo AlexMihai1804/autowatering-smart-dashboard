@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Onboarding Summary</title>
+<!-- Google Fonts: Manrope -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1c3020",
+                        "surface-dark-highlight": "#253d29",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem", 
+                        "lg": "1.5rem", 
+                        "xl": "2rem", 
+                        "2xl": "2.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#111812] dark:text-white transition-colors duration-200">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden pb-28">
+<!-- TopAppBar -->
+<div class="sticky top-0 z-10 flex items-center bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md p-4 pb-2 justify-between">
+<div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 dark:bg-surface-dark-highlight text-primary">
+<span class="material-symbols-outlined text-2xl">check</span>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">Setup Complete!</h2>
+</div>
+<!-- Hero Section: Efficiency Score -->
+<div class="flex flex-col gap-3 px-4 pt-6">
+<div class="relative overflow-hidden rounded-2xl bg-surface-light dark:bg-surface-dark p-6 shadow-sm dark:shadow-none border border-gray-100 dark:border-transparent">
+<!-- Decorative background glow -->
+<div class="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-primary/10 blur-3xl"></div>
+<div class="relative flex flex-col gap-4">
+<div class="flex justify-between items-end">
+<div class="flex flex-col gap-1">
+<p class="text-gray-500 dark:text-gray-400 text-sm font-medium uppercase tracking-wider">Efficiency Score</p>
+<div class="flex items-baseline gap-1">
+<span class="text-4xl font-extrabold text-[#111812] dark:text-white">98</span>
+<span class="text-xl font-bold text-primary">%</span>
+</div>
+</div>
+<div class="mb-2 rounded-full bg-primary/20 px-3 py-1 text-xs font-bold text-green-700 dark:text-primary">
+                            OPTIMIZED
+                        </div>
+</div>
+<!-- Progress Bar Component (Modified) -->
+<div class="h-3 w-full rounded-full bg-gray-100 dark:bg-black/40 overflow-hidden">
+<div class="h-full rounded-full bg-primary shadow-[0_0_12px_rgba(19,236,55,0.4)]" style="width: 98%;"></div>
+</div>
+<div class="flex gap-2 items-start mt-1">
+<span class="material-symbols-outlined text-primary text-lg mt-0.5">eco</span>
+<p class="text-gray-600 dark:text-[#9db9a1] text-sm font-medium leading-normal">Your schedule is optimized for maximum water savings based on local weather.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- DescriptionList: System Overview -->
+<div class="mt-8">
+<div class="flex justify-between items-center px-4 pb-3">
+<h3 class="text-[#111812] dark:text-white tracking-tight text-sm font-bold uppercase text-left">System Status</h3>
+<button class="text-primary text-sm font-semibold hover:text-primary/80 transition-colors">Edit</button>
+</div>
+<div class="mx-4 overflow-hidden rounded-2xl bg-surface-light dark:bg-surface-dark border border-gray-100 dark:border-transparent shadow-sm dark:shadow-none">
+<div class="grid grid-cols-[1fr_auto] gap-y-0">
+<div class="col-span-2 flex justify-between items-center border-b border-gray-100 dark:border-white/5 p-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-gray-400 dark:text-gray-500">router</span>
+<span class="text-gray-600 dark:text-[#9db9a1] text-sm font-medium">Controller</span>
+</div>
+<span class="text-[#111812] dark:text-white text-sm font-semibold">AutoWater Pro v2.4</span>
+</div>
+<div class="col-span-2 flex justify-between items-center border-b border-gray-100 dark:border-white/5 p-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-gray-400 dark:text-gray-500">cloud_queue</span>
+<span class="text-gray-600 dark:text-[#9db9a1] text-sm font-medium">Weather Adaptive</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+<span class="text-[#111812] dark:text-white text-sm font-semibold">Active</span>
+</div>
+</div>
+<div class="col-span-2 flex justify-between items-center p-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-gray-400 dark:text-gray-500">water_drop</span>
+<span class="text-gray-600 dark:text-[#9db9a1] text-sm font-medium">Active Zones</span>
+</div>
+<span class="text-[#111812] dark:text-white text-sm font-semibold">3</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Accordions: Zone Configuration -->
+<div class="mt-8 flex flex-col">
+<div class="flex justify-between items-center px-4 pb-3">
+<h3 class="text-[#111812] dark:text-white tracking-tight text-sm font-bold uppercase text-left">Zone Configuration</h3>
+<button class="text-primary text-sm font-semibold hover:text-primary/80 transition-colors">Edit</button>
+</div>
+<div class="flex flex-col px-4 gap-3">
+<!-- Zone 1 -->
+<details class="group flex flex-col rounded-2xl bg-surface-light dark:bg-surface-dark border border-gray-100 dark:border-transparent open:shadow-sm dark:open:bg-surface-dark-highlight transition-all duration-300">
+<summary class="flex cursor-pointer items-center justify-between gap-4 p-4 list-none [&amp;::-webkit-details-marker]:hidden">
+<div class="flex items-center gap-4">
+<div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-white group-open:bg-primary group-open:text-background-dark transition-colors">
+<span class="material-symbols-outlined">yard</span>
+</div>
+<div class="flex flex-col">
+<p class="text-[#111812] dark:text-white text-base font-bold leading-tight">Front Lawn</p>
+<p class="text-gray-500 dark:text-gray-400 text-xs font-medium">Zone 1 • Spray Head</p>
+</div>
+</div>
+<div class="text-gray-400 dark:text-gray-500 group-open:text-primary group-open:rotate-180 transition-transform duration-300">
+<span class="material-symbols-outlined">expand_more</span>
+</div>
+</summary>
+<div class="px-4 pb-4 pt-0 pl-[4.5rem]">
+<div class="h-px w-full bg-gray-100 dark:bg-white/5 mb-3"></div>
+<div class="grid grid-cols-2 gap-y-2 gap-x-4">
+<div>
+<p class="text-xs text-gray-500 dark:text-gray-400">Soil Type</p>
+<p class="text-sm font-medium text-[#111812] dark:text-white">Loam</p>
+</div>
+<div>
+<p class="text-xs text-gray-500 dark:text-gray-400">Schedule</p>
+<p class="text-sm font-medium text-[#111812] dark:text-white">Daily, Sunrise</p>
+</div>
+</div>
+</div>
+</details>
+<!-- Zone 2 -->
+<details class="group flex flex-col rounded-2xl bg-surface-light dark:bg-surface-dark border border-gray-100 dark:border-transparent open:shadow-sm dark:open:bg-surface-dark-highlight transition-all duration-300">
+<summary class="flex cursor-pointer items-center justify-between gap-4 p-4 list-none [&amp;::-webkit-details-marker]:hidden">
+<div class="flex items-center gap-4">
+<div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-white group-open:bg-primary group-open:text-background-dark transition-colors">
+<span class="material-symbols-outlined">local_florist</span>
+</div>
+<div class="flex flex-col">
+<p class="text-[#111812] dark:text-white text-base font-bold leading-tight">Flower Beds</p>
+<p class="text-gray-500 dark:text-gray-400 text-xs font-medium">Zone 2 • Drip Line</p>
+</div>
+</div>
+<div class="text-gray-400 dark:text-gray-500 group-open:text-primary group-open:rotate-180 transition-transform duration-300">
+<span class="material-symbols-outlined">expand_more</span>
+</div>
+</summary>
+<div class="px-4 pb-4 pt-0 pl-[4.5rem]">
+<div class="h-px w-full bg-gray-100 dark:bg-white/5 mb-3"></div>
+<div class="grid grid-cols-2 gap-y-2 gap-x-4">
+<div>
+<p class="text-xs text-gray-500 dark:text-gray-400">Soil Type</p>
+<p class="text-sm font-medium text-[#111812] dark:text-white">Clay</p>
+</div>
+<div>
+<p class="text-xs text-gray-500 dark:text-gray-400">Schedule</p>
+<p class="text-sm font-medium text-[#111812] dark:text-white">M/W/F, 6:00 AM</p>
+</div>
+</div>
+</div>
+</details>
+<!-- Zone 3 -->
+<details class="group flex flex-col rounded-2xl bg-surface-light dark:bg-surface-dark border border-gray-100 dark:border-transparent open:shadow-sm dark:open:bg-surface-dark-highlight transition-all duration-300">
+<summary class="flex cursor-pointer items-center justify-between gap-4 p-4 list-none [&amp;::-webkit-details-marker]:hidden">
+<div class="flex items-center gap-4">
+<div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-white group-open:bg-primary group-open:text-background-dark transition-colors">
+<span class="material-symbols-outlined">nutrition</span>
+</div>
+<div class="flex flex-col">
+<p class="text-[#111812] dark:text-white text-base font-bold leading-tight">Vegetable Garden</p>
+<p class="text-gray-500 dark:text-gray-400 text-xs font-medium">Zone 3 • Drip Line</p>
+</div>
+</div>
+<div class="text-gray-400 dark:text-gray-500 group-open:text-primary group-open:rotate-180 transition-transform duration-300">
+<span class="material-symbols-outlined">expand_more</span>
+</div>
+</summary>
+<div class="px-4 pb-4 pt-0 pl-[4.5rem]">
+<div class="h-px w-full bg-gray-100 dark:bg-white/5 mb-3"></div>
+<div class="grid grid-cols-2 gap-y-2 gap-x-4">
+<div>
+<p class="text-xs text-gray-500 dark:text-gray-400">Soil Type</p>
+<p class="text-sm font-medium text-[#111812] dark:text-white">Rich Soil</p>
+</div>
+<div>
+<p class="text-xs text-gray-500 dark:text-gray-400">Schedule</p>
+<p class="text-sm font-medium text-[#111812] dark:text-white">Daily, Sunset</p>
+</div>
+</div>
+</div>
+</details>
+</div>
+</div>
+</div>
+<!-- Sticky Footer CTA -->
+<div class="fixed bottom-0 left-0 w-full z-20">
+<!-- Gradient fade for smooth content scroll beneath -->
+<div class="absolute bottom-full left-0 w-full h-12 bg-gradient-to-t from-background-light dark:from-background-dark to-transparent pointer-events-none"></div>
+<div class="bg-background-light dark:bg-background-dark p-4 pb-8 safe-area-pb">
+<button class="w-full flex items-center justify-center gap-2 rounded-full bg-primary py-4 px-6 text-background-dark font-bold text-lg hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-primary/20">
+                Go to Dashboard
+                <span class="material-symbols-outlined font-bold">arrow_forward</span>
+</button>
+</div>
+</div>
+</body></html>

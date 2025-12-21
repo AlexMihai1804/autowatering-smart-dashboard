@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Onboarding: Soil Type</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                        "surface-dark": "#1c2e20",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#111812] dark:text-white flex flex-col min-h-screen selection:bg-primary selection:text-black overflow-hidden relative">
+<!-- Top Navigation -->
+<div class="flex items-center px-4 py-3 justify-between bg-background-light dark:bg-background-dark z-20">
+<button class="text-gray-900 dark:text-white flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors active:scale-90">
+<span class="material-symbols-outlined" style="font-size: 24px;">arrow_back_ios_new</span>
+</button>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-10 opacity-90">Zone 1 Configuration</h2>
+<div class="absolute right-4 flex items-center justify-end">
+<button class="text-primary text-sm font-bold leading-normal tracking-[0.015em] shrink-0 hover:text-primary/80 transition-colors">Help</button>
+</div>
+</div>
+<!-- Progress Stepper -->
+<div class="flex w-full flex-row items-center justify-center gap-2 py-2 mb-2">
+<div class="h-1.5 w-1.5 rounded-full bg-primary/40"></div>
+<div class="h-1.5 w-1.5 rounded-full bg-primary/40"></div>
+<!-- Active Step -->
+<div class="h-1.5 w-8 rounded-full bg-primary shadow-[0_0_10px_rgba(19,236,55,0.4)] transition-all"></div>
+<div class="h-1.5 w-1.5 rounded-full bg-gray-300 dark:bg-white/20"></div>
+<div class="h-1.5 w-1.5 rounded-full bg-gray-300 dark:bg-white/20"></div>
+</div>
+<!-- Scrollable Content Area -->
+<div class="flex-1 overflow-y-auto pb-32 no-scrollbar">
+<!-- Headline -->
+<div class="px-6 pt-2 pb-6">
+<h1 class="text-[32px] font-extrabold leading-[1.1] tracking-tight text-gray-900 dark:text-white">What kind of soil?</h1>
+<p class="text-gray-500 dark:text-gray-400 mt-3 text-base font-medium leading-relaxed">
+                We'll optimize your watering schedule based on how well your soil retains moisture.
+            </p>
+</div>
+<!-- Hero Card: Auto Detect -->
+<div class="px-4 mb-8 @container">
+<div class="group relative flex flex-col items-center justify-center rounded-[2.5rem] bg-surface-light dark:bg-surface-dark shadow-xl overflow-hidden border border-gray-100 dark:border-white/5 transition-all">
+<!-- Background Image / Pattern -->
+<div class="absolute inset-0 w-full h-full opacity-10 dark:opacity-20 transition-transform duration-1000 group-hover:scale-110 bg-cover bg-center" data-alt="Abstract dark topographic map texture representing geological data" data-location="Current Location" style='background-image: url("https://placeholder.pics/svg/300");'>
+</div>
+<!-- Gradient Overlay -->
+<div class="absolute inset-0 bg-gradient-to-b from-transparent via-surface-light/80 to-surface-light dark:via-surface-dark/80 dark:to-surface-dark"></div>
+<!-- Content -->
+<div class="relative z-10 flex flex-col items-center justify-center p-8 text-center w-full">
+<!-- Icon Circle -->
+<div class="mb-5 flex items-center justify-center size-[88px] rounded-full bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/5 text-primary ring-1 ring-primary/20 shadow-[0_0_30px_rgba(19,236,55,0.1)] backdrop-blur-sm">
+<span class="material-symbols-outlined filled" style="font-size: 40px; font-variation-settings: 'FILL' 1;">satellite_alt</span>
+</div>
+<h3 class="text-2xl font-bold leading-tight mb-2 tracking-tight">Auto-Detect via GPS</h3>
+<p class="text-gray-500 dark:text-gray-400 text-sm leading-relaxed max-w-[260px] mb-8 font-medium">
+                        We'll use local geological data based on your location to identify soil composition.
+                    </p>
+<button class="w-full flex cursor-pointer items-center justify-center gap-2.5 overflow-hidden rounded-full h-14 px-8 bg-primary hover:bg-[#10d630] active:scale-[0.98] transition-all text-[#102213] text-base font-bold shadow-lg shadow-primary/25">
+<span class="material-symbols-outlined" style="font-size: 22px;">my_location</span>
+<span>Start Detection</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Manual Selection Section -->
+<div class="px-6">
+<div class="flex items-center gap-4 mb-6">
+<div class="h-px bg-gray-200 dark:bg-white/10 flex-1"></div>
+<h2 class="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">Or select manually</h2>
+<div class="h-px bg-gray-200 dark:bg-white/10 flex-1"></div>
+</div>
+<!-- Styled Dropdown Trigger -->
+<div class="relative group">
+<div class="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-colors group-focus-within:text-primary z-10">
+<span class="material-symbols-outlined">grass</span>
+</div>
+<select class="w-full appearance-none bg-surface-light dark:bg-surface-dark text-gray-900 dark:text-white border border-transparent dark:border-white/5 rounded-2xl py-5 pl-14 pr-12 text-lg font-bold shadow-sm ring-1 ring-gray-200 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5">
+<option disabled="" selected="" value="">Select Soil Type...</option>
+<option value="clay">Clay</option>
+<option value="sandy">Sandy</option>
+<option value="silt">Silt</option>
+<option value="loam">Loam</option>
+<option value="peat">Peat</option>
+<option value="chalk">Chalk</option>
+</select>
+<div class="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform group-focus-within:rotate-180">
+<span class="material-symbols-outlined">keyboard_arrow_down</span>
+</div>
+</div>
+<!-- Info Box -->
+<div class="mt-6 p-5 rounded-2xl bg-surface-light dark:bg-surface-dark/50 border border-gray-200 dark:border-white/5 flex gap-4 items-start shadow-sm">
+<div class="bg-primary/10 p-2 rounded-lg text-primary shrink-0">
+<span class="material-symbols-outlined" style="font-size: 20px;">info</span>
+</div>
+<div class="flex-1 pt-0.5">
+<h4 class="text-sm font-bold text-gray-900 dark:text-white mb-1">Did you know?</h4>
+<p class="text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+                        Clay soil requires shorter, more frequent watering cycles to prevent runoff, while sandy soil needs longer soaks.
+                    </p>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Footer -->
+<div class="fixed bottom-0 left-0 w-full p-6 pt-12 bg-gradient-to-t from-background-light dark:from-background-dark via-background-light dark:via-background-dark to-transparent z-30">
+<button class="w-full bg-gray-200 dark:bg-white/10 text-gray-400 dark:text-gray-500 font-bold py-4 rounded-full cursor-not-allowed transition-all active:scale-[0.98] h-14 flex items-center justify-center" disabled="">
+            Continue
+        </button>
+</div>
+</body></html>

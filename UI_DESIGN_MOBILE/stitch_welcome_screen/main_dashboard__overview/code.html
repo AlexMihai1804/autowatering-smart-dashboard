@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AutoWatering Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#13ec37",
+              "background-light": "#f6f8f6",
+              "background-dark": "#102213",
+              "surface-dark": "#1c2e20",
+              "surface-light": "#ffffff",
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "1.5rem", "xl": "2rem", "2xl": "2.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Manrope', sans-serif;
+        }
+        /* Custom scrollbar hiding for clean UI */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased selection:bg-primary selection:text-black">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-hidden max-w-md mx-auto shadow-2xl">
+<!-- Header Section -->
+<header class="pt-8 pb-4 px-6 flex items-center justify-between sticky top-0 z-20 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md">
+<div class="flex items-center gap-3 cursor-pointer group">
+<div class="flex flex-col">
+<span class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Active Zone</span>
+<div class="flex items-center gap-2">
+<h1 class="text-xl font-bold tracking-tight">Backyard Garden</h1>
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors text-[20px]">expand_more</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<div class="flex items-center gap-1.5 px-3 py-1.5 bg-green-900/30 rounded-full border border-green-800/50">
+<span class="relative flex h-2.5 w-2.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+</span>
+<span class="text-xs font-bold text-primary uppercase tracking-wide">Online</span>
+</div>
+</div>
+</header>
+<!-- Main Scrollable Content -->
+<main class="flex-1 overflow-y-auto pb-24 px-4 no-scrollbar">
+<!-- Hero Status Card -->
+<div class="relative w-full rounded-2xl overflow-hidden bg-surface-light dark:bg-surface-dark shadow-sm border border-slate-200 dark:border-slate-800 p-6 mb-6">
+<!-- Background decorative elements -->
+<div class="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-primary/20 rounded-full blur-2xl"></div>
+<div class="absolute bottom-0 left-0 -ml-8 -mb-8 w-24 h-24 bg-blue-500/20 rounded-full blur-2xl"></div>
+<div class="relative z-10">
+<div class="flex justify-between items-start mb-6">
+<div>
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Next Watering Cycle</p>
+<h2 class="text-3xl font-extrabold text-slate-900 dark:text-white">06:00 <span class="text-lg font-bold text-slate-500">AM</span></h2>
+<p class="text-xs text-primary font-semibold mt-1">Tomorrow</p>
+</div>
+<div class="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[28px] filled">water_drop</span>
+</div>
+</div>
+<!-- Progress Bar Component -->
+<div class="flex flex-col gap-2">
+<div class="flex justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+<span>Soil Moisture</span>
+<span class="text-primary">Optimal (75%)</span>
+</div>
+<div class="h-3 w-full bg-slate-200 dark:bg-slate-700/50 rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-green-400 to-primary rounded-full transition-all duration-1000 ease-out" style="width: 75%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sensor Stats Grid -->
+<div class="grid grid-cols-2 gap-4 mb-6">
+<!-- Temperature -->
+<div class="col-span-1 bg-surface-light dark:bg-surface-dark p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between h-32 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-orange-400">thermostat</span>
+</div>
+<div class="flex items-center gap-2 mb-2">
+<span class="p-1.5 rounded-lg bg-orange-500/10 text-orange-500 flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">thermostat</span>
+</span>
+<span class="text-xs font-medium text-slate-500 dark:text-slate-400">Temp</span>
+</div>
+<div>
+<span class="text-2xl font-bold">72°F</span>
+<span class="text-xs text-primary font-medium ml-1">Avg</span>
+</div>
+</div>
+<!-- Humidity -->
+<div class="col-span-1 bg-surface-light dark:bg-surface-dark p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between h-32 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-blue-400">humidity_percentage</span>
+</div>
+<div class="flex items-center gap-2 mb-2">
+<span class="p-1.5 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">water_drop</span>
+</span>
+<span class="text-xs font-medium text-slate-500 dark:text-slate-400">Humidity</span>
+</div>
+<div>
+<span class="text-2xl font-bold">45%</span>
+<span class="text-xs text-slate-400 ml-1">Dry</span>
+</div>
+</div>
+<!-- Rainfall (Full Width) -->
+<div class="col-span-2 bg-surface-light dark:bg-surface-dark p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between relative overflow-hidden">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">rainy</span>
+</span>
+<span class="text-xs font-medium text-slate-500 dark:text-slate-400">Rainfall (24h)</span>
+</div>
+<div class="mt-1">
+<span class="text-2xl font-bold">0.2</span>
+<span class="text-sm text-slate-500 dark:text-slate-400 font-medium ml-1">inches</span>
+</div>
+</div>
+<div class="h-10 w-24">
+<!-- Tiny chart visualization placeholder -->
+<div class="flex items-end justify-between h-full gap-1">
+<div class="w-1.5 bg-indigo-500/20 h-[30%] rounded-t-sm"></div>
+<div class="w-1.5 bg-indigo-500/20 h-[50%] rounded-t-sm"></div>
+<div class="w-1.5 bg-indigo-500/20 h-[20%] rounded-t-sm"></div>
+<div class="w-1.5 bg-indigo-500/40 h-[60%] rounded-t-sm"></div>
+<div class="w-1.5 bg-indigo-500 h-[80%] rounded-t-sm"></div>
+<div class="w-1.5 bg-indigo-500/20 h-[40%] rounded-t-sm"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Quick Actions -->
+<div class="mb-6">
+<h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3 px-1 uppercase tracking-wider">Quick Actions</h3>
+<div class="flex flex-col gap-3">
+<button class="flex items-center justify-between w-full p-4 rounded-2xl bg-primary text-black font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform">
+<div class="flex items-center gap-3">
+<span class="bg-black/10 p-2 rounded-full">
+<span class="material-symbols-outlined text-[24px]">play_arrow</span>
+</span>
+<span>Manual Water</span>
+</div>
+<span class="material-symbols-outlined text-[20px] opacity-60">arrow_forward</span>
+</button>
+<button class="flex items-center justify-between w-full p-4 rounded-2xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white font-bold active:scale-[0.98] transition-transform">
+<div class="flex items-center gap-3">
+<span class="bg-slate-200 dark:bg-slate-700/50 p-2 rounded-full text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined text-[24px]">pause</span>
+</span>
+<span>Pause Schedule</span>
+</div>
+</button>
+</div>
+</div>
+<!-- Garden Camera Feed Preview (Visual interest) -->
+<div class="mb-6">
+<div class="flex justify-between items-end mb-3 px-1">
+<h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Live View</h3>
+<button class="text-xs text-primary font-bold">View Fullscreen</button>
+</div>
+<div class="h-40 w-full rounded-2xl overflow-hidden relative group">
+<img alt="Backyard garden greenery on a sunny day" class="object-cover w-full h-full opacity-80 group-hover:opacity-100 transition-opacity" data-alt="Backyard garden greenery on a sunny day" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJjW4oH_QkD9LqvcTf30emLAEI4SF9TXlfyoBT8w4KEi-DAccxG2w85Uu15Fbj6s9s7MQNOETc8fYSn18Kr62LM2WFTZ_2RrCWppRFIsAQchEToVEApzlM45XVb8V2K0eUL8j3wtJsvhnSOLyN2rmuwkJmm79sdnMBdZtMq5EBJU8hqVakQISpy2xwLSiQPbZ2Vlrr5HPyj_v63KF-oXYhlgiLt68AmKkHpONEkwMpxHJ4IQXUeCq0NYd502lTeM3xJpxBcMys4iGh"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-4">
+<div class="flex items-center gap-2">
+<div class="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
+<span class="text-xs font-medium text-white shadow-black drop-shadow-md">Live Camera</span>
+</div>
+</div>
+</div>
+</div>
+<div class="h-8"></div> <!-- Spacer -->
+</main>
+<!-- Bottom Navigation -->
+<nav class="absolute bottom-0 w-full bg-surface-light dark:bg-surface-dark border-t border-slate-200 dark:border-slate-800 pb-6 pt-2 px-6 z-30">
+<div class="flex justify-between items-center">
+<a class="flex flex-col items-center gap-1 text-primary w-16" href="#">
+<span class="material-symbols-outlined text-[28px] fill-current">home</span>
+<span class="text-[10px] font-bold">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 w-16 transition-colors" href="#">
+<span class="material-symbols-outlined text-[28px]">calendar_month</span>
+<span class="text-[10px] font-medium">Schedule</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 w-16 transition-colors" href="#">
+<span class="material-symbols-outlined text-[28px]">bar_chart</span>
+<span class="text-[10px] font-medium">Stats</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 w-16 transition-colors" href="#">
+<span class="material-symbols-outlined text-[28px]">settings</span>
+<span class="text-[10px] font-medium">Settings</span>
+</a>
+</div>
+</nav>
+</div>
+</body></html>

@@ -2282,7 +2282,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                     <MaxVolumeConfig
                         soil={currentZone.soil}
                         plant={currentZone.plant}
-                        rootDepth={currentZone.plant?.root_depth_max || 500}
+                        rootDepth={Math.round(((currentZone.plant?.root_depth_max_m ?? 0.5) as number) * 1000)}
                         maxVolumeLimit={currentZone.maxVolumeLimit}
                         coverageType={currentZone.coverageType}
                         coverageValue={currentZone.coverageValue}

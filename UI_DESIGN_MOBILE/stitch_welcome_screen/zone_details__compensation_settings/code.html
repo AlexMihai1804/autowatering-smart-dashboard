@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Zone Details: Compensation Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-white antialiased selection:bg-primary selection:text-black">
+<div class="relative flex h-full min-h-screen w-full max-w-md mx-auto flex-col overflow-hidden shadow-2xl bg-background-light dark:bg-background-dark">
+<!-- Top App Bar -->
+<header class="flex items-center justify-between p-4 bg-background-light dark:bg-background-dark sticky top-0 z-10">
+<button class="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-2xl">chevron_left</span>
+</button>
+<h2 class="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">Zone 2: Front Lawn</h2>
+</header>
+<!-- Main Content Scroll Area -->
+<main class="flex-1 overflow-y-auto px-4 pb-24">
+<!-- Headline -->
+<div class="pt-4 pb-6">
+<h1 class="text-3xl font-extrabold tracking-tight mb-2">Compensation</h1>
+<p class="text-gray-500 dark:text-gray-400 text-sm font-medium">Environmental adjustments based on local weather data.</p>
+</div>
+<!-- Stats Card (Visualization Widget) -->
+<section class="mb-6">
+<div class="flex flex-col gap-4 rounded-xl bg-white dark:bg-[#1c271d] p-6 shadow-sm border border-gray-100 dark:border-white/5">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Today's Compensation</p>
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-bold tracking-tight">110%</span>
+<span class="text-primary text-sm font-bold bg-primary/10 px-2 py-0.5 rounded-full">+10% Boost</span>
+</div>
+</div>
+<div class="size-12 rounded-full bg-orange-500/10 dark:bg-orange-500/20 flex items-center justify-center text-orange-600 dark:text-orange-400">
+<span class="material-symbols-outlined">wb_sunny</span>
+</div>
+</div>
+<!-- Progress bar / Gauge visualization -->
+<div class="space-y-2">
+<div class="h-3 w-full bg-gray-100 dark:bg-black/40 rounded-full overflow-hidden relative">
+<!-- Base marker -->
+<div class="absolute left-[80%] top-0 bottom-0 w-0.5 bg-gray-400 z-10"></div>
+<!-- Fill -->
+<div class="h-full bg-primary rounded-full" style="width: 88%"></div>
+</div>
+<div class="flex justify-between text-xs text-gray-400 font-medium">
+<span>0%</span>
+<span class="pl-4">Standard (100%)</span>
+<span>150%</span>
+</div>
+</div>
+<p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
+                        High temperatures detected. Watering duration increased to prevent lawn stress.
+                    </p>
+</div>
+</section>
+<!-- Status Cards Section -->
+<section class="space-y-4">
+<h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 pl-2">Active Rules</h3>
+<!-- Card 1: Rain Skip -->
+<div class="flex items-center justify-between gap-4 rounded-xl bg-white dark:bg-[#1c271d] p-5 shadow-sm border border-gray-100 dark:border-white/5 group relative overflow-hidden">
+<!-- Status indicator line -->
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary"></div>
+<div class="flex items-center gap-4 flex-1">
+<div class="size-12 rounded-full bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+<span class="material-symbols-outlined">water_drop</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2 mb-0.5">
+<h4 class="text-base font-bold">Rain Skip</h4>
+<span class="flex size-2 rounded-full bg-primary shadow-[0_0_8px_rgba(19,236,55,0.6)]"></span>
+</div>
+<p class="text-xs text-gray-500 dark:text-gray-400 font-medium">Skip if &gt;3mm in 24h</p>
+<p class="text-xs text-primary font-bold mt-1">Active - Monitoring</p>
+</div>
+</div>
+<button class="text-gray-400 dark:text-gray-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+<!-- Card 2: Temp Adjust -->
+<div class="flex items-center justify-between gap-4 rounded-xl bg-white dark:bg-[#1c271d] p-5 shadow-sm border border-gray-100 dark:border-white/5 group relative overflow-hidden">
+<!-- Status indicator line -->
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary"></div>
+<div class="flex items-center gap-4 flex-1">
+<div class="size-12 rounded-full bg-orange-500/10 dark:bg-orange-500/20 flex items-center justify-center text-orange-600 dark:text-orange-400 shrink-0">
+<span class="material-symbols-outlined">thermostat</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2 mb-0.5">
+<h4 class="text-base font-bold">Temp Adjust</h4>
+<span class="flex size-2 rounded-full bg-primary shadow-[0_0_8px_rgba(19,236,55,0.6)]"></span>
+</div>
+<p class="text-xs text-gray-500 dark:text-gray-400 font-medium">Base 20°C</p>
+<p class="text-xs text-primary font-bold mt-1">Active - Adjusting +10%</p>
+</div>
+</div>
+<button class="text-gray-400 dark:text-gray-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+<!-- Card 3: Wind Skip (Inactive Example) -->
+<div class="flex items-center justify-between gap-4 rounded-xl bg-gray-50 dark:bg-[#151c16] p-5 border border-transparent dark:border-white/5 opacity-70">
+<div class="flex items-center gap-4 flex-1">
+<div class="size-12 rounded-full bg-gray-200 dark:bg-white/5 flex items-center justify-center text-gray-400 dark:text-gray-500 shrink-0">
+<span class="material-symbols-outlined">air</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2 mb-0.5">
+<h4 class="text-base font-bold text-gray-500 dark:text-gray-400">Wind Skip</h4>
+</div>
+<p class="text-xs text-gray-400 dark:text-gray-500 font-medium">Skip if &gt;25km/h</p>
+<p class="text-xs text-gray-400 dark:text-gray-500 font-medium mt-1">Inactive</p>
+</div>
+</div>
+<!-- Toggle Switch Visual -->
+<div class="w-10 h-6 bg-gray-300 dark:bg-white/10 rounded-full relative">
+<div class="absolute left-1 top-1 size-4 bg-white rounded-full shadow-sm"></div>
+</div>
+</div>
+</section>
+<!-- Edit Button -->
+<div class="mt-8 px-2">
+<button class="w-full bg-primary hover:bg-green-400 text-black font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">tune</span>
+                    Edit All Adjustments
+                </button>
+</div>
+<!-- Contextual Info -->
+<div class="mt-8 flex gap-4 p-4 rounded-xl bg-blue-500/5 border border-blue-500/10">
+<span class="material-symbols-outlined text-blue-400">info</span>
+<p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                    Compensation settings use local weather data from <span class="text-white font-bold">Station ID: KWX-293</span>. Last synced 12m ago.
+                </p>
+</div>
+</main>
+<!-- Bottom Navigation -->
+<nav class="flex items-center justify-around bg-white/95 dark:bg-[#111812]/95 backdrop-blur-md border-t border-gray-200 dark:border-white/5 px-2 py-3 pb-6 fixed bottom-0 w-full max-w-md z-20">
+<a class="flex flex-col items-center gap-1 p-2 min-w-[64px] text-gray-400 dark:text-gray-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-[10px] font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 p-2 min-w-[64px] text-primary" href="#">
+<span class="material-symbols-outlined fill-current">grid_view</span>
+<span class="text-[10px] font-bold">Zones</span>
+</a>
+<div class="size-14 -mt-8 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/30 border-4 border-background-light dark:border-background-dark">
+<span class="material-symbols-outlined text-black text-2xl">water_drop</span>
+</div>
+<a class="flex flex-col items-center gap-1 p-2 min-w-[64px] text-gray-400 dark:text-gray-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">calendar_month</span>
+<span class="text-[10px] font-medium">Schedule</span>
+</a>
+<a class="flex flex-col items-center gap-1 p-2 min-w-[64px] text-gray-400 dark:text-gray-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-medium">Settings</span>
+</a>
+</nav>
+</div>
+</body></html>

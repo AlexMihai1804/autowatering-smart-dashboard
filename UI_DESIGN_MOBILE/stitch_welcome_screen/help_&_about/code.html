@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Help &amp; About - AutoWatering</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar hide for cleaner UI */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display min-h-screen flex flex-col antialiased selection:bg-primary selection:text-background-dark">
+<!-- Top Navigation Header -->
+<header class="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-black/5 dark:border-white/5 transition-colors duration-300">
+<div class="flex flex-col gap-2 px-6 pt-12 pb-4 max-w-lg mx-auto w-full">
+<div class="flex items-center h-10 justify-between">
+<button class="flex items-center justify-center size-10 -ml-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors group">
+<span class="material-symbols-outlined text-slate-900 dark:text-white group-hover:scale-110 transition-transform">arrow_back</span>
+</button>
+</div>
+<h1 class="text-3xl font-bold tracking-tight leading-tight text-slate-900 dark:text-white">
+                Help &amp; About
+            </h1>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 w-full max-w-lg mx-auto flex flex-col px-6 pb-32">
+<!-- Section 1: Self-Service -->
+<section class="mt-8">
+<h3 class="text-slate-500 dark:text-gray-400 text-sm font-bold uppercase tracking-wider mb-3 ml-2">Self-Service</h3>
+<div class="flex flex-col bg-white dark:bg-white/5 rounded-lg overflow-hidden border border-black/5 dark:border-white/5 shadow-sm">
+<!-- Knowledge Base -->
+<button class="flex items-center gap-4 p-4 min-h-[72px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors w-full text-left group border-b border-black/5 dark:border-white/5 last:border-0">
+<div class="flex items-center justify-center rounded-full bg-primary/10 dark:bg-primary/20 shrink-0 size-10 group-hover:scale-110 transition-transform duration-300">
+<span class="material-symbols-outlined text-green-700 dark:text-primary" style="font-size: 24px;">menu_book</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-slate-900 dark:text-white text-base font-semibold leading-normal truncate">Knowledge Base / FAQs</p>
+<p class="text-slate-500 dark:text-gray-400 text-xs mt-0.5 truncate">Common questions answered</p>
+</div>
+<span class="material-symbols-outlined text-slate-400 dark:text-gray-500">chevron_right</span>
+</button>
+<!-- Device Setup Guide -->
+<button class="flex items-center gap-4 p-4 min-h-[72px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors w-full text-left group border-b border-black/5 dark:border-white/5 last:border-0">
+<div class="flex items-center justify-center rounded-full bg-primary/10 dark:bg-primary/20 shrink-0 size-10 group-hover:scale-110 transition-transform duration-300">
+<span class="material-symbols-outlined text-green-700 dark:text-primary" style="font-size: 24px;">phonelink_setup</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-slate-900 dark:text-white text-base font-semibold leading-normal truncate">Device Setup Guide</p>
+<p class="text-slate-500 dark:text-gray-400 text-xs mt-0.5 truncate">Pairing &amp; wifi configuration</p>
+</div>
+<span class="material-symbols-outlined text-slate-400 dark:text-gray-500">chevron_right</span>
+</button>
+<!-- Troubleshooting Wizard -->
+<button class="flex items-center gap-4 p-4 min-h-[72px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors w-full text-left group border-b border-black/5 dark:border-white/5 last:border-0">
+<div class="flex items-center justify-center rounded-full bg-primary/10 dark:bg-primary/20 shrink-0 size-10 group-hover:scale-110 transition-transform duration-300">
+<span class="material-symbols-outlined text-green-700 dark:text-primary" style="font-size: 24px;">auto_fix_high</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-slate-900 dark:text-white text-base font-semibold leading-normal truncate">Troubleshooting Wizard</p>
+<p class="text-slate-500 dark:text-gray-400 text-xs mt-0.5 truncate">Diagnose connection issues</p>
+</div>
+<span class="material-symbols-outlined text-slate-400 dark:text-gray-500">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- Section 2: Get in Touch -->
+<section class="mt-8">
+<h3 class="text-slate-500 dark:text-gray-400 text-sm font-bold uppercase tracking-wider mb-3 ml-2">Support</h3>
+<div class="flex flex-col gap-3">
+<button class="relative w-full rounded-full bg-primary text-background-dark font-bold text-lg h-14 flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(19,236,55,0.2)]">
+<span class="material-symbols-outlined">chat</span>
+<span>Contact Support Team</span>
+</button>
+<button class="relative w-full rounded-full bg-white dark:bg-white/5 text-slate-900 dark:text-white font-semibold text-lg h-14 flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-white/10 active:scale-[0.98] transition-all border border-black/5 dark:border-white/10">
+<span class="material-symbols-outlined text-slate-500 dark:text-gray-400">bug_report</span>
+<span>Report a Bug</span>
+</button>
+</div>
+</section>
+<!-- Section 3: App Info & Footer -->
+<section class="mt-12 flex flex-col items-center justify-center text-center opacity-80">
+<!-- Logo Placeholder using CSS shapes/icon -->
+<div class="size-16 rounded-2xl bg-gradient-to-br from-green-800 to-background-dark border border-primary/30 flex items-center justify-center mb-4 shadow-lg" data-alt="AutoWatering App Logo abstract representation">
+<span class="material-symbols-outlined text-primary text-4xl">water_drop</span>
+</div>
+<h4 class="text-slate-900 dark:text-white font-bold text-lg">AutoWatering</h4>
+<p class="text-slate-500 dark:text-gray-400 text-sm">v2.4.0 (Build 302)</p>
+<p class="text-primary text-xs font-medium mt-1">Designed for a greener future.</p>
+<div class="flex items-center gap-6 mt-6">
+<a class="text-xs text-slate-500 dark:text-gray-500 hover:text-primary dark:hover:text-primary transition-colors underline decoration-dotted underline-offset-4" href="#">Privacy Policy</a>
+<a class="text-xs text-slate-500 dark:text-gray-500 hover:text-primary dark:hover:text-primary transition-colors underline decoration-dotted underline-offset-4" href="#">Terms of Service</a>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full z-40 bg-background-light/90 dark:bg-background-dark/95 backdrop-blur-xl border-t border-black/5 dark:border-white/5 pb-safe">
+<div class="max-w-lg mx-auto w-full h-20 px-6 flex items-center justify-between">
+<button class="flex flex-col items-center justify-center gap-1 w-16 text-slate-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[28px]">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 w-16 text-slate-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[28px]">calendar_clock</span>
+<span class="text-[10px] font-medium">Schedule</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 w-16 text-slate-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[28px]">analytics</span>
+<span class="text-[10px] font-medium">Stats</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 w-16 text-green-700 dark:text-primary transition-colors relative">
+<div class="absolute -top-1 bg-primary size-1.5 rounded-full shadow-[0_0_8px_#13ec37]"></div>
+<span class="material-symbols-outlined text-[28px] fill-current">settings</span>
+<span class="text-[10px] font-bold">Settings</span>
+</button>
+</div>
+<!-- Safe area spacing for iOS home indicator -->
+<div class="h-6 w-full"></div>
+</nav>
+</body></html>

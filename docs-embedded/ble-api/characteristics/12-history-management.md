@@ -6,7 +6,7 @@
 | Write | 12 B query header | 12 B | None | Triggers query or clear command |
 | Write | 12 B header (`history_type=0xFF`) | 12 B | None | Clears stored history (best effort) |
 | Read | `struct history_data` | 32 B | None | Returns the cached 32-byte `history_value` buffer (query header + latest detailed snapshot) |
-| Notify | `history_fragment_header_t` + payload | 8 B + <=240 B | Unified | Multi-fragment responses for queries |
+| Notify | `history_fragment_header_t` + payload | 8 B + <=232 B | Unified | Multi-fragment responses for queries |
 | Notify | `struct history_data` | 32 B | None | Real-time event notifications from watering tasks |
 
 History Management exposes watering history in four aggregation levels. Queries are issued through a compact 12-byte header and responses are delivered asynchronously as one or more fragments. Real-time watering events reuse the same `struct history_data` snapshot that backs the read buffer and are sent independently from queued queries.
@@ -19,8 +19,8 @@ History Management exposes watering history in four aggregation levels. Queries 
 | Permissions | Read, Write |
 | Query Header Size | 12 bytes |
 | Response Fragment Header | `history_fragment_header_t` (8 bytes) |
-| Max Fragment Payload | 240 bytes (`RAIN_HISTORY_FRAGMENT_SIZE`) |
-| Notification Priority | Low (>=1 s throttle between accepted queries; individual fragments spaced 50 ms) |
+| Max Fragment Payload | 232 bytes (`RAIN_HISTORY_FRAGMENT_SIZE`) |
+| Notification Priority | Low (new queries rate-limited to >=100 ms; continuation requests bypass the limiter; fragments stream at ~2 ms spacing) |
 
 Handlers: `read_history`, `write_history`, `history_ccc_changed`, `bt_irrigation_history_notify_event` in `src/bt_irrigation_service.c`.
 
@@ -44,7 +44,7 @@ All integers little-endian.
 | 4-7 | `start_timestamp` | Optional UTC filter (currently echoed only). |
 | 8-11 | `end_timestamp` | Optional UTC filter (currently echoed only). |
 
-The handler rejects payloads that are not exactly 12 bytes or writes with non-zero offset. Accepted queries update the on-characteristic buffer so a subsequent read returns the header that generated the current response.
+The handler rejects payloads that are not exactly 12 bytes or writes with non-zero offset. Accepted queries are answered via fragment notifications; the 32-byte read buffer (`history_value`) is not updated by query responses.
 
 ### Clear Command (`history_type = 0xFF`)
 - Invokes `watering_history_cleanup_expired()` and emits a single 8-byte header notification (`data_type = 0xFF`, `status = 0`).
@@ -55,7 +55,7 @@ Each fragment sent after a successful query has:
 
 ```
 history_fragment_header_t header;  // 8 bytes
-uint8_t payload[fragment_size];    // Up to 240 bytes
+uint8_t payload[fragment_size];    // Up to 232 bytes (may be smaller for small MTU)
 ```
 
 `header` fields:
@@ -130,10 +130,15 @@ Data is obtained through `watering_history_get_daily_stats()` and limited to a s
 `entry_index` selects the year offset from the current year.
 
 ## Rate Limiting & Errors
-- Queries are limited to one per second (`HISTORY_QUERY_MIN_INTERVAL_MS`). Flooding results in `BT_ATT_ERR_VALUE_NOT_ALLOWED` and a standalone notification with `data_type = 0xFE`, `status = 0x07` when notifications are enabled.
+- New queries are rate-limited to one per 100ms (`HISTORY_QUERY_MIN_INTERVAL_MS`). Flooding emits a standalone notification with `data_type = 0xFE`, `status = 0x07` (no payload) and the write is accepted without running the query.
+- Continuation requests for the same `(channel_id, history_type)` bypass the limiter to keep fragment downloads responsive.
 - Invalid length -> `BT_ATT_ERR_INVALID_ATTRIBUTE_LEN`.
 - Non-zero offset writes -> `BT_ATT_ERR_INVALID_OFFSET`.
 - Unsupported history type (other than `0-3, 0xFF`) or channel out of range -> `BT_ATT_ERR_VALUE_NOT_ALLOWED`.
+
+## Fragment Streaming Limits (v3.1.0)
+- Inter-fragment delay is reduced to ~2ms for faster streaming.
+- Transient `-ENOMEM/-EBUSY` notify failures are retried (up to 5 retries) with exponential backoff (approx. 20ms → 640ms).
 
 ## Real-Time Event Notifications
 `bt_irrigation_history_notify_event()` publishes immediate detailed-event snapshots using the fixed 32-byte `struct history_data` layout (no fragmentation). These notifications are triggered by watering task transitions (start/complete/error) and appear only when CCC is enabled and a default connection exists. They always report `history_type = 0`, `count = 1`, and populate the union fields directly.

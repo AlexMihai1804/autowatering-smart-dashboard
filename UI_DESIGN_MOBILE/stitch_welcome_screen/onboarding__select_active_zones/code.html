@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Onboarding: Select Active Zones</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1337ec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101322",
+                    },
+                    fontFamily: {
+                        "display": ["Spline Sans", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased text-slate-900 dark:text-white transition-colors duration-200">
+<!-- Main App Container -->
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl bg-background-light dark:bg-background-dark">
+<!-- Navigation Header -->
+<div class="flex items-center justify-between px-5 pt-8 pb-4">
+<button class="flex items-center justify-center p-2 -ml-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10 rounded-full transition-colors">
+<span class="material-symbols-outlined">arrow_back_ios_new</span>
+</button>
+<button class="text-sm font-semibold text-primary hover:text-primary/80 transition-colors">Skip</button>
+</div>
+<!-- Progress Indicator -->
+<div class="flex w-full flex-row items-center justify-center gap-2 py-2">
+<div class="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-700"></div>
+<div class="h-1.5 w-8 rounded-full bg-primary shadow-[0_0_10px_rgba(19,55,236,0.5)]"></div> <!-- Active step -->
+<div class="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-700"></div>
+<div class="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-700"></div>
+</div>
+<!-- Content Area -->
+<div class="flex flex-col flex-1 px-6 pt-6 pb-24">
+<!-- Headline & Subhead -->
+<div class="mb-8">
+<h1 class="text-[28px] font-bold leading-tight mb-3">How many zones are connected?</h1>
+<p class="text-slate-500 dark:text-slate-400 text-base font-normal leading-relaxed">
+                    Tap the zones that have wires connected to your AutoWatering controller.
+                </p>
+</div>
+<!-- Zones Grid -->
+<!-- Using grid-cols-2 for clear tappable areas on mobile -->
+<div class="grid grid-cols-2 gap-4">
+<!-- Zone 1: Selected State -->
+<div class="group cursor-pointer relative flex flex-col justify-between rounded-2xl p-4 aspect-[1.1/1] bg-primary shadow-lg shadow-primary/30 ring-2 ring-primary transition-all duration-200 active:scale-95">
+<div class="flex justify-between items-start">
+<div class="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center text-white backdrop-blur-sm">
+<span class="material-symbols-outlined text-[22px]">water_drop</span>
+</div>
+<div class="h-6 w-6 rounded-full bg-white text-primary flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-[16px] font-bold">check</span>
+</div>
+</div>
+<div>
+<span class="block text-white text-lg font-bold">Zone 1</span>
+<span class="text-white/70 text-xs font-medium">Connected</span>
+</div>
+</div>
+<!-- Zone 2: Inactive State -->
+<div class="group cursor-pointer relative flex flex-col justify-between rounded-2xl p-4 aspect-[1.1/1] bg-white dark:bg-[#1E1E24] ring-1 ring-slate-200 dark:ring-white/5 hover:ring-primary/50 dark:hover:ring-primary/50 transition-all duration-200 active:scale-95">
+<div class="flex justify-between items-start">
+<div class="h-10 w-10 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 dark:text-slate-500 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[22px]">sprinkler</span>
+</div>
+<div class="h-6 w-6 rounded-full border-2 border-slate-200 dark:border-slate-600 group-hover:border-primary/50 transition-colors"></div>
+</div>
+<div>
+<span class="block text-slate-700 dark:text-slate-200 text-lg font-bold group-hover:text-primary transition-colors">Zone 2</span>
+<span class="text-slate-400 dark:text-slate-500 text-xs font-medium">Inactive</span>
+</div>
+</div>
+<!-- Zone 3: Selected State -->
+<div class="group cursor-pointer relative flex flex-col justify-between rounded-2xl p-4 aspect-[1.1/1] bg-primary shadow-lg shadow-primary/30 ring-2 ring-primary transition-all duration-200 active:scale-95">
+<div class="flex justify-between items-start">
+<div class="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center text-white backdrop-blur-sm">
+<span class="material-symbols-outlined text-[22px]">water_drop</span>
+</div>
+<div class="h-6 w-6 rounded-full bg-white text-primary flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-[16px] font-bold">check</span>
+</div>
+</div>
+<div>
+<span class="block text-white text-lg font-bold">Zone 3</span>
+<span class="text-white/70 text-xs font-medium">Connected</span>
+</div>
+</div>
+<!-- Zone 4: Inactive State -->
+<div class="group cursor-pointer relative flex flex-col justify-between rounded-2xl p-4 aspect-[1.1/1] bg-white dark:bg-[#1E1E24] ring-1 ring-slate-200 dark:ring-white/5 hover:ring-primary/50 dark:hover:ring-primary/50 transition-all duration-200 active:scale-95">
+<div class="flex justify-between items-start">
+<div class="h-10 w-10 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 dark:text-slate-500 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[22px]">sprinkler</span>
+</div>
+<div class="h-6 w-6 rounded-full border-2 border-slate-200 dark:border-slate-600 group-hover:border-primary/50 transition-colors"></div>
+</div>
+<div>
+<span class="block text-slate-700 dark:text-slate-200 text-lg font-bold group-hover:text-primary transition-colors">Zone 4</span>
+<span class="text-slate-400 dark:text-slate-500 text-xs font-medium">Inactive</span>
+</div>
+</div>
+<!-- Zone 5: Inactive State -->
+<div class="group cursor-pointer relative flex flex-col justify-between rounded-2xl p-4 aspect-[1.1/1] bg-white dark:bg-[#1E1E24] ring-1 ring-slate-200 dark:ring-white/5 hover:ring-primary/50 dark:hover:ring-primary/50 transition-all duration-200 active:scale-95">
+<div class="flex justify-between items-start">
+<div class="h-10 w-10 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 dark:text-slate-500 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[22px]">sprinkler</span>
+</div>
+<div class="h-6 w-6 rounded-full border-2 border-slate-200 dark:border-slate-600 group-hover:border-primary/50 transition-colors"></div>
+</div>
+<div>
+<span class="block text-slate-700 dark:text-slate-200 text-lg font-bold group-hover:text-primary transition-colors">Zone 5</span>
+<span class="text-slate-400 dark:text-slate-500 text-xs font-medium">Inactive</span>
+</div>
+</div>
+<!-- Zone 6: Selected State -->
+<div class="group cursor-pointer relative flex flex-col justify-between rounded-2xl p-4 aspect-[1.1/1] bg-primary shadow-lg shadow-primary/30 ring-2 ring-primary transition-all duration-200 active:scale-95">
+<div class="flex justify-between items-start">
+<div class="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center text-white backdrop-blur-sm">
+<span class="material-symbols-outlined text-[22px]">water_drop</span>
+</div>
+<div class="h-6 w-6 rounded-full bg-white text-primary flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-[16px] font-bold">check</span>
+</div>
+</div>
+<div>
+<span class="block text-white text-lg font-bold">Zone 6</span>
+<span class="text-white/70 text-xs font-medium">Connected</span>
+</div>
+</div>
+<!-- Zone 7: Inactive State -->
+<div class="group cursor-pointer relative flex flex-col justify-between rounded-2xl p-4 aspect-[1.1/1] bg-white dark:bg-[#1E1E24] ring-1 ring-slate-200 dark:ring-white/5 hover:ring-primary/50 dark:hover:ring-primary/50 transition-all duration-200 active:scale-95">
+<div class="flex justify-between items-start">
+<div class="h-10 w-10 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 dark:text-slate-500 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[22px]">sprinkler</span>
+</div>
+<div class="h-6 w-6 rounded-full border-2 border-slate-200 dark:border-slate-600 group-hover:border-primary/50 transition-colors"></div>
+</div>
+<div>
+<span class="block text-slate-700 dark:text-slate-200 text-lg font-bold group-hover:text-primary transition-colors">Zone 7</span>
+<span class="text-slate-400 dark:text-slate-500 text-xs font-medium">Inactive</span>
+</div>
+</div>
+<!-- Zone 8: Inactive State -->
+<div class="group cursor-pointer relative flex flex-col justify-between rounded-2xl p-4 aspect-[1.1/1] bg-white dark:bg-[#1E1E24] ring-1 ring-slate-200 dark:ring-white/5 hover:ring-primary/50 dark:hover:ring-primary/50 transition-all duration-200 active:scale-95">
+<div class="flex justify-between items-start">
+<div class="h-10 w-10 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 dark:text-slate-500 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[22px]">sprinkler</span>
+</div>
+<div class="h-6 w-6 rounded-full border-2 border-slate-200 dark:border-slate-600 group-hover:border-primary/50 transition-colors"></div>
+</div>
+<div>
+<span class="block text-slate-700 dark:text-slate-200 text-lg font-bold group-hover:text-primary transition-colors">Zone 8</span>
+<span class="text-slate-400 dark:text-slate-500 text-xs font-medium">Inactive</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Footer -->
+<!-- Using backdrop blur for a modern glass effect over scrolled content -->
+<div class="fixed bottom-0 left-0 right-0 z-10 w-full max-w-md mx-auto p-4 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl border-t border-slate-200/50 dark:border-white/5">
+<button class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-full h-14 bg-primary text-white text-base font-bold leading-normal tracking-wide hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/25">
+<span class="truncate">Continue</span>
+</button>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AutoWatering Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                        "surface-dark": "#1c271d",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white min-h-screen flex flex-col overflow-hidden">
+<!-- Top App Bar -->
+<header class="flex items-center px-6 py-4 justify-between bg-background-light dark:bg-background-dark sticky top-0 z-10">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" style="font-size: 20px;">wifi</span>
+<span class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Online</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight">AutoWatering</h1>
+<button class="flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</header>
+<!-- Scrollable Content -->
+<main class="flex-1 overflow-y-auto px-4 pb-24 scrollbar-hide">
+<!-- Welcome & Weather -->
+<div class="flex items-end justify-between py-6 px-2">
+<div>
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">June 24, 2024</p>
+<h2 class="text-3xl font-extrabold leading-tight">Good Morning,<br/>Alex</h2>
+</div>
+<div class="flex flex-col items-end">
+<span class="material-symbols-outlined text-yellow-400 mb-1" style="font-size: 32px; font-variation-settings: 'FILL' 1;">wb_sunny</span>
+<p class="text-lg font-bold">72°F</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">Sunny</p>
+</div>
+</div>
+<!-- System Status Banner -->
+<div class="mx-2 mb-6 flex items-center gap-2">
+<span class="relative flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+</span>
+<p class="text-sm font-semibold text-primary uppercase tracking-wide">System Active: Zone 2 Running</p>
+</div>
+<!-- Active Zone Card (Hero) -->
+<div class="relative overflow-hidden rounded-xl bg-surface-light dark:bg-surface-dark shadow-sm dark:shadow-none ring-1 ring-black/5 dark:ring-white/10 mb-8 group">
+<!-- Active Indicator Line -->
+<div class="absolute top-0 left-0 w-full h-1 bg-primary shadow-[0_0_15px_rgba(19,236,55,0.6)]"></div>
+<div class="relative">
+<div class="h-48 w-full bg-cover bg-center" data-alt="Lush green front lawn with morning sunlight" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAqPKABLKsFwPkV8rWHjT-prncO0tOp-GOE9b9VgTQDj4kLzhsLQAshHEU7uVA7XpvDIifhZncXExMsw6rezlT3WWJ8bSnuQj03_NNkiSAZKAFB-vW8o8SvZn_ieApxB1jAHooolRSniT4zHybfQpfIlTf4iifpHtih6U5tpp1LjYQDo-RF7CqaaY9Alb9y9UuDCc5qDN2UiJFa2FaigvsrCYB6uBC3q7uHqPjET8MGTvKQ1pA5xL3S_rjpMvO_ffpRQqWC91t0HEFA');">
+<div class="absolute inset-0 bg-gradient-to-t from-surface-light dark:from-surface-dark to-transparent"></div>
+</div>
+<div class="p-5 -mt-20 relative z-10">
+<div class="flex justify-between items-start mb-4">
+<div class="bg-primary/20 backdrop-blur-md px-3 py-1 rounded-full border border-primary/30 flex items-center gap-1.5 w-fit">
+<span class="material-symbols-outlined text-primary icon-fill text-[18px] animate-pulse">water_drop</span>
+<span class="text-xs font-bold text-primary uppercase">Watering Now</span>
+</div>
+</div>
+<h3 class="text-2xl font-bold mb-1">Zone 2: Front Lawn</h3>
+<p class="text-slate-500 dark:text-slate-400 mb-6">Sprinkler Heads A, B, C active</p>
+<div class="flex items-center justify-between mb-6">
+<div class="flex flex-col">
+<span class="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider mb-1">Time Remaining</span>
+<span class="text-3xl font-mono font-bold tracking-tighter tabular-nums">12:34</span>
+</div>
+<!-- Circular Progress visual simulation -->
+<div class="relative size-14 flex items-center justify-center">
+<svg class="size-full -rotate-90" viewbox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+<circle class="stroke-slate-200 dark:stroke-white/10" cx="18" cy="18" fill="none" r="16" stroke-width="3"></circle>
+<circle class="stroke-primary" cx="18" cy="18" fill="none" r="16" stroke-dasharray="100" stroke-dashoffset="65" stroke-linecap="round" stroke-width="3"></circle>
+</svg>
+<span class="absolute material-symbols-outlined text-slate-400 dark:text-slate-500" style="font-size: 20px;">timer</span>
+</div>
+</div>
+<button class="w-full h-12 rounded-full bg-surface-light dark:bg-white/10 hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-900 dark:text-white ring-1 ring-inset ring-slate-200 dark:ring-white/10 hover:ring-red-500 dark:hover:ring-red-500 hover:text-red-600 dark:hover:text-red-400 font-bold transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">stop_circle</span>
+                        Stop Zone
+                    </button>
+</div>
+</div>
+</div>
+<!-- Section Header -->
+<div class="flex items-center justify-between px-2 mb-4">
+<h3 class="text-lg font-bold">Other Zones</h3>
+<button class="text-primary text-sm font-bold">View All</button>
+</div>
+<!-- Zone List -->
+<div class="space-y-3">
+<!-- Item 1 -->
+<div class="flex items-center gap-4 bg-surface-light dark:bg-surface-dark p-4 rounded-xl ring-1 ring-black/5 dark:ring-white/5">
+<div class="flex items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 shrink-0 size-12">
+<span class="material-symbols-outlined">yard</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-bold truncate">Zone 1: Vegetable Patch</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm truncate">Scheduled for 6:00 PM today</p>
+</div>
+<button class="size-10 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+<!-- Item 2 -->
+<div class="flex items-center gap-4 bg-surface-light dark:bg-surface-dark p-4 rounded-xl ring-1 ring-black/5 dark:ring-white/5">
+<div class="flex items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 shrink-0 size-12">
+<span class="material-symbols-outlined">deck</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-bold truncate">Zone 3: Side Walk</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm truncate">Next run: Tomorrow 7:00 AM</p>
+</div>
+<button class="size-10 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+<!-- Item 3 -->
+<div class="flex items-center gap-4 bg-surface-light dark:bg-surface-dark p-4 rounded-xl ring-1 ring-black/5 dark:ring-white/5">
+<div class="flex items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 shrink-0 size-12">
+<span class="material-symbols-outlined">local_florist</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-bold truncate">Zone 4: Flower Beds</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm truncate">Next run: Fri, 6:30 AM</p>
+</div>
+<button class="size-10 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+</div>
+<!-- Global Stop Button (Sticky bottom of content area, but before nav) -->
+<div class="mt-8 mb-4">
+<button class="w-full h-14 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 font-bold transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">block</span>
+                Stop All Watering
+            </button>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="bg-surface-light dark:bg-surface-dark border-t border-black/5 dark:border-white/5 px-6 pb-8 pt-4 flex justify-between items-center fixed bottom-0 w-full z-20">
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-primary icon-fill transition-colors">dashboard</span>
+<span class="text-[10px] font-bold text-primary">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors">calendar_month</span>
+<span class="text-[10px] font-medium text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200">Schedule</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors">history</span>
+<span class="text-[10px] font-medium text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200">History</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors">settings</span>
+<span class="text-[10px] font-medium text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200">Settings</span>
+</a>
+</nav>
+</body></html>

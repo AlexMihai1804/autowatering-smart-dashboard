@@ -236,7 +236,7 @@ export class HistoryService {
         
         try {
             const channelId = channels && channels.length === 1 ? channels[0] : 0xFF;
-            await this.bleService.getDetailedHistory(channelId, 0, limit);
+            await this.bleService.fetchWateringHistory(0, channelId, 0, limit);
             
             // Get from store (BleService updates useAppStore)
             const { useAppStore } = await import('../store/useAppStore');
@@ -298,7 +298,8 @@ export class HistoryService {
         this.isSyncing = true;
         
         try {
-            await this.bleService.getEnvHourlyHistory(hours);
+            const now = Math.floor(Date.now() / 1000);
+            await this.bleService.fetchEnvHistoryPaged(0x02, now - hours * 3600, now, 1, 100);
             
             const { useAppStore } = await import('../store/useAppStore');
             const entries = useAppStore.getState().envHistoryHourly;
@@ -319,7 +320,8 @@ export class HistoryService {
         this.isSyncing = true;
         
         try {
-            await this.bleService.getEnvDailyHistory(days);
+            const now = Math.floor(Date.now() / 1000);
+            await this.bleService.fetchEnvHistoryPaged(0x03, now - days * 86400, now, 2, 100);
             
             const { useAppStore } = await import('../store/useAppStore');
             const entries = useAppStore.getState().envHistoryDaily;
@@ -375,9 +377,10 @@ export class HistoryService {
         this.isSyncing = true;
         
         try {
-            await this.bleService.getRainHourlyHistory(24);
+            const now = Math.floor(Date.now() / 1000);
+            await this.bleService.fetchRainHistory(0x01, now - 24 * 3600, now, 24, 0);
             await this.delay(120);
-            await this.bleService.getRainDailyHistory(7);
+            await this.bleService.fetchRainHistory(0x02, now - 7 * 86400, now, 7, 1);
             
             const { useAppStore } = await import('../store/useAppStore');
             const state = useAppStore.getState();

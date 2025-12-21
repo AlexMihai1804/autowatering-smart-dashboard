@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Irrigation Method - Onboarding</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                        "surface-dark": "#1c2e20",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "1.5rem", "xl": "2rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar hide for cleaner UI */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display transition-colors duration-200 antialiased overflow-x-hidden">
+<div class="relative flex flex-col min-h-screen w-full max-w-md mx-auto shadow-2xl overflow-hidden">
+<!-- Top App Bar -->
+<header class="flex items-center justify-between p-4 pb-2 z-10 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm sticky top-0">
+<button class="flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-2xl">arrow_back_ios_new</span>
+</button>
+<h2 class="text-base font-bold tracking-tight opacity-90">Zone 1 Setup</h2>
+<button class="flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-primary">
+<span class="material-symbols-outlined text-2xl">help</span>
+</button>
+</header>
+<!-- Progress Bar -->
+<div class="px-6 pt-2 pb-6">
+<div class="flex justify-between items-end mb-2">
+<span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Progress</span>
+<span class="text-sm font-bold text-primary">Step 3 of 5</span>
+</div>
+<div class="h-1.5 w-full bg-slate-200 dark:bg-surface-dark rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full transition-all duration-500 ease-out" style="width: 60%"></div>
+</div>
+</div>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col px-6 pb-24 overflow-y-auto no-scrollbar">
+<!-- Headline Section -->
+<div class="mb-8">
+<h1 class="text-3xl font-extrabold leading-tight mb-3">Irrigation Method</h1>
+<p class="text-slate-600 dark:text-slate-300 text-base leading-relaxed">
+                    Select the type of sprinkler or emitter used in Zone 1. This helps us calculate precise flow rates.
+                </p>
+</div>
+<!-- Selection List -->
+<div aria-label="Irrigation Methods" class="flex flex-col gap-4" role="radiogroup">
+<!-- Option 1: Spray Sprinkler (Active) -->
+<label class="relative group cursor-pointer">
+<input checked="" class="peer sr-only" name="irrigation_method" type="radio" value="spray"/>
+<div class="flex items-center p-4 rounded-xl bg-surface-light dark:bg-surface-dark border-2 border-transparent peer-checked:border-primary peer-checked:bg-primary/5 transition-all duration-300 shadow-sm dark:shadow-none hover:shadow-md">
+<!-- Icon -->
+<div class="size-12 shrink-0 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-700 dark:text-slate-200 peer-checked:bg-primary peer-checked:text-black transition-colors duration-300">
+<span class="material-symbols-outlined text-[28px]">shower</span>
+</div>
+<!-- Text -->
+<div class="ml-4 flex-1">
+<div class="flex justify-between items-center mb-0.5">
+<span class="font-bold text-lg text-slate-900 dark:text-white">Spray Sprinkler</span>
+<div class="size-5 rounded-full border-2 border-slate-300 dark:border-slate-500 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center transition-all">
+<div class="size-2 bg-black rounded-full opacity-0 peer-checked:opacity-100"></div>
+</div>
+</div>
+<p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Fixed spray pattern, high water output.</p>
+</div>
+</div>
+</label>
+<!-- Option 2: Rotor Head -->
+<label class="relative group cursor-pointer">
+<input class="peer sr-only" name="irrigation_method" type="radio" value="rotor"/>
+<div class="flex items-center p-4 rounded-xl bg-surface-light dark:bg-surface-dark border-2 border-transparent peer-checked:border-primary peer-checked:bg-primary/5 transition-all duration-300 shadow-sm dark:shadow-none hover:shadow-md">
+<!-- Icon -->
+<div class="size-12 shrink-0 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-700 dark:text-slate-200 peer-checked:bg-primary peer-checked:text-black transition-colors duration-300">
+<span class="material-symbols-outlined text-[28px]">rotate_right</span>
+</div>
+<!-- Text -->
+<div class="ml-4 flex-1">
+<div class="flex justify-between items-center mb-0.5">
+<span class="font-bold text-lg text-slate-900 dark:text-white">Rotor Head</span>
+<div class="size-5 rounded-full border-2 border-slate-300 dark:border-slate-500 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center transition-all">
+<div class="size-2 bg-black rounded-full opacity-0 peer-checked:opacity-100"></div>
+</div>
+</div>
+<p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Rotates to cover large grassy areas.</p>
+</div>
+</div>
+</label>
+<!-- Option 3: Drip Line -->
+<label class="relative group cursor-pointer">
+<input class="peer sr-only" name="irrigation_method" type="radio" value="drip"/>
+<div class="flex items-center p-4 rounded-xl bg-surface-light dark:bg-surface-dark border-2 border-transparent peer-checked:border-primary peer-checked:bg-primary/5 transition-all duration-300 shadow-sm dark:shadow-none hover:shadow-md">
+<!-- Icon -->
+<div class="size-12 shrink-0 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-700 dark:text-slate-200 peer-checked:bg-primary peer-checked:text-black transition-colors duration-300">
+<span class="material-symbols-outlined text-[28px]">water_drop</span>
+</div>
+<!-- Text -->
+<div class="ml-4 flex-1">
+<div class="flex justify-between items-center mb-0.5">
+<span class="font-bold text-lg text-slate-900 dark:text-white">Drip Line</span>
+<div class="size-5 rounded-full border-2 border-slate-300 dark:border-slate-500 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center transition-all">
+<div class="size-2 bg-black rounded-full opacity-0 peer-checked:opacity-100"></div>
+</div>
+</div>
+<p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Slow, direct watering for garden beds.</p>
+</div>
+</div>
+</label>
+<!-- Option 4: Soaker Hose -->
+<label class="relative group cursor-pointer">
+<input class="peer sr-only" name="irrigation_method" type="radio" value="soaker"/>
+<div class="flex items-center p-4 rounded-xl bg-surface-light dark:bg-surface-dark border-2 border-transparent peer-checked:border-primary peer-checked:bg-primary/5 transition-all duration-300 shadow-sm dark:shadow-none hover:shadow-md">
+<!-- Icon -->
+<div class="size-12 shrink-0 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-700 dark:text-slate-200 peer-checked:bg-primary peer-checked:text-black transition-colors duration-300">
+<span class="material-symbols-outlined text-[28px]">water</span>
+</div>
+<!-- Text -->
+<div class="ml-4 flex-1">
+<div class="flex justify-between items-center mb-0.5">
+<span class="font-bold text-lg text-slate-900 dark:text-white">Soaker Hose</span>
+<div class="size-5 rounded-full border-2 border-slate-300 dark:border-slate-500 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center transition-all">
+<div class="size-2 bg-black rounded-full opacity-0 peer-checked:opacity-100"></div>
+</div>
+</div>
+<p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Porous hose for deep root watering.</p>
+</div>
+</div>
+</label>
+</div>
+</main>
+<!-- Bottom Action Bar -->
+<div class="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background-light dark:from-background-dark via-background-light/90 dark:via-background-dark/90 to-transparent z-20 max-w-md mx-auto">
+<button class="w-full h-14 bg-primary hover:bg-[#0fd630] active:scale-[0.98] transition-all rounded-full flex items-center justify-center shadow-lg shadow-primary/20">
+<span class="text-black text-lg font-bold tracking-wide">Continue</span>
+<span class="material-symbols-outlined text-black ml-2 font-bold">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Background texture element for visual depth (Abstract) -->
+<div class="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05] z-[-1]" data-alt="Subtle dot pattern texture for background depth" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAUgDrx-Ryva9zAzFATseWwWamHBjoNtY_tdzajMM9-Ei641hSHtgcX8LujBnlhHzF77Nq8gTm_Urpvwa5UbEfgQxRbG_NwhSdvTRFp876WbV3nU5M6QsLsX9l2eTkisNkmewdG1y-BiNrwPj7YO71cuKOcslZWnzw4NDg9V-efDHlhBDJXDT1sFuOSWyXl_Ftv4JIuG5MbezYaXA-4lTo25X-GlKQKDu6xiT7uZOd6x2dEAUAynrueVki6KNPzaVTrWnFDqHMmu9kF');"></div>
+</body></html>

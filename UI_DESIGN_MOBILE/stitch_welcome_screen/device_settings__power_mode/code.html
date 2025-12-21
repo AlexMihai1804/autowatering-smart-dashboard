@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Device Settings: Power Mode</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "primary": "#13ec37",
+          "background-light": "#f6f8f6",
+          "background-dark": "#102213",
+        },
+        fontFamily: {
+          "display": ["Manrope"]
+        },
+        borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+      },
+    },
+  }
+</script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased text-[#111812] dark:text-white transition-colors duration-200">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl bg-background-light dark:bg-background-dark">
+<!-- TopAppBar -->
+<header class="flex items-center justify-between p-4 pt-12 pb-2 sticky top-0 z-20 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md">
+<button class="flex size-10 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors group">
+<span class="material-symbols-outlined text-2xl group-active:scale-95">arrow_back_ios_new</span>
+</button>
+<h1 class="text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-10">Power Mode</h1>
+</header>
+<main class="flex-1 flex flex-col gap-6 p-4">
+<!-- Battery Status Card (ProgressBar variant) -->
+<div class="relative overflow-hidden rounded-xl bg-white dark:bg-[#1C2A20] p-5 shadow-sm border border-gray-100 dark:border-white/5">
+<div class="flex justify-between items-start mb-4">
+<div class="flex flex-col gap-1">
+<p class="text-sm font-medium text-gray-500 dark:text-[#9db9a1]">Battery Status</p>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-bold tracking-tight">74%</span>
+<span class="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-green-700 dark:text-primary">
+                                Good
+                            </span>
+</div>
+</div>
+<span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings: 'FILL' 1;">battery_4_bar</span>
+</div>
+<div class="relative h-3 w-full rounded-full bg-gray-100 dark:bg-[#2C3E30] overflow-hidden">
+<div class="absolute top-0 left-0 h-full bg-primary rounded-full transition-all duration-500 ease-out" style="width: 74%;"></div>
+</div>
+<div class="mt-3 flex items-center gap-2 text-sm text-gray-500 dark:text-[#9db9a1]">
+<span class="material-symbols-outlined text-[18px]">timelapse</span>
+<p>~3 months remaining</p>
+</div>
+</div>
+<!-- RadioList (Enhanced Card Selection) -->
+<div class="flex flex-col gap-4">
+<h2 class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider px-1 opacity-80">Select Mode</h2>
+<!-- Option 1: Normal -->
+<label class="group relative flex cursor-pointer rounded-xl border-2 border-transparent bg-white dark:bg-[#1C2A20] p-5 shadow-sm transition-all duration-200 hover:border-primary/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5 dark:has-[:checked]:bg-[#13ec37]/5 has-[:checked]:shadow-[0_0_20px_rgba(19,236,55,0.1)]">
+<input checked="" class="peer sr-only" name="power_mode" type="radio"/>
+<!-- Checkmark Badge -->
+<div class="absolute top-5 right-5 opacity-0 peer-checked:opacity-100 transition-opacity scale-90 peer-checked:scale-100 duration-200">
+<div class="flex size-6 items-center justify-center rounded-full bg-primary text-[#102213]">
+<span class="material-symbols-outlined text-sm font-bold">check</span>
+</div>
+</div>
+<div class="flex w-full flex-col gap-3">
+<div class="flex items-center gap-4">
+<div class="flex size-12 items-center justify-center rounded-full bg-gray-100 dark:bg-[#2C3E30] text-gray-900 dark:text-white peer-checked:bg-primary peer-checked:text-[#102213] transition-colors">
+<span class="material-symbols-outlined text-2xl">bolt</span>
+</div>
+<div>
+<h3 class="font-bold text-base">Normal</h3>
+<p class="text-xs text-gray-500 dark:text-[#9db9a1]">Standard Operation</p>
+</div>
+</div>
+<p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed pr-6">
+                            Always listening. Instant response to app commands. Best for frequent adjustments.
+                        </p>
+<div class="flex flex-wrap gap-2 mt-1">
+<span class="inline-flex items-center rounded-md bg-green-50 dark:bg-green-500/10 px-2 py-1 text-xs font-semibold text-green-700 dark:text-green-400 ring-1 ring-inset ring-green-600/20">Fastest Response</span>
+<span class="inline-flex items-center rounded-md bg-gray-50 dark:bg-gray-500/10 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 ring-1 ring-inset ring-gray-500/20">Standard Battery</span>
+</div>
+</div>
+</label>
+<!-- Option 2: Power Save -->
+<label class="group relative flex cursor-pointer rounded-xl border-2 border-transparent bg-white dark:bg-[#1C2A20] p-5 shadow-sm transition-all duration-200 hover:border-primary/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5 dark:has-[:checked]:bg-[#13ec37]/5 has-[:checked]:shadow-[0_0_20px_rgba(19,236,55,0.1)]">
+<input class="peer sr-only" name="power_mode" type="radio"/>
+<div class="absolute top-5 right-5 opacity-0 peer-checked:opacity-100 transition-opacity scale-90 peer-checked:scale-100 duration-200">
+<div class="flex size-6 items-center justify-center rounded-full bg-primary text-[#102213]">
+<span class="material-symbols-outlined text-sm font-bold">check</span>
+</div>
+</div>
+<div class="flex w-full flex-col gap-3">
+<div class="flex items-center gap-4">
+<div class="flex size-12 items-center justify-center rounded-full bg-gray-100 dark:bg-[#2C3E30] text-gray-900 dark:text-white peer-checked:bg-primary peer-checked:text-[#102213] transition-colors">
+<span class="material-symbols-outlined text-2xl">eco</span>
+</div>
+<div>
+<h3 class="font-bold text-base">Power Save</h3>
+<p class="text-xs text-gray-500 dark:text-[#9db9a1]">Balanced Performance</p>
+</div>
+</div>
+<p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed pr-6">
+                            Checks for commands every 10 mins. Extends battery life by 2x.
+                        </p>
+<div class="flex flex-wrap gap-2 mt-1">
+<span class="inline-flex items-center rounded-md bg-yellow-50 dark:bg-yellow-500/10 px-2 py-1 text-xs font-medium text-yellow-700 dark:text-yellow-400 ring-1 ring-inset ring-yellow-600/20">10m Delay</span>
+<span class="inline-flex items-center rounded-md bg-green-50 dark:bg-green-500/10 px-2 py-1 text-xs font-semibold text-green-700 dark:text-green-400 ring-1 ring-inset ring-green-600/20">Extended Battery</span>
+</div>
+</div>
+</label>
+<!-- Option 3: Ultra Save -->
+<label class="group relative flex cursor-pointer rounded-xl border-2 border-transparent bg-white dark:bg-[#1C2A20] p-5 shadow-sm transition-all duration-200 hover:border-primary/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5 dark:has-[:checked]:bg-[#13ec37]/5 has-[:checked]:shadow-[0_0_20px_rgba(19,236,55,0.1)]">
+<input class="peer sr-only" name="power_mode" type="radio"/>
+<div class="absolute top-5 right-5 opacity-0 peer-checked:opacity-100 transition-opacity scale-90 peer-checked:scale-100 duration-200">
+<div class="flex size-6 items-center justify-center rounded-full bg-primary text-[#102213]">
+<span class="material-symbols-outlined text-sm font-bold">check</span>
+</div>
+</div>
+<div class="flex w-full flex-col gap-3">
+<div class="flex items-center gap-4">
+<div class="flex size-12 items-center justify-center rounded-full bg-gray-100 dark:bg-[#2C3E30] text-gray-900 dark:text-white peer-checked:bg-primary peer-checked:text-[#102213] transition-colors">
+<span class="material-symbols-outlined text-2xl">battery_saver</span>
+</div>
+<div>
+<h3 class="font-bold text-base">Ultra Save</h3>
+<p class="text-xs text-gray-500 dark:text-[#9db9a1]">Max Efficiency</p>
+</div>
+</div>
+<p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed pr-6">
+                            Checks once per day. Maximize battery life for remote areas.
+                        </p>
+<div class="flex flex-wrap gap-2 mt-1">
+<span class="inline-flex items-center rounded-md bg-orange-50 dark:bg-orange-500/10 px-2 py-1 text-xs font-medium text-orange-700 dark:text-orange-400 ring-1 ring-inset ring-orange-600/20">24h Delay</span>
+<span class="inline-flex items-center rounded-md bg-green-50 dark:bg-green-500/10 px-2 py-1 text-xs font-semibold text-green-700 dark:text-green-400 ring-1 ring-inset ring-green-600/20">Max Battery</span>
+</div>
+</div>
+</label>
+</div>
+<!-- Accordion Info -->
+<details class="group rounded-xl bg-white dark:bg-[#1C2A20] ring-1 ring-inset ring-gray-200 dark:ring-white/5 overflow-hidden">
+<summary class="flex cursor-pointer items-center justify-between gap-4 p-4 text-sm font-medium hover:bg-gray-50 dark:hover:bg-white/5 transition-colors select-none">
+<div class="flex items-center gap-3 text-gray-700 dark:text-gray-300">
+<span class="material-symbols-outlined text-gray-400">info</span>
+<span>Important Note on Ultra Save</span>
+</div>
+<span class="material-symbols-outlined text-gray-400 transition-transform duration-300 group-open:rotate-180">expand_more</span>
+</summary>
+<div class="px-4 pb-4 pt-0">
+<div class="pl-9 text-sm text-gray-600 dark:text-[#9db9a1] leading-relaxed border-l-2 border-primary/20 ml-2 py-1 pr-2">
+                        Ultra Save mode maximizes battery life by disconnecting from the network. It only wakes up once per day to check for new watering schedules. Instant commands sent from the app will be queued and applied during the next wake-up window.
+                    </div>
+</div>
+</details>
+</main>
+<!-- Fixed Action Button -->
+<div class="p-4 bg-background-light dark:bg-background-dark sticky bottom-0 border-t border-gray-200 dark:border-white/5 backdrop-blur-xl bg-opacity-80 dark:bg-opacity-80 z-10">
+<button class="relative w-full overflow-hidden rounded-full bg-primary h-14 text-[#102213] font-bold text-lg hover:bg-[#32f552] active:bg-[#0fd630] transition-all duration-200 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(19,236,55,0.25)] hover:shadow-[0_0_25px_rgba(19,236,55,0.4)] hover:-translate-y-0.5 active:translate-y-0">
+<span class="material-symbols-outlined">save_as</span>
+<span>Update Settings</span>
+</button>
+</div>
+<div class="h-6 bg-background-light dark:bg-background-dark"></div>
+</div>
+</body></html>

@@ -417,6 +417,45 @@ export interface UnifiedHistoryHeader {
 }
 
 // ============================================================================
+// BULK SYNC SNAPSHOT (Characteristic #28) - 60 bytes
+// ============================================================================
+export interface BulkSyncSnapshot {
+    version: number;                 /* uint8 */
+    flags: number;                   /* uint8 */
+    rtc_valid: boolean;              /* bit0 */
+    env_valid: boolean;              /* bit1 */
+    rain_valid: boolean;             /* bit2 */
+    utc_timestamp: number;           /* uint32 */
+    timezone_offset_min: number;     /* int16 */
+    dst_active: boolean;             /* uint8 */
+    system_mode: number;             /* uint8 */
+    active_alarms: number;           /* uint8 */
+    valve_states: number;            /* uint8 */
+    active_channel: number;          /* uint8 */
+    remaining_seconds: number;       /* uint16 */
+    flow_rate_ml_min: number;        /* uint16 */
+    temperature_c: number;           /* int16 / 10 */
+    humidity_pct: number;            /* uint16 / 10 */
+    pressure_hpa: number;            /* uint16 / 10 */
+    dew_point_c: number;             /* int16 / 10 */
+    vpd_kpa: number;                 /* uint16 / 100 */
+    rain_today_mm: number;           /* uint16 / 10 */
+    rain_week_mm: number;            /* uint16 / 10 */
+    rain_integration_enabled: boolean; /* uint8 */
+    skip_active: boolean;            /* uint8 */
+    skip_remaining_min: number;      /* uint16 */
+    temp_comp_enabled: boolean;      /* uint8 */
+    rain_comp_enabled: boolean;      /* uint8 */
+    temp_adjustment_pct: number;     /* int8 */
+    rain_adjustment_pct: number;     /* int8 */
+    pending_task_count: number;      /* uint8 */
+    next_task_channel: number;       /* uint8 */
+    next_task_in_min: number;        /* uint16 */
+    next_task_timestamp: number;     /* uint32 */
+    channel_status: number[];        /* uint8[8] */
+}
+
+// ============================================================================
 // CONSTANTS - Protocol Values
 // ============================================================================
 export const FRAGMENT_TYPE_NAME_ONLY = 0x01;
@@ -426,9 +465,9 @@ export const FRAGMENT_TYPE_FULL_LE = 0x03;
 export const UNIFIED_HEADER_SIZE = 8;
 export const WRITE_HEADER_SIZE = 4;
 export const MAX_CHUNK_SIZE = 20;
-export const RAIN_HISTORY_FRAGMENT_SIZE = 240;
+export const RAIN_HISTORY_FRAGMENT_SIZE = 232;
 export const ENV_HISTORY_FRAGMENT_SIZE = 232;
-export const RAIN_HISTORY_MAX_FRAGMENTS = 20;
+export const RAIN_HISTORY_MAX_FRAGMENTS = 255;
 
 // ============================================================================
 // Current Task Data (Characteristic #16) - 22 bytes

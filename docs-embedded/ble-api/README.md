@@ -44,8 +44,61 @@ All characteristics live under the irrigation primary service. Properties come d
 | 25 | Onboarding Status | `12345678-1234-5678-1234-56789abcde20` | 29 bytes | R / N | Read-only progress flags for onboarding workflows. |
 | 26 | Reset Control | `12345678-1234-5678-1234-56789abcde21` | 16 bytes | R / W / N | Two-step reset interface (code generate + confirmation). Notifies result and refreshed confirmation code. |
 | 27 | Channel Compensation Config | `12345678-1234-5678-1234-56789abcde19` | 44 bytes | R / W / N | Per-channel rain/temp compensation settings. 1-byte write selects channel; 44-byte write updates config. |
+| 28 | Bulk Sync Snapshot | `12345678-1234-5678-1234-56789abcde60` | 60 bytes | R | **NEW** Single-read aggregate of system state, environmental data, rain totals, compensation status, and channel states. Use at connection to replace multiple queries. |
 
 Legend: R = Read, W = Write, N = Notify.
+
+## Performance Optimizations (v2.1+)
+
+The following optimizations have been implemented to maximize BLE throughput:
+
+### PHY 2M and Data Length Extension
+- PHY is upgraded to 2M (2 Mbps) at connection when supported
+- Data Length Extension (DLE) is requested to 251 bytes
+- Combined effect: ~2x faster raw data transfer
+
+### Binary Search for Flash History
+- History queries now use O(log n) binary search instead of O(n) linear scan
+- Applies to: environmental hourly/daily, rain hourly/daily
+- Typical speedup: 10-30x for queries on 720+ entry history
+
+### Fragment Streaming Improvements
+- Inter-fragment delay reduced from 5ms to 2ms
+- Retry logic with exponential backoff (20ms → 640ms, 5 retries)
+- New-query rate-limit reduced from 1000ms to 100ms (continuation/fragment requests bypass the limiter)
+- Query continuation bypasses rate-limit entirely
+
+### Buffer Configuration
+```
+CONFIG_BT_BUF_ACL_TX_COUNT=12
+CONFIG_BT_BUF_EVT_RX_COUNT=16
+CONFIG_BT_L2CAP_TX_BUF_COUNT=12
+CONFIG_BT_ATT_TX_COUNT=12
+CONFIG_BT_CONN_TX_MAX=24
+CONFIG_BT_CTLR_RX_BUFFERS=18
+CONFIG_BT_GATT_NOTIFY_MULTIPLE=y
+```
+
+### Bulk Sync Snapshot (UUID 0xde60)
+A single 60-byte READ replaces 10+ individual characteristic queries at connection:
+- System status, active channel, valve states
+- Environmental data (temperature, humidity, pressure, dew point, VPD)
+- Rain totals (today, week), skip status
+- Compensation status and adjustments
+- Task queue status and next scheduled task
+- Per-channel status byte array (8 channels)
+
+## New Limits & Behavioral Changes (v3.1.0)
+
+These are the practical limits clients should follow for stable high-throughput operation:
+
+- **Bulk Sync Snapshot**: single 60-byte READ (`0xde60`), no notifications. Use it at connection to avoid multiple round-trips.
+- **History Management (watering history)**: new queries are accepted at most every **100ms**; fragment/continuation requests are **not** rate-limited.
+- **Environmental History**: accepted command rate is **>= 50ms** between requests.
+- **Rain History**: one in-flight command at a time; fragments stream via work queue with **~2ms spacing** between fragments.
+- **Fragment payload sizing**: history fragments carry an 8-byte `history_fragment_header_t` plus payload; payload is MTU-aware and capped at **232 bytes** (`RAIN_HISTORY_FRAGMENT_SIZE`).
+- **Retries**: history/rain/environment fragment streaming retries transient `-ENOMEM/-EBUSY` failures (up to **5 retries**) with exponential backoff.
+- **Transfer cache**: repeated history/environment range reads may hit a **30s cache** to avoid re-reading flash between fragment requests.
 
 ## Fragmentation Rules
 
@@ -53,7 +106,7 @@ The firmware keeps 20-byte payload compatibility for writes even when a larger M
 
 - **Channel Configuration / Growing Environment:** First fragment carries `[channel_id][frag_type][len_lo][len_hi]`. Fragment types 1 (name-only), 2 (big-endian struct), and 3 (little-endian struct) are supported; new tooling should prefer type 3.
 - **Auto Calc Status:** Uses the generic `[0x00][frag_type][len_lo][len_hi]` header because it is not channel-scoped.
-- **History responses (irrigation, rain, environmental):** Every fragment starts with the packed 8-byte `history_fragment_header_t` followed by up to 240 bytes of payload (`RAIN_HISTORY_FRAGMENT_SIZE`). Digest fields expose `fragment_index`, `total_fragments`, entry count, and status codes.
+- **History responses (irrigation, rain, environmental):** Every fragment starts with the packed 8-byte `history_fragment_header_t` followed by up to 232 bytes of payload (`RAIN_HISTORY_FRAGMENT_SIZE`) and may be smaller to fit the negotiated MTU. Digest fields expose `fragment_index`, `total_fragments`, entry count, and status codes.
 - **Notifications:** Managed through `SMART_NOTIFY`, `CRITICAL_NOTIFY`, and `CHANNEL_CONFIG_NOTIFY`. Adaptive throttling widens or shrinks the per-priority interval (critical 0 ms, high 50 ms, normal 200 ms, low 1000 ms) based on success and congestion counters. Channel name notifications are additionally rate-limited (maximum three within one second per channel).
 
 ## ATT Error Behaviour

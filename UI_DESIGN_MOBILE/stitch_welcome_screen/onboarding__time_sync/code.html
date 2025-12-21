@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Onboarding: Time Sync</title>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1337ec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101322",
+                    },
+                    fontFamily: {
+                        "display": ["Spline Sans", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-white antialiased">
+<!-- Main Scrollable Container -->
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark group/design-root overflow-x-hidden">
+<!-- Header -->
+<div class="flex items-center p-4 pb-2 justify-between sticky top-0 z-10 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md">
+<button class="text-slate-900 dark:text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">Step 3: Configuration</h2>
+</div>
+<!-- Page Indicators -->
+<div class="flex w-full flex-row items-center justify-center gap-3 py-5 px-6">
+<div class="h-1.5 flex-1 rounded-full bg-primary/20 dark:bg-white/10"></div>
+<div class="h-1.5 flex-1 rounded-full bg-primary/20 dark:bg-white/10"></div>
+<div class="h-1.5 flex-1 rounded-full bg-primary"></div> <!-- Active Step -->
+<div class="h-1.5 flex-1 rounded-full bg-primary/20 dark:bg-white/10"></div>
+<div class="h-1.5 flex-1 rounded-full bg-primary/20 dark:bg-white/10"></div>
+</div>
+<!-- Main Content Area -->
+<div class="flex w-full grow flex-col items-center px-6 pb-6">
+<!-- Hero Visual -->
+<div class="flex w-full justify-center py-8">
+<div class="relative flex items-center justify-center size-56">
+<!-- Glow Background -->
+<div class="absolute inset-0 bg-primary/30 rounded-full blur-[40px]"></div>
+<!-- Circular Container -->
+<div class="relative w-full h-full rounded-full bg-gradient-to-b from-white/80 to-white/40 dark:from-white/10 dark:to-white/5 p-[1px] shadow-2xl">
+<div class="w-full h-full rounded-full bg-background-light dark:bg-background-dark flex items-center justify-center relative overflow-hidden">
+<!-- Abstract Pattern Background -->
+<div class="absolute inset-0 opacity-10 dark:opacity-20 bg-cover bg-center" data-alt="Abstract radial lines representing time and synchronization" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC5drbnYOxVVlKShc8-f2AfrTPJJGiqlFggb6dnJ9SV-lI2dmvw_MnUCrpQM1dVCE2_tPbcfOambAebb2VGfvxrBKxy1Hnj4vVWVyl_2HBhyi8iH5LExGz2wdBfwRROxzbNpuJxnm4AB-LrqE7B78UWe5XKts2pdiCmskeurSQ23AcDHKW9vGUxZ1G8hZuuB0C9de-sqmvDnhuH7lR10kUCnzUVEK6R-TbKY8aJWrIs7h5IfXd-pBa8QalTOQxz632CAVg44ZCZvcMv');">
+</div>
+<!-- Central Icon -->
+<div class="relative z-10 flex flex-col items-center justify-center gap-2">
+<span class="material-symbols-outlined text-6xl text-primary drop-shadow-sm">sync</span>
+</div>
+<!-- Decorative Orbit Ring -->
+<div class="absolute inset-4 rounded-full border border-dashed border-primary/30 animate-spin-slow"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Headline -->
+<h1 class="text-slate-900 dark:text-white tracking-tight text-[28px] font-bold leading-tight px-4 text-center pb-3">
+                Synchronize Clock
+            </h1>
+<!-- Body Text -->
+<p class="text-slate-600 dark:text-slate-400 text-base font-normal leading-relaxed pb-8 px-4 text-center max-w-sm mx-auto">
+                To ensure your watering schedules are accurate, we'll sync the controller to your phone's current time zone.
+            </p>
+<!-- Data Display Card -->
+<div class="w-full max-w-sm bg-white dark:bg-[#1A1D2D] rounded-[2rem] p-6 shadow-sm border border-slate-200 dark:border-white/5 mb-8">
+<!-- Zone Item -->
+<div class="flex items-start gap-4 mb-6 relative">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 dark:bg-primary/20 text-primary">
+<span class="material-symbols-outlined">public</span>
+</div>
+<div class="flex-1">
+<div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Detected Zone</div>
+<div class="text-base font-semibold text-slate-900 dark:text-white leading-tight">America/New_York</div>
+<div class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">(UTC-5)</div>
+</div>
+<div class="absolute right-0 top-1 text-primary">
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+</div>
+</div>
+<!-- Divider -->
+<div class="h-px w-full bg-slate-100 dark:bg-white/5 mb-6"></div>
+<!-- Time Item -->
+<div class="flex items-start gap-4">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 dark:bg-primary/20 text-primary">
+<span class="material-symbols-outlined">schedule</span>
+</div>
+<div class="flex-1">
+<div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Phone Time</div>
+<div class="flex items-baseline gap-1">
+<span class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight font-mono">09:41</span>
+<span class="text-sm font-medium text-slate-500">AM</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex-1"></div>
+<!-- Footer Actions -->
+<div class="w-full max-w-sm flex flex-col gap-4 mt-auto">
+<button class="group relative flex w-full items-center justify-center gap-2.5 rounded-full bg-primary py-4 px-6 text-center font-bold text-white shadow-lg shadow-primary/25 transition-all hover:bg-blue-600 active:scale-[0.98]">
+<span class="material-symbols-outlined text-[20px]">sync_alt</span>
+<span>Sync with iPhone</span>
+</button>
+<button class="w-full py-2 text-center text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors">
+                    Manual Setup
+                </button>
+</div>
+</div>
+<!-- Bottom Safe Area Spacer if needed -->
+<div class="h-5 w-full bg-background-light dark:bg-background-dark"></div>
+</div>
+</body></html>

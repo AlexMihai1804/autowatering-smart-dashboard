@@ -10,7 +10,7 @@ The AutoWatering system implements a custom fragmentation protocol to handle BLE
 
 - Compatibility: Many cross-platform client stacks assume <=20B write chunks
 - Larger Structures: Several structs now exceed earlier sizes (e.g., `growing_env_data`, enhanced configs, 78B rain integration status)
-- History Payloads: History responses can carry up to 232B payload per notification (after header) for environmental history; rain history uses up to 240B compile-time constant
+- History Payloads: Unified history responses carry up to 232B payload per notification after the 8B header (total value <=240B at MTU=247); firmware may reduce payload to fit negotiated MTU
 - Unified Headers: A consistent 8B header wraps all history/auto-calc style notifications simplifying client parsing
 
 ## Fragmentation Protocol Specification
@@ -66,7 +66,7 @@ The total data size is encoded in bytes 2-3 of the header:
 | Auto Calc Status (64B) | (writes optional) | 2,3 | Notifications wrapped in unified 8B header + full struct |
 | Rain History Control | Reserved-first | 2,3 | All responses unified header + payload slices |
 | Environmental History | Reserved-first | 2,3 | Unified header + payload (<=232B) |
-| Environmental Data | - | - | Not fragmented (single 28B snapshot) |
+| Environmental Data | - | - | Not fragmented on READ (single 24B snapshot). Notifications may be fragmented when using the compatibility path (see `21-environmental-data.md`). |
 | Rain Integration Status (78B) | - | - | Single read (fits MTU after negotiation) |
 | Current Task Status (21B) | - | - | No fragmentation; periodic notify |
 

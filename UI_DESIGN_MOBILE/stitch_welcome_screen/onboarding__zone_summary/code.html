@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Zone Summary Onboarding</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#13ec37",
+              "background-light": "#f6f8f6",
+              "background-dark": "#102213",
+              "surface-dark": "#1A2C1E",
+              "surface-light": "#ffffff",
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white antialiased selection:bg-primary selection:text-background-dark">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden pb-32">
+<!-- Top Navigation & Progress -->
+<div class="sticky top-0 z-30 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md pt-2 border-b border-transparent dark:border-white/5 transition-colors duration-300">
+<div class="flex items-center px-4 py-3 justify-between">
+<button class="flex size-10 items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-white/10 transition-colors active:scale-95">
+<span class="material-symbols-outlined text-2xl">arrow_back_ios_new</span>
+</button>
+<h2 class="text-lg font-bold leading-tight tracking-tight">Review Settings</h2>
+<div class="size-10"></div> <!-- Spacer -->
+</div>
+<!-- Page Indicators -->
+<div class="flex w-full flex-row items-center justify-center gap-2 pb-4">
+<div class="h-1.5 w-6 rounded-full bg-primary shadow-[0_0_10px_rgba(19,236,55,0.5)]"></div>
+<div class="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-white/20"></div>
+<div class="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-white/20"></div>
+<div class="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-white/20"></div>
+</div>
+</div>
+<!-- Scrollable Content -->
+<div class="flex flex-col px-4 space-y-6 pt-6">
+<!-- Hero Section: Zone Identity -->
+<div class="flex flex-col items-center gap-5 py-2">
+<div class="relative group cursor-pointer">
+<!-- Glow effect -->
+<div class="absolute inset-0 rounded-full bg-primary/30 blur-2xl scale-110 opacity-60 group-hover:opacity-80 transition-opacity duration-500"></div>
+<!-- Image Container -->
+<div class="relative bg-center bg-no-repeat bg-cover rounded-full size-36 border-[6px] border-background-light dark:border-background-dark shadow-2xl z-10" data-alt="Close up view of lush green vegetable garden leaves with water droplets" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAEF717hlNBeMpodfauf1DwIa2nR2l7aonQ2SbvRJ-2Nvry4z2uQ_Rv3mANPHiLxO6xRm_9_b5rvI3e3iHHO3miu-vJMGgOqQaEiBPJxT1vmf-gqaR5WMrFTZRu-mdSuxwtWhU4F3c9d8914DKAVxT7LfSvDqUFNgryvtxAMfqt6ymnsJ9TC13nwPqKTyOz2YHV4A4Ruqx61Lpb3L1ufgcNMUc6pvf0nVXfVb7RBlwHWCCZGnM-b7ax0cpmcLfamEPF_mxSsGe1YOQL");'>
+</div>
+<!-- Icon Badge -->
+<div class="absolute bottom-1 right-1 z-20 bg-primary text-background-dark rounded-full p-2.5 border-[5px] border-background-light dark:border-background-dark flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-xl font-bold">grass</span>
+</div>
+</div>
+<div class="text-center space-y-1">
+<h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">Backyard Veggies</h1>
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200/50 dark:bg-white/10 backdrop-blur-sm">
+<span class="size-2 rounded-full bg-primary animate-pulse"></span>
+<p class="text-slate-600 dark:text-slate-300 font-semibold text-sm">Zone 1 • External</p>
+</div>
+</div>
+</div>
+<!-- Summary Group 1: Environment -->
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between px-2">
+<h3 class="text-slate-800 dark:text-slate-200 text-base font-bold uppercase tracking-wider opacity-80">Environment</h3>
+<button class="text-primary text-sm font-bold hover:text-primary/80 transition-colors px-2 py-1 rounded hover:bg-primary/10">Edit</button>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-white/5 divide-y divide-slate-100 dark:divide-white/5">
+<!-- Plant Type -->
+<div class="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+<div class="flex items-center justify-center rounded-xl bg-green-100 dark:bg-[#28392b] text-green-700 dark:text-primary shrink-0 size-10">
+<span class="material-symbols-outlined">potted_plant</span>
+</div>
+<div class="flex-1">
+<p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Plant Type</p>
+<p class="text-base font-bold text-slate-900 dark:text-white mt-0.5">Vegetables</p>
+</div>
+</div>
+<!-- Soil -->
+<div class="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+<div class="flex items-center justify-center rounded-xl bg-amber-100 dark:bg-[#393228] text-amber-700 dark:text-amber-400 shrink-0 size-10">
+<span class="material-symbols-outlined">landscape</span>
+</div>
+<div class="flex-1">
+<p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Soil Type</p>
+<p class="text-base font-bold text-slate-900 dark:text-white mt-0.5">Loam</p>
+</div>
+</div>
+<!-- Sun -->
+<div class="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+<div class="flex items-center justify-center rounded-xl bg-orange-100 dark:bg-[#392b28] text-orange-600 dark:text-orange-400 shrink-0 size-10">
+<span class="material-symbols-outlined">wb_sunny</span>
+</div>
+<div class="flex-1">
+<p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Sun Exposure</p>
+<p class="text-base font-bold text-slate-900 dark:text-white mt-0.5">Full Sun</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Summary Group 2: Hardware -->
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between px-2">
+<h3 class="text-slate-800 dark:text-slate-200 text-base font-bold uppercase tracking-wider opacity-80">Hardware</h3>
+<button class="text-primary text-sm font-bold hover:text-primary/80 transition-colors px-2 py-1 rounded hover:bg-primary/10">Edit</button>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-white/5 divide-y divide-slate-100 dark:divide-white/5">
+<!-- Method -->
+<div class="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+<div class="flex items-center justify-center rounded-xl bg-blue-100 dark:bg-[#283239] text-blue-600 dark:text-blue-400 shrink-0 size-10">
+<span class="material-symbols-outlined">water_drop</span>
+</div>
+<div class="flex-1">
+<p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Method</p>
+<p class="text-base font-bold text-slate-900 dark:text-white mt-0.5">Drip Line</p>
+</div>
+</div>
+<!-- Emitters -->
+<div class="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+<div class="flex items-center justify-center rounded-xl bg-slate-100 dark:bg-[#2d332e] text-slate-600 dark:text-slate-300 shrink-0 size-10">
+<span class="material-symbols-outlined">grid_view</span>
+</div>
+<div class="flex-1">
+<p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Emitters</p>
+<p class="text-base font-bold text-slate-900 dark:text-white mt-0.5">12 Heads</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Summary Group 3: Schedule -->
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between px-2">
+<h3 class="text-slate-800 dark:text-slate-200 text-base font-bold uppercase tracking-wider opacity-80">Schedule</h3>
+<button class="text-primary text-sm font-bold hover:text-primary/80 transition-colors px-2 py-1 rounded hover:bg-primary/10">Edit</button>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-white/5 divide-y divide-slate-100 dark:divide-white/5">
+<!-- Mode -->
+<div class="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+<div class="flex items-center justify-center rounded-xl bg-purple-100 dark:bg-[#342839] text-purple-600 dark:text-purple-400 shrink-0 size-10">
+<span class="material-symbols-outlined">smart_toy</span>
+</div>
+<div class="flex-1">
+<p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Mode</p>
+<div class="flex items-center gap-2">
+<p class="text-base font-bold text-slate-900 dark:text-white mt-0.5">Smart Adaptive</p>
+<span class="material-symbols-outlined text-sm text-primary" title="AI Enabled">auto_awesome</span>
+</div>
+</div>
+</div>
+<!-- Frequency -->
+<div class="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+<div class="flex items-center justify-center rounded-xl bg-teal-100 dark:bg-[#283936] text-teal-600 dark:text-teal-400 shrink-0 size-10">
+<span class="material-symbols-outlined">calendar_today</span>
+</div>
+<div class="flex-1">
+<p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Est. Frequency</p>
+<p class="text-base font-bold text-slate-900 dark:text-white mt-0.5">Every 2 days</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Bottom Actions -->
+<div class="fixed bottom-0 left-0 right-0 z-40">
+<!-- Gradient fade for smooth content scroll beneath footer -->
+<div class="h-12 w-full bg-gradient-to-b from-transparent to-background-light dark:to-background-dark pointer-events-none"></div>
+<div class="bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-xl border-t border-slate-200 dark:border-white/5 px-4 pt-4 pb-8 safe-area-pb">
+<div class="flex flex-col gap-3 max-w-lg mx-auto">
+<button class="group relative flex w-full items-center justify-center rounded-full bg-primary h-14 px-6 text-background-dark font-extrabold text-lg shadow-[0_0_20px_-5px_rgba(19,236,55,0.4)] hover:shadow-[0_0_30px_-5px_rgba(19,236,55,0.6)] transition-all active:scale-[0.98]">
+<span class="relative z-10 flex items-center gap-2">
+                            Confirm &amp; Next Zone
+                            <span class="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
+</span>
+</button>
+<button class="flex w-full items-center justify-center rounded-full h-12 px-6 text-slate-500 dark:text-slate-400 font-semibold text-base hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors">
+                        Delete Zone
+                    </button>
+</div>
+</div>
+</div>
+</div>
+</body></html>

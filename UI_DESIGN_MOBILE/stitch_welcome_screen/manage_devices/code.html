@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Manage Devices</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#13ec37",
+              "background-light": "#f6f8f6",
+              "background-dark": "#111812", // Deep charcoal/green-black from requirements
+              "card-dark": "#1c271d", // Slightly lighter for cards
+              "text-secondary": "#9db9a1",
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "1.5rem", "xl": "2rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .material-symbols-outlined {
+                font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            }
+            .material-symbols-filled {
+                font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased text-slate-900 dark:text-white transition-colors duration-200">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl bg-background-light dark:bg-background-dark">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-50 bg-background-light dark:bg-background-dark/95 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-white/5">
+<button class="flex size-10 items-center justify-center rounded-full hover:bg-white/5 active:scale-95 transition-all text-white">
+<span class="material-symbols-outlined text-[24px]">arrow_back_ios_new</span>
+</button>
+<h2 class="text-white text-lg font-bold leading-tight tracking-tight">Manage Devices</h2>
+<button class="flex size-10 items-center justify-center rounded-full bg-primary/10 hover:bg-primary/20 text-primary active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[24px]">add</span>
+</button>
+</header>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col p-4 pb-32 gap-6">
+<!-- Section: Current Device -->
+<section>
+<h3 class="text-white text-lg font-bold leading-tight tracking-tight mb-4 px-1">Current Device</h3>
+<!-- Active Device Card -->
+<div class="relative overflow-hidden rounded-xl bg-card-dark p-5 shadow-[0_0_15px_rgba(19,236,55,0.1)] border border-primary/30 group cursor-pointer transition-transform active:scale-[0.98]">
+<div class="absolute top-0 right-0 p-5">
+<div class="flex items-center gap-1.5 bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+<span class="text-primary text-xs font-bold uppercase tracking-wider">Active</span>
+</div>
+</div>
+<div class="flex flex-col h-full justify-between gap-6">
+<div class="flex gap-4">
+<div class="w-16 h-16 rounded-lg bg-center bg-cover bg-no-repeat shadow-inner" data-alt="Smart garden sprinkler system close up" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC2i7Fd0vhsgqNwyAXYeTXTZ0FSx1H4CmgJH52cwOdEHKuFvPT_hQ21HxwHQOhaWU4L9OU96lbKdFbbudm3OQr8mrGxOPnf4StPW2gmE00rN4ihFu0ziLJ-ukCpK6VL2XciJFmAF8ftR1wHAYvFJc88TbqP8hQDEgNgROyHl2MFduvWkJ3jCjKLjRd5SiUpKiTo4hGJXQJe-lQ_G9h8Vb7ix9tfRN09MP0_87Dj--rQqwwZRZSuqt4MDCqt5OwZxvacUTbttLOcnpUv");'></div>
+<div class="flex flex-col pt-1">
+<h4 class="text-white text-xl font-bold leading-tight">Garden Master 3000</h4>
+<p class="text-text-secondary text-sm font-medium mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">wifi</span>
+                                    Connected via Wi-Fi
+                                </p>
+</div>
+</div>
+<!-- Quick Stats / Info -->
+<div class="grid grid-cols-2 gap-3">
+<div class="bg-white/5 rounded-lg p-3 flex flex-col">
+<span class="text-text-secondary text-xs">Last Sync</span>
+<span class="text-white font-semibold text-sm">Just now</span>
+</div>
+<div class="bg-white/5 rounded-lg p-3 flex flex-col">
+<span class="text-text-secondary text-xs">Signal Strength</span>
+<span class="text-primary font-semibold text-sm">Excellent</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Other Devices -->
+<section class="flex flex-col gap-3">
+<h3 class="text-white text-lg font-bold leading-tight tracking-tight mb-1 px-1">Other Devices</h3>
+<!-- Device Item 1 -->
+<div class="group flex items-center justify-between gap-4 rounded-xl bg-card-dark p-3 pr-4 active:bg-white/5 transition-colors cursor-pointer border border-white/5 hover:border-white/10">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat bg-cover rounded-lg size-14 shrink-0 bg-neutral-800" data-alt="Modern house front lawn with green grass" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDR5Mbrk8l5zsU_xzaf81KoI3vOivx_Op_5rwhcU7SBSnbFSTA5UVDFggGCqhil_VAg2ZXLCCkt_J4OFu5QGmAePIXtUk3pyFxj6sevYvV9oXl2MnvPnOGWfWM2dk8GDbJnpjvagv2Ovc-fYmx5zacwKxlcWIH2jmONXzUcKVz6MHwDXAWUkEpTYOLzobrrxgq-jhWC_ugiYEnKRdXrE4gJwoIMTyCNDH3fpXhPexED0sxXaNFM_EK-WUARyErIkuzYWi-FUJDw_nyF");'></div>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-semibold leading-normal line-clamp-1">Front Lawn Sprinkler</p>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="size-1.5 rounded-full bg-yellow-500"></span>
+<p class="text-text-secondary text-sm font-normal leading-normal">Standby • Backyard</p>
+</div>
+</div>
+</div>
+<button class="shrink-0 flex items-center justify-center size-8 rounded-full bg-white/5 text-white group-hover:bg-primary group-hover:text-black transition-colors">
+<span class="material-symbols-outlined text-[20px]">arrow_forward_ios</span>
+</button>
+</div>
+<!-- Device Item 2 -->
+<div class="group flex items-center justify-between gap-4 rounded-xl bg-card-dark p-3 pr-4 active:bg-white/5 transition-colors cursor-pointer border border-white/5 hover:border-white/10 opacity-75">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat bg-cover rounded-lg size-14 shrink-0 bg-neutral-800 grayscale" data-alt="Greenhouse interior with plants" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBRDbbG-gz_DdpGvRFJ8mITfdhEBqN6a5WHDQzmf1OQcpMmOIAmLVFOjJoMfIpyKKXeD7DwfXCBTDRbZ68FZmvhyYAi_K8uBscwUJu14ZAp8wzrJklNCfv1PA2bW_qJaEpg4z89hmmSbZ7MMr-3weuNsaQfh-1DlcWVkMM_7P2Tf6bEHw3fVVGepGRnAV6eW0MNIqifd1SW138iTAN-kBaOx9T7mGMInFBOfbNPICjlibASBEJFYPWd7a2M65oqOyGdhVShsGAz_l1Q");'></div>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-semibold leading-normal line-clamp-1">Greenhouse Drip</p>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="size-1.5 rounded-full bg-red-500"></span>
+<p class="text-text-secondary text-sm font-normal leading-normal">Offline • Greenhouse</p>
+</div>
+</div>
+</div>
+<button class="shrink-0 flex items-center justify-center size-8 rounded-full bg-white/5 text-white group-hover:bg-primary group-hover:text-black transition-colors">
+<span class="material-symbols-outlined text-[20px]">arrow_forward_ios</span>
+</button>
+</div>
+<!-- Device Item 3 -->
+<div class="group flex items-center justify-between gap-4 rounded-xl bg-card-dark p-3 pr-4 active:bg-white/5 transition-colors cursor-pointer border border-white/5 hover:border-white/10">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat bg-cover rounded-lg size-14 shrink-0 bg-neutral-800" data-alt="Vegetable garden patch with soil" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDI7Cr6ngl8qDsyv0ApfuOxy8o9UTQUc90i1ML22wVQbwgsqCL-_h3vyVbX8zVACWwIyCuuCpJ260gAJetT_c31WMihT3bGrXIzXE0O-PHPNAq74x6iLCy9wjK-mnIbnsQhJIE45Wak74xQwQaqh7wJ3PJSC9Yzsy5tUeZnkNQpzNm5lbGU4-_z-4--Lmeni8-FvuQgOGfHDQMJXV6XAbn5F6m8EwhdChwdSA4Ry7iB5mpDynq5-1Y5UeIVfBW2bBayBiGzIC9esuJm");'></div>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-semibold leading-normal line-clamp-1">Veggie Patch</p>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="size-1.5 rounded-full bg-yellow-500"></span>
+<p class="text-text-secondary text-sm font-normal leading-normal">Standby • Side Yard</p>
+</div>
+</div>
+</div>
+<button class="shrink-0 flex items-center justify-center size-8 rounded-full bg-white/5 text-white group-hover:bg-primary group-hover:text-black transition-colors">
+<span class="material-symbols-outlined text-[20px]">arrow_forward_ios</span>
+</button>
+</div>
+</section>
+<!-- Footer Action -->
+<div class="mt-4">
+<button class="w-full h-14 rounded-full border-2 border-primary text-primary font-bold text-base tracking-wide active:bg-primary active:text-black transition-all flex items-center justify-center gap-2 hover:bg-primary/10">
+<span class="material-symbols-outlined">add_circle</span>
+                    Add New Controller
+                </button>
+</div>
+</main>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 w-full max-w-md mx-auto z-40 bg-[#161f17]/90 backdrop-blur-lg border-t border-white/5 pb-6 pt-2">
+<div class="flex justify-around items-center">
+<button class="flex flex-col items-center gap-1 p-2 text-text-secondary hover:text-white transition-colors">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-[10px] font-medium">Home</span>
+</button>
+<button class="flex flex-col items-center gap-1 p-2 text-text-secondary hover:text-white transition-colors">
+<span class="material-symbols-outlined">calendar_month</span>
+<span class="text-[10px] font-medium">Schedules</span>
+</button>
+<button class="flex flex-col items-center gap-1 p-2 text-primary">
+<div class="bg-primary/20 px-4 py-1 rounded-full flex items-center justify-center">
+<span class="material-symbols-filled">router</span>
+</div>
+<span class="text-[10px] font-bold">Devices</span>
+</button>
+<button class="flex flex-col items-center gap-1 p-2 text-text-secondary hover:text-white transition-colors">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-medium">Settings</span>
+</button>
+</div>
+</nav>
+</div>
+</body></html>

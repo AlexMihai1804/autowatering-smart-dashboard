@@ -1,4 +1,4 @@
-import { BleClient, BleDevice, ScanResult } from '@capacitor-community/bluetooth-le';
+import { BleClient, BleDevice, ConnectionPriority, ScanResult } from '@capacitor-community/bluetooth-le';
 import { BleFragmentationManager } from './BleFragmentationManager';
 import { SERVICE_UUID, CUSTOM_CONFIG_SERVICE_UUID, CHAR_UUIDS } from '../types/uuids';
 import { useAppStore } from '../store/useAppStore';
@@ -35,6 +35,7 @@ import {
     EnvDetailedEntry,
     EnvHourlyEntry,
     EnvDailyEntry,
+    BulkSyncSnapshot,
     CustomSoilConfigData,
     CUSTOM_SOIL_OPERATIONS,
     CUSTOM_SOIL_STATUS
@@ -70,8 +71,106 @@ export class BleService {
         receivedLen: number;
     } | null = null;
 
+    // Pending history request completion (resolved when full response is received)
+    private pendingWateringHistoryRequests: Map<number, { resolve: () => void; reject: (e: Error) => void; timeoutId: ReturnType<typeof setTimeout> }> = new Map();
+    private pendingRainHistoryRequests: Map<number, { resolve: () => void; reject: (e: Error) => void; timeoutId: ReturnType<typeof setTimeout> }> = new Map();
+
+    // Env history is paged (fragment_id), not streamed; we wait per-fragment.
+    private pendingEnvHistoryFragments: Map<string, { resolve: (r: { header: any; payload: Uint8Array }) => void; reject: (e: Error) => void; timeoutId: ReturnType<typeof setTimeout> }> = new Map();
+
+    private lastWateringRequestedType: number | null = null;
+    private lastRainExpectedDataType: number | null = null;
+
     private constructor() {
         this.fragmentationManager = BleFragmentationManager.getInstance();
+    }
+
+    private delay(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    private parseUnifiedHeader(data: DataView) {
+        return {
+            data_type: data.getUint8(0),
+            status: data.getUint8(1),
+            entry_count: data.getUint16(2, true),
+            fragment_index: data.getUint8(4),
+            total_fragments: data.getUint8(5),
+            fragment_size: data.getUint8(6),
+            reserved: data.getUint8(7)
+        };
+    }
+
+    private makeEnvFragmentKey(dataType: number, fragmentIndex: number) {
+        return `${dataType}:${fragmentIndex}`;
+    }
+
+    private createPendingVoidRequest(
+        map: Map<number, { resolve: () => void; reject: (e: Error) => void; timeoutId: ReturnType<typeof setTimeout> }>,
+        key: number,
+        timeoutMs: number,
+        label: string
+    ): Promise<void> {
+        // Cancel any in-flight request with same key
+        const existing = map.get(key);
+        if (existing) {
+            clearTimeout(existing.timeoutId);
+            existing.reject(new Error(`${label} request superseded`));
+            map.delete(key);
+        }
+
+        return new Promise<void>((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+                map.delete(key);
+                reject(new Error(`${label} request timed out`));
+            }, timeoutMs);
+            map.set(key, { resolve: () => { clearTimeout(timeoutId); map.delete(key); resolve(); }, reject: (e) => { clearTimeout(timeoutId); map.delete(key); reject(e); }, timeoutId });
+        });
+    }
+
+    private resolvePendingVoid(map: Map<number, { resolve: () => void; reject: (e: Error) => void; timeoutId: ReturnType<typeof setTimeout> }>, key: number) {
+        const pending = map.get(key);
+        if (pending) {
+            pending.resolve();
+        }
+    }
+
+    private rejectPendingVoid(map: Map<number, { resolve: () => void; reject: (e: Error) => void; timeoutId: ReturnType<typeof setTimeout> }>, key: number, error: Error) {
+        const pending = map.get(key);
+        if (pending) {
+            pending.reject(error);
+        }
+    }
+
+    private async requestEnvHistoryFragment(
+        command: number,
+        startTime: number,
+        endTime: number,
+        dataType: number,
+        maxRecords: number,
+        fragmentId: number,
+        timeoutMs: number = 3000
+    ): Promise<{ header: any; payload: Uint8Array }> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+
+        const key = this.makeEnvFragmentKey(dataType, fragmentId);
+        const existing = this.pendingEnvHistoryFragments.get(key);
+        if (existing) {
+            clearTimeout(existing.timeoutId);
+            existing.reject(new Error('Env history fragment request superseded'));
+            this.pendingEnvHistoryFragments.delete(key);
+        }
+
+        const promise = new Promise<{ header: any; payload: Uint8Array }>((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+                this.pendingEnvHistoryFragments.delete(key);
+                reject(new Error('Env history fragment request timed out'));
+            }, timeoutMs);
+            this.pendingEnvHistoryFragments.set(key, { resolve, reject, timeoutId });
+        });
+
+        await this.queryEnvHistory(command, startTime, endTime, dataType, maxRecords, fragmentId);
+        return promise;
     }
 
     public static getInstance(): BleService {
@@ -124,6 +223,17 @@ export class BleService {
             this.connectedDeviceId = deviceId;
             useAppStore.getState().setConnectionState('connected');
             useAppStore.getState().setConnectedDeviceId(deviceId);
+
+            // Request a high-priority BLE connection on Android for faster throughput
+            try {
+                await BleClient.requestConnectionPriority(
+                    deviceId,
+                    ConnectionPriority.CONNECTION_PRIORITY_HIGH
+                );
+                console.log('[BLE] Connection priority set to HIGH');
+            } catch (priorityError: any) {
+                console.log('[BLE] Connection priority request skipped:', priorityError?.message || priorityError);
+            }
             
             // Attempt to create bond for encrypted characteristics (Android only, iOS auto-bonds)
             try {
@@ -186,52 +296,86 @@ export class BleService {
 
             // Wait a bit before starting the heavy data sync to let the MCU breathe
             console.log('[BLE] Waiting 500ms before Initial Data Sync...');
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await this.delay(500);
+
+            // Optional Bulk Sync Snapshot (newer firmware only)
+            const bulkSnapshot = await this.readBulkSyncSnapshot();
+            const interReadDelay = bulkSnapshot ? 80 : 200;
+            const channelReadDelay = bulkSnapshot ? 50 : 100;
+            const shouldReadCurrentTask = !bulkSnapshot || bulkSnapshot.system_mode !== 0;
+            const shouldReadValveControl = !bulkSnapshot || bulkSnapshot.valve_states !== 0;
+            const shouldReadRainData = !bulkSnapshot || bulkSnapshot.rain_valid;
+            const shouldReadRtcConfig = !bulkSnapshot || !bulkSnapshot.rtc_valid;
 
             // Initial Data Sync
             console.log('[BLE] Starting Initial Data Sync Sequence...');
             try {
                 // Sequential reads with delays to avoid overwhelming the MCU
-                console.log('[BLE] Reading Environmental Data...');
-                const env = await this.readEnvironmentalData();
-                console.log('[BLE] Got Env Data:', env);
-                await new Promise(resolve => setTimeout(resolve, 200));
+                if (!bulkSnapshot?.env_valid) {
+                    console.log('[BLE] Reading Environmental Data...');
+                    const env = await this.readEnvironmentalData();
+                    console.log('[BLE] Got Env Data:', env);
+                    await this.delay(interReadDelay);
+                } else {
+                    console.log('[BLE] Using Bulk Sync Snapshot for Environmental Data');
+                    await this.delay(interReadDelay);
+                }
 
-                console.log('[BLE] Reading Rain Data...');
-                const rain = await this.readRainData();
-                console.log('[BLE] Got Rain Data:', rain);
-                await new Promise(resolve => setTimeout(resolve, 200));
+                if (shouldReadRainData) {
+                    console.log('[BLE] Reading Rain Data...');
+                    const rain = await this.readRainData();
+                    console.log('[BLE] Got Rain Data:', rain);
+                    await this.delay(interReadDelay);
+                } else {
+                    console.log('[BLE] Skipping Rain Data (snapshot invalid).');
+                    await this.delay(interReadDelay);
+                }
 
                 console.log('[BLE] Reading Onboarding Status...');
                 const onboarding = await this.readOnboardingStatus();
                 console.log('[BLE] Got Onboarding Data:', onboarding);
-                await new Promise(resolve => setTimeout(resolve, 200));
+                await this.delay(interReadDelay);
 
-                console.log('[BLE] Reading Current Task...');
-                const task = await this.readCurrentTask();
-                console.log('[BLE] Got Task Data:', task);
-                await new Promise(resolve => setTimeout(resolve, 200));
+                if (shouldReadCurrentTask) {
+                    console.log('[BLE] Reading Current Task...');
+                    const task = await this.readCurrentTask();
+                    console.log('[BLE] Got Task Data:', task);
+                    await this.delay(interReadDelay);
+                } else {
+                    console.log('[BLE] Skipping Current Task (idle snapshot).');
+                    await this.delay(interReadDelay);
+                }
 
-                console.log('[BLE] Reading Valve Control...');
-                const valve = await this.readValveControl();
-                console.log('[BLE] Got Valve Data:', valve);
-                await new Promise(resolve => setTimeout(resolve, 200));
+                if (shouldReadValveControl) {
+                    console.log('[BLE] Reading Valve Control...');
+                    const valve = await this.readValveControl();
+                    console.log('[BLE] Got Valve Data:', valve);
+                    await this.delay(interReadDelay);
+                } else {
+                    console.log('[BLE] Skipping Valve Control (no active valves).');
+                    await this.delay(interReadDelay);
+                }
 
-                console.log('[BLE] Reading RTC Config...');
-                const rtc = await this.readRtcConfig();
-                console.log('[BLE] Got RTC Data:', rtc);
-                await this.checkTimeDrift(rtc);
-                await new Promise(resolve => setTimeout(resolve, 200));
+                if (shouldReadRtcConfig) {
+                    console.log('[BLE] Reading RTC Config...');
+                    const rtc = await this.readRtcConfig();
+                    console.log('[BLE] Got RTC Data:', rtc);
+                    await this.checkTimeDrift(rtc);
+                    await this.delay(interReadDelay);
+                } else {
+                    console.log('[BLE] Skipping RTC Config (snapshot valid).');
+                    await this.delay(interReadDelay);
+                }
 
                 console.log('[BLE] Reading System Config...');
                 const sysConfig = await this.readSystemConfig();
                 console.log('[BLE] Got System Config:', sysConfig);
-                await new Promise(resolve => setTimeout(resolve, 200));
+                await this.delay(interReadDelay);
 
                 console.log('[BLE] Reading Rain Config...');
                 const rainCfg = await this.readRainConfig();
                 console.log('[BLE] Got Rain Config:', rainCfg);
-                await new Promise(resolve => setTimeout(resolve, 200));
+                await this.delay(interReadDelay);
 
                 // Read all 8 channel configurations
                 console.log('[BLE] Reading Channel Configs (0-7)...');
@@ -241,7 +385,7 @@ export class BleService {
                         const channelConfig = await this.readChannelConfig(i);
                         zones.push(channelConfig);
                         console.log(`[BLE] Channel ${i}: ${channelConfig.name || '(unnamed)'}`);
-                        await new Promise(resolve => setTimeout(resolve, 100));
+                        await this.delay(channelReadDelay);
                     } catch (chErr) {
                         console.warn(`[BLE] Failed to read channel ${i}:`, chErr);
                     }
@@ -255,8 +399,10 @@ export class BleService {
             
         } catch (error) {
             console.error('Connection failed', error);
+            this.connectedDeviceId = null;
             useAppStore.getState().setConnectionState('disconnected');
             useAppStore.getState().setConnectedDeviceId(null);
+            throw error;
         }
     }
 
@@ -541,7 +687,7 @@ export class BleService {
             console.log('[BLE] Auto Calc Status notifications enabled');
             await new Promise(resolve => setTimeout(resolve, 100));
 
-            // 25. Environmental History (Unified header, 500ms throttle, command-response pattern)
+            // 25. Environmental History (Unified header, >=50ms command spacing, MTU-aware fragments)
             console.log('[BLE] Subscribing to Environmental History...');
             await BleClient.startNotifications(
                 deviceId,
@@ -552,7 +698,7 @@ export class BleService {
             console.log('[BLE] Environmental History notifications enabled');
             await new Promise(resolve => setTimeout(resolve, 100));
 
-            // 26. Rain History Control (Unified header, multi-fragment responses ~50ms apart)
+            // 26. Rain History Control (Unified header, fast fragment streaming)
             console.log('[BLE] Subscribing to Rain History...');
             await BleClient.startNotifications(
                 deviceId,
@@ -591,13 +737,36 @@ export class BleService {
             return;
         }
 
+        // Environmental History is paged (fragment_id) and should NOT be reassembled across notifications.
+        // Each notify contains one unified header + payload slice.
+        if (characteristicUuid === CHAR_UUIDS.ENV_HISTORY) {
+            if (value.byteLength < 8) return;
+            const header = this.parseUnifiedHeader(value);
+            const availablePayload = Math.max(0, value.byteLength - 8);
+            const payloadLen = Math.min(header.fragment_size || availablePayload, availablePayload);
+            const payloadStart = value.byteOffset + 8;
+            const payload = new Uint8Array(value.buffer.slice(payloadStart, payloadStart + payloadLen));
+
+            const key = this.makeEnvFragmentKey(header.data_type, header.fragment_index);
+            const pending = this.pendingEnvHistoryFragments.get(key);
+            if (pending) {
+                clearTimeout(pending.timeoutId);
+                this.pendingEnvHistoryFragments.delete(key);
+                pending.resolve({ header, payload });
+                return;
+            }
+
+            // Fallback: dispatch single fragment to store
+            this.dispatchToStore(characteristicUuid, payload, header);
+            return;
+        }
+
         // List of characteristics that use custom fragmentation protocol
         // NOTE: Web Bluetooth handles ATT-level fragmentation automatically.
         // Only characteristics with APPLICATION-level fragmentation headers need special handling.
         // Onboarding Status uses unified header but Web Bluetooth reassembles it for us.
         const fragmentedCharacteristics = [
             CHAR_UUIDS.HISTORY_MGMT,
-            CHAR_UUIDS.ENV_HISTORY,
             CHAR_UUIDS.RAIN_HISTORY,
             // CHAR_UUIDS.ONBOARDING_STATUS - Web Bluetooth handles this
             CHAR_UUIDS.AUTO_CALC_STATUS
@@ -750,7 +919,48 @@ export class BleService {
                 break;
 
             case CHAR_UUIDS.AUTO_CALC_STATUS:
-                store.updateAutoCalc(this.parseAutoCalcStatus(view));
+                // Auto Calc Status notifications prepend an 8-byte unified header.
+                // Normally, BleFragmentationManager strips it; however, in some edge-cases
+                // (invalid header detection / different notify path) we may still receive
+                // header+payload. Guard here to keep offsets correct.
+                {
+                    const unifiedHeaderLen = 8;
+                    const expectedPayloadLen = 64;
+                    const minPayloadLen = 60; // last field read is at offset 59
+
+                    let autoCalcView = view;
+
+                    if (view.byteLength >= unifiedHeaderLen + minPayloadLen) {
+                        const status = view.getUint8(1);
+                        const entryCount = view.getUint16(2, true);
+                        const fragmentIndex = view.getUint8(4);
+                        const totalFragments = view.getUint8(5);
+                        const fragmentSize = view.getUint8(6);
+                        const reserved = view.getUint8(7);
+
+                        const looksLikeUnifiedHeader =
+                            status === 0 &&
+                            entryCount === 1 &&
+                            fragmentIndex === 0 &&
+                            totalFragments === 1 &&
+                            fragmentSize === expectedPayloadLen &&
+                            reserved === 0;
+
+                        if (looksLikeUnifiedHeader) {
+                            const payloadStart = data.byteOffset + unifiedHeaderLen;
+                            const available = Math.max(0, data.byteLength - unifiedHeaderLen);
+                            const payloadLen = Math.min(expectedPayloadLen, available);
+                            autoCalcView = new DataView(data.buffer, payloadStart, payloadLen);
+                        }
+                    }
+
+                    if (autoCalcView.byteLength < minPayloadLen) {
+                        console.warn('[BLE] Auto Calc Status packet too short:', autoCalcView.byteLength);
+                        break;
+                    }
+
+                    store.updateAutoCalc(this.parseAutoCalcStatus(autoCalcView));
+                }
                 break;
 
             case CHAR_UUIDS.ENV_DATA:
@@ -789,24 +999,52 @@ export class BleService {
             case CHAR_UUIDS.HISTORY_MGMT:
                 // Watering History Data - uses unified header fragmentation
                 // Header tells us data_type: 0=detailed, 1=daily, 2=monthly, 3=annual
-                if (header && header.status === 0 && header.entry_count > 0) {
-                    // Skip the 12-byte echoed query header in first fragment
-                    const payloadOffset = header.fragment_index === 0 ? 12 : 0;
-                    const payloadView = new DataView(data.buffer, data.byteOffset + payloadOffset, data.byteLength - payloadOffset);
+                if (header && header.status === 0) {
+                    // First 12 bytes of the reassembled payload are the echoed query header
+                    const queryHeaderLen = 12;
+                    const headerBytes = Math.min(queryHeaderLen, data.byteLength);
+                    const echoed = new DataView(data.buffer, data.byteOffset, headerBytes);
+                    const entryIndex = echoed.byteLength >= 3 ? echoed.getUint8(2) : 0;
+
+                    const payloadOffset = headerBytes;
+                    const payloadView = new DataView(
+                        data.buffer,
+                        data.byteOffset + payloadOffset,
+                        data.byteLength - payloadOffset
+                    );
                     
                     if (header.data_type === 0) {  // Detailed
-                        const entries = this.parseWateringDetailedEntries(payloadView, header.entry_count);
-                        store.appendWateringHistory(entries);
+                        const entryCount = this.getEntryCountFromPayload(
+                            header.entry_count,
+                            payloadView.byteLength,
+                            24
+                        );
+                        const entries = this.parseWateringDetailedEntries(payloadView, entryCount);
+                        if (entryIndex === 0) store.setWateringHistory(entries);
+                        else store.appendWateringHistory(entries);
                         console.log(`[BLE] Parsed ${entries.length} detailed watering history entries`);
                     }
                     // TODO: Add parsing for daily, monthly, annual if needed
+
+                    // Resolve any pending watering history request for this type
+                    this.resolvePendingVoid(this.pendingWateringHistoryRequests, header.data_type);
                 } else if (header) {
-                    if (header.status === 0x07) {
+                    if (header.data_type === 0xFE && header.status === 0x07) {
                         console.info('[BLE] History query rate limited (status=0x07). Backing off.');
+                        if (this.lastWateringRequestedType !== null) {
+                            this.rejectPendingVoid(this.pendingWateringHistoryRequests, this.lastWateringRequestedType, new Error('Watering history rate limited'));
+                        }
                     } else if (header.status === 0) {
                         console.info('[BLE] History query returned no data.');
+                        // Treat as successful empty response
+                        if (this.lastWateringRequestedType !== null) {
+                            this.resolvePendingVoid(this.pendingWateringHistoryRequests, this.lastWateringRequestedType);
+                        }
                     } else {
                         console.warn(`[BLE] History query error: status=0x${header.status.toString(16)}`);
+                        if (this.lastWateringRequestedType !== null) {
+                            this.rejectPendingVoid(this.pendingWateringHistoryRequests, this.lastWateringRequestedType, new Error(`Watering history error: 0x${header.status.toString(16)}`));
+                        }
                     }
                 }
                 break;
@@ -839,24 +1077,51 @@ export class BleService {
             case CHAR_UUIDS.ENV_HISTORY:
                 // Environmental History - uses unified header
                 // data_type: 0=detailed, 1=hourly, 2=daily, 0x03=trends
-                if (header && header.status === 0 && header.entry_count > 0) {
+                if (header && header.status === 0) {
                     const payloadView = new DataView(data.buffer, data.byteOffset, data.byteLength);
                     
                     switch (header.data_type) {
                         case 0:  // Detailed
-                            const detailedEntries = this.parseEnvDetailedEntries(payloadView, header.entry_count);
-                            store.setEnvHistoryDetailed(detailedEntries);
-                            console.log(`[BLE] Parsed ${detailedEntries.length} detailed env history entries`);
+                            const detailedCount = this.getEntryCountFromPayload(
+                                header.entry_count,
+                                payloadView.byteLength,
+                                12
+                            );
+                            if (detailedCount > 0) {
+                                const detailedEntries = this.parseEnvDetailedEntries(payloadView, detailedCount);
+                                store.setEnvHistoryDetailed(detailedEntries);
+                                console.log(`[BLE] Parsed ${detailedEntries.length} detailed env history entries`);
+                            } else {
+                                console.info('[BLE] Env history returned no entries.');
+                            }
                             break;
                         case 1:  // Hourly
-                            const hourlyEntries = this.parseEnvHourlyEntries(payloadView, header.entry_count);
-                            store.setEnvHistoryHourly(hourlyEntries);
-                            console.log(`[BLE] Parsed ${hourlyEntries.length} hourly env history entries`);
+                            const hourlyCount = this.getEntryCountFromPayload(
+                                header.entry_count,
+                                payloadView.byteLength,
+                                16
+                            );
+                            if (hourlyCount > 0) {
+                                const hourlyEntries = this.parseEnvHourlyEntries(payloadView, hourlyCount);
+                                store.setEnvHistoryHourly(hourlyEntries);
+                                console.log(`[BLE] Parsed ${hourlyEntries.length} hourly env history entries`);
+                            } else {
+                                console.info('[BLE] Env history returned no entries.');
+                            }
                             break;
                         case 2:  // Daily
-                            const dailyEntries = this.parseEnvDailyEntries(payloadView, header.entry_count);
-                            store.setEnvHistoryDaily(dailyEntries);
-                            console.log(`[BLE] Parsed ${dailyEntries.length} daily env history entries`);
+                            const dailyCount = this.getEntryCountFromPayload(
+                                header.entry_count,
+                                payloadView.byteLength,
+                                22
+                            );
+                            if (dailyCount > 0) {
+                                const dailyEntries = this.parseEnvDailyEntries(payloadView, dailyCount);
+                                store.setEnvHistoryDaily(dailyEntries);
+                                console.log(`[BLE] Parsed ${dailyEntries.length} daily env history entries`);
+                            } else {
+                                console.info('[BLE] Env history returned no entries.');
+                            }
                             break;
                         case 0x03:  // Trends
                             console.log('[BLE] Received env trends data');
@@ -866,6 +1131,10 @@ export class BleService {
                 } else if (header) {
                     if (header.status === 0x03) {
                         console.info('[BLE] Env history returned no data (status=0x03).');
+                    } else if (header.status === 0x07) {
+                        console.info('[BLE] Env history rate limited (status=0x07).');
+                    } else if (header.status === 0x08) {
+                        console.warn('[BLE] Env history error: MTU too small (status=0x08).');
                     } else if (header.status === 0) {
                         console.info('[BLE] Env history returned no entries.');
                     } else {
@@ -882,14 +1151,32 @@ export class BleService {
                     
                     switch (header.data_type) {
                         case 0:  // Hourly
-                            const hourlyRain = this.parseRainHourlyEntries(payloadView, header.entry_count);
-                            store.setRainHistoryHourly(hourlyRain);
-                            console.log(`[BLE] Parsed ${hourlyRain.length} hourly rain history entries`);
+                            const hourlyCount = this.getEntryCountFromPayload(
+                                header.entry_count,
+                                payloadView.byteLength,
+                                8
+                            );
+                            if (hourlyCount > 0) {
+                                const hourlyRain = this.parseRainHourlyEntries(payloadView, hourlyCount);
+                                store.setRainHistoryHourly(hourlyRain);
+                                console.log(`[BLE] Parsed ${hourlyRain.length} hourly rain history entries`);
+                            } else {
+                                console.info('[BLE] Rain history returned no entries.');
+                            }
                             break;
                         case 1:  // Daily
-                            const dailyRain = this.parseRainDailyEntries(payloadView, header.entry_count);
-                            store.setRainHistoryDaily(dailyRain);
-                            console.log(`[BLE] Parsed ${dailyRain.length} daily rain history entries`);
+                            const dailyCount = this.getEntryCountFromPayload(
+                                header.entry_count,
+                                payloadView.byteLength,
+                                12
+                            );
+                            if (dailyCount > 0) {
+                                const dailyRain = this.parseRainDailyEntries(payloadView, dailyCount);
+                                store.setRainHistoryDaily(dailyRain);
+                                console.log(`[BLE] Parsed ${dailyRain.length} daily rain history entries`);
+                            } else {
+                                console.info('[BLE] Rain history returned no entries.');
+                            }
                             break;
                         case 0xFE:  // Recent totals
                             if (data.byteLength >= 16) {
@@ -906,18 +1193,55 @@ export class BleService {
                         case 0xFC:  // Calibration acknowledgement
                             console.log('[BLE] Rain sensor calibration acknowledged');
                             break;
+                        case 0xFF:  // Error response (1-byte error code)
+                            {
+                                const errorCode = payloadView.byteLength >= 1 ? payloadView.getUint8(0) : 0xFF;
+                                console.warn(`[BLE] Rain history error response: code=0x${errorCode.toString(16)}`);
+                                if (this.lastRainExpectedDataType !== null) {
+                                    this.rejectPendingVoid(this.pendingRainHistoryRequests, this.lastRainExpectedDataType, new Error(`Rain history error code: 0x${errorCode.toString(16)}`));
+                                }
+                                // Do not resolve success for error frames
+                                break;
+                            }
+                    }
+
+                    // Resolve pending request for successful responses
+                    if (header.data_type !== 0xFF) {
+                        this.resolvePendingVoid(this.pendingRainHistoryRequests, header.data_type);
                     }
                 } else if (header) {
                     if (header.status === 0x03) {
-                        console.info('[BLE] Rain history returned no data (status=0x03).');
+                        console.warn('[BLE] Rain history transport/fragmentation error (status=0x03).');
+                        if (this.lastRainExpectedDataType !== null) {
+                            this.rejectPendingVoid(this.pendingRainHistoryRequests, this.lastRainExpectedDataType, new Error('Rain history transport error'));
+                        }
                     } else if (header.status === 0) {
                         console.info('[BLE] Rain history returned no entries.');
+                        if (this.lastRainExpectedDataType !== null) {
+                            this.resolvePendingVoid(this.pendingRainHistoryRequests, this.lastRainExpectedDataType);
+                        }
+                    } else if (header.status === 0x07) {
+                        console.warn('[BLE] Rain history too large (status=0x07).');
+                        if (this.lastRainExpectedDataType !== null) {
+                            this.rejectPendingVoid(this.pendingRainHistoryRequests, this.lastRainExpectedDataType, new Error('Rain history too large'));
+                        }
+                    } else if (header.status === 0xFE) {
+                        console.warn('[BLE] Rain history invalid parameters (status=0xFE).');
+                        if (this.lastRainExpectedDataType !== null) {
+                            this.rejectPendingVoid(this.pendingRainHistoryRequests, this.lastRainExpectedDataType, new Error('Rain history invalid parameters'));
+                        }
+                    } else if (header.status === 0xFF) {
+                        console.warn('[BLE] Rain history invalid command (status=0xFF).');
+                        if (this.lastRainExpectedDataType !== null) {
+                            this.rejectPendingVoid(this.pendingRainHistoryRequests, this.lastRainExpectedDataType, new Error('Rain history invalid command'));
+                        }
                     } else {
                         console.warn(`[BLE] Rain History error: status=0x${header.status.toString(16)}`);
+                        if (this.lastRainExpectedDataType !== null) {
+                            this.rejectPendingVoid(this.pendingRainHistoryRequests, this.lastRainExpectedDataType, new Error(`Rain history error: 0x${header.status.toString(16)}`));
+                        }
                     }
                 }
-                // TODO: Parse and store rain history entries
-                // store.appendRainHistory(...)
                 break;
 
             case CHAR_UUIDS.CHANNEL_COMP_CONFIG:
@@ -978,6 +1302,9 @@ export class BleService {
         
         // Select channel first
         await this.selectChannel(channelId);
+        
+        // Wait for firmware to switch channel context before reading
+        await new Promise(resolve => setTimeout(resolve, 50));
         
         // Read data from device (SOURCE OF TRUTH)
         const result = await BleClient.read(
@@ -1110,7 +1437,9 @@ export class BleService {
 
     private parseChannelConfig(data: DataView): ChannelConfigData {
         const decoder = new TextDecoder('utf-8');
-        const nameBytes = new Uint8Array(data.buffer, 2, 64);
+        // IMPORTANT: DataView may have a non-zero byteOffset; always account for it when
+        // creating Uint8Array views into the underlying buffer.
+        const nameBytes = new Uint8Array(data.buffer, data.byteOffset + 2, 64);
         // Find null terminator or use full length
         let nameEnd = 0;
         while (nameEnd < 64 && nameBytes[nameEnd] !== 0) nameEnd++;
@@ -1387,6 +1716,139 @@ export class BleService {
         // Update store with data READ from device
         useAppStore.getState().setOnboardingState(onboardingData);
         return onboardingData;
+    }
+
+    // --- Bulk Sync Snapshot ---
+
+    public async readBulkSyncSnapshot(): Promise<BulkSyncSnapshot | null> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+        try {
+            const data = await BleClient.read(
+                this.connectedDeviceId,
+                SERVICE_UUID,
+                CHAR_UUIDS.BULK_SYNC_SNAPSHOT
+            );
+
+            const snapshot = this.parseBulkSyncSnapshot(data);
+            useAppStore.getState().setBulkSyncSnapshot(snapshot);
+            await this.applyBulkSyncSnapshot(snapshot);
+            console.log('[BLE] Bulk Sync Snapshot received');
+            return snapshot;
+        } catch (error: any) {
+            console.log('[BLE] Bulk Sync Snapshot not available:', error?.message || error);
+            return null;
+        }
+    }
+
+    private parseBulkSyncSnapshot(view: DataView): BulkSyncSnapshot {
+        if (view.byteLength < 60) {
+            throw new Error(`Bulk Sync Snapshot invalid size: ${view.byteLength}`);
+        }
+
+        const flags = view.getUint8(1);
+        return {
+            version: view.getUint8(0),
+            flags,
+            rtc_valid: (flags & 0x01) !== 0,
+            env_valid: (flags & 0x02) !== 0,
+            rain_valid: (flags & 0x04) !== 0,
+            utc_timestamp: view.getUint32(4, true),
+            timezone_offset_min: view.getInt16(8, true),
+            dst_active: view.getUint8(10) !== 0,
+            system_mode: view.getUint8(12),
+            active_alarms: view.getUint8(13),
+            valve_states: view.getUint8(14),
+            active_channel: view.getUint8(15),
+            remaining_seconds: view.getUint16(16, true),
+            flow_rate_ml_min: view.getUint16(18, true),
+            temperature_c: view.getInt16(20, true) / 10,
+            humidity_pct: view.getUint16(22, true) / 10,
+            pressure_hpa: view.getUint16(24, true) / 10,
+            dew_point_c: view.getInt16(26, true) / 10,
+            vpd_kpa: view.getUint16(28, true) / 100,
+            rain_today_mm: view.getUint16(32, true) / 10,
+            rain_week_mm: view.getUint16(34, true) / 10,
+            rain_integration_enabled: view.getUint8(36) !== 0,
+            skip_active: view.getUint8(37) !== 0,
+            skip_remaining_min: view.getUint16(38, true),
+            temp_comp_enabled: view.getUint8(40) !== 0,
+            rain_comp_enabled: view.getUint8(41) !== 0,
+            temp_adjustment_pct: view.getInt8(42),
+            rain_adjustment_pct: view.getInt8(43),
+            pending_task_count: view.getUint8(44),
+            next_task_channel: view.getUint8(45),
+            next_task_in_min: view.getUint16(46, true),
+            next_task_timestamp: view.getUint32(48, true),
+            channel_status: Array.from(new Uint8Array(view.buffer, view.byteOffset + 52, 8))
+        };
+    }
+
+    private async applyBulkSyncSnapshot(snapshot: BulkSyncSnapshot): Promise<void> {
+        const store = useAppStore.getState();
+
+        if (snapshot.env_valid) {
+            store.setEnvData({
+                temperature: snapshot.temperature_c,
+                humidity: snapshot.humidity_pct,
+                pressure: snapshot.pressure_hpa,
+                timestamp: snapshot.utc_timestamp,
+                sensor_status: 1,
+                measurement_interval: 0,
+                data_quality: 100
+            });
+        }
+
+        if (!snapshot.rain_valid) {
+            store.setRainData({
+                current_hour_mm: 0,
+                today_total_mm: 0,
+                last_24h_mm: 0,
+                current_rate_mm_h: 0,
+                last_pulse_time: 0,
+                total_pulses: 0,
+                sensor_status: 0,
+                data_quality: 0
+            });
+        }
+
+        if (snapshot.rtc_valid) {
+            const rtcData = this.buildRtcConfigFromSnapshot(snapshot);
+            store.setRtcConfig(rtcData);
+            await this.checkTimeDrift(rtcData);
+        }
+
+        if (snapshot.next_task_timestamp > 0 || snapshot.next_task_in_min > 0) {
+            const timestamp = snapshot.next_task_timestamp > 0
+                ? snapshot.next_task_timestamp
+                : Math.floor(Date.now() / 1000) + snapshot.next_task_in_min * 60;
+            const nextRun = this.formatTime(timestamp);
+            store.updateSystemStatus({ nextRun });
+        } else {
+            store.updateSystemStatus({ nextRun: undefined });
+        }
+    }
+
+    private buildRtcConfigFromSnapshot(snapshot: BulkSyncSnapshot): RtcData {
+        const offsetSeconds = snapshot.timezone_offset_min * 60;
+        const localDate = new Date((snapshot.utc_timestamp + offsetSeconds) * 1000);
+        return {
+            year: localDate.getFullYear() % 100,
+            month: localDate.getMonth() + 1,
+            day: localDate.getDate(),
+            hour: localDate.getHours(),
+            minute: localDate.getMinutes(),
+            second: localDate.getSeconds(),
+            day_of_week: localDate.getDay(),
+            utc_offset_minutes: snapshot.timezone_offset_min,
+            dst_active: snapshot.dst_active
+        };
+    }
+
+    private formatTime(utcSeconds: number): string {
+        const date = new Date(utcSeconds * 1000);
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
     }
 
     // --- Environmental Data ---
@@ -2248,6 +2710,34 @@ export class BleService {
         return status;
     }
 
+    /**
+     * Reads the global Auto Calc Status using FFh (0xFF) channel selector.
+     * Firmware may interpret this as either "global" or "first auto-calc channel".
+     */
+    public async readAutoCalcStatusGlobal(): Promise<AutoCalcStatusData> {
+        const status = await this.readAutoCalcStatus(0xFF);
+        useAppStore.getState().setGlobalAutoCalcStatus(status);
+        return status;
+    }
+
+    public async readAutoCalcStatusRaw(channelId: number): Promise<Uint8Array> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+
+        await this.selectAutoCalcChannel(channelId);
+
+        const data = await BleClient.read(
+            this.connectedDeviceId,
+            SERVICE_UUID,
+            CHAR_UUIDS.AUTO_CALC_STATUS
+        );
+
+        return new Uint8Array(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength));
+    }
+
+    public async readAutoCalcStatusGlobalRaw(): Promise<Uint8Array> {
+        return this.readAutoCalcStatusRaw(0xFF);
+    }
+
     private parseAutoCalcStatus(view: DataView): AutoCalcStatusData {
         return {
             channel_id: view.getUint8(0),
@@ -2674,6 +3164,30 @@ export class BleService {
     }
 
     /**
+     * Query watering history and wait until the response is fully received/parsed.
+     * Completion is driven by notifications + fragmentation reassembly.
+     */
+    public async fetchWateringHistory(
+        historyType: number = 0,
+        channelId: number = 0xFF,
+        entryIndex: number = 0,
+        count: number = 20,
+        startTimestamp: number = 0,
+        endTimestamp: number = 0,
+        timeoutMs: number = 5000
+    ): Promise<void> {
+        this.lastWateringRequestedType = historyType;
+        const waitFor = this.createPendingVoidRequest(
+            this.pendingWateringHistoryRequests,
+            historyType,
+            timeoutMs,
+            'Watering history'
+        );
+        await this.queryWateringHistory(historyType, channelId, entryIndex, count, startTimestamp, endTimestamp);
+        await waitFor;
+    }
+
+    /**
      * Get detailed watering history (individual events)
      */
     public async getDetailedHistory(channelId: number = 0xFF, page: number = 0, count: number = 20): Promise<void> {
@@ -2751,6 +3265,28 @@ export class BleService {
     }
 
     /**
+     * Query rain history and wait until the response is fully received/parsed.
+     */
+    public async fetchRainHistory(
+        command: number,
+        startTimestamp: number = 0,
+        endTimestamp: number = 0,
+        maxEntries: number = 24,
+        dataType: number = 0,
+        timeoutMs: number = 5000
+    ): Promise<void> {
+        this.lastRainExpectedDataType = dataType;
+        const waitFor = this.createPendingVoidRequest(
+            this.pendingRainHistoryRequests,
+            dataType,
+            timeoutMs,
+            'Rain history'
+        );
+        await this.queryRainHistory(command, startTimestamp, endTimestamp, maxEntries, dataType);
+        await waitFor;
+    }
+
+    /**
      * Get hourly rain data for the last N hours
      */
     public async getRainHourlyHistory(hours: number = 24): Promise<void> {
@@ -2811,8 +3347,8 @@ export class BleService {
     ): Promise<void> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
 
-        // 12-byte request (match firmware expectation)
-        const data = new Uint8Array(12);
+        // 20-byte request (match firmware expectation)
+        const data = new Uint8Array(20);
         const view = new DataView(data.buffer);
 
         data[0] = command;
@@ -2821,7 +3357,7 @@ export class BleService {
         data[9] = dataType;
         data[10] = Math.min(Math.max(maxRecords, 1), 100);  // Clamp 1-100
         data[11] = fragmentId;
-        // reserved[7] stays 0
+        // reserved[8] stays 0
 
         console.log(`[BLE] Querying env history: cmd=${command}, type=${dataType}, max=${maxRecords}, frag=${fragmentId}`);
         await BleClient.write(
@@ -2830,6 +3366,79 @@ export class BleService {
             CHAR_UUIDS.ENV_HISTORY,
             view
         );
+    }
+
+    /**
+     * Environmental history uses fragment_id paging (one unified-header fragment per notify).
+     * This method pages until entry_count==0 or an error status is returned.
+     */
+    public async fetchEnvHistoryPaged(
+        command: number,
+        startTime: number = 0,
+        endTime: number = 0,
+        dataType: number = 0,
+        maxRecords: number = 24,
+        timeoutMsPerFragment: number = 3000,
+        maxFragments: number = 200
+    ): Promise<void> {
+        const store = useAppStore.getState();
+
+        // Clear destination list for a fresh fetch
+        if (dataType === 0) store.setEnvHistoryDetailed([]);
+        if (dataType === 1) store.setEnvHistoryHourly([]);
+        if (dataType === 2) store.setEnvHistoryDaily([]);
+
+        let fragmentId = 0;
+        for (let i = 0; i < maxFragments; i++) {
+            const { header, payload } = await this.requestEnvHistoryFragment(
+                command,
+                startTime,
+                endTime,
+                dataType,
+                maxRecords,
+                fragmentId,
+                timeoutMsPerFragment
+            );
+
+            if (header.status !== 0) {
+                if (header.status === 0x07) throw new Error('Environmental history rate limited');
+                // Per BLE docs: 0x03 means "no data" for the requested range/command.
+                // Treat it as an empty result (not an exception).
+                if (header.status === 0x03) {
+                    console.info('[BLE] Env history: no data for requested range');
+                    break;
+                }
+                // Some firmware versions signal "no more pages" using status=0x06 (invalid fragment)
+                // once the client requests a fragment beyond the available range.
+                if (header.status === 0x06) {
+                    console.warn('[BLE] Env history: device reported invalid fragment; treating as end-of-data');
+                    break;
+                }
+                throw new Error(`Environmental history error: 0x${header.status.toString(16)}`);
+            }
+
+            if (header.entry_count === 0 || payload.byteLength === 0) {
+                break;
+            }
+
+            const dv = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
+            if (dataType === 0) {
+                const entries = this.parseEnvDetailedEntries(dv, header.entry_count);
+                const current = useAppStore.getState().envHistoryDetailed;
+                store.setEnvHistoryDetailed(current.concat(entries));
+            } else if (dataType === 1) {
+                const entries = this.parseEnvHourlyEntries(dv, header.entry_count);
+                const current = useAppStore.getState().envHistoryHourly;
+                store.setEnvHistoryHourly(current.concat(entries));
+            } else if (dataType === 2) {
+                const entries = this.parseEnvDailyEntries(dv, header.entry_count);
+                const current = useAppStore.getState().envHistoryDaily;
+                store.setEnvHistoryDaily(current.concat(entries));
+            }
+
+            fragmentId += 1;
+            await this.delay(40);
+        }
     }
 
     /**
@@ -2873,6 +3482,13 @@ export class BleService {
     // =========================================================================
     // HISTORY PARSING HELPERS
     // =========================================================================
+
+    private getEntryCountFromPayload(headerCount: number | undefined, payloadBytes: number, entrySize: number): number {
+        if (entrySize <= 0) return 0;
+        const maxEntries = Math.floor(payloadBytes / entrySize);
+        if (!headerCount || headerCount <= 0) return maxEntries;
+        return Math.min(headerCount, maxEntries);
+    }
 
     /**
      * Parse watering history detailed entries from notification payload

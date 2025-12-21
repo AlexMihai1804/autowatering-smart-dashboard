@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Environment History</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "primary-dark": "#0eb52a",
+                        "accent-rain": "#38bdf8",
+                        "accent-temp": "#fb923c",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                        "surface-dark": "#1c2e20",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "1.5rem",
+                        "xl": "2rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Glassmorphism for bottom nav */
+        .glass-nav {
+            background: rgba(16, 34, 19, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-x-hidden selection:bg-primary selection:text-black">
+<div class="relative flex flex-col min-h-screen pb-24">
+<!-- Header -->
+<header class="sticky top-0 z-20 flex items-center justify-between px-4 py-4 bg-background-light dark:bg-background-dark/95 backdrop-blur-sm">
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-2xl">chevron_left</span>
+</button>
+<h1 class="text-lg font-bold tracking-tight">Environment History</h1>
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-2xl">tune</span>
+</button>
+</header>
+<!-- Main Content -->
+<main class="flex-1 px-4 space-y-6">
+<!-- Time Period Selector -->
+<div class="flex p-1 bg-surface-light dark:bg-surface-dark rounded-full shadow-sm border border-gray-200 dark:border-white/5">
+<label class="flex-1 cursor-pointer">
+<input checked="" class="peer sr-only" name="time-period" type="radio"/>
+<div class="py-2 px-4 rounded-full text-center text-sm font-semibold text-gray-500 dark:text-gray-400 peer-checked:bg-primary peer-checked:text-black transition-all duration-200">
+                        Last 7 Days
+                    </div>
+</label>
+<label class="flex-1 cursor-pointer">
+<input class="peer sr-only" name="time-period" type="radio"/>
+<div class="py-2 px-4 rounded-full text-center text-sm font-semibold text-gray-500 dark:text-gray-400 peer-checked:bg-primary peer-checked:text-black transition-all duration-200">
+                        Last 30 Days
+                    </div>
+</label>
+</div>
+<!-- Summary Stats -->
+<div class="flex gap-3 overflow-x-auto hide-scrollbar pb-1 -mx-4 px-4">
+<!-- Stat 1 -->
+<div class="flex-none w-36 p-4 rounded-xl bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-white/5 flex flex-col gap-2 shadow-sm">
+<div class="flex items-center gap-2 text-accent-rain">
+<span class="material-symbols-outlined text-xl">water_drop</span>
+<span class="text-xs font-bold uppercase tracking-wider">Rainfall</span>
+</div>
+<p class="text-2xl font-bold dark:text-white">3.2 <span class="text-sm font-medium text-gray-500">in</span></p>
+</div>
+<!-- Stat 2 -->
+<div class="flex-none w-36 p-4 rounded-xl bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-white/5 flex flex-col gap-2 shadow-sm">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined text-xl">sprinkler</span>
+<span class="text-xs font-bold uppercase tracking-wider">Irrigation</span>
+</div>
+<p class="text-2xl font-bold dark:text-white">1.5 <span class="text-sm font-medium text-gray-500">in</span></p>
+</div>
+<!-- Stat 3 -->
+<div class="flex-none w-36 p-4 rounded-xl bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-white/5 flex flex-col gap-2 shadow-sm">
+<div class="flex items-center gap-2 text-accent-temp">
+<span class="material-symbols-outlined text-xl">thermostat</span>
+<span class="text-xs font-bold uppercase tracking-wider">Avg Temp</span>
+</div>
+<p class="text-2xl font-bold dark:text-white">72<span class="text-sm font-medium text-gray-500">°F</span></p>
+</div>
+</div>
+<!-- Graph Container -->
+<div class="rounded-xl bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-white/5 p-5 shadow-sm">
+<div class="flex items-center justify-between mb-4">
+<div>
+<h2 class="text-base font-bold dark:text-white">Weather vs Watering</h2>
+<p class="text-xs text-gray-500 dark:text-gray-400">Rainfall reduced watering by 40%</p>
+</div>
+</div>
+<!-- Legend -->
+<div class="flex flex-wrap gap-4 mb-6 text-xs font-medium">
+<div class="flex items-center gap-1.5">
+<div class="w-2.5 h-2.5 rounded-full bg-primary"></div>
+<span class="text-gray-600 dark:text-gray-300">Watering</span>
+</div>
+<div class="flex items-center gap-1.5">
+<div class="w-2.5 h-2.5 rounded-full bg-accent-rain"></div>
+<span class="text-gray-600 dark:text-gray-300">Rainfall</span>
+</div>
+<div class="flex items-center gap-1.5">
+<div class="w-4 h-0.5 rounded-full bg-accent-temp"></div>
+<span class="text-gray-600 dark:text-gray-300">Temp</span>
+</div>
+</div>
+<!-- Chart Viz -->
+<div class="relative h-60 w-full select-none">
+<!-- Y-Axis Grid Lines -->
+<div class="absolute inset-0 flex flex-col justify-between text-xs text-gray-400 dark:text-gray-600 font-medium z-0">
+<div class="w-full border-b border-gray-200 dark:border-white/5 h-0 flex items-center"><span class="bg-surface-light dark:bg-surface-dark pr-2 -mt-2">2.0"</span></div>
+<div class="w-full border-b border-gray-200 dark:border-white/5 h-0 flex items-center"><span class="bg-surface-light dark:bg-surface-dark pr-2 -mt-2">1.5"</span></div>
+<div class="w-full border-b border-gray-200 dark:border-white/5 h-0 flex items-center"><span class="bg-surface-light dark:bg-surface-dark pr-2 -mt-2">1.0"</span></div>
+<div class="w-full border-b border-gray-200 dark:border-white/5 h-0 flex items-center"><span class="bg-surface-light dark:bg-surface-dark pr-2 -mt-2">0.5"</span></div>
+<div class="w-full border-b border-gray-200 dark:border-white/5 h-0 flex items-center"><span class="bg-surface-light dark:bg-surface-dark pr-2 -mt-2">0"</span></div>
+</div>
+<!-- Bars & X-Axis Wrapper -->
+<div class="absolute inset-0 flex items-end justify-between pl-8 pr-2 pt-4 pb-0 z-10">
+<!-- Monday -->
+<div class="flex flex-col items-center justify-end h-full w-8 gap-2 group cursor-pointer">
+<div class="relative w-full flex justify-center items-end h-full gap-1">
+<!-- Rain Bar -->
+<div class="w-2 bg-accent-rain rounded-t-sm h-[40%] group-hover:brightness-110 transition-all"></div>
+<!-- Watering Bar -->
+<div class="w-2 bg-primary rounded-t-sm h-[10%] group-hover:brightness-110 transition-all"></div>
+</div>
+<span class="text-[10px] font-bold text-gray-500 uppercase">Mon</span>
+</div>
+<!-- Tuesday -->
+<div class="flex flex-col items-center justify-end h-full w-8 gap-2 group cursor-pointer">
+<div class="relative w-full flex justify-center items-end h-full gap-1">
+<div class="w-2 bg-accent-rain rounded-t-sm h-[80%] group-hover:brightness-110 transition-all"></div>
+<div class="w-2 bg-primary rounded-t-sm h-[0%] group-hover:brightness-110 transition-all"></div>
+</div>
+<span class="text-[10px] font-bold text-gray-500 uppercase">Tue</span>
+</div>
+<!-- Wednesday -->
+<div class="flex flex-col items-center justify-end h-full w-8 gap-2 group cursor-pointer">
+<div class="relative w-full flex justify-center items-end h-full gap-1">
+<div class="w-2 bg-accent-rain rounded-t-sm h-[10%] group-hover:brightness-110 transition-all"></div>
+<div class="w-2 bg-primary rounded-t-sm h-[60%] group-hover:brightness-110 transition-all"></div>
+</div>
+<span class="text-[10px] font-bold text-gray-500 uppercase">Wed</span>
+</div>
+<!-- Thursday -->
+<div class="flex flex-col items-center justify-end h-full w-8 gap-2 group cursor-pointer">
+<div class="relative w-full flex justify-center items-end h-full gap-1">
+<div class="w-2 bg-accent-rain rounded-t-sm h-[0%] group-hover:brightness-110 transition-all"></div>
+<div class="w-2 bg-primary rounded-t-sm h-[75%] group-hover:brightness-110 transition-all"></div>
+</div>
+<span class="text-[10px] font-bold text-gray-500 uppercase">Thu</span>
+</div>
+<!-- Friday -->
+<div class="flex flex-col items-center justify-end h-full w-8 gap-2 group cursor-pointer">
+<div class="relative w-full flex justify-center items-end h-full gap-1">
+<div class="w-2 bg-accent-rain rounded-t-sm h-[0%] group-hover:brightness-110 transition-all"></div>
+<div class="w-2 bg-primary rounded-t-sm h-[80%] group-hover:brightness-110 transition-all"></div>
+</div>
+<span class="text-[10px] font-bold text-gray-500 uppercase">Fri</span>
+</div>
+<!-- Saturday -->
+<div class="flex flex-col items-center justify-end h-full w-8 gap-2 group cursor-pointer">
+<div class="relative w-full flex justify-center items-end h-full gap-1">
+<div class="w-2 bg-accent-rain rounded-t-sm h-[50%] group-hover:brightness-110 transition-all"></div>
+<div class="w-2 bg-primary rounded-t-sm h-[0%] group-hover:brightness-110 transition-all"></div>
+</div>
+<span class="text-[10px] font-bold text-gray-500 uppercase">Sat</span>
+</div>
+<!-- Sunday -->
+<div class="flex flex-col items-center justify-end h-full w-8 gap-2 group cursor-pointer">
+<div class="relative w-full flex justify-center items-end h-full gap-1">
+<div class="w-2 bg-accent-rain rounded-t-sm h-[15%] group-hover:brightness-110 transition-all"></div>
+<div class="w-2 bg-primary rounded-t-sm h-[50%] group-hover:brightness-110 transition-all"></div>
+</div>
+<span class="text-[10px] font-bold text-gray-500 uppercase">Sun</span>
+</div>
+</div>
+<!-- Temperature SVG Overlay -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none z-20 pl-8 pr-2 pt-4 pb-6 overflow-visible" preserveaspectratio="none">
+<defs>
+<lineargradient id="grad1" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" style="stop-color:#fb923c;stop-opacity:1"></stop>
+<stop offset="100%" style="stop-color:#ef4444;stop-opacity:1"></stop>
+</lineargradient>
+<filter height="140%" id="shadow" width="140%" x="-20%" y="-20%">
+<fedropshadow dx="0" dy="2" flood-color="rgba(0,0,0,0.3)" stddeviation="2"></fedropshadow>
+</filter>
+</defs>
+<!-- Points roughly aligned with columns -->
+<path d="M 15 120 C 50 100, 80 130, 110 90 S 170 50, 210 60 S 260 90, 300 80" fill="none" filter="url(#shadow)" stroke="url(#grad1)" stroke-linecap="round" stroke-width="3" vector-effect="non-scaling-stroke"></path>
+<!-- Data points on the line -->
+<circle cx="15" cy="120" fill="#102213" r="4" stroke="#fb923c" stroke-width="2"></circle>
+<circle cx="62" cy="110" fill="#102213" r="4" stroke="#fb923c" stroke-width="2"></circle>
+<circle cx="110" cy="90" fill="#102213" r="4" stroke="#fb923c" stroke-width="2"></circle>
+<circle cx="158" cy="70" fill="#102213" r="4" stroke="#fb923c" stroke-width="2"></circle>
+<circle cx="205" cy="60" fill="#102213" r="4" stroke="#fb923c" stroke-width="2"></circle>
+<circle cx="252" cy="75" fill="#102213" r="4" stroke="#fb923c" stroke-width="2"></circle>
+<circle cx="300" cy="80" fill="#102213" r="4" stroke="#fb923c" stroke-width="2"></circle>
+</svg>
+</div>
+</div>
+<!-- Insight Card -->
+<div class="flex items-stretch gap-4 p-4 rounded-xl bg-surface-dark shadow-md relative overflow-hidden group">
+<!-- Background decorative blob -->
+<div class="absolute -right-10 -top-10 w-40 h-40 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all duration-500"></div>
+<div class="flex flex-col gap-2 relative z-10 flex-[2]">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">smart_toy</span>
+<p class="text-white text-base font-bold leading-tight">Smart Skip Active</p>
+</div>
+<p class="text-gray-300 text-sm font-normal leading-relaxed">
+                        Skipped <span class="text-white font-semibold">3 watering cycles</span> this week due to heavy rainfall.
+                    </p>
+</div>
+<div class="flex-1 min-h-[80px] rounded-lg bg-cover bg-center border border-white/10" data-alt="Abstract visualization of rain drops on a green leaf surface" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDb7l5Nr_BbfsIzK4SyjUzPAm6NKPCER_1Uqnj5vWRf89TmOxPiaR5IGhWTAZI_reBp_iQ0SguDBvoIzS-dCTEJQ8rV4Q1fAN-xRNbERbIWfrk4mGmbRGvYvyYgqkMC2TTuLbGlQjOpB7-1i3d9du41GU3q7BjGsA5HzgbiAiczjM_0FHbI-qoea05ZirEsag51MFnzCHhZyUYaxWXXKURleQsJt05c_bpXGZd5CZsf-vawTnU8i9d2DYLuoTu98eTqr9Ee1KM2HwQg");'>
+</div>
+</div>
+<!-- Spacer for bottom nav -->
+<div class="h-8"></div>
+</main>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 right-0 glass-nav pb-5 pt-3 px-6 z-50">
+<div class="flex items-center justify-between">
+<button class="flex flex-col items-center gap-1 w-16 group">
+<span class="material-symbols-outlined text-gray-500 dark:text-gray-400 group-hover:text-primary transition-colors">home</span>
+<span class="text-[10px] font-medium text-gray-500 dark:text-gray-400 group-hover:text-primary transition-colors">Home</span>
+</button>
+<button class="flex flex-col items-center gap-1 w-16 group">
+<span class="material-symbols-outlined text-gray-500 dark:text-gray-400 group-hover:text-primary transition-colors">water_drop</span>
+<span class="text-[10px] font-medium text-gray-500 dark:text-gray-400 group-hover:text-primary transition-colors">Zones</span>
+</button>
+<button class="flex flex-col items-center gap-1 w-16 relative">
+<!-- Active Indicator -->
+<div class="absolute -top-3 w-8 h-1 bg-primary rounded-b-full shadow-[0_0_10px_rgba(19,236,55,0.6)]"></div>
+<span class="material-symbols-outlined text-primary filled">bar_chart</span>
+<span class="text-[10px] font-bold text-primary">History</span>
+</button>
+<button class="flex flex-col items-center gap-1 w-16 group">
+<span class="material-symbols-outlined text-gray-500 dark:text-gray-400 group-hover:text-primary transition-colors">settings</span>
+<span class="text-[10px] font-medium text-gray-500 dark:text-gray-400 group-hover:text-primary transition-colors">Settings</span>
+</button>
+</div>
+</nav>
+</div>
+</body></html>

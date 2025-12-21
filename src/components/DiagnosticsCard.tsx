@@ -35,6 +35,7 @@ const DiagnosticsCard: React.FC<DiagnosticsCardProps> = ({ onToast }) => {
         systemStatus, 
         taskQueue,
         flowSensorData,
+        bulkSyncSnapshot,
         connectionState 
     } = useAppStore();
     const bleService = BleService.getInstance();
@@ -113,6 +114,20 @@ const DiagnosticsCard: React.FC<DiagnosticsCardProps> = ({ onToast }) => {
         return null;
     }
 
+    const valveBitmask = diagnosticsData?.valve_status ?? bulkSyncSnapshot?.valve_states;
+    const queueCount = taskQueue?.pending_count ?? bulkSyncSnapshot?.pending_task_count;
+    const flowText = flowSensorData?.flow_rate_or_pulses !== undefined
+        ? `${flowSensorData.flow_rate_or_pulses} pps`
+        : bulkSyncSnapshot?.flow_rate_ml_min !== undefined
+            ? `${bulkSyncSnapshot.flow_rate_ml_min} ml/min`
+            : '--';
+    const alarmIsActive = alarmStatus?.alarm_code !== undefined
+        ? alarmStatus.alarm_code !== AlarmCode.NONE
+        : (bulkSyncSnapshot?.active_alarms ?? 0) > 0;
+    const alarmLabel = alarmStatus?.alarm_code !== undefined
+        ? (alarmStatus.alarm_code === AlarmCode.NONE ? 'Clear' : `0x${alarmStatus.alarm_code.toString(16).toUpperCase()}`)
+        : alarmIsActive ? 'Active' : '--';
+
     return (
         <IonCard className="bg-gray-900/80 border border-gray-800">
             <IonCardHeader>
@@ -184,16 +199,16 @@ const DiagnosticsCard: React.FC<DiagnosticsCardProps> = ({ onToast }) => {
                         <IonIcon icon={water} className="text-2xl text-blue-400 mb-1" />
                         <div className="text-xs text-gray-400 mb-1">Active Valves</div>
                         <div className="text-white font-mono text-xs">
-                            {diagnosticsData ? getValveStatusBits(diagnosticsData.valve_status).join(', ') : '--'}
+                            {valveBitmask !== undefined ? getValveStatusBits(valveBitmask).join(', ') : '--'}
                         </div>
                     </div>
 
                     {/* Flow Rate */}
                     <div className="bg-gray-800/50 rounded-lg p-3 text-center">
                         <IonIcon icon={water} className="text-2xl text-cyan-400 mb-1" />
-                        <div className="text-xs text-gray-400 mb-1">Flow (pps)</div>
+                        <div className="text-xs text-gray-400 mb-1">Flow</div>
                         <div className="text-white font-mono text-sm">
-                            {flowSensorData?.flow_rate_or_pulses ?? '--'}
+                            {flowText}
                         </div>
                     </div>
 
@@ -202,23 +217,22 @@ const DiagnosticsCard: React.FC<DiagnosticsCardProps> = ({ onToast }) => {
                         <IonIcon icon={statsChart} className="text-2xl text-purple-400 mb-1" />
                         <div className="text-xs text-gray-400 mb-1">Queue</div>
                         <div className="text-white font-mono text-sm">
-                            {taskQueue ? `${taskQueue.pending_count} pending` : '--'}
+                            {queueCount !== undefined ? `${queueCount} pending` : '--'}
                         </div>
                     </div>
 
                     {/* Alarm Status */}
                     <div className="bg-gray-800/50 rounded-lg p-3 text-center">
-                        <IonIcon icon={alarmStatus?.alarm_code !== AlarmCode.NONE ? warning : checkmarkCircle} 
+                        <IonIcon icon={alarmIsActive ? warning : checkmarkCircle} 
                             className={`text-2xl mb-1 ${
-                                alarmStatus?.alarm_code !== AlarmCode.NONE ? 'text-red-400 animate-pulse' : 'text-green-400'
+                                alarmIsActive ? 'text-red-400 animate-pulse' : 'text-green-400'
                             }`} 
                         />
                         <div className="text-xs text-gray-400 mb-1">Alarm</div>
                         <div className={`font-mono text-xs ${
-                            alarmStatus?.alarm_code !== AlarmCode.NONE ? 'text-red-400' : 'text-green-400'
+                            alarmIsActive ? 'text-red-400' : 'text-green-400'
                         }`}>
-                            {alarmStatus?.alarm_code === AlarmCode.NONE ? 'Clear' : 
-                             `0x${alarmStatus?.alarm_code.toString(16).toUpperCase()}`}
+                            {alarmLabel}
                         </div>
                     </div>
                 </div>

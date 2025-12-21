@@ -3,6 +3,10 @@
   "appName": "AutoWatering",
   "webDir": "dist",
   "bundledWebRuntime": false,
+  "android": {
+    "loggingBehavior": "production",
+    "webContentsDebuggingEnabled": true
+  },
   "server": {
     "androidScheme": "https"
   },

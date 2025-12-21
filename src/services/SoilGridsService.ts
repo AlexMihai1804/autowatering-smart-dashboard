@@ -9,9 +9,11 @@
  * License: CC-BY 4.0
  */
 
-import { CapacitorHttp } from '@capacitor/core';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { SoilDBEntry } from './DatabaseService';
 import { useAppStore } from '../store/useAppStore';
+import { fromArrayBuffer } from 'geotiff';
+import { geoInterruptedHomolosine } from 'd3-geo-projection';
 
 // ============================================================================
 // Types
@@ -72,16 +74,25 @@ interface CacheEntry {
 // ============================================================================
 
 const SOILGRIDS_PROPERTIES_URL = 'https://rest.isric.org/soilgrids/v2.0/properties/query';
+const SOILGRIDS_WCS_BASE_URL = 'https://maps.isric.org/mapserv';
 const CACHE_KEY = 'soilgrids_cache';
 const API_STATUS_KEY = 'soilgrids_api_status';
 const CACHE_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const CACHE_DISTANCE_THRESHOLD_M = 500; // Use cached result if within 500m
 const API_TIMEOUT_MS = 10000; // 10 second timeout
+const API_RETRY_COUNT = 2;
+const API_RETRY_BASE_DELAY_MS = 400;
 const API_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes cooldown when API is down
 const DEFAULT_ROOT_DEPTH_CM = 30; // Used when plant root depth is unknown
 const MAX_ROOT_DEPTH_CM = 200;
 const MIN_ROOT_DEPTH_CM = 5;
 const PROPERTY_DEPTHS = ['0-5cm', '5-15cm', '15-30cm', '30-60cm', '60-100cm', '100-200cm'];
+const SOILGRIDS_WCS_CRS_IGH = 'http://www.opengis.net/def/crs/EPSG/0/152160';
+// Interrupted Goode Homolosine (EPSG:152160 / ESRI:54052 style). We use d3-geo-projection
+// and scale to meters. This is sufficiently accurate for 250m grid sampling.
+const EARTH_RADIUS_M = 6371007.181;
+const SOILGRIDS_WCS_HALF_WINDOW_M = 250; // request a small coverage around point (meters)
+const WCS_CONCURRENCY = 4;
 
 // API status tracking
 interface APIStatus {
@@ -115,15 +126,192 @@ function markAPISuccess(): void {
     setAPIStatus({ isDown: false, lastCheck: Date.now(), consecutiveFailures: 0 });
 }
 
-function markAPIFailure(): void {
+function markAPIFailure(statusCode?: number): void {
     const status = getAPIStatus();
     const failures = status.consecutiveFailures + 1;
-    // Mark as down after 2 consecutive failures
+
+    // Server-side / throttling errors tend to persist; mark down faster.
+    const markDownImmediately = typeof statusCode === 'number' && (statusCode === 429 || statusCode >= 500);
+
+    // Mark as down after 2 consecutive failures (or immediately for server-side errors)
     setAPIStatus({ 
-        isDown: failures >= 2, 
+        isDown: markDownImmediately ? true : failures >= 2,
         lastCheck: Date.now(), 
         consecutiveFailures: failures 
     });
+}
+
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isRetryableStatus(status: number): boolean {
+    return status === 429 || status === 502 || status === 503 || status === 504;
+}
+
+function extractStatusCode(error: unknown): number | undefined {
+    if (!error || typeof error !== 'object') return undefined;
+    if ('status' in error && typeof (error as any).status === 'number') return (error as any).status;
+    const message = (error as any).message;
+    if (typeof message !== 'string') return undefined;
+    const match = message.match(/SoilGrids error: (\d{3})/);
+    if (!match) return undefined;
+    const parsed = Number(match[1]);
+    return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function lonLatToIGH(lon: number, lat: number): { x: number; y: number } {
+    const proj = geoInterruptedHomolosine().scale(EARTH_RADIUS_M).translate([0, 0]);
+    const out = proj([lon, lat]) as [number, number] | null;
+    if (!out) return { x: 0, y: 0 };
+
+    // D3 projections use screen coordinates (Y grows downward). MapServer IGH uses Y upwards.
+    return { x: out[0], y: -out[1] };
+}
+
+function parseDepthLabel(depthLabel: string): { top: number; bottom: number } {
+    // e.g. "0-5cm", "100-200cm"
+    const cleaned = depthLabel.trim().toLowerCase().replace('cm', '');
+    const parts = cleaned.split('-');
+    const top = Number(parts[0]);
+    const bottom = Number(parts[1]);
+    return {
+        top: Number.isFinite(top) ? top : 0,
+        bottom: Number.isFinite(bottom) ? bottom : 0,
+    };
+}
+
+function toArrayBuffer(data: unknown): ArrayBuffer {
+    if (data instanceof ArrayBuffer) return data;
+    if (ArrayBuffer.isView(data)) {
+        const anyView = data as any;
+        const view = new Uint8Array(anyView.buffer, anyView.byteOffset ?? 0, anyView.byteLength ?? 0);
+        return new Uint8Array(view).buffer;
+    }
+    if (typeof data === 'string') {
+        // CapacitorHttp may return base64 string for arraybuffer responses.
+        const binary = atob(data);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes.buffer;
+    }
+    throw new Error('Unexpected binary response type');
+}
+
+async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+    const results: R[] = new Array(items.length);
+    let nextIndex = 0;
+
+    const workers = new Array(Math.min(limit, items.length)).fill(0).map(async () => {
+        while (true) {
+            const current = nextIndex;
+            nextIndex++;
+            if (current >= items.length) return;
+            results[current] = await fn(items[current]);
+        }
+    });
+
+    await Promise.all(workers);
+    return results;
+}
+
+async function fetchWcsPixelValue(mapName: 'clay' | 'sand' | 'silt', coverageId: string, x: number, y: number): Promise<number> {
+    const xMin = x - SOILGRIDS_WCS_HALF_WINDOW_M;
+    const xMax = x + SOILGRIDS_WCS_HALF_WINDOW_M;
+    const yMin = y - SOILGRIDS_WCS_HALF_WINDOW_M;
+    const yMax = y + SOILGRIDS_WCS_HALF_WINDOW_M;
+
+    const url = `${SOILGRIDS_WCS_BASE_URL}?` +
+        `map=/map/${mapName}.map&` +
+        `SERVICE=WCS&VERSION=2.0.1&REQUEST=GetCoverage&` +
+        `COVERAGEID=${encodeURIComponent(coverageId)}&` +
+        `FORMAT=${encodeURIComponent('image/tiff')}&` +
+        `SUBSETTINGCRS=${encodeURIComponent(SOILGRIDS_WCS_CRS_IGH)}&` +
+        `OUTPUTCRS=${encodeURIComponent(SOILGRIDS_WCS_CRS_IGH)}&` +
+        `SUBSET=X(${xMin},${xMax})&` +
+        `SUBSET=Y(${yMin},${yMax})`;
+
+    let buf: ArrayBuffer;
+    let status: number;
+    if (Capacitor.getPlatform() === 'web') {
+        const res = await fetch(url);
+        status = res.status;
+        if (status < 200 || status >= 300) {
+            throw new Error(`SoilGrids WCS error: ${status}`);
+        }
+        buf = await res.arrayBuffer();
+    } else {
+        const response = await CapacitorHttp.get({
+            url,
+            connectTimeout: API_TIMEOUT_MS,
+            readTimeout: API_TIMEOUT_MS,
+            // Capacitor types don't always include this, but it is supported.
+            responseType: 'arraybuffer' as any,
+        } as any);
+
+        status = response.status;
+        if (status < 200 || status >= 300) {
+            throw new Error(`SoilGrids WCS error: ${status}`);
+        }
+
+        buf = toArrayBuffer(response.data);
+    }
+
+    const tiff = await fromArrayBuffer(buf);
+    const image = await tiff.getImage();
+    const width = image.getWidth();
+    const height = image.getHeight();
+    const noData = (image as any).getGDALNoData?.();
+    const raster = await image.readRasters({ interleave: true });
+
+    const cx = Math.floor(width / 2);
+    const cy = Math.floor(height / 2);
+    const idx = cy * width + cx;
+    const value = Number((raster as any)[idx]);
+
+    if (!Number.isFinite(value)) return 0;
+    if (noData !== undefined && noData !== null && Number(noData) === value) return 0;
+
+    return value;
+}
+
+/**
+ * Fetch soil profile using WCS (GeoTIFF) services on maps.isric.org.
+ * This is the fallback when the REST endpoint is down.
+ */
+async function fetchSoilProfileViaWCS(lat: number, lon: number, depthLabels: string[]): Promise<SoilProfile> {
+    console.log('[SoilGrids] Fetching soil profile via WCS (maps.isric.org)...');
+
+    const { x, y } = lonLatToIGH(lon, lat);
+    const tasks: Array<{ prop: 'clay' | 'sand' | 'silt'; depth: string }> = [];
+    for (const depth of depthLabels) {
+        tasks.push({ prop: 'clay', depth });
+        tasks.push({ prop: 'sand', depth });
+        tasks.push({ prop: 'silt', depth });
+    }
+
+    const values = await mapWithConcurrency(tasks, WCS_CONCURRENCY, async (t) => {
+        const coverageId = `${t.prop}_${t.depth}_mean`;
+        return fetchWcsPixelValue(t.prop, coverageId, x, y);
+    });
+
+    const profile: SoilProfile = { clay: [], sand: [], silt: [] };
+    for (let i = 0; i < tasks.length; i++) {
+        const { prop, depth } = tasks[i];
+        const { top, bottom } = parseDepthLabel(depth);
+        const mean = values[i]; // g/kg
+        const valuePct = mean / 10; // g/kg to %
+        const entry: SoilLayerValue = { label: depth, top, bottom, value: valuePct };
+        profile[prop].push(entry);
+    }
+
+    (['clay', 'sand', 'silt'] as const).forEach(key => {
+        profile[key] = profile[key].sort((a, b) => a.top - b.top);
+    });
+
+    return profile;
 }
 
 // ============================================================================
@@ -331,23 +519,46 @@ function normalizeRootDepth(rootDepthCm?: number): number {
 /**
  * Fetches full soil profile (all supported depths) from SoilGrids properties API.
  */
-async function fetchSoilProfile(lat: number, lon: number): Promise<SoilProfile> {
+async function fetchSoilProfile(lat: number, lon: number): Promise<{ profile: SoilProfile; source: 'rest' | 'wcs' }> {
     const depthParam = PROPERTY_DEPTHS.join(',');
     const url = `${SOILGRIDS_PROPERTIES_URL}?lon=${lon}&lat=${lat}&property=clay,sand,silt&depth=${depthParam}`;
 
     console.log('[SoilGrids] Fetching soil profile via properties API...');
 
-    const response = await CapacitorHttp.get({
-        url,
-        connectTimeout: API_TIMEOUT_MS,
-        readTimeout: API_TIMEOUT_MS,
-    });
+    let lastStatus: number | undefined;
+    try {
+        for (let attempt = 0; attempt <= API_RETRY_COUNT; attempt++) {
+            const response = await CapacitorHttp.get({
+                url,
+                connectTimeout: API_TIMEOUT_MS,
+                readTimeout: API_TIMEOUT_MS,
+            });
 
-    if (response.status < 200 || response.status >= 300) {
-        throw new Error(`SoilGrids error: ${response.status}`);
+            lastStatus = response.status;
+
+            if (response.status >= 200 && response.status < 300) {
+                return { profile: parseAPIResponse(response.data as SoilGridsAPIResponse), source: 'rest' };
+            }
+
+            if (isRetryableStatus(response.status) && attempt < API_RETRY_COUNT) {
+                const delay = API_RETRY_BASE_DELAY_MS * Math.pow(2, attempt);
+                console.warn(`[SoilGrids] Retryable status ${response.status}. Retrying in ${delay}ms...`);
+                await sleep(delay);
+                continue;
+            }
+
+            throw new Error(`SoilGrids error: ${response.status}`);
+        }
+
+        throw new Error(`SoilGrids error: ${lastStatus ?? 'unknown'}`);
+    } catch (err) {
+        // REST endpoint is sometimes down (502). Fallback to WCS.
+        console.warn('[SoilGrids] Properties API failed, falling back to WCS:', err);
+        // Mark REST as down; WCS might still be up.
+        markAPIFailure(lastStatus);
+        const profile = await fetchSoilProfileViaWCS(lat, lon, PROPERTY_DEPTHS);
+        return { profile, source: 'wcs' };
     }
-
-    return parseAPIResponse(response.data as SoilGridsAPIResponse);
 }
 
 /**
@@ -515,8 +726,10 @@ export class SoilGridsService {
         }
 
         try {
-            const profile = await fetchSoilProfile(lat, lon);
-            markAPISuccess();
+            const { profile, source } = await fetchSoilProfile(lat, lon);
+            if (source === 'rest') {
+                markAPISuccess();
+            }
 
             // Cache raw profile so we can reuse for multiple root depths
             addToCache(lat, lon, profile);
@@ -525,7 +738,7 @@ export class SoilGridsService {
             return this.buildResult(aggregated, targetDepth, 'api');
         } catch (error) {
             console.warn('[SoilGrids] API failed:', error);
-            markAPIFailure();
+            markAPIFailure(extractStatusCode(error));
             return this.createFallbackResult(targetDepth);
         }
     }

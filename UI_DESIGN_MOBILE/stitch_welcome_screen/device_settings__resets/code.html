@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Device Settings: Resets</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#13ec37",
+              "background-light": "#f6f8f6",
+              "background-dark": "#102213",
+              "surface-dark": "#162b1a", // Slightly lighter than background for cards
+              "danger": "#ff453a",
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "1.5rem", "xl": "2rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        /* Custom scrollbar hide for cleaner mobile look */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-gray-900 dark:text-white font-display antialiased selection:bg-primary selection:text-black">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl bg-background-light dark:bg-background-dark">
+<!-- Top App Bar -->
+<header class="flex items-center px-4 py-4 sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
+<button class="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h1 class="text-xl font-bold leading-tight flex-1 text-center pr-10">Resets &amp; Maintenance</h1>
+</header>
+<!-- Main Content -->
+<main class="flex-1 px-4 py-2 flex flex-col gap-6 pb-12">
+<!-- Warning Action Panel -->
+<div class="@container">
+<div class="flex flex-col gap-4 rounded-xl border border-yellow-600/30 bg-yellow-900/10 p-5">
+<div class="flex gap-3 items-start">
+<span class="material-symbols-outlined text-yellow-500 shrink-0 mt-0.5">warning</span>
+<div class="flex flex-col gap-1">
+<p class="text-base font-bold leading-tight">Warning</p>
+<p class="text-white/70 text-sm font-normal leading-normal">Actions performed on this screen cannot be undone. Please proceed with caution.</p>
+</div>
+</div>
+<button class="self-end px-5 py-2 cursor-pointer overflow-hidden rounded-full bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-500 text-sm font-bold transition-colors">
+                        Dismiss
+                    </button>
+</div>
+</div>
+<!-- Partial Resets Section -->
+<section>
+<h3 class="text-sm font-bold text-primary uppercase tracking-wider mb-3 ml-2">Partial Resets</h3>
+<div class="flex flex-col rounded-xl overflow-hidden bg-surface-dark divide-y divide-white/5 border border-white/5">
+<!-- Reset Zone -->
+<button class="group flex items-center gap-4 px-4 py-4 hover:bg-white/5 active:bg-white/10 transition-colors text-left w-full">
+<div class="shrink-0 flex items-center justify-center size-10 rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined">water_drop</span>
+</div>
+<div class="flex flex-col flex-1">
+<p class="text-base font-medium leading-normal">Reset Specific Zone</p>
+<p class="text-white/50 text-xs font-normal leading-normal">Clear configuration for a single zone</p>
+</div>
+<span class="material-symbols-outlined text-white/30">chevron_right</span>
+</button>
+<!-- Reset Schedules -->
+<button class="group flex items-center gap-4 px-4 py-4 hover:bg-white/5 active:bg-white/10 transition-colors text-left w-full">
+<div class="shrink-0 flex items-center justify-center size-10 rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined">schedule</span>
+</div>
+<div class="flex flex-col flex-1">
+<p class="text-base font-medium leading-normal">Reset Schedules</p>
+<p class="text-white/50 text-xs font-normal leading-normal">Remove all active watering timers</p>
+</div>
+<span class="material-symbols-outlined text-white/30">chevron_right</span>
+</button>
+<!-- Reset Sensors -->
+<button class="group flex items-center gap-4 px-4 py-4 hover:bg-white/5 active:bg-white/10 transition-colors text-left w-full">
+<div class="shrink-0 flex items-center justify-center size-10 rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined">sensors</span>
+</div>
+<div class="flex flex-col flex-1">
+<p class="text-base font-medium leading-normal">Reset Calibrations</p>
+<p class="text-white/50 text-xs font-normal leading-normal">Recalibrate moisture &amp; rain sensors</p>
+</div>
+<span class="material-symbols-outlined text-white/30">chevron_right</span>
+</button>
+<!-- Clear History -->
+<button class="group flex items-center gap-4 px-4 py-4 hover:bg-white/5 active:bg-white/10 transition-colors text-left w-full">
+<div class="shrink-0 flex items-center justify-center size-10 rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined">history</span>
+</div>
+<div class="flex flex-col flex-1">
+<p class="text-base font-medium leading-normal">Clear History</p>
+<p class="text-white/50 text-xs font-normal leading-normal">Delete all logs and usage data</p>
+</div>
+<span class="material-symbols-outlined text-white/30">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- Danger Zone Section -->
+<section class="mt-4">
+<h3 class="text-sm font-bold text-danger uppercase tracking-wider mb-3 ml-2">Danger Zone</h3>
+<div class="flex flex-col gap-4 rounded-xl border border-danger/20 bg-danger/5 p-5">
+<div class="flex flex-col gap-2 text-center">
+<div class="size-12 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto mb-1">
+<span class="material-symbols-outlined">phonelink_erase</span>
+</div>
+<h4 class="text-white text-lg font-bold">Factory Reset</h4>
+<p class="text-white/60 text-sm">This will erase all data, remove all user configurations, and unpair the device from your account. This action is irreversible.</p>
+</div>
+<button class="mt-2 flex w-full cursor-pointer items-center justify-center rounded-full h-12 px-6 bg-danger hover:bg-red-600 text-white text-base font-bold transition-all shadow-lg shadow-danger/20 active:scale-[0.98]">
+<span class="mr-2 material-symbols-outlined text-[20px]">delete_forever</span>
+                        Erase All Content
+                    </button>
+</div>
+</section>
+</main>
+<!-- Navigation Bar (Mockup for context) -->
+<div class="sticky bottom-0 w-full h-1 bg-transparent"></div>
+</div>
+</body></html>

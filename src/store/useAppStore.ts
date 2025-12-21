@@ -30,7 +30,8 @@ import {
     RainDailyEntry,
     EnvDetailedEntry,
     EnvHourlyEntry,
-    EnvDailyEntry
+    EnvDailyEntry,
+    BulkSyncSnapshot
 } from '../types/firmware_structs';
 import { PlantDBEntry, SoilDBEntry, IrrigationMethodEntry } from '../services/DatabaseService';
 import { 
@@ -68,6 +69,7 @@ interface AppState {
     onboardingState: OnboardingStatusData | null;
     envData: EnvironmentalData | null;
     rainData: RainData | null;
+    bulkSyncSnapshot: BulkSyncSnapshot | null;
     
     // New Data States Initial Values
     systemConfig: SystemConfigData | null;
@@ -76,6 +78,7 @@ interface AppState {
     rainIntegration: RainIntegrationStatusData | null;
     compensationStatus: Map<number, CompensationStatusData>;
     autoCalcStatus: Map<number, AutoCalcStatusData>;
+    globalAutoCalcStatus: AutoCalcStatusData | null;
     growingEnv: Map<number, GrowingEnvData>;
     schedules: Map<number, ScheduleConfigData>;
     channelCompensationConfig: Map<number, ChannelCompensationConfigData>;
@@ -133,6 +136,7 @@ interface AppState {
     setOnboardingState: (state: OnboardingStatusData) => void;
     setEnvData: (data: EnvironmentalData) => void;
     setRainData: (data: RainData) => void;
+    setBulkSyncSnapshot: (snapshot: BulkSyncSnapshot | null) => void;
     
     // New Data Actions Implementation
     setSystemConfig: (config: SystemConfigData) => void;
@@ -142,6 +146,7 @@ interface AppState {
     
     updateCompensation: (status: CompensationStatusData) => void;
     updateAutoCalc: (status: AutoCalcStatusData) => void;
+    setGlobalAutoCalcStatus: (status: AutoCalcStatusData | null) => void;
     updateGrowingEnv: (env: GrowingEnvData) => void;
     updateSchedule: (schedule: ScheduleConfigData) => void;
     updateChannelCompensationConfig: (config: ChannelCompensationConfigData) => void;
@@ -204,6 +209,7 @@ export const useAppStore = create<AppState>((set) => ({
     onboardingState: null,
     envData: null,
     rainData: null,
+    bulkSyncSnapshot: null,
     
     // New Data States Initial Values
     systemConfig: null,
@@ -212,6 +218,7 @@ export const useAppStore = create<AppState>((set) => ({
     rainIntegration: null,
     compensationStatus: new Map<number, CompensationStatusData>(),
     autoCalcStatus: new Map<number, AutoCalcStatusData>(),
+    globalAutoCalcStatus: null,
     growingEnv: new Map<number, GrowingEnvData>(),
     schedules: new Map<number, ScheduleConfigData>(),
     channelCompensationConfig: new Map<number, ChannelCompensationConfigData>(),
@@ -285,6 +292,7 @@ export const useAppStore = create<AppState>((set) => ({
     setOnboardingState: (state) => set({ onboardingState: state }),
     setEnvData: (data) => set({ envData: data }),
     setRainData: (data) => set({ rainData: data }),
+    setBulkSyncSnapshot: (snapshot) => set({ bulkSyncSnapshot: snapshot }),
 
     // New Data Actions Implementation
     setSystemConfig: (config) => set({ systemConfig: config }),
@@ -303,6 +311,8 @@ export const useAppStore = create<AppState>((set) => ({
         newMap.set(status.channel_id, status);
         return { autoCalcStatus: newMap };
     }),
+
+    setGlobalAutoCalcStatus: (status) => set({ globalAutoCalcStatus: status }),
     
     updateGrowingEnv: (env) => set((state) => {
         const newMap = new Map(state.growingEnv);
@@ -525,6 +535,7 @@ export const useAppStore = create<AppState>((set) => ({
         onboardingState: null,
         envData: null,
         rainData: null,
+        bulkSyncSnapshot: null,
         systemConfig: null,
         rainConfig: null,
         timezoneConfig: null,

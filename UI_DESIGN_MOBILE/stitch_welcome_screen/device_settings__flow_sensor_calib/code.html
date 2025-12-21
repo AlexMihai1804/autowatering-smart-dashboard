@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Device Settings: Flow Sensor Calibration</title>
+<!-- Fonts & Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-primary/30">
+<!-- Top Navigation -->
+<div class="sticky top-0 z-50 flex items-center justify-between p-4 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md">
+<button class="flex size-10 items-center justify-center rounded-full active:bg-gray-200 dark:active:bg-white/10 transition-colors text-gray-900 dark:text-white">
+<span class="material-symbols-outlined">arrow_back_ios_new</span>
+</button>
+<h2 class="text-gray-900 dark:text-white text-lg font-bold leading-tight flex-1 text-center pr-10 tracking-tight">Flow Sensor</h2>
+<div class="w-10"></div> <!-- Spacer for center alignment -->
+</div>
+<!-- Main Scrollable Content -->
+<div class="flex-1 flex flex-col w-full max-w-md mx-auto">
+<!-- Value Display Section -->
+<div class="flex flex-col items-center justify-center pt-8 pb-10 px-4 relative">
+<!-- Decorative Glow -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+<h1 class="relative text-primary text-[72px] font-extrabold leading-none tracking-tighter drop-shadow-[0_0_15px_rgba(19,236,55,0.2)]">
+                450
+            </h1>
+<div class="flex items-center gap-2 mt-3 opacity-80">
+<p class="text-gray-600 dark:text-gray-300 text-sm font-semibold tracking-wide uppercase">Pulses Per Liter (PPL)</p>
+<button class="text-gray-400 hover:text-primary transition-colors cursor-help">
+<span class="material-symbols-outlined text-[18px]">info</span>
+</button>
+</div>
+</div>
+<!-- Manual Adjustment Card -->
+<div class="px-6 mb-6">
+<div class="bg-white dark:bg-white/5 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-white/5 backdrop-blur-sm">
+<!-- Header of Card -->
+<div class="flex justify-between items-center mb-6">
+<span class="text-gray-900 dark:text-white font-bold text-base">Manual Adjustment</span>
+<div class="bg-primary/10 text-primary px-2 py-1 rounded text-xs font-bold uppercase tracking-wider">
+                        Active
+                    </div>
+</div>
+<!-- Stepper Controls -->
+<div class="flex items-center gap-5">
+<button class="size-12 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-white/20 active:scale-95 transition-all shadow-sm">
+<span class="material-symbols-outlined">remove</span>
+</button>
+<!-- Slider Component -->
+<div class="flex-1 relative h-12 flex items-center group cursor-ew-resize select-none">
+<!-- Track Background -->
+<div class="absolute w-full h-2 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
+<!-- Filled Track -->
+<div class="h-full bg-primary w-[45%] rounded-full"></div>
+</div>
+<!-- Thumb / Knob -->
+<div class="absolute left-[45%] -translate-x-1/2 w-7 h-7 bg-white rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.2)] border-[3px] border-primary transform transition-transform group-active:scale-110 flex items-center justify-center">
+<div class="w-1.5 h-1.5 bg-primary rounded-full"></div>
+</div>
+</div>
+<button class="size-12 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-white/20 active:scale-95 transition-all shadow-sm">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<!-- Reset Button -->
+<div class="flex justify-center mt-8">
+<button class="group flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined text-[18px] text-gray-400 group-hover:text-primary transition-colors">restart_alt</span>
+<span class="text-gray-500 dark:text-gray-400 text-xs font-semibold group-hover:text-white transition-colors">Reset to Default (450)</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Guided Calibration Section -->
+<div class="px-6 pb-8">
+<div class="relative overflow-hidden bg-gradient-to-br from-[#1a1f1b] to-[#142016] dark:from-[#152a18] dark:to-[#0f1a11] rounded-2xl p-0.5 shadow-lg">
+<!-- Inner content with gradient border effect -->
+<div class="bg-gray-50 dark:bg-[#131f15] rounded-[15px] p-5 h-full relative z-10">
+<div class="flex items-start gap-4">
+<div class="bg-primary/20 p-3 rounded-full shrink-0">
+<span class="material-symbols-outlined text-primary">water_drop</span>
+</div>
+<div class="flex-1">
+<h3 class="text-gray-900 dark:text-white font-bold text-lg mb-1">Not sure?</h3>
+<p class="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-4">
+                                Run a guided calibration test using a known volume of water (e.g., a 1-liter bucket).
+                            </p>
+<button class="w-full bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white font-semibold py-3 px-4 rounded-xl text-sm transition-all flex items-center justify-center gap-2 group">
+<span>Start Calibration Wizard</span>
+<span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Background decoration for the card -->
+<div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/20 to-transparent rounded-bl-full pointer-events-none opacity-50"></div>
+</div>
+</div>
+</div>
+<!-- Bottom Action Button -->
+<div class="sticky bottom-0 p-6 bg-gradient-to-t from-background-light via-background-light to-transparent dark:from-background-dark dark:via-background-dark dark:to-transparent pt-10">
+<button class="w-full h-14 bg-primary hover:bg-[#11d431] text-[#0a160c] font-bold text-base rounded-full shadow-[0_8px_25px_rgba(19,236,55,0.25)] transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
+<span>Save Configuration</span>
+<span class="material-symbols-outlined text-[20px] font-bold">check</span>
+</button>
+</div>
+</body></html>

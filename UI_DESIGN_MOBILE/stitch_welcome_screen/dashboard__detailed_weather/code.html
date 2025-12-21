@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Detailed Weather - AutoWatering</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                        "card-dark": "#18281b", 
+                        "card-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem", 
+                        "lg": "2rem", 
+                        "xl": "3rem", 
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar hiding for cleaner mobile look */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-[#111418] dark:text-white font-display min-h-screen flex flex-col overflow-x-hidden selection:bg-primary selection:text-black pb-24">
+<!-- Header -->
+<div class="sticky top-0 z-20 flex items-center bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md p-4 pb-2 justify-between">
+<button class="text-[#111418] dark:text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<h2 class="text-[#111418] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">Environment Status</h2>
+</div>
+<!-- Meta Text -->
+<p class="text-[#637588] dark:text-[#9db9a1] text-xs font-medium leading-normal pb-4 px-4 text-center flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[14px]">sync</span>
+        Updated 2 mins ago
+    </p>
+<!-- Main Content Area -->
+<div class="flex flex-col gap-5 px-4">
+<!-- Soil Moisture Card -->
+<div class="flex flex-col items-stretch justify-start rounded-lg shadow-sm bg-card-light dark:bg-card-dark overflow-hidden ring-1 ring-black/5 dark:ring-white/5">
+<div class="p-6 flex flex-col gap-6">
+<div class="flex items-center justify-between">
+<div>
+<p class="text-[#111418] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">Soil Moisture Estimate</p>
+<p class="text-[#637588] dark:text-[#9db9a1] text-sm font-medium mt-1">Zone 1 • Front Lawn</p>
+</div>
+<div class="size-10 rounded-full bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">grass</span>
+</div>
+</div>
+<div class="flex flex-row items-center gap-6">
+<!-- Custom SVG Gauge -->
+<div class="relative size-32 shrink-0">
+<svg class="size-full -rotate-90" viewbox="0 0 100 100">
+<!-- Background Circle -->
+<circle class="text-[#e2e8f0] dark:text-white/10" cx="50" cy="50" fill="transparent" r="42" stroke="currentColor" stroke-width="8"></circle>
+<!-- Progress Circle (65%) -->
+<circle class="text-primary" cx="50" cy="50" fill="transparent" r="42" stroke="currentColor" stroke-dasharray="263.89" stroke-dashoffset="92.36" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-2xl font-bold text-[#111418] dark:text-white">65%</span>
+<span class="text-[10px] font-bold text-primary uppercase tracking-wider">Optimal</span>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-primary text-[20px] mt-0.5">check_circle</span>
+<div>
+<p class="text-[#111418] dark:text-white text-sm font-bold leading-snug">Watering Skipped</p>
+<p class="text-[#637588] dark:text-[#9db9a1] text-xs leading-relaxed mt-1">Soil moisture is sufficient for the next 24 hours.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Decorative bottom bar -->
+<div class="h-1.5 w-full bg-black/5 dark:bg-white/5">
+<div class="h-full bg-primary w-[65%] rounded-r-full"></div>
+</div>
+</div>
+<!-- Sensor Grid (Stats) -->
+<div class="grid grid-cols-2 gap-4">
+<!-- Temperature -->
+<div class="flex flex-col gap-3 rounded-lg p-5 bg-card-light dark:bg-card-dark ring-1 ring-black/5 dark:ring-white/5 shadow-sm">
+<div class="flex justify-between items-start">
+<div class="p-2 bg-red-500/10 dark:bg-red-500/20 rounded-full text-red-600 dark:text-red-400">
+<span class="material-symbols-outlined block text-[20px]">thermostat</span>
+</div>
+<span class="text-[10px] font-bold uppercase text-[#637588] dark:text-[#9db9a1]">High 82°</span>
+</div>
+<div>
+<p class="text-[#637588] dark:text-[#9db9a1] text-sm font-medium">Temperature</p>
+<p class="text-[#111418] dark:text-white tracking-tight text-3xl font-extrabold leading-tight mt-1">78<span class="text-lg align-top text-[#637588] dark:text-[#9db9a1]">°F</span></p>
+</div>
+</div>
+<!-- Humidity -->
+<div class="flex flex-col gap-3 rounded-lg p-5 bg-card-light dark:bg-card-dark ring-1 ring-black/5 dark:ring-white/5 shadow-sm">
+<div class="flex justify-between items-start">
+<div class="p-2 bg-blue-500/10 dark:bg-blue-500/20 rounded-full text-blue-600 dark:text-blue-400">
+<span class="material-symbols-outlined block text-[20px]">humidity_percentage</span>
+</div>
+<span class="text-[10px] font-bold uppercase text-[#637588] dark:text-[#9db9a1]">Dew 60°</span>
+</div>
+<div>
+<p class="text-[#637588] dark:text-[#9db9a1] text-sm font-medium">Humidity</p>
+<p class="text-[#111418] dark:text-white tracking-tight text-3xl font-extrabold leading-tight mt-1">45<span class="text-lg align-top text-[#637588] dark:text-[#9db9a1]">%</span></p>
+</div>
+</div>
+<!-- Rainfall -->
+<div class="flex flex-col gap-3 rounded-lg p-5 bg-card-light dark:bg-card-dark ring-1 ring-black/5 dark:ring-white/5 shadow-sm">
+<div class="flex justify-between items-start">
+<div class="p-2 bg-primary/10 rounded-full text-primary">
+<span class="material-symbols-outlined block text-[20px]">rainy</span>
+</div>
+<span class="text-[10px] font-bold uppercase text-[#637588] dark:text-[#9db9a1]">24h</span>
+</div>
+<div>
+<p class="text-[#637588] dark:text-[#9db9a1] text-sm font-medium">Rainfall</p>
+<p class="text-[#111418] dark:text-white tracking-tight text-3xl font-extrabold leading-tight mt-1">0.5<span class="text-lg align-top text-[#637588] dark:text-[#9db9a1] font-medium pl-1">in</span></p>
+</div>
+</div>
+<!-- Wind -->
+<div class="flex flex-col gap-3 rounded-lg p-5 bg-card-light dark:bg-card-dark ring-1 ring-black/5 dark:ring-white/5 shadow-sm">
+<div class="flex justify-between items-start">
+<div class="p-2 bg-gray-500/10 dark:bg-gray-500/20 rounded-full text-gray-600 dark:text-gray-400">
+<span class="material-symbols-outlined block text-[20px]">air</span>
+</div>
+<span class="text-[10px] font-bold uppercase text-[#637588] dark:text-[#9db9a1]">NW</span>
+</div>
+<div>
+<p class="text-[#637588] dark:text-[#9db9a1] text-sm font-medium">Wind Speed</p>
+<p class="text-[#111418] dark:text-white tracking-tight text-3xl font-extrabold leading-tight mt-1">3<span class="text-lg align-top text-[#637588] dark:text-[#9db9a1] font-medium pl-1">mph</span></p>
+</div>
+</div>
+</div>
+<!-- Charts Section -->
+<div class="flex flex-col gap-2 rounded-lg bg-card-light dark:bg-card-dark ring-1 ring-black/5 dark:ring-white/5 shadow-sm p-6">
+<div class="flex items-center justify-between mb-2">
+<p class="text-[#111418] dark:text-white text-base font-bold leading-normal">Rain &amp; Temp Forecast</p>
+<div class="flex gap-4">
+<div class="flex items-center gap-1.5">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="text-[10px] uppercase font-bold text-[#637588] dark:text-[#9db9a1]">Rain %</span>
+</div>
+<div class="flex items-center gap-1.5">
+<div class="w-2 h-2 rounded-full border border-white/50"></div>
+<span class="text-[10px] uppercase font-bold text-[#637588] dark:text-[#9db9a1]">Temp</span>
+</div>
+</div>
+</div>
+<div class="flex min-h-[160px] flex-1 flex-col justify-end py-4 overflow-hidden relative">
+<!-- Grid Lines -->
+<div class="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
+<div class="border-b border-dashed border-[#9db9a1]"></div>
+<div class="border-b border-dashed border-[#9db9a1]"></div>
+<div class="border-b border-dashed border-[#9db9a1]"></div>
+<div class="border-b border-dashed border-[#9db9a1]"></div>
+</div>
+<svg class="z-10" fill="none" height="120" preserveaspectratio="none" viewbox="0 0 380 120" width="100%" xmlns="http://www.w3.org/2000/svg">
+<!-- Gradient Definition -->
+<defs>
+<lineargradient id="rainGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#13ec37" stop-opacity="0.4"></stop>
+<stop offset="100%" stop-color="#13ec37" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<!-- Rain Area (Simulated Data) -->
+<path d="M0 120 L0 100 C 40 100, 50 20, 90 20 C 130 20, 140 90, 180 90 C 220 90, 230 110, 270 110 L 380 120 Z" fill="url(#rainGradient)"></path>
+<path d="M0 100 C 40 100, 50 20, 90 20 C 130 20, 140 90, 180 90 C 220 90, 230 110, 270 110 L 380 120" fill="none" stroke="#13ec37" stroke-width="2"></path>
+<!-- Temp Line (Simulated Data) -->
+<path class="text-[#637588] dark:text-white" d="M0 40 C 60 30, 120 20, 180 35 C 240 50, 300 60, 380 55" fill="none" stroke="currentColor" stroke-dasharray="4 4" stroke-width="2"></path>
+</svg>
+</div>
+<div class="flex justify-between px-1">
+<p class="text-[#637588] dark:text-[#9db9a1] text-xs font-semibold">1 PM</p>
+<p class="text-[#637588] dark:text-[#9db9a1] text-xs font-semibold">3 PM</p>
+<p class="text-[#637588] dark:text-[#9db9a1] text-xs font-semibold">5 PM</p>
+<p class="text-[#637588] dark:text-[#9db9a1] text-xs font-semibold">7 PM</p>
+<p class="text-[#637588] dark:text-[#9db9a1] text-xs font-semibold">9 PM</p>
+<p class="text-[#637588] dark:text-[#9db9a1] text-xs font-semibold">11 PM</p>
+</div>
+</div>
+<!-- Bottom Spacer -->
+<div class="h-4"></div>
+</div>
+<!-- Bottom Navigation -->
+<div class="fixed bottom-0 left-0 right-0 bg-background-light/95 dark:bg-[#0c1a0e]/95 backdrop-blur-lg border-t border-black/5 dark:border-white/5 pb-6 pt-2 px-6 z-50">
+<div class="flex items-center justify-between">
+<a class="flex flex-col items-center gap-1 group" href="#">
+<div class="p-1 rounded-full group-hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-primary text-[24px]">dashboard</span>
+</div>
+<span class="text-[10px] font-bold text-primary">Dashboard</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<div class="p-1 rounded-full group-hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-[#637588] dark:text-[#9db9a1] text-[24px] group-hover:text-white">sprinkler</span>
+</div>
+<span class="text-[10px] font-medium text-[#637588] dark:text-[#9db9a1] group-hover:text-white">Zones</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<div class="p-1 rounded-full group-hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-[#637588] dark:text-[#9db9a1] text-[24px] group-hover:text-white">calendar_today</span>
+</div>
+<span class="text-[10px] font-medium text-[#637588] dark:text-[#9db9a1] group-hover:text-white">Schedule</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<div class="p-1 rounded-full group-hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-[#637588] dark:text-[#9db9a1] text-[24px] group-hover:text-white">settings</span>
+</div>
+<span class="text-[10px] font-medium text-[#637588] dark:text-[#9db9a1] group-hover:text-white">Settings</span>
+</a>
+</div>
+</div>
+</body></html>

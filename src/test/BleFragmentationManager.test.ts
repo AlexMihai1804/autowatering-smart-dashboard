@@ -63,15 +63,15 @@ describe('BleFragmentationManager', () => {
             });
 
             it('should treat invalid headers as raw data', () => {
-                // Create a header with invalid data_type (> 5)
+                // Create a header with an invalid fragment_index (>= total_fragments)
                 const invalidHeader = new Uint8Array([
-                    0x99,       // data_type (invalid - > 5)
-                    0x00,
-                    0x01, 0x00,
-                    0x00,
-                    0x01,
-                    0x00,       // fragment_size (0 = invalid)
-                    0x00
+                    0x99,       // data_type (unknown/ignored by parser)
+                    0x00,       // status
+                    0x01, 0x00, // entry_count (1)
+                    0x02,       // fragment_index (2) -> invalid when total_fragments=1
+                    0x01,       // total_fragments (1)
+                    0x04,       // fragment_size
+                    0x00        // reserved
                 ]);
                 const dataView = new DataView(invalidHeader.buffer);
 
