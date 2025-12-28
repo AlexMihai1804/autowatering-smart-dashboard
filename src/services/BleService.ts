@@ -2,11 +2,11 @@ import { BleClient, BleDevice, ConnectionPriority, ScanResult } from '@capacitor
 import { BleFragmentationManager } from './BleFragmentationManager';
 import { SERVICE_UUID, CUSTOM_CONFIG_SERVICE_UUID, CHAR_UUIDS } from '../types/uuids';
 import { useAppStore } from '../store/useAppStore';
-import { 
-    ChannelConfigData, 
-    ValveControlData, 
-    RtcData, 
-    CalibrationData, 
+import {
+    ChannelConfigData,
+    ValveControlData,
+    RtcData,
+    CalibrationData,
     ResetControlData,
     SystemStatus,
     CalibrationAction,
@@ -29,6 +29,7 @@ import {
     StatisticsData,
     AlarmData,
     DiagnosticsData,
+    HydraulicStatusData,
     HistoryDetailedEntry,
     RainHourlyEntry,
     RainDailyEntry,
@@ -38,7 +39,12 @@ import {
     BulkSyncSnapshot,
     CustomSoilConfigData,
     CUSTOM_SOIL_OPERATIONS,
-    CUSTOM_SOIL_STATUS
+    CUSTOM_SOIL_STATUS,
+    SoilMoistureConfigData,
+    SOIL_MOISTURE_OPERATIONS,
+    SOIL_MOISTURE_STATUS,
+    IntervalModeConfigData,
+    isAlarmCritical
 } from '../types/firmware_structs';
 
 /**
@@ -62,7 +68,7 @@ export class BleService {
     private static instance: BleService;
     private connectedDeviceId: string | null = null;
     private fragmentationManager: BleFragmentationManager;
-    
+
     // Buffer for Environmental Data reassembly (3-byte header)
     private envReassembly: {
         seq: number;
@@ -81,12 +87,38 @@ export class BleService {
     private lastWateringRequestedType: number | null = null;
     private lastRainExpectedDataType: number | null = null;
 
+    private pendingResetResolver: {
+        resolveCode: (code: number) => void;
+        resolveComplete: () => void;
+        reject: (e: Error) => void;
+        type: number;
+    } | null = null;
+
     private constructor() {
         this.fragmentationManager = BleFragmentationManager.getInstance();
     }
 
     private delay(ms: number): Promise<void> {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * Trigger haptic feedback for critical alarms.
+     * Uses Capacitor Haptics if available (native platform).
+     */
+    private async triggerAlarmHaptic(): Promise<void> {
+        try {
+            // Dynamic import to avoid bundling issues if not installed
+            const { Capacitor } = await import('@capacitor/core');
+            if (!Capacitor.isNativePlatform()) return;
+
+            const { Haptics, NotificationType } = await import('@capacitor/haptics');
+            await Haptics.notification({ type: NotificationType.Error });
+            console.log('[BLE] Alarm haptic triggered');
+        } catch (e) {
+            // Haptics not available or not installed - silent fail
+            console.debug('[BLE] Haptics not available:', e);
+        }
     }
 
     private parseUnifiedHeader(data: DataView) {
@@ -149,7 +181,7 @@ export class BleService {
         dataType: number,
         maxRecords: number,
         fragmentId: number,
-        timeoutMs: number = 3000
+        timeoutMs: number = 8000
     ): Promise<{ header: any; payload: Uint8Array }> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
 
@@ -192,17 +224,17 @@ export class BleService {
     public async scan(): Promise<void> {
         try {
             useAppStore.getState().setConnectionState('scanning');
-            
+
             // Use requestDevice which works on Web (opens picker) and Native
             // We filter by namePrefix because 128-bit UUIDs are often not in the advertisement packet
             const device = await BleClient.requestDevice({
                 namePrefix: 'AutoWatering',
                 optionalServices: [SERVICE_UUID, CUSTOM_CONFIG_SERVICE_UUID]
             });
-            
+
             console.log('Device selected:', device);
             useAppStore.getState().addDiscoveredDevice(device);
-            
+
             // Auto-connect after selection
             await this.connect(device.deviceId);
 
@@ -216,10 +248,10 @@ export class BleService {
         try {
             useAppStore.getState().setConnectionState('connecting');
             console.log(`Connecting to ${deviceId}...`);
-            
+
             await BleClient.connect(deviceId, (deviceId) => this.onDisconnect(deviceId));
             console.log('Connected!');
-            
+
             this.connectedDeviceId = deviceId;
             useAppStore.getState().setConnectionState('connected');
             useAppStore.getState().setConnectedDeviceId(deviceId);
@@ -234,7 +266,7 @@ export class BleService {
             } catch (priorityError: any) {
                 console.log('[BLE] Connection priority request skipped:', priorityError?.message || priorityError);
             }
-            
+
             // Attempt to create bond for encrypted characteristics (Android only, iOS auto-bonds)
             try {
                 console.log('[BLE] Attempting to create bond for encrypted writes...');
@@ -244,10 +276,10 @@ export class BleService {
                 // Bond might already exist or not be supported (Web)
                 console.log('[BLE] Bond creation skipped or already bonded:', bondError?.message || bondError);
             }
-            
+
             // Wait after bonding
             await new Promise(resolve => setTimeout(resolve, 500));
-            
+
             // Attempt to read a characteristic first to trigger pairing/bonding if needed
             // System Status (Char 3) is a good candidate as it's Read/Notify
             try {
@@ -257,13 +289,13 @@ export class BleService {
                 console.log('Initial read success, pairing likely established.');
             } catch (readError: any) {
                 console.warn('Initial read failed:', readError);
-                
+
                 // If authentication failed, it might be prompting for pairing now.
                 // Let's wait a bit and try again.
                 if (readError.message && (readError.message.includes('Authentication') || readError.message.includes('Security'))) {
                     console.log('Authentication failed. Waiting 15s for pairing to complete... (Please accept pairing request if visible)');
                     await new Promise(resolve => setTimeout(resolve, 15000));
-                    
+
                     // Check if we got disconnected during the wait
                     if (!this.connectedDeviceId) {
                         console.log('Device disconnected during pairing wait. Attempting to reconnect...');
@@ -392,11 +424,39 @@ export class BleService {
                 }
                 useAppStore.getState().setZones(zones);
 
+                // Hydraulic Status: do an initial snapshot read (notifications may fail on low MTU)
+                try {
+                    console.log('[BLE] Reading Hydraulic Status (active channel)...');
+                    await this.readHydraulicStatus(0xFF);
+                    await this.delay(interReadDelay);
+                } catch (hydErr) {
+                    console.warn('[BLE] Hydraulic Status read skipped/failed (likely unsupported firmware):', hydErr);
+                }
+
+                // Custom Config Service: Soil Moisture Configuration (global + per-channel)
+                try {
+                    console.log('[BLE] Reading Soil Moisture Config (global)...');
+                    await this.readSoilMoistureConfig(0xFF);
+                    await this.delay(interReadDelay);
+
+                    console.log('[BLE] Reading Soil Moisture Config (channels 0-7)...');
+                    for (let i = 0; i < sysConfig.num_channels; i++) {
+                        try {
+                            await this.readSoilMoistureConfig(i);
+                            await this.delay(channelReadDelay);
+                        } catch (chErr) {
+                            console.warn(`[BLE] Failed to read soil moisture config for channel ${i}:`, chErr);
+                        }
+                    }
+                } catch (soilErr) {
+                    console.warn('[BLE] Soil Moisture Config read skipped/failed (likely unsupported firmware):', soilErr);
+                }
+
                 console.log('[BLE] Initial Data Sync Complete.');
             } catch (syncError) {
                 console.warn('[BLE] Initial data sync failed:', syncError);
             }
-            
+
         } catch (error) {
             console.error('Connection failed', error);
             this.connectedDeviceId = null;
@@ -577,6 +637,17 @@ export class BleService {
             console.log('[BLE] Diagnostics notifications enabled');
             await new Promise(resolve => setTimeout(resolve, 100));
 
+            // 14b. Hydraulic Status (Not Fragmented - 48 bytes)
+            console.log('[BLE] Subscribing to Hydraulic Status...');
+            await BleClient.startNotifications(
+                deviceId,
+                SERVICE_UUID,
+                CHAR_UUIDS.HYDRAULIC_STATUS,
+                (value) => this.handleNotification(CHAR_UUIDS.HYDRAULIC_STATUS, value)
+            );
+            console.log('[BLE] Hydraulic Status notifications enabled');
+            await new Promise(resolve => setTimeout(resolve, 100));
+
             // 15. RTC Config (Not Fragmented - confirmation notify on write + CCC enable)
             console.log('[BLE] Subscribing to RTC Config...');
             await BleClient.startNotifications(
@@ -724,6 +795,21 @@ export class BleService {
                 console.warn('[BLE] Channel Compensation Config characteristic not available (may not be implemented in firmware):', compConfigError);
             }
 
+            // Custom Config Service: Soil Moisture Configuration (8 bytes)
+            // NOTE: This characteristic may not exist in older firmware versions.
+            try {
+                console.log('[BLE] Subscribing to Soil Moisture Config (Custom Service)...');
+                await BleClient.startNotifications(
+                    deviceId,
+                    CUSTOM_CONFIG_SERVICE_UUID,
+                    CHAR_UUIDS.SOIL_MOISTURE_CONFIG,
+                    (value) => this.handleNotification(CHAR_UUIDS.SOIL_MOISTURE_CONFIG, value)
+                );
+                console.log('[BLE] Soil Moisture Config notifications enabled');
+            } catch (soilCfgError) {
+                console.warn('[BLE] Soil Moisture Config characteristic not available (may not be implemented in firmware):', soilCfgError);
+            }
+
         } catch (error) {
             console.error('[BLE] Error setting up notifications:', error);
             throw error; // Re-throw to trigger disconnect in connect()
@@ -822,7 +908,14 @@ export class BleService {
                     volume_ml: view.getUint32(5, true),
                     pulses_per_liter: view.getUint32(9, true)
                 };
-                store.setCalibrationState(calData);
+                store.setCalibrationData(calData);
+                break;
+
+            case CHAR_UUIDS.AUTO_CALC_STATUS:
+                // Auto Calc Status is 64 bytes
+                console.log('[DEBUG BLE] AUTO_CALC_STATUS notification received, byteLength:', view.byteLength);
+                const autoCalc = this.parseAutoCalcStatus(view);
+                store.setAutoCalcData(autoCalc.channel_id, autoCalc);
                 break;
 
             case CHAR_UUIDS.RESET_CONTROL:
@@ -834,6 +927,20 @@ export class BleService {
                     timestamp: view.getUint32(7, true)
                 };
                 store.setResetState(resetData);
+
+                // Handle pending reset flow
+                if (this.pendingResetResolver && resetData.status === 0x01 && resetData.confirmation_code !== 0) {
+                    // Received confirmation code
+                    this.pendingResetResolver.resolveCode(resetData.confirmation_code);
+                    // Don't clear resolver yet, we might want to wait for completion?
+                    // The doc says "Notify... after successful execution" (idle frame).
+                    // But current architecture might only wait for code. 
+                    // Let's implement full flow in performReset.
+                } else if (this.pendingResetResolver && resetData.status === 0xFF) {
+                    // Reset complete (idle)
+                    this.pendingResetResolver.resolveComplete();
+                    this.pendingResetResolver = null;
+                }
                 break;
 
             case CHAR_UUIDS.CURRENT_TASK:
@@ -872,7 +979,7 @@ export class BleService {
                     break;
                 }
                 // Otherwise: raw payload (33 bytes typical) already in onboardingView
-                
+
                 const onboardingData: OnboardingStatusData = {
                     overall_completion_pct: onboardingView.getUint8(0),
                     channels_completion_pct: onboardingView.getUint8(1),
@@ -963,6 +1070,12 @@ export class BleService {
                 }
                 break;
 
+            case CHAR_UUIDS.SOIL_MOISTURE_CONFIG: {
+                const config = this.parseSoilMoistureConfig(view);
+                store.setSoilMoistureConfig(config);
+                break;
+            }
+
             case CHAR_UUIDS.ENV_DATA:
                 const envData = this.parseEnvironmentalData(view);
                 console.log(`[BLE] EnvData parsed: T=${envData.temperature.toFixed(1)}°C, H=${envData.humidity.toFixed(1)}%, P=${envData.pressure.toFixed(0)}hPa, ts=${envData.timestamp}`);
@@ -1012,7 +1125,7 @@ export class BleService {
                         data.byteOffset + payloadOffset,
                         data.byteLength - payloadOffset
                     );
-                    
+
                     if (header.data_type === 0) {  // Detailed
                         const entryCount = this.getEntryCountFromPayload(
                             header.entry_count,
@@ -1066,7 +1179,27 @@ export class BleService {
 
             case CHAR_UUIDS.ALARM_STATUS:
                 const alarmData = this.parseAlarm(view);
+                const previousAlarm = store.alarmStatus;
                 store.setAlarmStatus(alarmData);
+
+                // Trigger haptic feedback for new critical alarms
+                if (alarmData.alarm_code !== 0 &&
+                    (!previousAlarm || previousAlarm.timestamp !== alarmData.timestamp)) {
+                    if (isAlarmCritical(alarmData.alarm_code)) {
+                        this.triggerAlarmHaptic();
+                    }
+                    // Add to alarm history
+                    store.addAlarmToHistory({
+                        alarm_code: alarmData.alarm_code,
+                        alarm_data: alarmData.alarm_data,
+                        timestamp: alarmData.timestamp
+                    });
+                }
+                break;
+
+            case CHAR_UUIDS.HYDRAULIC_STATUS:
+                const hydraulicData = this.parseHydraulicStatus(view);
+                store.setHydraulicStatus(hydraulicData);
                 break;
 
             case CHAR_UUIDS.DIAGNOSTICS:
@@ -1079,7 +1212,7 @@ export class BleService {
                 // data_type: 0=detailed, 1=hourly, 2=daily, 0x03=trends
                 if (header && header.status === 0) {
                     const payloadView = new DataView(data.buffer, data.byteOffset, data.byteLength);
-                    
+
                     switch (header.data_type) {
                         case 0:  // Detailed
                             const detailedCount = this.getEntryCountFromPayload(
@@ -1148,7 +1281,7 @@ export class BleService {
                 // data_type: 0=hourly, 1=daily, 0xFE=recent, 0xFD=reset ack, 0xFC=cal ack, 0xFF=error
                 if (header && header.status === 0) {
                     const payloadView = new DataView(data.buffer, data.byteOffset, data.byteLength);
-                    
+
                     switch (header.data_type) {
                         case 0:  // Hourly
                             const hourlyCount = this.getEntryCountFromPayload(
@@ -1265,11 +1398,11 @@ export class BleService {
                 rtcData.minute,
                 rtcData.second
             );
-            
+
             const now = new Date();
             const diffMs = Math.abs(now.getTime() - deviceTime.getTime());
             const driftSeconds = diffMs / 1000;
-            
+
             console.log(`[BLE] Time Check: Device=${deviceTime.toLocaleString()}, Phone=${now.toLocaleString()}, Drift=${driftSeconds.toFixed(1)}s`);
 
             if (driftSeconds > 60) {
@@ -1290,29 +1423,29 @@ export class BleService {
     public async selectChannel(channelId: number): Promise<void> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
         await BleClient.write(
-            this.connectedDeviceId, 
-            SERVICE_UUID, 
-            CHAR_UUIDS.CHANNEL_CONFIG, 
+            this.connectedDeviceId,
+            SERVICE_UUID,
+            CHAR_UUIDS.CHANNEL_CONFIG,
             new DataView(new Uint8Array([channelId]).buffer)
         );
     }
 
     public async readChannelConfig(channelId: number): Promise<ChannelConfigData> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
-        
+
         // Select channel first
         await this.selectChannel(channelId);
-        
+
         // Wait for firmware to switch channel context before reading
         await new Promise(resolve => setTimeout(resolve, 50));
-        
+
         // Read data from device (SOURCE OF TRUTH)
         const result = await BleClient.read(
-            this.connectedDeviceId, 
-            SERVICE_UUID, 
+            this.connectedDeviceId,
+            SERVICE_UUID,
             CHAR_UUIDS.CHANNEL_CONFIG
         );
-        
+
         const config = this.parseChannelConfig(result);
         // Update store with data READ from device
         useAppStore.getState().updateZone(config.channel_id, config);
@@ -1321,25 +1454,25 @@ export class BleService {
 
     public async writeChannelConfig(channelId: number, configData: Uint8Array): Promise<void> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
-        
+
         // Use custom fragmentation matching Growing Environment pattern (Type 2 BE)
         // This is more reliable than the generic fragmentationManager
         await this.writeChannelConfigFragmented(configData, channelId);
     }
 
     /**
-     * Custom fragmentation for Channel Config (76 bytes) using Type 2 (Big Endian)
-     * Matches the pattern used by Growing Environment for consistency
+     * Custom fragmentation for Channel Config (76 bytes) using Type 3 (Little Endian)
+     * Matches the standard BleFragmentationManager pattern
      */
     private async writeChannelConfigFragmented(data: Uint8Array, channelId: number): Promise<void> {
         const totalSize = data.length; // 76
-        
-        // Header: [channel_id, frag_type, size_hi, size_lo] (Big Endian for type 2)
+
+        // Header: [channel_id, frag_type, size_lo, size_hi] (Little Endian for type 3)
         const header = new Uint8Array(4);
         header[0] = channelId;
-        header[1] = 0x02; // FRAGMENT_TYPE_FULL_BE (Big Endian size)
-        header[2] = (totalSize >> 8) & 0xFF;
-        header[3] = totalSize & 0xFF;
+        header[1] = 0x03; // FRAGMENT_TYPE_FULL_LE (Little Endian size)
+        header[2] = totalSize & 0xFF;           // Low byte first
+        header[3] = (totalSize >> 8) & 0xFF;    // High byte second
 
         const mtu = 20; // Conservative MTU
         let offset = 0;
@@ -1349,41 +1482,51 @@ export class BleService {
         const firstPacket = new Uint8Array(4 + firstChunkSize);
         firstPacket.set(header, 0);
         firstPacket.set(data.slice(0, firstChunkSize), 4);
-        
-        console.log(`[BLE] ChannelConfig write: sending fragment 1 (${firstPacket.length}B)`);
-        
-        await BleClient.write(
-            this.connectedDeviceId!,
-            SERVICE_UUID,
-            CHAR_UUIDS.CHANNEL_CONFIG,
-            new DataView(firstPacket.buffer)
-        );
-        
+
+        console.log(`[BLE] ChannelConfig write: sending fragment 1 (${firstPacket.length}B), channel=${channelId}, totalSize=${totalSize}`);
+
+        try {
+            await BleClient.write(
+                this.connectedDeviceId!,
+                SERVICE_UUID,
+                CHAR_UUIDS.CHANNEL_CONFIG,
+                new DataView(firstPacket.buffer)
+            );
+        } catch (error) {
+            console.error(`[BLE] ChannelConfig write: fragment 1 FAILED:`, error);
+            throw error;
+        }
+
         offset += firstChunkSize;
 
         // Subsequent packets: Raw payload chunks (20 bytes each)
         let fragNum = 2;
         while (offset < totalSize) {
-            // 100ms delay between fragments to prevent device overflow and ensure encryption
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
+            // 150ms delay between fragments to prevent device overflow
+            await new Promise(resolve => setTimeout(resolve, 150));
+
             const chunkSize = Math.min(mtu, totalSize - offset);
             const chunk = data.slice(offset, offset + chunkSize);
-            
-            console.log(`[BLE] ChannelConfig write: sending fragment ${fragNum} (${chunk.length}B)`);
-            
-            await BleClient.write(
-                this.connectedDeviceId!,
-                SERVICE_UUID,
-                CHAR_UUIDS.CHANNEL_CONFIG,
-                new DataView(chunk.buffer)
-            );
-            
+
+            console.log(`[BLE] ChannelConfig write: sending fragment ${fragNum} (${chunk.length}B), offset=${offset}`);
+
+            try {
+                await BleClient.write(
+                    this.connectedDeviceId!,
+                    SERVICE_UUID,
+                    CHAR_UUIDS.CHANNEL_CONFIG,
+                    new DataView(chunk.buffer)
+                );
+            } catch (error) {
+                console.error(`[BLE] ChannelConfig write: fragment ${fragNum} FAILED at offset ${offset}:`, error);
+                throw error;
+            }
+
             offset += chunkSize;
             fragNum++;
         }
-        
-        console.log(`[BLE] ChannelConfig write: complete (${fragNum - 1} fragments)`);
+
+        console.log(`[BLE] ChannelConfig write: complete (${fragNum - 1} fragments, ${totalSize} bytes)`);
     }
 
     public async writeChannelConfigObject(config: ChannelConfigData): Promise<void> {
@@ -1395,7 +1538,7 @@ export class BleService {
 
         // 0: Channel ID
         view.setUint8(0, config.channel_id);
-        
+
         // 1: Name Length
         // 2-65: Name (64 bytes)
         const encoder = new TextEncoder();
@@ -1489,7 +1632,7 @@ export class BleService {
 
     public async writeValveControl(valveId: number, action: number, duration: number): Promise<void> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
-        
+
         // Simple write (4 bytes) - No fragmentation needed
         // NOTE: Do NOT update store after write - wait for notification to confirm valve state
         const data = new Uint8Array(4);
@@ -1700,7 +1843,7 @@ export class BleService {
             SERVICE_UUID,
             CHAR_UUIDS.ONBOARDING_STATUS
         );
-        
+
         const onboardingData: OnboardingStatusData = {
             overall_completion_pct: data.getUint8(0),
             channels_completion_pct: data.getUint8(1),
@@ -1861,7 +2004,7 @@ export class BleService {
             SERVICE_UUID,
             CHAR_UUIDS.ENV_DATA
         );
-        
+
         const envData = this.parseEnvironmentalData(data);
         // Update store with data READ from device
         useAppStore.getState().setEnvData(envData);
@@ -1881,7 +2024,7 @@ export class BleService {
         const seq = data.getUint8(0);
         const total = data.getUint8(1);
         const len = data.getUint8(2);
-        
+
         // Extract payload correctly using byteOffset
         const payload = new Uint8Array(data.buffer.slice(data.byteOffset + 3, data.byteOffset + 3 + len));
 
@@ -1936,7 +2079,7 @@ export class BleService {
             SERVICE_UUID,
             CHAR_UUIDS.RAIN_SENSOR_DATA
         );
-        
+
         const rainData = this.parseRainData(data);
         // Update store with data READ from device
         useAppStore.getState().setRainData(rainData);
@@ -1974,13 +2117,13 @@ export class BleService {
 
     public async writeSystemConfig(configData: Uint8Array): Promise<void> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
-        
+
         // NOTE: Do NOT update store after write - re-read to confirm
         // Standard ATT Long Write - Client handles splitting if needed, 
         // but BleClient usually handles it if the device supports it.
         // If not, we might need to split manually. 
         // Docs say: "Fragmentation: Required for writes when MTU < 56; handled via standard ATT long write semantics"
-        
+
         // We'll try direct write first. If BleClient supports long writes, it should work.
         await BleClient.write(
             this.connectedDeviceId,
@@ -1998,20 +2141,20 @@ export class BleService {
 
         // 0: Version (Read Only, but we write 2)
         view.setUint8(0, 2);
-        
+
         // 1: Power Mode (Default 0)
         view.setUint8(1, config.power_mode ?? 0);
-        
+
         // 2: Flow Calibration (Default 750 pulses/L if not set)
         // CRITICAL: Must be 100-10000
         view.setUint32(2, config.flow_calibration ?? 750, true);
-        
+
         // 6: Max Active Valves (Read Only)
         view.setUint8(6, 1);
-        
+
         // 7: Num Channels (Read Only)
         view.setUint8(7, 8);
-        
+
         // 8: Master Valve
         const mv = config.master_valve;
         view.setUint8(8, mv?.enabled ? 1 : 0);
@@ -2111,16 +2254,16 @@ export class BleService {
 
     public async readScheduleConfig(channelId: number): Promise<ScheduleConfigData> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
-        
+
         await this.selectScheduleChannel(channelId);
-        
+
         // Read actual schedule from device (SOURCE OF TRUTH)
         const data = await BleClient.read(
             this.connectedDeviceId,
             SERVICE_UUID,
             CHAR_UUIDS.SCHEDULE_CONFIG
         );
-        
+
         const config = this.parseScheduleConfig(data);
         // Update store with data READ from device
         useAppStore.getState().updateSchedule(config);
@@ -2193,16 +2336,16 @@ export class BleService {
 
     public async readGrowingEnvironment(channelId: number): Promise<GrowingEnvData> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
-        
+
         await this.selectGrowingEnvChannel(channelId);
-        
+
         // Read actual growing environment from device (SOURCE OF TRUTH)
         const data = await BleClient.read(
             this.connectedDeviceId,
             SERVICE_UUID,
             CHAR_UUIDS.GROWING_ENV
         );
-        
+
         const env = this.parseGrowingEnv(data);
         // Update store with data READ from device
         useAppStore.getState().updateGrowingEnv(env);
@@ -2211,6 +2354,24 @@ export class BleService {
 
     public async writeGrowingEnvironment(env: GrowingEnvData): Promise<void> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
+
+        console.log('[DEBUG BLE] writeGrowingEnvironment called with:', {
+            channel_id: env.channel_id,
+            plant_db_index: env.plant_db_index,
+            soil_db_index: env.soil_db_index,
+            irrigation_method_index: env.irrigation_method_index,
+            use_area_based: env.use_area_based,
+            coverage: env.coverage,
+            auto_mode: env.auto_mode,
+            max_volume_limit_l: env.max_volume_limit_l,
+            planting_date_unix: env.planting_date_unix,
+            days_after_planting: env.days_after_planting,
+            latitude_deg: env.latitude_deg,
+            plant_type: env.plant_type,
+            specific_plant: env.specific_plant,
+            water_need_factor: env.water_need_factor,
+            custom_name: env.custom_name,
+        });
 
         // NOTE: Do NOT update store after write - re-read to confirm
         // Serialize struct (71 bytes)
@@ -2223,13 +2384,13 @@ export class BleService {
         view.setUint8(3, env.soil_db_index);
         view.setUint8(4, env.irrigation_method_index);
         view.setUint8(5, env.use_area_based ? 1 : 0);
-        
+
         if (env.use_area_based) {
             view.setFloat32(6, env.coverage.area_m2 || 0, true);
         } else {
             view.setUint16(6, env.coverage.plant_count || 0, true);
         }
-        
+
         view.setUint8(10, env.auto_mode);
         view.setFloat32(11, env.max_volume_limit_l, true);
         view.setUint8(15, env.enable_cycle_soak ? 1 : 0);
@@ -2237,18 +2398,18 @@ export class BleService {
         view.setUint16(20, env.days_after_planting, true);
         view.setFloat32(22, env.latitude_deg, true);
         view.setUint8(26, env.sun_exposure_pct);
-        
+
         // Legacy/Custom fields
         view.setUint8(27, env.plant_type);
         view.setUint16(28, env.specific_plant, true);
         view.setUint8(30, env.soil_type);
         view.setUint8(31, env.irrigation_method);
         view.setUint8(32, env.sun_percentage);
-        
+
         const encoder = new TextEncoder();
         const nameBytes = encoder.encode(env.custom_name);
         bytes.set(nameBytes.slice(0, 32), 33);
-        
+
         view.setFloat32(65, env.water_need_factor, true);
         view.setUint8(69, env.irrigation_freq_days);
         view.setUint8(70, env.prefer_area_based ? 1 : 0);
@@ -2261,7 +2422,7 @@ export class BleService {
         // Custom Header: [channel_id, frag_type, size_hi, size_lo] (Big Endian size for type 2)
         // frag_type 2 = Big Endian size
         const totalSize = data.length;
-        const header = new Uint8Array  (4);
+        const header = new Uint8Array(4);
         header[0] = channelId;
         header[1] = 0x02; // FRAGMENT_TYPE_FULL_BE
         header[2] = (totalSize >> 8) & 0xFF;
@@ -2275,28 +2436,28 @@ export class BleService {
         const firstPacket = new Uint8Array(4 + firstChunkSize);
         firstPacket.set(header, 0);
         firstPacket.set(data.slice(0, firstChunkSize), 4);
-        
+
         await BleClient.write(
             this.connectedDeviceId!,
             SERVICE_UUID,
             CHAR_UUIDS.GROWING_ENV,
             new DataView(firstPacket.buffer)
         );
-        
+
         offset += firstChunkSize;
 
         // Subsequent packets: Payload chunks
         while (offset < totalSize) {
             const chunkSize = Math.min(mtu, totalSize - offset);
             const chunk = data.slice(offset, offset + chunkSize);
-            
+
             await BleClient.write(
                 this.connectedDeviceId!,
                 SERVICE_UUID,
                 CHAR_UUIDS.GROWING_ENV,
                 new DataView(chunk.buffer)
             );
-            
+
             offset += chunkSize;
             // Small delay to prevent congestion
             await new Promise(resolve => setTimeout(resolve, 20));
@@ -2458,7 +2619,7 @@ export class BleService {
     public async selectChannelCompensationConfig(channelId: number): Promise<void> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
         if (channelId < 0 || channelId > 7) throw new Error('Invalid channel ID (0-7)');
-        
+
         await BleClient.write(
             this.connectedDeviceId,
             SERVICE_UUID,
@@ -2475,14 +2636,14 @@ export class BleService {
      */
     public async readChannelCompensationConfig(channelId?: number): Promise<ChannelCompensationConfigData> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
-        
+
         // Select channel if specified
         if (channelId !== undefined) {
             await this.selectChannelCompensationConfig(channelId);
             // Small delay for firmware to process selection
             await new Promise(resolve => setTimeout(resolve, 50));
         }
-        
+
         const data = await BleClient.read(
             this.connectedDeviceId,
             SERVICE_UUID,
@@ -2524,21 +2685,21 @@ export class BleService {
 
         // Channel ID @ 0
         view.setUint8(0, config.channel_id);
-        
+
         // Rain compensation fields @ 1-15
         view.setUint8(1, config.rain.enabled ? 1 : 0);
         view.setFloat32(2, config.rain.sensitivity, true);
         view.setUint16(6, config.rain.lookback_hours, true);
         view.setFloat32(8, config.rain.skip_threshold_mm, true);
         view.setFloat32(12, config.rain.reduction_factor, true);
-        
+
         // Temperature compensation fields @ 16-32
         view.setUint8(16, config.temp.enabled ? 1 : 0);
         view.setFloat32(17, config.temp.base_temperature, true);
         view.setFloat32(21, config.temp.sensitivity, true);
         view.setFloat32(25, config.temp.min_factor, true);
         view.setFloat32(29, config.temp.max_factor, true);
-        
+
         // Timestamps and reserved are ignored on write (@ 33-43)
         view.setUint32(33, 0, true);
         view.setUint32(37, 0, true);
@@ -2643,16 +2804,16 @@ export class BleService {
 
     public async readCompensationStatus(channelId: number): Promise<CompensationStatusData> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
-        
+
         await this.selectCompensationChannel(channelId);
-        
+
         // Read actual compensation status from device (SOURCE OF TRUTH)
         const data = await BleClient.read(
             this.connectedDeviceId,
             SERVICE_UUID,
             CHAR_UUIDS.COMPENSATION_STATUS
         );
-        
+
         const status = this.parseCompensationStatus(data);
         // Update store with data READ from device
         useAppStore.getState().updateCompensation(status);
@@ -2694,19 +2855,19 @@ export class BleService {
 
     public async readAutoCalcStatus(channelId: number): Promise<AutoCalcStatusData> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
-        
+
         await this.selectAutoCalcChannel(channelId);
-        
+
         // Read actual auto-calc status from device (SOURCE OF TRUTH)
         const data = await BleClient.read(
             this.connectedDeviceId,
             SERVICE_UUID,
             CHAR_UUIDS.AUTO_CALC_STATUS
         );
-        
+
         const status = this.parseAutoCalcStatus(data);
         // Update store with data READ from device
-        useAppStore.getState().updateAutoCalc(status);
+        useAppStore.getState().setAutoCalcData(status.channel_id, status);
         return status;
     }
 
@@ -2716,6 +2877,7 @@ export class BleService {
      */
     public async readAutoCalcStatusGlobal(): Promise<AutoCalcStatusData> {
         const status = await this.readAutoCalcStatus(0xFF);
+        // Also set globalAutoCalcStatus for components that use it directly
         useAppStore.getState().setGlobalAutoCalcStatus(status);
         return status;
     }
@@ -2739,10 +2901,26 @@ export class BleService {
     }
 
     private parseAutoCalcStatus(view: DataView): AutoCalcStatusData {
+        // DEBUG: Log raw bytes for next_irrigation_time at offset 31-34
+        const b31 = view.getUint8(31);
+        const b32 = view.getUint8(32);
+        const b33 = view.getUint8(33);
+        const b34 = view.getUint8(34);
+        const nextEpoch = view.getUint32(31, true); // little-endian
+        const nextDate = new Date(nextEpoch * 1000);
+        console.log('[DEBUG AutoCalcStatus] next_irrigation_time parsing:', {
+            rawBytes: `[${b31}, ${b32}, ${b33}, ${b34}]`,
+            rawBytesHex: `0x${b31.toString(16).padStart(2, '0')} 0x${b32.toString(16).padStart(2, '0')} 0x${b33.toString(16).padStart(2, '0')} 0x${b34.toString(16).padStart(2, '0')}`,
+            parsedEpoch: nextEpoch,
+            asDate: nextDate.toISOString(),
+            asLocalTime: nextDate.toLocaleString(),
+            channel_id: view.getUint8(0),
+        });
+
         return {
             channel_id: view.getUint8(0),
-            calculation_active: view.getUint8(1) !== 0,
-            irrigation_needed: view.getUint8(2) !== 0,
+            calculation_active: view.getUint8(1),
+            irrigation_needed: view.getUint8(2),
             current_deficit_mm: view.getFloat32(3, true),
             et0_mm_day: view.getFloat32(7, true),
             crop_coefficient: view.getFloat32(11, true),
@@ -2754,11 +2932,11 @@ export class BleService {
             days_after_planting: view.getUint16(35, true),
             phenological_stage: view.getUint8(37),
             quality_mode: view.getUint8(38),
-            volume_limited: view.getUint8(39) !== 0,
+            volume_limited: view.getUint8(39),
             auto_mode: view.getUint8(40),
             raw_mm: view.getFloat32(41, true),
             effective_rain_mm: view.getFloat32(45, true),
-            calculation_error: view.getUint8(49) !== 0,
+            calculation_error: view.getUint8(49),
             etc_mm_day: view.getFloat32(50, true),
             volume_liters: view.getFloat32(54, true),
             cycle_count: view.getUint8(58),
@@ -2821,7 +2999,7 @@ export class BleService {
 
     public async readStatistics(channelId: number): Promise<StatisticsData> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
-        
+
         // Select channel first
         await BleClient.write(
             this.connectedDeviceId,
@@ -2829,7 +3007,7 @@ export class BleService {
             CHAR_UUIDS.STATISTICS,
             new DataView(new Uint8Array([channelId]).buffer)
         );
-        
+
         // Read actual statistics from device (SOURCE OF TRUTH)
         const data = await BleClient.read(
             this.connectedDeviceId,
@@ -2858,9 +3036,9 @@ export class BleService {
      */
     public async readAllStatistics(): Promise<StatisticsData[]> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
-        
+
         const allStats: StatisticsData[] = [];
-        
+
         for (let ch = 0; ch < 8; ch++) {
             try {
                 const stats = await this.readStatistics(ch);
@@ -2879,7 +3057,7 @@ export class BleService {
                 });
             }
         }
-        
+
         return allStats;
     }
 
@@ -2970,6 +3148,71 @@ export class BleService {
         };
     }
 
+    // --- Hydraulic Status (Characteristic #29 - UUID: de22) ---
+
+    /**
+     * Read hydraulic status for a specific channel.
+     * Write channel selector byte first, then read the 48-byte response.
+     * @param channelId - 0-7, or 0xFF for current active channel
+     */
+    public async readHydraulicStatus(channelId: number = 0xFF): Promise<HydraulicStatusData> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+
+        // Write channel selector
+        const selector = new Uint8Array([channelId]);
+        await BleClient.write(
+            this.connectedDeviceId,
+            SERVICE_UUID,
+            CHAR_UUIDS.HYDRAULIC_STATUS,
+            new DataView(selector.buffer)
+        );
+
+        // Read the 48-byte response
+        const data = await BleClient.read(
+            this.connectedDeviceId,
+            SERVICE_UUID,
+            CHAR_UUIDS.HYDRAULIC_STATUS
+        );
+        const hydraulicData = this.parseHydraulicStatus(data);
+        useAppStore.getState().setHydraulicStatus(hydraulicData);
+        return hydraulicData;
+    }
+
+    private parseHydraulicStatus(view: DataView): HydraulicStatusData {
+        if (view.byteLength < 48) {
+            throw new Error(`Hydraulic status data too short: ${view.byteLength}`);
+        }
+        return {
+            channel_id: view.getUint8(0),
+            profile_type: view.getUint8(1),
+            lock_level: view.getUint8(2),
+            lock_reason: view.getUint8(3),
+            nominal_flow_ml_min: view.getUint32(4, true),
+            ramp_up_time_sec: view.getUint16(8, true),
+            tolerance_high_percent: view.getUint8(10),
+            tolerance_low_percent: view.getUint8(11),
+            is_calibrated: view.getUint8(12) === 1,
+            monitoring_enabled: view.getUint8(13) === 1,
+            learning_runs: view.getUint8(14),
+            stable_runs: view.getUint8(15),
+            estimated: view.getUint8(16) === 1,
+            manual_override_active: view.getUint8(17) === 1,
+            // reserved0 @ 18-19
+            lock_at_epoch: view.getUint32(20, true),
+            retry_after_epoch: view.getUint32(24, true),
+            no_flow_runs: view.getUint8(28),
+            high_flow_runs: view.getUint8(29),
+            unexpected_flow_runs: view.getUint8(30),
+            // reserved1 @ 31
+            last_anomaly_epoch: view.getUint32(32, true),
+            global_lock_level: view.getUint8(36),
+            global_lock_reason: view.getUint8(37),
+            // reserved2 @ 38-39
+            global_lock_at_epoch: view.getUint32(40, true),
+            global_retry_after_epoch: view.getUint32(44, true)
+        };
+    }
+
     // --- Task Queue Commands ---
 
     /**
@@ -2983,7 +3226,7 @@ export class BleService {
         // Build full 9-byte struct with command
         const data = new Uint8Array(9);
         const view = new DataView(data.buffer);
-        
+
         // All fields except command are ignored on write
         view.setUint8(0, 0);  // pending_count (ignored)
         view.setUint8(1, 0);  // completed_tasks (ignored)
@@ -3146,7 +3389,7 @@ export class BleService {
         // 12-byte query header
         const data = new Uint8Array(12);
         const view = new DataView(data.buffer);
-        
+
         data[0] = channelId;
         data[1] = historyType;
         data[2] = entryIndex;
@@ -3378,7 +3621,7 @@ export class BleService {
         endTime: number = 0,
         dataType: number = 0,
         maxRecords: number = 24,
-        timeoutMsPerFragment: number = 3000,
+        timeoutMsPerFragment: number = 8000,
         maxFragments: number = 200
     ): Promise<void> {
         const store = useAppStore.getState();
@@ -3390,15 +3633,37 @@ export class BleService {
 
         let fragmentId = 0;
         for (let i = 0; i < maxFragments; i++) {
-            const { header, payload } = await this.requestEnvHistoryFragment(
-                command,
-                startTime,
-                endTime,
-                dataType,
-                maxRecords,
-                fragmentId,
-                timeoutMsPerFragment
-            );
+            // Web BLE notifications can occasionally be delayed; retry a timed-out fragment once.
+            let header: any | null = null;
+            let payload: Uint8Array<ArrayBufferLike> = new Uint8Array(0);
+            for (let attempt = 0; attempt < 2; attempt++) {
+                try {
+                    const res = await this.requestEnvHistoryFragment(
+                        command,
+                        startTime,
+                        endTime,
+                        dataType,
+                        maxRecords,
+                        fragmentId,
+                        timeoutMsPerFragment
+                    );
+                    header = res.header;
+                    payload = res.payload;
+                    break;
+                } catch (e: any) {
+                    const msg = String(e?.message || e);
+                    if (attempt === 0 && msg.toLowerCase().includes('timed out')) {
+                        console.warn(`[BLE] Env history fragment ${fragmentId} timed out; retrying once...`);
+                        await this.delay(120);
+                        continue;
+                    }
+                    throw e;
+                }
+            }
+
+            if (!header) {
+                throw new Error(`Environmental history error: failed to fetch fragment ${fragmentId}`);
+            }
 
             if (header.status !== 0) {
                 if (header.status === 0x07) throw new Error('Environmental history rate limited');
@@ -3437,7 +3702,7 @@ export class BleService {
             }
 
             fragmentId += 1;
-            await this.delay(40);
+            await this.delay(80);
         }
     }
 
@@ -3585,7 +3850,6 @@ export class BleService {
         const entries: EnvHourlyEntry[] = [];
         let offset = 0;
         const ENTRY_SIZE = 16;
-
         for (let i = 0; i < entryCount && offset + ENTRY_SIZE <= payload.byteLength; i++) {
             entries.push({
                 timestamp: payload.getUint32(offset, true),
@@ -3598,6 +3862,148 @@ export class BleService {
             offset += ENTRY_SIZE;
         }
         return entries;
+    }
+
+    // --- Flow Calibration Stubs ---
+
+    public async startFlowCalibration(): Promise<void> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+        console.log('[BleService] startFlowCalibration called - stub implementation');
+        // TODO: Implement actual BLE write to start calibration
+    }
+
+    public async stopFlowCalibration(): Promise<void> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+        console.log('[BleService] stopFlowCalibration called - stub implementation');
+        // TODO: Implement actual BLE write to stop calibration
+    }
+
+    public async calculateFlowCalibration(testVolumeMl: number): Promise<void> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+        console.log('[BleService] calculateFlowCalibration called with volume:', testVolumeMl, '- stub implementation');
+        // TODO: Implement actual BLE write to trigger calculation
+    }
+
+    public async applyFlowCalibration(): Promise<void> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+        console.log('[BleService] applyFlowCalibration called - stub implementation');
+        // TODO: Implement actual BLE write to apply calibration
+    }
+
+    // --- Time & Location ---
+
+    public async syncDeviceTime(): Promise<void> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+
+        const now = new Date();
+        const buffer = new ArrayBuffer(16);
+        const view = new DataView(buffer);
+
+        view.setUint8(0, now.getFullYear() - 2000); // Year
+        view.setUint8(1, now.getMonth() + 1);       // Month
+        view.setUint8(2, now.getDate());            // Day
+        view.setUint8(3, now.getHours());           // Hour
+        view.setUint8(4, now.getMinutes());         // Minute
+        view.setUint8(5, now.getSeconds());         // Second
+        view.setUint8(6, 0);                        // Day of week (ignored)
+
+        // Offset
+        const offset = -now.getTimezoneOffset(); // JS returns positive for WEST, we want positive for EAST?
+        // JS getTimezoneOffset() returns minutes *difference* from UTC to Local.
+        // e.g. GMT+2 returns -120. We want +120.
+        // So negate it.
+        view.setInt16(7, offset, true);
+
+        view.setUint8(9, 0); // DST active? JS doesn't tell us easily if DST is active without libraries.
+        // But offset includes DST if active.
+        // Firmware expects "dst_active" flag. 
+        // We can heuristic it or leave 0 and let user set timezone rules.
+        // Docs say "dst_active... 1 if DST logic enabled".
+        // Let's set 0 for now (Auto-DST logic might be handled by TimezoneConfig).
+
+        // Write to RTC
+        await BleClient.write(
+            this.connectedDeviceId,
+            SERVICE_UUID,
+            CHAR_UUIDS.RTC_CONFIG,
+            view
+        );
+    }
+
+
+    // --- Reset Control ---
+
+    public async performReset(type: number, channelId: number = 0xFF): Promise<void> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+
+        // prevent concurrent resets
+        if (this.pendingResetResolver) {
+            throw new Error('Reset already in progress');
+        }
+
+        return new Promise<void>(async (resolve, reject) => {
+            // Setup resolver
+            let codeReceived = false;
+
+            const timeoutId = setTimeout(() => {
+                this.pendingResetResolver = null;
+                reject(new Error('Reset timeout'));
+            }, 10000); // 10s timeout
+
+            this.pendingResetResolver = {
+                resolveCode: async (code) => {
+                    if (codeReceived) return;
+                    codeReceived = true;
+                    try {
+                        console.log(`[BLE] Got reset code ${code}, executing...`);
+                        await this.writeResetControl(type, channelId, code);
+                        // Now wait for completion (status 0xFF)
+                    } catch (e) {
+                        clearTimeout(timeoutId);
+                        this.pendingResetResolver = null;
+                        reject(e as Error);
+                    }
+                },
+                resolveComplete: () => {
+                    clearTimeout(timeoutId);
+                    console.log('[BLE] Reset complete');
+                    resolve();
+                },
+                reject: (e) => {
+                    clearTimeout(timeoutId);
+                    this.pendingResetResolver = null;
+                    reject(e);
+                },
+                type
+            };
+
+            try {
+                // Step 1: Request Code (code=0)
+                console.log(`[BLE] Requesting reset type ${type}...`);
+                await this.writeResetControl(type, channelId, 0);
+            } catch (e) {
+                clearTimeout(timeoutId);
+                this.pendingResetResolver = null;
+                reject(e as Error);
+            }
+        });
+    }
+
+    private async writeResetControl(type: number, channelId: number, code: number): Promise<void> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+        const buffer = new ArrayBuffer(16);
+        const view = new DataView(buffer);
+        view.setUint8(0, type);
+        view.setUint8(1, channelId);
+        view.setUint32(2, code, true);
+        // rest is padding/reserved
+
+        await BleClient.write(
+            this.connectedDeviceId,
+            SERVICE_UUID,
+            CHAR_UUIDS.RESET_CONTROL,
+            view
+        );
     }
 
     /**
@@ -3625,6 +4031,62 @@ export class BleService {
         return entries;
     }
 
+    // ==================== SOIL MOISTURE CONFIGURATION ====================
+
+    /**
+     * Read Soil Moisture Configuration.
+     * channelId: 0..7 for per-channel, 0xFF for global.
+     */
+    public async readSoilMoistureConfig(channelId: number): Promise<SoilMoistureConfigData> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+        if (!(channelId === 0xFF || (channelId >= 0 && channelId <= 7))) {
+            throw new Error('Invalid channel ID (0-7) or 0xFF for global');
+        }
+
+        const requestBuffer = new ArrayBuffer(8);
+        const requestView = new DataView(requestBuffer);
+        requestView.setUint8(0, channelId);
+        requestView.setUint8(1, SOIL_MOISTURE_OPERATIONS.READ);
+        // remaining bytes are 0
+
+        await BleClient.write(
+            this.connectedDeviceId,
+            CUSTOM_CONFIG_SERVICE_UUID,
+            CHAR_UUIDS.SOIL_MOISTURE_CONFIG,
+            requestView
+        );
+
+        const data = await BleClient.read(
+            this.connectedDeviceId,
+            CUSTOM_CONFIG_SERVICE_UUID,
+            CHAR_UUIDS.SOIL_MOISTURE_CONFIG
+        );
+
+        const parsed = this.parseSoilMoistureConfig(data);
+        useAppStore.getState().setSoilMoistureConfig(parsed);
+        return parsed;
+    }
+
+    private parseSoilMoistureConfig(data: DataView): SoilMoistureConfigData {
+        if (data.byteLength < 8) {
+            throw new Error(`Soil moisture config data too short: ${data.byteLength}`);
+        }
+
+        const status = data.getUint8(4);
+        if (status !== SOIL_MOISTURE_STATUS.SUCCESS) {
+            console.warn(`[BLE] Soil Moisture Config non-success status: 0x${status.toString(16)}`);
+        }
+
+        return {
+            channel_id: data.getUint8(0),
+            operation: data.getUint8(1),
+            enabled: data.getUint8(2) !== 0,
+            moisture_pct: data.getUint8(3),
+            status,
+            has_data: data.getUint8(5) !== 0
+        };
+    }
+
     // ==================== CUSTOM SOIL CONFIGURATION ====================
 
     /**
@@ -3638,7 +4100,7 @@ export class BleService {
         // Write a read request first (70 bytes)
         const requestBuffer = new ArrayBuffer(70);
         const requestView = new DataView(requestBuffer);
-        
+
         requestView.setUint8(0, channelId);
         requestView.setUint8(1, CUSTOM_SOIL_OPERATIONS.READ);
         // All other bytes are 0 (reserved/empty for read request)
@@ -3683,7 +4145,7 @@ export class BleService {
 
         const buffer = new ArrayBuffer(70);
         const view = new DataView(buffer);
-        
+
         view.setUint8(0, channelId);
         view.setUint8(1, CUSTOM_SOIL_OPERATIONS.DELETE);
         // All other bytes are 0
@@ -3740,7 +4202,9 @@ export class BleService {
 
         // Name: 32 bytes UTF-8, NUL-padded (offsets 2-33)
         const encoder = new TextEncoder();
-        const nameBytes = encoder.encode(config.name || 'Custom Soil');
+        const nameToWrite = config.name || 'Custom Soil';
+        console.log('[BLE] writeCustomSoilConfig: name="' + nameToWrite + '", length=' + nameToWrite.length);
+        const nameBytes = encoder.encode(nameToWrite);
         bytes.set(nameBytes.slice(0, 32), 2);
         // Ensure NUL termination
         if (nameBytes.length < 32) {
@@ -3799,9 +4263,11 @@ export class BleService {
         }
 
         const status = data.getInt8(66);
-        
+        console.log('[BLE] parseCustomSoilConfig: byteLength=' + data.byteLength + ', status=' + status);
+
         // If status is NOT_FOUND, no custom soil exists for this channel
         if (status === CUSTOM_SOIL_STATUS.NOT_FOUND) {
+            console.log('[BLE] parseCustomSoilConfig: NOT_FOUND status, returning null');
             return null;
         }
 
@@ -3809,7 +4275,14 @@ export class BleService {
         const nameBytes = new Uint8Array(data.buffer, data.byteOffset + 2, 32);
         const nullIndex = nameBytes.indexOf(0);
         const decoder = new TextDecoder('utf-8');
-        const name = decoder.decode(nameBytes.slice(0, nullIndex > 0 ? nullIndex : 32));
+
+        // Debug: show first 16 bytes of name as hex
+        const hexBytes = Array.from(nameBytes.slice(0, 16)).map(b => b.toString(16).padStart(2, '0')).join(' ');
+        console.log('[BLE] parseCustomSoilConfig: nameBytes[0:16]=' + hexBytes + ', nullIndex=' + nullIndex);
+
+        // Fix: if nullIndex is 0, name is empty; if -1, use full 32 bytes
+        const name = nullIndex === 0 ? '' : decoder.decode(nameBytes.slice(0, nullIndex > 0 ? nullIndex : 32));
+        console.log('[BLE] parseCustomSoilConfig: parsed name="' + name + '"');
 
         return {
             channel_id: data.getUint8(0),
@@ -3848,5 +4321,87 @@ export class BleService {
         } catch (err) {
             console.warn('[BLE] Failed to debug onboarding flags', err);
         }
+    }
+
+    // ============================================================================
+    // Interval Mode Configuration (Cycle & Soak Durations) - Characteristic #32
+    // ============================================================================
+
+    /**
+     * Read Interval Mode Configuration for a channel (Cycle & Soak durations)
+     * First write channel_id, then read config
+     */
+    async readIntervalModeConfig(channelId: number): Promise<IntervalModeConfigData> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+
+        // Write channel_id to select context
+        const selectBuffer = new ArrayBuffer(1);
+        new DataView(selectBuffer).setUint8(0, channelId);
+        await BleClient.write(
+            this.connectedDeviceId,
+            CUSTOM_CONFIG_SERVICE_UUID,
+            CHAR_UUIDS.INTERVAL_MODE_CONFIG,
+            new DataView(selectBuffer)
+        );
+
+        await this.delay(100);
+
+        // Read the config
+        const result = await BleClient.read(
+            this.connectedDeviceId,
+            CUSTOM_CONFIG_SERVICE_UUID,
+            CHAR_UUIDS.INTERVAL_MODE_CONFIG
+        );
+
+        return this.parseIntervalModeConfig(result);
+    }
+
+    /**
+     * Write Interval Mode Configuration (Cycle & Soak durations)
+     */
+    async writeIntervalModeConfig(config: IntervalModeConfigData): Promise<void> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+
+        // Create 17-byte buffer (firmware expects 17 bytes)
+        const buffer = new ArrayBuffer(17);
+        const data = new DataView(buffer);
+
+        data.setUint8(0, config.channel_id);
+        data.setUint8(1, config.enabled ? 1 : 0);
+        data.setUint16(2, config.watering_minutes, true);
+        data.setUint8(4, config.watering_seconds);
+        data.setUint16(5, config.pause_minutes, true);
+        data.setUint8(7, config.pause_seconds);
+        data.setUint8(8, 0); // configured (read-only, write 0)
+        data.setUint32(9, 0, true); // last_update (read-only, write 0)
+        // Reserved bytes 13-16, write zeros
+        data.setUint8(13, 0);
+        data.setUint8(14, 0);
+        data.setUint8(15, 0);
+        data.setUint8(16, 0); // Extra reserved byte (firmware expects 17 bytes)
+
+        await BleClient.write(
+            this.connectedDeviceId,
+            CUSTOM_CONFIG_SERVICE_UUID,
+            CHAR_UUIDS.INTERVAL_MODE_CONFIG,
+            data
+        );
+
+        console.log(`[BLE] Wrote Interval Mode Config for ch${config.channel_id}: ` +
+            `enabled=${config.enabled}, watering=${config.watering_minutes}m${config.watering_seconds}s, ` +
+            `pause=${config.pause_minutes}m${config.pause_seconds}s`);
+    }
+
+    private parseIntervalModeConfig(result: DataView): IntervalModeConfigData {
+        return {
+            channel_id: result.getUint8(0),
+            enabled: result.getUint8(1) !== 0,
+            watering_minutes: result.getUint16(2, true),
+            watering_seconds: result.getUint8(4),
+            pause_minutes: result.getUint16(5, true),
+            pause_seconds: result.getUint8(7),
+            configured: result.getUint8(8) !== 0,
+            last_update: result.getUint32(9, true),
+        };
     }
 }

@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import MobileConfirmModal from '../../components/mobile/MobileConfirmModal';
+import { BleService } from '../../services/BleService';
 
 type ResetType = 'settings' | 'schedule' | 'stats' | 'full';
 
 const MobileDeviceReset: React.FC = () => {
   const history = useHistory();
-  
+  const bleService = BleService.getInstance();
+
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedReset, setSelectedReset] = useState<ResetType | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const resetOptions = [
     {
@@ -58,16 +61,37 @@ const MobileDeviceReset: React.FC = () => {
     setShowConfirmModal(true);
   };
 
-  const handleConfirmReset = () => {
-    console.log('Performing reset:', selectedReset);
-    setShowConfirmModal(false);
-    
-    // In real app, would call BLE service to reset
-    if (selectedReset === 'full') {
-      // Navigate to welcome after factory reset
-      history.push('/welcome');
-    } else {
-      history.goBack();
+  const handleConfirmReset = async () => {
+    if (!selectedReset) return;
+
+    setLoading(true);
+    setShowConfirmModal(false); // Close modal, maybe show global spinner?
+
+    // Opcodes: 0x12=Settings, 0x11=Schedules, 0x14=History, 0xFF=Factory
+    let opcode = 0x00;
+    switch (selectedReset) {
+      case 'settings': opcode = 0x12; break;
+      case 'schedule': opcode = 0x11; break;
+      case 'stats': opcode = 0x14; break;
+      case 'full': opcode = 0xFF; break;
+    }
+
+    try {
+      console.log(`Performing reset: ${selectedReset} (0x${opcode.toString(16)})`);
+      await bleService.performReset(opcode);
+
+      if (selectedReset === 'full') {
+        // Navigate to welcome after factory reset
+        history.push('/welcome');
+      } else {
+        alert('Reset successful.');
+        history.goBack();
+      }
+    } catch (e) {
+      console.error('Reset failed:', e);
+      alert('Reset failed: ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -77,7 +101,7 @@ const MobileDeviceReset: React.FC = () => {
     <div className="min-h-screen bg-mobile-bg-dark font-manrope pb-24">
       {/* Header */}
       <div className="sticky top-0 z-50 flex items-center bg-mobile-bg-dark/90 backdrop-blur-md p-4 justify-between">
-        <button 
+        <button
           onClick={() => history.goBack()}
           className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
         >
@@ -106,26 +130,26 @@ const MobileDeviceReset: React.FC = () => {
           <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
             Reset Options
           </label>
-          
+
           <div className="space-y-3">
             {resetOptions.map(option => (
               <button
                 key={option.id}
                 onClick={() => handleResetClick(option.id)}
-                className={`w-full rounded-2xl bg-mobile-surface-dark border transition-all p-4 text-left ${
-                  option.severity === 'critical' 
-                    ? 'border-red-500/30 hover:border-red-500/50' 
+                disabled={loading}
+                className={`w-full rounded-2xl bg-mobile-surface-dark border transition-all p-4 text-left ${loading ? 'opacity-50 cursor-not-allowed' : ''
+                  } ${option.severity === 'critical'
+                    ? 'border-red-500/30 hover:border-red-500/50'
                     : 'border-mobile-border-dark hover:border-mobile-primary/50'
-                }`}
+                  }`}
               >
                 <div className="flex items-start gap-4">
                   <div className={`size-12 rounded-full ${option.iconBg} flex items-center justify-center ${option.iconColor} shrink-0`}>
                     <span className="material-symbols-outlined text-2xl">{option.icon}</span>
                   </div>
                   <div className="flex-1">
-                    <h4 className={`font-bold text-lg mb-1 ${
-                      option.severity === 'critical' ? 'text-red-400' : 'text-white'
-                    }`}>
+                    <h4 className={`font-bold text-lg mb-1 ${option.severity === 'critical' ? 'text-red-400' : 'text-white'
+                      }`}>
                       {option.name}
                     </h4>
                     <p className="text-mobile-text-muted text-sm">{option.description}</p>
@@ -166,6 +190,16 @@ const MobileDeviceReset: React.FC = () => {
         variant={selectedReset === 'full' ? 'danger' : 'warning'}
         requireConfirmation={selectedReset === 'full' ? 'RESET' : undefined}
       />
+
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-mobile-primary mb-4"></div>
+            <p className="text-white font-bold">Resetting...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

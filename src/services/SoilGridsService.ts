@@ -93,6 +93,15 @@ const SOILGRIDS_WCS_CRS_IGH = 'http://www.opengis.net/def/crs/EPSG/0/152160';
 const EARTH_RADIUS_M = 6371007.181;
 const SOILGRIDS_WCS_HALF_WINDOW_M = 250; // request a small coverage around point (meters)
 const WCS_CONCURRENCY = 4;
+const OPEN_ELEVATION_API_URL = 'https://api.open-elevation.com/api/v1/lookup';
+const SLOPE_SAMPLE_DISTANCE_M = 50; // Distance for slope calculation (meters)
+
+// Slope detection result
+export interface SlopeResult {
+    slope_percent: number;    // Slope as percentage (rise/run * 100)
+    elevation_m: number;      // Center point elevation in meters
+    confidence: 'high' | 'medium' | 'low';
+}
 
 // API status tracking
 interface APIStatus {
@@ -134,10 +143,10 @@ function markAPIFailure(statusCode?: number): void {
     const markDownImmediately = typeof statusCode === 'number' && (statusCode === 429 || statusCode >= 500);
 
     // Mark as down after 2 consecutive failures (or immediately for server-side errors)
-    setAPIStatus({ 
+    setAPIStatus({
         isDown: markDownImmediately ? true : failures >= 2,
-        lastCheck: Date.now(), 
-        consecutiveFailures: failures 
+        lastCheck: Date.now(),
+        consecutiveFailures: failures
     });
 }
 
@@ -328,7 +337,7 @@ export function classifyUSDATexture(clay: number, sand: number, silt: number): s
     // Normalize to ensure they sum to 100
     const total = clay + sand + silt;
     if (total === 0) return 'Loam'; // Fallback
-    
+
     const c = (clay / total) * 100;
     const s = (sand / total) * 100;
     const si = (silt / total) * 100;
@@ -350,7 +359,7 @@ export function classifyUSDATexture(clay: number, sand: number, silt: number): s
     }
 
     // Sandy loam
-    if ((s >= 43 && s <= 85 && si < 50 && c < 20) || 
+    if ((s >= 43 && s <= 85 && si < 50 && c < 20) ||
         (s >= 50 && c < 7 && si < 50)) {
         if (c < 7 && si < 50 && s >= 52) {
             return 'SandyLoam';
@@ -417,7 +426,7 @@ export function classifyUSDATexture(clay: number, sand: number, silt: number): s
  */
 function mapTextureToSoilDB(textureClass: string): SoilDBEntry | null {
     const soilDb = useAppStore.getState().soilDb;
-    
+
     // Direct match by soil_type
     const directMatch = soilDb.find(s => s.soil_type === textureClass);
     if (directMatch) return directMatch;
@@ -580,13 +589,13 @@ function estimateFromTextureClass(textureClass: string): { clay: number; sand: n
         'LoamySand': { clay: 5, sand: 80, silt: 15 },
         'Sand': { clay: 3, sand: 90, silt: 7 },
     };
-    
+
     for (const [key, value] of Object.entries(estimates)) {
         if (textureClass.toLowerCase().includes(key.toLowerCase())) {
             return value;
         }
     }
-    
+
     return estimates['Loam'];
 }
 
@@ -674,12 +683,12 @@ function aggregateTextureByRootDepth(profile: SoilProfile, rootDepthCm: number):
  */
 function determineConfidence(clay: number, sand: number, silt: number): 'high' | 'medium' | 'low' {
     const total = clay + sand + silt;
-    
+
     if (total < 80 || total > 120) return 'low';
     if (total < 90 || total > 110) return 'medium';
-    
+
     if (clay === 0 || sand === 0 || silt === 0) return 'medium';
-    
+
     return 'high';
 }
 
@@ -690,7 +699,7 @@ function determineConfidence(clay: number, sand: number, silt: number): 'high' |
 export class SoilGridsService {
     private static instance: SoilGridsService;
 
-    private constructor() {}
+    private constructor() { }
 
     public static getInstance(): SoilGridsService {
         if (!SoilGridsService.instance) {
@@ -818,64 +827,246 @@ export class SoilGridsService {
 }
 
 // ============================================================================
-// Utility Functions (exported for use in components)
+// Elevation & Slope Detection (Open-Elevation API)
 // ============================================================================
 
 /**
- * Checks if Cycle & Soak should be auto-enabled based on soil
+ * Fetches elevation for a single point from Open-Elevation API
  */
-export function shouldEnableCycleSoak(soil: SoilDBEntry): boolean {
-    // Enable for slow-draining soils (infiltration < 10 mm/h)
-    const infiltration = soil.infiltration_rate_mm_h;
-    if (typeof infiltration !== 'number') return false;
-    return infiltration < 10;
-}
+async function fetchElevation(lat: number, lon: number): Promise<number | null> {
+    try {
+        const response = await CapacitorHttp.get({
+            url: `${OPEN_ELEVATION_API_URL}?locations=${lat},${lon}`,
+            connectTimeout: API_TIMEOUT_MS,
+            readTimeout: API_TIMEOUT_MS,
+        });
 
-/**
- * Calculates recommended max volume limit based on coverage and soil
- */
-export function calculateRecommendedMaxVolume(
-    coverageType: 'area' | 'plants',
-    coverageValue: number,
-    soil: SoilDBEntry
-): number {
-    const awc = soil.available_water_mm_m;
-    if (typeof awc !== 'number') return 50; // Default 50L
-
-    if (coverageType === 'area') {
-        // Formula: area_m² × AWC_mm/m × 0.5 (half of available water capacity)
-        // AWC is in mm per meter depth, assume 30cm root zone
-        const volumeL = (coverageValue * awc * 0.3 * 0.5) / 1000;
-        return Math.max(5, Math.min(500, Math.round(volumeL)));
-    } else {
-        // For plant count: ~2L per plant (adjustable)
-        return Math.max(5, Math.min(500, coverageValue * 2));
+        if (response.status >= 200 && response.status < 300 && response.data?.results?.[0]) {
+            return response.data.results[0].elevation;
+        }
+        return null;
+    } catch (error) {
+        console.warn('[SoilGrids] Elevation API error:', error);
+        return null;
     }
 }
 
 /**
- * Calculates Cycle & Soak timing based on soil infiltration rate
+ * Fetches multiple elevations in a single request (more efficient)
  */
-export function calculateCycleSoakTiming(soil: SoilDBEntry): { cycleMinutes: number; soakMinutes: number } {
+async function fetchMultipleElevations(points: Array<{ lat: number; lon: number }>): Promise<Array<number | null>> {
+    try {
+        const locations = points.map(p => `${p.lat},${p.lon}`).join('|');
+        const response = await CapacitorHttp.get({
+            url: `${OPEN_ELEVATION_API_URL}?locations=${locations}`,
+            connectTimeout: API_TIMEOUT_MS,
+            readTimeout: API_TIMEOUT_MS,
+        });
+
+        if (response.status >= 200 && response.status < 300 && response.data?.results) {
+            return response.data.results.map((r: any) => r.elevation ?? null);
+        }
+        return points.map(() => null);
+    } catch (error) {
+        console.warn('[SoilGrids] Multi-elevation API error:', error);
+        return points.map(() => null);
+    }
+}
+
+/**
+ * Calculates slope from a center point by sampling 4 surrounding points
+ * Uses Open-Elevation API (free, no API key required)
+ * 
+ * @param lat Center latitude
+ * @param lon Center longitude
+ * @returns SlopeResult with slope percentage and elevation
+ */
+export async function calculateSlope(lat: number, lon: number): Promise<SlopeResult> {
+    console.log(`[SoilGrids] Calculating slope for ${lat}, ${lon}`);
+
+    // Calculate offset in degrees for sample distance
+    // 1 degree latitude ≈ 111km, 1 degree longitude varies by latitude
+    const latOffsetDeg = SLOPE_SAMPLE_DISTANCE_M / 111000;
+    const lonOffsetDeg = SLOPE_SAMPLE_DISTANCE_M / (111000 * Math.cos(lat * Math.PI / 180));
+
+    // Sample 5 points: center and 4 cardinal directions (N, S, E, W)
+    const points = [
+        { lat, lon },                           // Center
+        { lat: lat + latOffsetDeg, lon },       // North
+        { lat: lat - latOffsetDeg, lon },       // South
+        { lat, lon: lon + lonOffsetDeg },       // East
+        { lat, lon: lon - lonOffsetDeg },       // West
+    ];
+
+    const elevations = await fetchMultipleElevations(points);
+    const [centerElev, northElev, southElev, eastElev, westElev] = elevations;
+
+    // If center elevation failed, return low confidence
+    if (centerElev === null) {
+        console.warn('[SoilGrids] Could not get center elevation, assuming flat terrain');
+        return { slope_percent: 0, elevation_m: 0, confidence: 'low' };
+    }
+
+    // Calculate slopes in each direction and take maximum
+    const slopes: number[] = [];
+    if (northElev !== null) {
+        slopes.push(Math.abs(northElev - centerElev) / SLOPE_SAMPLE_DISTANCE_M * 100);
+    }
+    if (southElev !== null) {
+        slopes.push(Math.abs(southElev - centerElev) / SLOPE_SAMPLE_DISTANCE_M * 100);
+    }
+    if (eastElev !== null) {
+        slopes.push(Math.abs(eastElev - centerElev) / SLOPE_SAMPLE_DISTANCE_M * 100);
+    }
+    if (westElev !== null) {
+        slopes.push(Math.abs(westElev - centerElev) / SLOPE_SAMPLE_DISTANCE_M * 100);
+    }
+
+    // Use max slope (steepest direction)
+    const maxSlope = slopes.length > 0 ? Math.max(...slopes) : 0;
+
+    // Determine confidence based on how many points we got
+    let confidence: 'high' | 'medium' | 'low';
+    if (slopes.length >= 4) {
+        confidence = 'high';
+    } else if (slopes.length >= 2) {
+        confidence = 'medium';
+    } else {
+        confidence = 'low';
+    }
+
+    console.log(`[SoilGrids] Slope calculation: ${maxSlope.toFixed(1)}%, elevation: ${centerElev}m, confidence: ${confidence}`);
+
+    return {
+        slope_percent: Math.round(maxSlope * 10) / 10,
+        elevation_m: centerElev,
+        confidence
+    };
+}
+
+// ============================================================================
+// Utility Functions (exported for use in components)
+// ============================================================================
+
+/**
+ * Checks if Cycle & Soak should be auto-enabled based on soil AND slope
+ * 
+ * Rule: Enable Cycle & Soak when:
+ * - Infiltration < 10 mm/h (slow-draining soil), OR
+ * - Slope > 3% (steep terrain causes runoff even on sandy soil), OR
+ * - Infiltration < 15 mm/h AND Slope > 2% (combined effect)
+ * 
+ * @param soil Soil database entry with infiltration rate
+ * @param slope_percent Optional slope percentage (0-100)
+ */
+export function shouldEnableCycleSoak(soil: SoilDBEntry, slope_percent: number = 0): boolean {
+    const infiltration = soil.infiltration_rate_mm_h;
+    if (typeof infiltration !== 'number') return false;
+
+    // Low infiltration = always enable
+    if (infiltration < 10) return true;
+
+    // High slope = always enable (water runs off even on sandy soil)
+    if (slope_percent > 3) return true;
+
+    // Combined effect: moderate infiltration + some slope
+    if (infiltration < 15 && slope_percent > 2) return true;
+
+    return false;
+}
+
+/**
+ * Calculates recommended max volume limit based on coverage, soil, and slope
+ */
+export function calculateRecommendedMaxVolume(
+    coverageType: 'area' | 'plants',
+    coverageValue: number,
+    soil: SoilDBEntry,
+    slope_percent: number = 0
+): number {
+    const awc = soil.available_water_mm_m;
+    if (typeof awc !== 'number') return 50; // Default 50L
+
+    let volumeL: number;
+    if (coverageType === 'area') {
+        // Formula: area_m² × AWC_mm/m × 0.5 (half of available water capacity)
+        // AWC is in mm per meter depth, assume 30cm root zone
+        volumeL = (coverageValue * awc * 0.3 * 0.5) / 1000;
+    } else {
+        // For plant count: ~2L per plant (adjustable)
+        volumeL = coverageValue * 2;
+    }
+
+    // Reduce max volume on slopes (more runoff risk)
+    if (slope_percent > 5) {
+        volumeL *= 0.6; // 40% reduction for steep slopes
+    } else if (slope_percent > 3) {
+        volumeL *= 0.8; // 20% reduction for moderate slopes
+    }
+
+    return Math.max(5, Math.min(500, Math.round(volumeL)));
+}
+
+/**
+ * Calculates Cycle & Soak timing based on soil infiltration rate AND slope
+ * 
+ * Slope increases both the need for cycle/soak and the soak duration
+ * because water needs time to absorb instead of running off.
+ * 
+ * @param soil Soil database entry with infiltration rate
+ * @param slope_percent Optional slope percentage (0-100)
+ */
+export function calculateCycleSoakTiming(
+    soil: SoilDBEntry,
+    slope_percent: number = 0
+): { cycleMinutes: number; soakMinutes: number } {
     const infiltration = soil.infiltration_rate_mm_h;
     if (typeof infiltration !== 'number') {
         return { cycleMinutes: 5, soakMinutes: 10 }; // Default
     }
 
+    // Base timing from soil infiltration
+    let cycleMinutes: number;
+    let soakMinutes: number;
+
     // Lower infiltration = shorter cycles, longer soaks
     if (infiltration <= 3) {
         // Heavy clay
-        return { cycleMinutes: 3, soakMinutes: 20 };
+        cycleMinutes = 3;
+        soakMinutes = 20;
     } else if (infiltration <= 6) {
         // Clay/Silty clay
-        return { cycleMinutes: 5, soakMinutes: 15 };
+        cycleMinutes = 5;
+        soakMinutes = 15;
     } else if (infiltration <= 10) {
         // Clay loam / Silt loam
-        return { cycleMinutes: 8, soakMinutes: 10 };
+        cycleMinutes = 8;
+        soakMinutes = 10;
+    } else if (infiltration <= 20) {
+        // Loamy soils
+        cycleMinutes = 10;
+        soakMinutes = 8;
     } else {
-        // Sandy soils - no real need for cycle & soak
-        return { cycleMinutes: 10, soakMinutes: 5 };
+        // Sandy soils - minimal need for cycle & soak
+        cycleMinutes = 15;
+        soakMinutes = 5;
     }
+
+    // Adjust for slope - higher slope means shorter cycles and longer soak
+    if (slope_percent > 5) {
+        // Steep slope: reduce cycle by 40%, increase soak by 50%
+        cycleMinutes = Math.max(2, Math.round(cycleMinutes * 0.6));
+        soakMinutes = Math.round(soakMinutes * 1.5);
+    } else if (slope_percent > 3) {
+        // Moderate slope: reduce cycle by 20%, increase soak by 25%
+        cycleMinutes = Math.max(2, Math.round(cycleMinutes * 0.8));
+        soakMinutes = Math.round(soakMinutes * 1.25);
+    } else if (slope_percent > 1) {
+        // Slight slope: increase soak by 10%
+        soakMinutes = Math.round(soakMinutes * 1.1);
+    }
+
+    return { cycleMinutes, soakMinutes };
 }
 
 // ============================================================================
@@ -920,25 +1111,25 @@ export function estimateSoilParametersFromTexture(
     const C = (clay / total);  // Clay fraction
     const S = (sand / total);  // Sand fraction
     const OM = organicMatter / 100; // Organic matter fraction
-    
+
     // Saxton & Rawls (2006) pedotransfer equations
     // θ_1500 (wilting point at -1500 kPa)
     const theta_1500t = -0.024 * S + 0.487 * C + 0.006 * OM +
-                        0.005 * S * OM - 0.013 * C * OM +
-                        0.068 * S * C + 0.031;
+        0.005 * S * OM - 0.013 * C * OM +
+        0.068 * S * C + 0.031;
     const theta_1500 = theta_1500t + (0.14 * theta_1500t - 0.02);
-    
+
     // θ_33 (field capacity at -33 kPa)
     const theta_33t = -0.251 * S + 0.195 * C + 0.011 * OM +
-                      0.006 * S * OM - 0.027 * C * OM +
-                      0.452 * S * C + 0.299;
+        0.006 * S * OM - 0.027 * C * OM +
+        0.452 * S * C + 0.299;
     const theta_33 = theta_33t + (1.283 * theta_33t * theta_33t - 0.374 * theta_33t - 0.015);
-    
+
     // Saturated conductivity (Ksat) - used to estimate infiltration rate
     // Simplified version based on texture
     const lambda = Math.log(theta_33) - Math.log(theta_1500);
     const Ksat = 1930 * Math.pow(theta_33 - theta_1500, 3 - lambda);
-    
+
     // Bulk density estimation (typical values by texture class)
     let bulkDensity: number;
     const textureClass = classifyUSDATexture(clay, sand, silt);
@@ -967,18 +1158,18 @@ export function estimateSoilParametersFromTexture(
         default:
             bulkDensity = 1.35;
     }
-    
+
     // Infiltration rate approximation from Ksat
     // Actual infiltration is ~0.5-0.7 of Ksat for unsaturated conditions
     const infiltrationRate = Math.max(0.5, Ksat * 0.6);
-    
+
     // Convert to percentages and constrain to valid ranges
     const fieldCapacity = Math.max(5, Math.min(60, theta_33 * 100));
     const wiltingPoint = Math.max(2, Math.min(40, theta_1500 * 100));
-    
+
     // Ensure FC > WP
     const finalWP = Math.min(wiltingPoint, fieldCapacity - 2);
-    
+
     return {
         name: `Detected ${textureClass}`,
         field_capacity: Math.round(fieldCapacity * 10) / 10,
@@ -998,19 +1189,19 @@ export function shouldUseCustomSoil(
     dbMatch: SoilDBEntry | null
 ): boolean {
     if (!dbMatch) return true;
-    
+
     const dbFC = dbMatch.field_capacity_pct;
     const dbWP = dbMatch.wilting_point_pct;
     const dbInfil = dbMatch.infiltration_rate_mm_h;
-    
+
     // Use custom if DB values are missing
     if (dbFC === null || dbWP === null || dbInfil === null) return true;
-    
+
     // Check if values differ by more than 20%
     const fcDiff = Math.abs(detected.field_capacity - dbFC) / dbFC;
     const wpDiff = Math.abs(detected.wilting_point - dbWP) / dbWP;
     const infilDiff = Math.abs(detected.infiltration_rate - dbInfil) / dbInfil;
-    
+
     return fcDiff > 0.2 || wpDiff > 0.2 || infilDiff > 0.2;
 }
 

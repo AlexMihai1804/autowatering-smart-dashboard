@@ -37,6 +37,9 @@ import MobileNoDevices from '../../pages/mobile/MobileNoDevices';
 import MobileConnectionSuccess from '../../pages/mobile/MobileConnectionSuccess';
 import MobileManageDevices from '../../pages/mobile/MobileManageDevices';
 import MobileZoneAddWizard from '../../pages/mobile/MobileZoneAddWizard';
+import MobileAlarmHistory from '../../pages/mobile/MobileAlarmHistory';
+
+import AndroidBackButtonHandler from '../AndroidBackButtonHandler';
 
 // Components
 import Sidebar from './Sidebar';
@@ -60,8 +63,15 @@ const Shell: React.FC = () => {
     return (
       <IonApp className="bg-mobile-bg-dark text-white font-manrope">
         <IonReactRouter>
-          <div className="min-h-screen bg-mobile-bg-dark">
-            <Switch>
+          <AndroidBackButtonHandler />
+          <IonPage>
+            <IonContent
+              fullscreen
+              className="bg-transparent"
+              style={{ '--background': 'transparent' } as React.CSSProperties}
+            >
+              <div className="min-h-screen bg-mobile-bg-dark">
+                <Switch>
               {/* Welcome & Connection Flow */}
               <Route exact path="/welcome" component={MobileWelcome} />
               <Route exact path="/no-devices" component={MobileNoDevices} />
@@ -99,6 +109,9 @@ const Shell: React.FC = () => {
               </Route>
               <Route exact path="/notifications">
                 {isConnected ? <MobileNotifications /> : <Redirect to="/welcome" />}
+              </Route>
+              <Route exact path="/alarms">
+                {isConnected ? <MobileAlarmHistory /> : <Redirect to="/welcome" />}
               </Route>
               
               {/* Device Settings */}
@@ -144,18 +157,20 @@ const Shell: React.FC = () => {
               <Route>
                 <Redirect to={isConnected ? "/dashboard" : "/welcome"} />
               </Route>
-            </Switch>
-            
-            {/* Bottom Navigation - only show when connected and not on welcome/scan/onboarding */}
-            {isConnected && (
-              <Route render={({ location }) => {
-                const hideNavPaths = ['/welcome', '/scan', '/permissions', '/onboarding', '/device/', '/zones/', '/weather', '/notifications', '/app-settings', '/help'];
-                const shouldHide = hideNavPaths.some(p => location.pathname.startsWith(p)) || 
-                                   (location.pathname.startsWith('/zones/') && location.pathname.includes('/'));
-                return shouldHide ? null : <MobileBottomNav />;
-              }} />
-            )}
-          </div>
+                </Switch>
+
+                {/* Bottom Navigation - only show when connected and not on welcome/scan/onboarding */}
+                {isConnected && (
+                  <Route render={({ location }) => {
+                    const hideNavPaths = ['/welcome', '/scan', '/permissions', '/onboarding', '/device/', '/zones/', '/weather', '/notifications', '/app-settings', '/help'];
+                    const shouldHide = hideNavPaths.some(p => location.pathname.startsWith(p)) ||
+                                      (location.pathname.startsWith('/zones/') && location.pathname.includes('/'));
+                    return shouldHide ? null : <MobileBottomNav />;
+                  }} />
+                )}
+              </div>
+            </IonContent>
+          </IonPage>
         </IonReactRouter>
       </IonApp>
     );
@@ -165,6 +180,7 @@ const Shell: React.FC = () => {
   return (
     <IonApp className="bg-cyber-dark text-white">
       <IonReactRouter>
+        <AndroidBackButtonHandler />
         {isDesktop ? (
           <div className="flex h-screen overflow-hidden bg-cyber-gradient">
             {isConnected && <Sidebar />}

@@ -14,7 +14,7 @@ const MobileDeviceSettings: React.FC = () => {
           iconColor: 'text-blue-400',
           label: 'Device Info',
           subtitle: 'Model, firmware, serial number',
-          route: '/settings/device/info',
+          route: '/device/info',
         },
         {
           icon: 'schedule',
@@ -22,7 +22,7 @@ const MobileDeviceSettings: React.FC = () => {
           iconColor: 'text-purple-400',
           label: 'Time & Location',
           subtitle: 'Timezone, coordinates, sync',
-          route: '/settings/device/time',
+          route: '/device/time',
         },
         {
           icon: 'valve',
@@ -30,7 +30,7 @@ const MobileDeviceSettings: React.FC = () => {
           iconColor: 'text-green-400',
           label: 'Master Valve',
           subtitle: 'Configure main water supply valve',
-          route: '/settings/device/master-valve',
+          route: '/device/master-valve',
         },
         {
           icon: 'water_drop',
@@ -38,7 +38,7 @@ const MobileDeviceSettings: React.FC = () => {
           iconColor: 'text-cyan-400',
           label: 'Flow Sensor Calibration',
           subtitle: 'Pulses per liter, accuracy test',
-          route: '/settings/device/flow-calibration',
+          route: '/device/flow-calibration',
         },
       ],
     },
@@ -51,7 +51,7 @@ const MobileDeviceSettings: React.FC = () => {
           iconColor: 'text-amber-400',
           label: 'Power Mode',
           subtitle: 'Normal, Energy-Saving, Ultra-Low',
-          route: '/settings/device/power',
+          route: '/device/power-mode',
         },
       ],
     },
@@ -64,7 +64,7 @@ const MobileDeviceSettings: React.FC = () => {
           iconColor: 'text-red-400',
           label: 'Reset Options',
           subtitle: 'Factory reset, clear schedules',
-          route: '/settings/device/reset',
+          route: '/device/reset',
         },
       ],
     },
@@ -74,7 +74,7 @@ const MobileDeviceSettings: React.FC = () => {
     <div className="min-h-screen bg-mobile-bg-dark font-manrope pb-24">
       {/* Header */}
       <div className="sticky top-0 z-50 flex items-center bg-mobile-bg-dark p-4 pb-2 justify-between">
-        <button 
+        <button
           onClick={() => history.goBack()}
           className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
         >

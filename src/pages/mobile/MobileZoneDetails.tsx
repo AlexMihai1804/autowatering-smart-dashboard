@@ -3,6 +3,7 @@ import { useHistory, useParams } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { BleService } from '../../services/BleService';
 import { TaskStatus } from '../../types/firmware_structs';
+import { calcSoilMoisturePercentPreferred } from '../../utils/soilMoisture';
 
 interface RouteParams {
   channelId: string;
@@ -13,7 +14,16 @@ const MobileZoneDetails: React.FC = () => {
   const { channelId } = useParams<RouteParams>();
   const channelIdNum = parseInt(channelId, 10);
 
-  const { zones, currentTask, autoCalcStatus, statistics } = useAppStore();
+  const {
+    zones,
+    currentTask,
+    autoCalcStatus,
+    globalSoilMoistureConfig,
+    soilMoistureConfig,
+    statistics,
+    schedules,
+    growingEnv
+  } = useAppStore();
   const bleService = BleService.getInstance();
 
   const zone = useMemo(() => {
@@ -39,8 +49,36 @@ const MobileZoneDetails: React.FC = () => {
   // Get zone stats
   const zoneStats = statistics.get(channelIdNum);
   const autoCalc = autoCalcStatus.get(channelIdNum);
-  const soilMoisture = 45; // Mock - not available from firmware
+  const schedule = schedules.get(channelIdNum);
+  const growing = growingEnv.get(channelIdNum);
+  const soilMoisture = calcSoilMoisturePercentPreferred({
+    perChannelConfig: soilMoistureConfig.get(channelIdNum) ?? null,
+    globalConfig: globalSoilMoistureConfig,
+    autoCalc: autoCalc ?? null
+  });
   const lastRunUsage = zoneStats?.total_volume ?? 12; // Fallback 12L
+
+  // Is FAO-56 auto mode
+  const isFao56 = schedule?.schedule_type === 2 || (growing?.auto_mode ?? 0) > 0;
+
+  // Get next watering display - only show for FAO-56 mode with valid data
+  const nextScheduleDisplay = useMemo(() => {
+    const nextEpoch = autoCalc?.next_irrigation_time ?? 0;
+    if (!nextEpoch) {
+      return 'Not scheduled';
+    }
+    const d = new Date(nextEpoch * 1000);
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const isTomorrow = d.toDateString() === tomorrow.toDateString();
+    
+    const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    if (isToday) return `Today at ${time}`;
+    if (isTomorrow) return `Tomorrow at ${time}`;
+    return d.toLocaleDateString(undefined, { weekday: 'long' }) + ' at ' + time;
+  }, [autoCalc?.next_irrigation_time]);
 
   const handleBack = () => {
     history.goBack();
@@ -119,9 +157,11 @@ const MobileZoneDetails: React.FC = () => {
           <span className="inline-flex items-center justify-center rounded-full bg-mobile-surface-dark px-2.5 py-0.5 text-xs font-medium text-mobile-text-muted border border-mobile-border-dark">
             {zone.plant_type ? 'Vegetables' : 'General'}
           </span>
-          <p className="text-mobile-text-muted text-sm font-medium">
-            {soilMoisture < 30 ? 'Low Water' : soilMoisture < 60 ? 'Normal Water' : 'High Water'} Need
-          </p>
+          {soilMoisture !== null && (
+            <p className="text-mobile-text-muted text-sm font-medium">
+              {soilMoisture < 30 ? 'Low Water' : soilMoisture < 60 ? 'Normal Water' : 'High Water'} Need
+            </p>
+          )}
         </div>
       </div>
 
@@ -182,7 +222,7 @@ const MobileZoneDetails: React.FC = () => {
             </div>
 
             <p className="text-center text-white/70 text-sm max-w-[200px]">
-              Next schedule: Tomorrow at 6:00 AM
+              Next schedule: {nextScheduleDisplay}
             </p>
           </div>
         </div>
@@ -239,20 +279,22 @@ const MobileZoneDetails: React.FC = () => {
         <h3 className="text-white text-base font-bold mb-4 px-1">Health & Stats</h3>
         <div className="grid grid-cols-2 gap-4">
           {/* Moisture Card */}
-          <div className="flex flex-col rounded-[1.5rem] bg-mobile-surface-dark p-5 border border-mobile-border-dark">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex w-10 h-10 items-center justify-center rounded-full bg-blue-500/20 text-blue-400">
-                <span className="material-symbols-outlined">humidity_percentage</span>
+          {soilMoisture !== null && (
+            <div className="flex flex-col rounded-[1.5rem] bg-mobile-surface-dark p-5 border border-mobile-border-dark">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex w-10 h-10 items-center justify-center rounded-full bg-blue-500/20 text-blue-400">
+                  <span className="material-symbols-outlined">humidity_percentage</span>
+                </div>
+                <span className="text-xs font-medium text-mobile-primary bg-mobile-primary/10 px-2 py-1 rounded-full">
+                  {autoCalc?.current_deficit_mm ? `-${autoCalc.current_deficit_mm.toFixed(1)}mm` : '+0%'}
+                </span>
               </div>
-              <span className="text-xs font-medium text-mobile-primary bg-mobile-primary/10 px-2 py-1 rounded-full">
-                {autoCalc?.current_deficit_mm ? `-${autoCalc.current_deficit_mm.toFixed(1)}mm` : '+0%'}
-              </span>
+              <div className="flex flex-col">
+                <span className="text-3xl font-bold text-white">{soilMoisture}%</span>
+                <span className="text-sm text-mobile-text-muted">Soil Moisture</span>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-3xl font-bold text-white">{soilMoisture}%</span>
-              <span className="text-sm text-mobile-text-muted">Soil Moisture</span>
-            </div>
-          </div>
+          )}
 
           {/* Water Usage Card */}
           <div className="flex flex-col rounded-[1.5rem] bg-mobile-surface-dark p-5 border border-mobile-border-dark">

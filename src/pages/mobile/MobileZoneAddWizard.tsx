@@ -9,7 +9,7 @@ import { PlantDBEntry, SoilDBEntry, IrrigationMethodEntry, PLANT_CATEGORIES } fr
 import { isChannelConfigComplete } from '../../types/firmware_structs';
 import SoilGridsServiceInstance, { CustomSoilParameters, estimateSoilParametersFromTexture } from '../../services/SoilGridsService';
 
-type WizardStep = 
+type WizardStep =
   | 'select-channel'
   | 'zone-name'
   | 'plant-method'      // NEW: Camera or List choice
@@ -70,6 +70,9 @@ interface ZoneConfig {
   useSolarTiming: boolean;
   solarEvent: 0 | 1; // 0=SUNSET, 1=SUNRISE
   solarOffsetMinutes: number; // -120 to +120
+  // Cycle & Soak and volume limit
+  enableCycleSoak: boolean;
+  maxVolumeLimitL: number;
 }
 
 const MobileZoneAddWizard: React.FC = () => {
@@ -77,7 +80,7 @@ const MobileZoneAddWizard: React.FC = () => {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const preselectedChannel = params.get('channel') ? parseInt(params.get('channel')!, 10) : null;
-  
+
   const { zones, systemConfig, onboardingState, wizardState, plantDb, soilDb, irrigationMethodDb } = useAppStore();
   const bleService = BleService.getInstance();
 
@@ -85,16 +88,16 @@ const MobileZoneAddWizard: React.FC = () => {
   const unconfiguredChannels = useMemo(() => {
     const numChannels = systemConfig?.num_channels || 8;
     const channels: number[] = [];
-    
+
     for (let i = 0; i < numChannels; i++) {
-      const isConfigured = 
-        (onboardingState?.channel_extended_flags !== undefined && 
-         isChannelConfigComplete(onboardingState.channel_extended_flags, i)) ||
+      const isConfigured =
+        (onboardingState?.channel_extended_flags !== undefined &&
+          isChannelConfigComplete(onboardingState.channel_extended_flags, i)) ||
         wizardState.completedZones.includes(i);
-      
+
       const zone = zones.find(z => z.channel_id === i);
       const hasName = zone?.name && zone.name.trim() !== '';
-      
+
       if (!isConfigured && !hasName) {
         channels.push(i);
       }
@@ -143,6 +146,9 @@ const MobileZoneAddWizard: React.FC = () => {
     useSolarTiming: true,
     solarEvent: 0,          // 0=SUNSET (default)
     solarOffsetMinutes: 0,  // Right at sunset
+    // Cycle & Soak and volume limit
+    enableCycleSoak: false, // Disabled by default
+    maxVolumeLimitL: 50,    // 50L default max per watering
   });
 
   // Plant selection method: 'camera' or 'list'
@@ -163,22 +169,22 @@ const MobileZoneAddWizard: React.FC = () => {
   // Filter plants - use database from store with category
   const filteredPlants = useMemo(() => {
     let plants = plantDb;
-    
+
     // Filter by category first
     if (selectedCategory) {
       plants = plants.filter(p => p.category === selectedCategory);
     }
-    
+
     // Then filter by search
     if (plantSearch.trim()) {
       const lowerSearch = plantSearch.toLowerCase();
-      plants = plants.filter(p => 
+      plants = plants.filter(p =>
         p.common_name_en?.toLowerCase().includes(lowerSearch) ||
         p.common_name_ro?.toLowerCase().includes(lowerSearch) ||
         p.scientific_name?.toLowerCase().includes(lowerSearch)
       );
     }
-    
+
     return plants.slice(0, 100);
   }, [plantDb, plantSearch, selectedCategory]);
 
@@ -186,7 +192,7 @@ const MobileZoneAddWizard: React.FC = () => {
   const filteredSoils = useMemo(() => {
     if (!soilSearch.trim()) return soilDb;
     const lowerSearch = soilSearch.toLowerCase();
-    return soilDb.filter(s => 
+    return soilDb.filter(s =>
       s.soil_type?.toLowerCase().includes(lowerSearch) ||
       s.texture?.toLowerCase().includes(lowerSearch)
     );
@@ -205,7 +211,7 @@ const MobileZoneAddWizard: React.FC = () => {
       'zone-name',
       'watering-mode',     // FIRST: Choose mode (Quality/Eco/Duration/Volume)
     ];
-    
+
     // FAO-56 modes need plant/soil/location data + schedule for start time
     if (zoneConfig.wateringMode === 'quality' || zoneConfig.wateringMode === 'eco') {
       return [
@@ -221,7 +227,7 @@ const MobileZoneAddWizard: React.FC = () => {
         'zone-summary',
       ];
     }
-    
+
     // Duration/Volume modes - simpler config with schedule
     return [
       ...baseSteps,
@@ -240,7 +246,7 @@ const MobileZoneAddWizard: React.FC = () => {
   const goNext = () => {
     setDirection(1);
     const nextIndex = currentStepIndex + 1;
-    
+
     if (nextIndex < stepOrder.length) {
       setCurrentStep(stepOrder[nextIndex]);
     } else {
@@ -251,7 +257,7 @@ const MobileZoneAddWizard: React.FC = () => {
   const goBack = () => {
     setDirection(-1);
     const prevIndex = currentStepIndex - 1;
-    
+
     if (prevIndex >= 0) {
       setCurrentStep(stepOrder[prevIndex]);
     } else {
@@ -278,11 +284,11 @@ const MobileZoneAddWizard: React.FC = () => {
       };
 
       // If we have a custom soil from GPS detection, create it on device first
+      // BUT still send a valid soil_type (0-7) in ChannelConfig - firmware validates this!
+      // The custom soil profile is stored separately via Custom Soil Configuration.
       let soilTypeId = zoneConfig.soilType?.id ?? 0;
-      let hasCustomSoil = false;
       if (zoneConfig.customSoilFromDetection?.enabled) {
-        // Create custom soil on device - custom soils are stored per channel
-        await bleService.createCustomSoilConfig({
+        const customSoilData = {
           channel_id: zoneConfig.channelId,
           name: zoneConfig.customSoilFromDetection.name,
           field_capacity: zoneConfig.customSoilFromDetection.field_capacity,
@@ -290,28 +296,92 @@ const MobileZoneAddWizard: React.FC = () => {
           infiltration_rate: zoneConfig.customSoilFromDetection.infiltration_rate,
           bulk_density: zoneConfig.customSoilFromDetection.bulk_density,
           organic_matter: zoneConfig.customSoilFromDetection.organic_matter,
+        };
+
+        // Create custom soil on device - custom soils are stored per channel
+        await bleService.createCustomSoilConfig(customSoilData);
+
+        // WORKAROUND: Firmware doesn't return name in read response (returns all zeros)
+        // Cache the name locally in the store so UI can display it
+        useAppStore.getState().updateCustomSoilConfig(zoneConfig.channelId, {
+          ...customSoilData,
+          operation: 1, // CREATE
+          created_timestamp: Math.floor(Date.now() / 1000),
+          modified_timestamp: Math.floor(Date.now() / 1000),
+          crc32: 0,
+          status: 0, // SUCCESS
         });
-        hasCustomSoil = true;
-        soilTypeId = 255; // Special ID to indicate custom soil is used
-        console.log('[ZoneAddWizard] Created custom soil for channel:', zoneConfig.channelId);
+
+        // Keep the matched standard soil type (0-7) for ChannelConfig validation
+        // The custom soil profile takes precedence in firmware calculations
+        // Use matched soil ID if available, otherwise default to 0 (Clay)
+        soilTypeId = zoneConfig.soilType?.id ?? 0;
+        console.log('[ZoneAddWizard] Created custom soil for channel:', zoneConfig.channelId, 'name:', customSoilData.name);
       }
 
       // Map watering mode to firmware value
       // Write channel config to device (watering_mode is part of ScheduleConfigData, not here)
+      // IMPORTANT: Clamp soil_type and plant_type to valid firmware ranges!
+      // soil_type: 0-7 (firmware enum), database IDs may be larger
+      // plant_type: 0-7 (firmware enum), database IDs may be larger (20+)
+      const firmwareSoilType = Math.min(Math.max(soilTypeId, 0), 7);
+      const firmwarePlantType = Math.min(Math.max(zoneConfig.plantType?.id ?? 0, 0), 7);
+
+      console.log('[ZoneAddWizard] Firmware values: soil_type=', firmwareSoilType, 'plant_type=', firmwarePlantType);
+
       await bleService.writeChannelConfigObject({
         channel_id: zoneConfig.channelId,
         name_len: zoneConfig.name.length,
         name: zoneConfig.name || `Zone ${zoneConfig.channelId + 1}`,
         auto_enabled: zoneConfig.wateringMode === 'quality' || zoneConfig.wateringMode === 'eco',
-        plant_type: zoneConfig.plantType?.id ?? 0,
-        soil_type: soilTypeId,
+        plant_type: firmwarePlantType,
+        soil_type: firmwareSoilType,
         irrigation_method: irrigationMethodMap[zoneConfig.irrigationMethod] ?? 1,
         coverage_type: zoneConfig.coverageType === 'area' ? 0 : 1,
-        coverage: zoneConfig.coverageType === 'area' 
+        coverage: zoneConfig.coverageType === 'area'
           ? { area_m2: zoneConfig.coverageValue }
           : { plant_count: zoneConfig.coverageValue },
         sun_percentage: sunPercentageMap[zoneConfig.sunExposure] ?? 100,
       });
+
+      // For FAO-56 modes, also write Growing Environment for enhanced plant/soil data
+      // This is REQUIRED for firmware to set the full onboarding flags (plant_type_set, soil_type_set, etc.)
+      if (zoneConfig.wateringMode === 'quality' || zoneConfig.wateringMode === 'eco') {
+        const irrigationMethodIndex = irrigationMethodMap[zoneConfig.irrigationMethod] ?? 1;
+
+        // NOTE: soil_db_index MUST be valid (0-7) for AUTO mode to work!
+        // Using 0xFF breaks AUTO validation. Custom soil is stored separately via createCustomSoilConfig.
+        // The matched standard soil type is used as fallback for FAO-56 calculations.
+
+        await bleService.writeGrowingEnvironment({
+          channel_id: zoneConfig.channelId,
+          plant_db_index: zoneConfig.plantType?.id ?? 0,
+          soil_db_index: firmwareSoilType,  // MUST be valid 0-7 for AUTO mode!
+          irrigation_method_index: irrigationMethodIndex,
+          use_area_based: zoneConfig.coverageType === 'area',
+          coverage: zoneConfig.coverageType === 'area'
+            ? { area_m2: zoneConfig.coverageValue }
+            : { plant_count: zoneConfig.coverageValue },
+          auto_mode: zoneConfig.wateringMode === 'quality' ? 1 : 2, // 1=Quality, 2=Eco
+          max_volume_limit_l: zoneConfig.maxVolumeLimitL, // User-configurable max volume per watering
+          enable_cycle_soak: zoneConfig.enableCycleSoak, // User-configurable cycle & soak
+          planting_date_unix: Math.floor(Date.now() / 1000), // Current date as planting date
+          days_after_planting: 0,
+          latitude_deg: zoneConfig.latitude ?? 0,
+          sun_exposure_pct: sunPercentageMap[zoneConfig.sunExposure] ?? 100,
+          // Legacy fields
+          plant_type: firmwarePlantType,
+          specific_plant: zoneConfig.plantType?.id ?? 0,
+          soil_type: firmwareSoilType,
+          irrigation_method: irrigationMethodIndex,
+          sun_percentage: sunPercentageMap[zoneConfig.sunExposure] ?? 100,
+          custom_name: zoneConfig.name,
+          water_need_factor: 1.0,
+          irrigation_freq_days: 1,
+          prefer_area_based: zoneConfig.coverageType === 'area',
+        });
+        console.log('[ZoneAddWizard] Wrote Growing Environment for FAO-56 mode, soil_db_index:', firmwareSoilType);
+      }
 
       // Watering mode for schedule: 0=duration, 1=volume (FAO-56 uses volume internally)
       const wateringModeForSchedule = zoneConfig.wateringMode === 'duration' ? 0 : 1;
@@ -430,17 +500,15 @@ const MobileZoneAddWizard: React.FC = () => {
                   <button
                     key={channelId}
                     onClick={() => updateZoneConfig({ channelId })}
-                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${
-                      zoneConfig.channelId === channelId
-                        ? 'bg-mobile-primary/10 border-mobile-primary'
-                        : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
-                    }`}
+                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${zoneConfig.channelId === channelId
+                      ? 'bg-mobile-primary/10 border-mobile-primary'
+                      : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
+                      }`}
                   >
-                    <div className={`size-12 rounded-full flex items-center justify-center ${
-                      zoneConfig.channelId === channelId
-                        ? 'bg-mobile-primary text-mobile-bg-dark'
-                        : 'bg-white/10 text-mobile-text-muted'
-                    }`}>
+                    <div className={`size-12 rounded-full flex items-center justify-center ${zoneConfig.channelId === channelId
+                      ? 'bg-mobile-primary text-mobile-bg-dark'
+                      : 'bg-white/10 text-mobile-text-muted'
+                      }`}>
                       <span className="text-xl font-bold">{channelId + 1}</span>
                     </div>
                     <div className="flex-1 text-left">
@@ -530,20 +598,18 @@ const MobileZoneAddWizard: React.FC = () => {
                 // TODO: Implement camera plant identification
                 alert('Camera identification coming soon! Please use manual search for now.');
               }}
-              className={`relative w-full flex flex-col items-center gap-4 rounded-[2rem] border-2 p-6 transition-all hover:scale-[1.02] ${
-                plantMethod === 'camera'
-                  ? 'border-mobile-primary bg-mobile-surface-dark shadow-[0_0_20px_rgba(19,236,55,0.15)]'
-                  : 'border-transparent bg-mobile-surface-dark hover:border-mobile-border-dark'
-              }`}
+              className={`relative w-full flex flex-col items-center gap-4 rounded-[2rem] border-2 p-6 transition-all hover:scale-[1.02] ${plantMethod === 'camera'
+                ? 'border-mobile-primary bg-mobile-surface-dark shadow-[0_0_20px_rgba(19,236,55,0.15)]'
+                : 'border-transparent bg-mobile-surface-dark hover:border-mobile-border-dark'
+                }`}
             >
               {plantMethod === 'camera' && (
                 <div className="absolute top-4 right-4 size-6 rounded-full bg-mobile-primary flex items-center justify-center text-mobile-bg-dark">
                   <span className="material-symbols-outlined text-[18px]">check</span>
                 </div>
               )}
-              <div className={`size-20 rounded-full flex items-center justify-center transition-colors ${
-                plantMethod === 'camera' ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
-              }`}>
+              <div className={`size-20 rounded-full flex items-center justify-center transition-colors ${plantMethod === 'camera' ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
+                }`}>
                 <span className="material-symbols-outlined text-[40px]">photo_camera</span>
               </div>
               <div className="text-center space-y-1">
@@ -555,20 +621,18 @@ const MobileZoneAddWizard: React.FC = () => {
             {/* Manual Search Option */}
             <button
               onClick={() => setPlantMethod('list')}
-              className={`relative w-full flex flex-col items-center gap-4 rounded-[2rem] border-2 p-6 transition-all hover:scale-[1.02] ${
-                plantMethod === 'list'
-                  ? 'border-mobile-primary bg-mobile-surface-dark shadow-[0_0_20px_rgba(19,236,55,0.15)]'
-                  : 'border-transparent bg-mobile-surface-dark hover:border-mobile-border-dark'
-              }`}
+              className={`relative w-full flex flex-col items-center gap-4 rounded-[2rem] border-2 p-6 transition-all hover:scale-[1.02] ${plantMethod === 'list'
+                ? 'border-mobile-primary bg-mobile-surface-dark shadow-[0_0_20px_rgba(19,236,55,0.15)]'
+                : 'border-transparent bg-mobile-surface-dark hover:border-mobile-border-dark'
+                }`}
             >
               {plantMethod === 'list' && (
                 <div className="absolute top-4 right-4 size-6 rounded-full bg-mobile-primary flex items-center justify-center text-mobile-bg-dark">
                   <span className="material-symbols-outlined text-[18px]">check</span>
                 </div>
               )}
-              <div className={`size-20 rounded-full flex items-center justify-center transition-colors ${
-                plantMethod === 'list' ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
-              }`}>
+              <div className={`size-20 rounded-full flex items-center justify-center transition-colors ${plantMethod === 'list' ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
+                }`}>
                 <span className="material-symbols-outlined text-[40px]">potted_plant</span>
               </div>
               <div className="text-center space-y-1">
@@ -593,7 +657,7 @@ const MobileZoneAddWizard: React.FC = () => {
           'Lawn': 'grass',
           'Shrub': 'forest',
         };
-        
+
         return (
           <div className="space-y-5">
             <div className="pb-2">
@@ -622,11 +686,10 @@ const MobileZoneAddWizard: React.FC = () => {
               <div className="flex gap-2 pb-2">
                 <button
                   onClick={() => setSelectedCategory(null)}
-                  className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                    selectedCategory === null
-                      ? 'bg-mobile-primary text-mobile-bg-dark'
-                      : 'bg-mobile-surface-dark text-mobile-text-muted hover:bg-white/10'
-                  }`}
+                  className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${selectedCategory === null
+                    ? 'bg-mobile-primary text-mobile-bg-dark'
+                    : 'bg-mobile-surface-dark text-mobile-text-muted hover:bg-white/10'
+                    }`}
                 >
                   All
                 </button>
@@ -634,11 +697,10 @@ const MobileZoneAddWizard: React.FC = () => {
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                      selectedCategory === cat
-                        ? 'bg-mobile-primary text-mobile-bg-dark'
-                        : 'bg-mobile-surface-dark text-mobile-text-muted hover:bg-white/10'
-                    }`}
+                    className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all ${selectedCategory === cat
+                      ? 'bg-mobile-primary text-mobile-bg-dark'
+                      : 'bg-mobile-surface-dark text-mobile-text-muted hover:bg-white/10'
+                      }`}
                   >
                     <span className="material-symbols-outlined text-base">{categoryIcons[cat] || 'eco'}</span>
                     {cat}
@@ -657,7 +719,7 @@ const MobileZoneAddWizard: React.FC = () => {
                   <p className="text-white font-bold">{zoneConfig.plantType.common_name_en}</p>
                   <p className="text-mobile-text-muted text-sm italic">{zoneConfig.plantType.scientific_name}</p>
                 </div>
-                <button 
+                <button
                   onClick={() => updateZoneConfig({ plantType: undefined })}
                   className="text-mobile-text-muted hover:text-white"
                 >
@@ -672,17 +734,15 @@ const MobileZoneAddWizard: React.FC = () => {
                 <button
                   key={plant.id}
                   onClick={() => updateZoneConfig({ plantType: plant })}
-                  className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${
-                    zoneConfig.plantType?.id === plant.id
-                      ? 'bg-mobile-primary/10 border-mobile-primary'
-                      : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
-                  }`}
+                  className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${zoneConfig.plantType?.id === plant.id
+                    ? 'bg-mobile-primary/10 border-mobile-primary'
+                    : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
+                    }`}
                 >
-                  <div className={`size-10 rounded-full flex items-center justify-center ${
-                    zoneConfig.plantType?.id === plant.id
-                      ? 'bg-mobile-primary/20 text-mobile-primary'
-                      : 'bg-white/5 text-mobile-text-muted'
-                  }`}>
+                  <div className={`size-10 rounded-full flex items-center justify-center ${zoneConfig.plantType?.id === plant.id
+                    ? 'bg-mobile-primary/20 text-mobile-primary'
+                    : 'bg-white/5 text-mobile-text-muted'
+                    }`}>
                     <span className="material-symbols-outlined">{categoryIcons[plant.category] || 'eco'}</span>
                   </div>
                   <div className="flex-1 text-left">
@@ -769,10 +829,10 @@ const MobileZoneAddWizard: React.FC = () => {
 
             // Now fetch soil data from SoilGrids API
             try {
-              const rootDepthCm = zoneConfig.plantType?.root_depth_max_m 
-                ? zoneConfig.plantType.root_depth_max_m * 100 
+              const rootDepthCm = zoneConfig.plantType?.root_depth_max_m
+                ? zoneConfig.plantType.root_depth_max_m * 100
                 : 30;
-              
+
               const soilResult = await SoilGridsServiceInstance.detectSoilFromLocation(lat, lon, rootDepthCm);
 
               const isRealDetection = soilResult?.source === 'api' || soilResult?.source === 'cache';
@@ -806,7 +866,7 @@ const MobileZoneAddWizard: React.FC = () => {
                 // SoilGrids is down/unstable (or returned fallback). Don't pretend this is a GPS-derived soil.
                 // Keep any existing selection; if none, set a conservative default and let user choose manually.
                 setLocationError('Soil detection is temporarily unavailable (SoilGrids). Please select soil manually.');
-                const loamSoil = soilDb.find(s => 
+                const loamSoil = soilDb.find(s =>
                   s.soil_type?.toLowerCase().includes('loam')
                 );
                 updateZoneConfig({
@@ -820,7 +880,7 @@ const MobileZoneAddWizard: React.FC = () => {
               console.warn('[ZoneAddWizard] SoilGrids API error, using fallback:', soilErr);
               // SoilGrids failed. Keep current soil if set; otherwise choose a safe default.
               setLocationError('Soil detection is temporarily unavailable (SoilGrids). Please select soil manually.');
-              const loamSoil = soilDb.find(s => 
+              const loamSoil = soilDb.find(s =>
                 s.soil_type?.toLowerCase().includes('loam')
               );
               updateZoneConfig({
@@ -844,7 +904,7 @@ const MobileZoneAddWizard: React.FC = () => {
             setDetectingLocation(false);
           }
         };
-        
+
         return (
           <div className="space-y-6">
             <div className="pt-2 pb-4">
@@ -862,17 +922,17 @@ const MobileZoneAddWizard: React.FC = () => {
               <div className="absolute inset-0 opacity-10 pointer-events-none">
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-mobile-primary/20 rounded-full blur-3xl"></div>
               </div>
-              
+
               {/* Icon */}
               <div className="relative z-10 mb-5 flex items-center justify-center size-[88px] rounded-full bg-gradient-to-br from-mobile-primary/10 to-mobile-primary/5 text-mobile-primary ring-1 ring-mobile-primary/20 shadow-[0_0_30px_rgba(19,236,55,0.1)]">
                 <span className="material-symbols-outlined text-[40px]">satellite_alt</span>
               </div>
-              
+
               <h3 className="text-2xl font-bold leading-tight mb-2 tracking-tight text-white">Auto-Detect via GPS</h3>
               <p className="text-mobile-text-muted text-sm leading-relaxed max-w-[260px] mb-6 font-medium text-center">
                 We'll use your location to identify local soil composition and weather patterns.
               </p>
-              
+
               {zoneConfig.latitude && zoneConfig.longitude ? (
                 <div className="w-full p-4 rounded-2xl bg-mobile-primary/10 border border-mobile-primary text-center mb-4">
                   <p className="text-mobile-primary font-bold mb-1">Location Detected!</p>
@@ -899,7 +959,7 @@ const MobileZoneAddWizard: React.FC = () => {
                   )}
                 </button>
               )}
-              
+
               {locationError && (
                 <p className="text-red-400 text-sm mt-4 text-center">{locationError}</p>
               )}
@@ -911,7 +971,7 @@ const MobileZoneAddWizard: React.FC = () => {
               <span className="text-xs font-bold uppercase tracking-widest text-mobile-text-muted">Or skip this step</span>
               <div className="h-px bg-mobile-border-dark flex-1"></div>
             </div>
-            
+
             <p className="text-mobile-text-muted text-sm text-center">
               You can manually select soil type in the next step
             </p>
@@ -926,7 +986,7 @@ const MobileZoneAddWizard: React.FC = () => {
                 Soil Type
               </h1>
               <p className="text-mobile-text-muted mt-2 text-sm font-medium">
-                {zoneConfig.customSoilFromDetection?.enabled 
+                {zoneConfig.customSoilFromDetection?.enabled
                   ? 'Custom soil profile created from GPS location'
                   : 'Select your soil type for accurate watering'}
               </p>
@@ -1014,20 +1074,18 @@ const MobileZoneAddWizard: React.FC = () => {
                   <button
                     key={soil.id}
                     onClick={() => {
-                      updateZoneConfig({ 
+                      updateZoneConfig({
                         soilType: soil,
                         customSoilFromDetection: undefined, // Clear custom when manual select
                       });
                     }}
-                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${
-                      isSelected
-                        ? 'bg-mobile-primary/10 border-mobile-primary'
-                        : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
-                    }`}
+                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${isSelected
+                      ? 'bg-mobile-primary/10 border-mobile-primary'
+                      : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
+                      }`}
                   >
-                    <div className={`size-10 rounded-full flex items-center justify-center ${
-                      isSelected ? 'bg-mobile-primary/20 text-mobile-primary' : 'bg-white/5 text-yellow-500'
-                    }`}>
+                    <div className={`size-10 rounded-full flex items-center justify-center ${isSelected ? 'bg-mobile-primary/20 text-mobile-primary' : 'bg-white/5 text-yellow-500'
+                      }`}>
                       <span className="material-symbols-outlined">landscape</span>
                     </div>
                     <div className="flex-1 text-left">
@@ -1041,6 +1099,59 @@ const MobileZoneAddWizard: React.FC = () => {
                 );
               })}
             </div>
+
+            {/* Cycle & Soak Recommendation (based on soil) */}
+            {(zoneConfig.soilType || zoneConfig.customSoilFromDetection?.enabled) && (
+              <div className="mt-4">
+                <div className="flex items-center gap-4 mb-3">
+                  <div className="h-px bg-mobile-border-dark flex-1"></div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-mobile-text-muted">
+                    Water Management
+                  </span>
+                  <div className="h-px bg-mobile-border-dark flex-1"></div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => updateZoneConfig({ enableCycleSoak: !zoneConfig.enableCycleSoak })}
+                  className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${zoneConfig.enableCycleSoak
+                    ? 'bg-cyan-500/10 border-cyan-500'
+                    : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-cyan-500/50'
+                    }`}
+                >
+                  <div className={`size-12 rounded-full flex items-center justify-center ${zoneConfig.enableCycleSoak ? 'bg-cyan-500/20 text-cyan-400' : 'bg-white/5 text-mobile-text-muted'
+                    }`}>
+                    <span className="material-symbols-outlined text-2xl">waves</span>
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className={`font-bold ${zoneConfig.enableCycleSoak ? 'text-white' : 'text-mobile-text-muted'}`}>
+                      Cycle & Soak
+                    </p>
+                    <p className="text-mobile-text-muted text-xs">
+                      {(() => {
+                        const infiltration = zoneConfig.customSoilFromDetection?.enabled
+                          ? zoneConfig.customSoilFromDetection.infiltration_rate
+                          : zoneConfig.soilType?.infiltration_rate_mm_h ?? 10;
+                        if (infiltration < 10) {
+                          return zoneConfig.enableCycleSoak
+                            ? `Activ - Sol lent (${infiltration.toFixed(1)} mm/h) - previne scurgerea`
+                            : `Recomandat - Sol lent (${infiltration.toFixed(1)} mm/h)`;
+                        }
+                        return zoneConfig.enableCycleSoak
+                          ? `Activ - Previne scurgerea pe terenuri în pantă`
+                          : `Dezactivat - Sol rapid (${infiltration.toFixed(1)} mm/h)`;
+                      })()}
+                    </p>
+                  </div>
+                  <div className={`size-8 rounded-full flex items-center justify-center ${zoneConfig.enableCycleSoak ? 'bg-cyan-500 text-white' : 'bg-white/10 text-mobile-text-muted'
+                    }`}>
+                    <span className="material-symbols-outlined text-xl">
+                      {zoneConfig.enableCycleSoak ? 'check' : 'close'}
+                    </span>
+                  </div>
+                </button>
+              </div>
+            )}
           </div>
         );
       case 'sun-exposure':
@@ -1065,15 +1176,13 @@ const MobileZoneAddWizard: React.FC = () => {
                 <button
                   key={sun.value}
                   onClick={() => updateZoneConfig({ sunExposure: sun.value })}
-                  className={`w-full flex items-center gap-4 p-5 rounded-2xl border transition-all ${
-                    zoneConfig.sunExposure === sun.value
-                      ? 'bg-mobile-primary/10 border-mobile-primary'
-                      : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
-                  }`}
+                  className={`w-full flex items-center gap-4 p-5 rounded-2xl border transition-all ${zoneConfig.sunExposure === sun.value
+                    ? 'bg-mobile-primary/10 border-mobile-primary'
+                    : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
+                    }`}
                 >
-                  <div className={`size-14 rounded-full flex items-center justify-center ${
-                    zoneConfig.sunExposure === sun.value ? 'bg-orange-500/20 text-orange-400' : 'bg-white/5 text-mobile-text-muted'
-                  }`}>
+                  <div className={`size-14 rounded-full flex items-center justify-center ${zoneConfig.sunExposure === sun.value ? 'bg-orange-500/20 text-orange-400' : 'bg-white/5 text-mobile-text-muted'
+                    }`}>
                     <span className="material-symbols-outlined text-3xl">{sun.icon}</span>
                   </div>
                   <div className="flex-1 text-left">
@@ -1107,21 +1216,19 @@ const MobileZoneAddWizard: React.FC = () => {
             <div className="flex h-12 items-center justify-center rounded-full bg-mobile-surface-dark p-1">
               <button
                 onClick={() => updateZoneConfig({ coverageType: 'area' })}
-                className={`flex h-full flex-1 items-center justify-center rounded-full px-4 text-sm font-bold transition-all ${
-                  zoneConfig.coverageType === 'area'
-                    ? 'bg-mobile-primary text-black shadow-md'
-                    : 'text-mobile-text-muted hover:text-white'
-                }`}
+                className={`flex h-full flex-1 items-center justify-center rounded-full px-4 text-sm font-bold transition-all ${zoneConfig.coverageType === 'area'
+                  ? 'bg-mobile-primary text-black shadow-md'
+                  : 'text-mobile-text-muted hover:text-white'
+                  }`}
               >
                 Specify by Area
               </button>
               <button
                 onClick={() => updateZoneConfig({ coverageType: 'plants' })}
-                className={`flex h-full flex-1 items-center justify-center rounded-full px-4 text-sm font-bold transition-all ${
-                  zoneConfig.coverageType === 'plants'
-                    ? 'bg-mobile-primary text-black shadow-md'
-                    : 'text-mobile-text-muted hover:text-white'
-                }`}
+                className={`flex h-full flex-1 items-center justify-center rounded-full px-4 text-sm font-bold transition-all ${zoneConfig.coverageType === 'plants'
+                  ? 'bg-mobile-primary text-black shadow-md'
+                  : 'text-mobile-text-muted hover:text-white'
+                  }`}
               >
                 Specify by Plants
               </button>
@@ -1146,7 +1253,7 @@ const MobileZoneAddWizard: React.FC = () => {
                 placeholder="0"
                 className="bg-transparent border-none text-center text-7xl font-light text-white placeholder-white/20 focus:ring-0 focus:outline-none w-48 p-0 m-0 caret-mobile-primary"
               />
-              
+
               {/* Unit display */}
               <div className="mt-4 flex items-center justify-center bg-mobile-surface-dark rounded-full p-1 border border-mobile-border-dark">
                 <span className="px-4 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white">
@@ -1157,18 +1264,17 @@ const MobileZoneAddWizard: React.FC = () => {
 
             {/* Quick select buttons */}
             <div className="grid grid-cols-4 gap-2">
-              {(zoneConfig.coverageType === 'area' 
-                ? [10, 25, 50, 100] 
+              {(zoneConfig.coverageType === 'area'
+                ? [10, 25, 50, 100]
                 : [5, 10, 20, 50]
               ).map(val => (
                 <button
                   key={val}
                   onClick={() => updateZoneConfig({ coverageValue: val })}
-                  className={`py-3 rounded-xl text-sm font-bold transition-all ${
-                    zoneConfig.coverageValue === val
-                      ? 'bg-mobile-primary text-mobile-bg-dark'
-                      : 'bg-white/5 text-mobile-text-muted hover:bg-white/10'
-                  }`}
+                  className={`py-3 rounded-xl text-sm font-bold transition-all ${zoneConfig.coverageValue === val
+                    ? 'bg-mobile-primary text-mobile-bg-dark'
+                    : 'bg-white/5 text-mobile-text-muted hover:bg-white/10'
+                    }`}
                 >
                   {val}{zoneConfig.coverageType === 'area' ? 'm²' : ''}
                 </button>
@@ -1177,7 +1283,7 @@ const MobileZoneAddWizard: React.FC = () => {
 
             {/* Helper text */}
             <p className="text-mobile-text-muted text-sm font-medium text-center">
-              {zoneConfig.coverageType === 'area' 
+              {zoneConfig.coverageType === 'area'
                 ? "We'll use this to estimate the liters required for optimal hydration."
                 : "Each plant will receive individual watering calculations."}
             </p>
@@ -1201,27 +1307,25 @@ const MobileZoneAddWizard: React.FC = () => {
               {irrigationMethodDb.map((method: IrrigationMethodEntry) => {
                 const isSelected = zoneConfig.irrigationMethodEntry?.id === method.id;
                 const methodIcon = method.name?.toLowerCase().includes('drip') ? 'opacity' :
-                                   method.name?.toLowerCase().includes('sprinkler') ? 'water_drop' :
-                                   method.name?.toLowerCase().includes('rotor') ? 'autorenew' :
-                                   method.name?.toLowerCase().includes('bubbler') ? 'bubble_chart' :
-                                   method.name?.toLowerCase().includes('flood') ? 'waves' :
-                                   method.name?.toLowerCase().includes('furrow') ? 'view_stream' :
-                                   method.name?.toLowerCase().includes('micro') ? 'blur_on' :
-                                   'water_drop';
-                
+                  method.name?.toLowerCase().includes('sprinkler') ? 'water_drop' :
+                    method.name?.toLowerCase().includes('rotor') ? 'autorenew' :
+                      method.name?.toLowerCase().includes('bubbler') ? 'bubble_chart' :
+                        method.name?.toLowerCase().includes('flood') ? 'waves' :
+                          method.name?.toLowerCase().includes('furrow') ? 'view_stream' :
+                            method.name?.toLowerCase().includes('micro') ? 'blur_on' :
+                              'water_drop';
+
                 return (
                   <button
                     key={method.id}
                     onClick={() => updateZoneConfig({ irrigationMethodEntry: method })}
-                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${
-                      isSelected
-                        ? 'bg-mobile-primary/10 border-mobile-primary'
-                        : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
-                    }`}
+                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${isSelected
+                      ? 'bg-mobile-primary/10 border-mobile-primary'
+                      : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
+                      }`}
                   >
-                    <div className={`size-10 rounded-full flex items-center justify-center ${
-                      isSelected ? 'bg-mobile-primary/20 text-mobile-primary' : 'bg-white/5 text-blue-400'
-                    }`}>
+                    <div className={`size-10 rounded-full flex items-center justify-center ${isSelected ? 'bg-mobile-primary/20 text-mobile-primary' : 'bg-white/5 text-blue-400'
+                      }`}>
                       <span className="material-symbols-outlined">{methodIcon}</span>
                     </div>
                     <div className="flex-1 text-left">
@@ -1248,41 +1352,41 @@ const MobileZoneAddWizard: React.FC = () => {
       case 'watering-mode':
         // 4 watering modes per docs: Quality (FAO-56 100%), Eco (FAO-56 70%), Duration, Volume
         const wateringModes = [
-          { 
-            value: 'quality' as const, 
-            label: 'Smart Auto', 
+          {
+            value: 'quality' as const,
+            label: 'Smart Auto',
             badge: 'FAO-56 • 100%',
             badgeColor: 'bg-mobile-primary/20 text-mobile-primary',
-            icon: 'psychology', 
+            icon: 'psychology',
             desc: 'Calculates water needs using weather data. Maximizes plant health.',
-            recommended: true 
+            recommended: true
           },
-          { 
-            value: 'eco' as const, 
-            label: 'Eco Saver', 
+          {
+            value: 'eco' as const,
+            label: 'Eco Saver',
             badge: 'FAO-56 • 70%',
             badgeColor: 'bg-blue-400/20 text-blue-400',
-            icon: 'eco', 
+            icon: 'eco',
             desc: 'Same as Smart Auto but uses 30% less water. Trains deeper roots.',
-            recommended: false 
+            recommended: false
           },
-          { 
-            value: 'duration' as const, 
-            label: 'Fixed Duration', 
+          {
+            value: 'duration' as const,
+            label: 'Fixed Duration',
             badge: 'Manual',
             badgeColor: 'bg-orange-400/20 text-orange-400',
-            icon: 'timer', 
+            icon: 'timer',
             desc: 'Waters for a fixed time (e.g., 10 minutes). You control the schedule.',
-            recommended: false 
+            recommended: false
           },
-          { 
-            value: 'volume' as const, 
-            label: 'Fixed Volume', 
+          {
+            value: 'volume' as const,
+            label: 'Fixed Volume',
             badge: 'Manual',
             badgeColor: 'bg-purple-400/20 text-purple-400',
-            icon: 'water_drop', 
+            icon: 'water_drop',
             desc: 'Waters until a specific volume is reached (e.g., 5 liters).',
-            recommended: false 
+            recommended: false
           },
         ];
 
@@ -1302,18 +1406,16 @@ const MobileZoneAddWizard: React.FC = () => {
                 <button
                   key={mode.value}
                   onClick={() => updateZoneConfig({ wateringMode: mode.value })}
-                  className={`w-full p-5 rounded-[2rem] border-2 text-left transition-all ${
-                    zoneConfig.wateringMode === mode.value
-                      ? 'bg-mobile-primary/5 border-mobile-primary shadow-[0_0_20px_rgba(19,236,55,0.15)]'
-                      : 'bg-mobile-surface-dark border-transparent hover:border-mobile-border-dark'
-                  }`}
+                  className={`w-full p-5 rounded-[2rem] border-2 text-left transition-all ${zoneConfig.wateringMode === mode.value
+                    ? 'bg-mobile-primary/5 border-mobile-primary shadow-[0_0_20px_rgba(19,236,55,0.15)]'
+                    : 'bg-mobile-surface-dark border-transparent hover:border-mobile-border-dark'
+                    }`}
                 >
                   <div className="flex items-start gap-4">
-                    <div className={`size-14 rounded-2xl flex items-center justify-center shrink-0 ${
-                      zoneConfig.wateringMode === mode.value 
-                        ? 'bg-mobile-primary/20 text-mobile-primary' 
-                        : 'bg-white/10 text-white'
-                    }`}>
+                    <div className={`size-14 rounded-2xl flex items-center justify-center shrink-0 ${zoneConfig.wateringMode === mode.value
+                      ? 'bg-mobile-primary/20 text-mobile-primary'
+                      : 'bg-white/10 text-white'
+                      }`}>
                       <span className="material-symbols-outlined text-[28px]">{mode.icon}</span>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -1333,11 +1435,10 @@ const MobileZoneAddWizard: React.FC = () => {
                       </p>
                     </div>
                     {/* Radio indicator */}
-                    <div className={`size-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-1 ${
-                      zoneConfig.wateringMode === mode.value
-                        ? 'border-mobile-primary bg-mobile-primary'
-                        : 'border-mobile-text-muted'
-                    }`}>
+                    <div className={`size-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-1 ${zoneConfig.wateringMode === mode.value
+                      ? 'border-mobile-primary bg-mobile-primary'
+                      : 'border-mobile-text-muted'
+                      }`}>
                       {zoneConfig.wateringMode === mode.value && (
                         <span className="material-symbols-outlined text-black text-sm font-bold">check</span>
                       )}
@@ -1367,7 +1468,7 @@ const MobileZoneAddWizard: React.FC = () => {
         const isFAO56Mode = zoneConfig.wateringMode === 'quality' || zoneConfig.wateringMode === 'eco';
         const isDurationMode = zoneConfig.wateringMode === 'duration';
         const scheduleDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        
+
         return (
           <div className="space-y-4">
             <div className="pb-1">
@@ -1375,7 +1476,7 @@ const MobileZoneAddWizard: React.FC = () => {
                 Schedule
               </h1>
               <p className="text-mobile-text-muted mt-2 text-sm font-medium">
-                {isFAO56Mode 
+                {isFAO56Mode
                   ? 'Choose when to water. Amount is calculated automatically.'
                   : 'Set when and how much to water.'}
               </p>
@@ -1387,15 +1488,13 @@ const MobileZoneAddWizard: React.FC = () => {
                 {/* AUTO mode - DEFAULT and recommended */}
                 <button
                   onClick={() => updateZoneConfig({ scheduleType: 2 })}
-                  className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${
-                    zoneConfig.scheduleType === 2
-                      ? 'bg-mobile-primary/10 border-mobile-primary'
-                      : 'bg-mobile-surface-dark border-mobile-border-dark'
-                  }`}
+                  className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${zoneConfig.scheduleType === 2
+                    ? 'bg-mobile-primary/10 border-mobile-primary'
+                    : 'bg-mobile-surface-dark border-mobile-border-dark'
+                    }`}
                 >
-                  <div className={`size-10 rounded-full flex items-center justify-center ${
-                    zoneConfig.scheduleType === 2 ? 'bg-mobile-primary/20 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
-                  }`}>
+                  <div className={`size-10 rounded-full flex items-center justify-center ${zoneConfig.scheduleType === 2 ? 'bg-mobile-primary/20 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
+                    }`}>
                     <span className="material-symbols-outlined">psychology</span>
                   </div>
                   <div className="flex-1 text-left">
@@ -1413,15 +1512,13 @@ const MobileZoneAddWizard: React.FC = () => {
                 {/* Manual schedule option */}
                 <button
                   onClick={() => updateZoneConfig({ scheduleType: 0 })}
-                  className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${
-                    zoneConfig.scheduleType !== 2
-                      ? 'bg-mobile-primary/10 border-mobile-primary'
-                      : 'bg-mobile-surface-dark border-mobile-border-dark'
-                  }`}
+                  className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${zoneConfig.scheduleType !== 2
+                    ? 'bg-mobile-primary/10 border-mobile-primary'
+                    : 'bg-mobile-surface-dark border-mobile-border-dark'
+                    }`}
                 >
-                  <div className={`size-10 rounded-full flex items-center justify-center ${
-                    zoneConfig.scheduleType !== 2 ? 'bg-mobile-primary/20 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
-                  }`}>
+                  <div className={`size-10 rounded-full flex items-center justify-center ${zoneConfig.scheduleType !== 2 ? 'bg-mobile-primary/20 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
+                    }`}>
                     <span className="material-symbols-outlined">edit_calendar</span>
                   </div>
                   <div className="flex-1 text-left">
@@ -1439,9 +1536,8 @@ const MobileZoneAddWizard: React.FC = () => {
             {!isFAO56Mode && (
               <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`size-9 rounded-full flex items-center justify-center ${
-                    isDurationMode ? 'bg-orange-400/20 text-orange-400' : 'bg-blue-400/20 text-blue-400'
-                  }`}>
+                  <div className={`size-9 rounded-full flex items-center justify-center ${isDurationMode ? 'bg-orange-400/20 text-orange-400' : 'bg-blue-400/20 text-blue-400'
+                    }`}>
                     <span className="material-symbols-outlined text-lg">
                       {isDurationMode ? 'timer' : 'water_drop'}
                     </span>
@@ -1473,11 +1569,10 @@ const MobileZoneAddWizard: React.FC = () => {
                     <button
                       key={val}
                       onClick={() => updateZoneConfig({ scheduleValue: val })}
-                      className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                        zoneConfig.scheduleValue === val
-                          ? 'bg-mobile-primary text-mobile-bg-dark'
-                          : 'bg-white/10 text-mobile-text-muted'
-                      }`}
+                      className={`px-2.5 py-1 rounded-full text-xs font-bold ${zoneConfig.scheduleValue === val
+                        ? 'bg-mobile-primary text-mobile-bg-dark'
+                        : 'bg-white/10 text-mobile-text-muted'
+                        }`}
                     >
                       {val}{isDurationMode ? 'm' : 'L'}
                     </button>
@@ -1502,22 +1597,20 @@ const MobileZoneAddWizard: React.FC = () => {
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => updateZoneConfig({ useSolarTiming: true })}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                        zoneConfig.useSolarTiming
-                          ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                          : 'bg-white/5 text-mobile-text-muted border border-transparent'
-                      }`}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${zoneConfig.useSolarTiming
+                        ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                        : 'bg-white/5 text-mobile-text-muted border border-transparent'
+                        }`}
                     >
                       <span className="material-symbols-outlined text-lg">wb_twilight</span>
                       Solar
                     </button>
                     <button
                       onClick={() => updateZoneConfig({ useSolarTiming: false })}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                        !zoneConfig.useSolarTiming
-                          ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                          : 'bg-white/5 text-mobile-text-muted border border-transparent'
-                      }`}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${!zoneConfig.useSolarTiming
+                        ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                        : 'bg-white/5 text-mobile-text-muted border border-transparent'
+                        }`}
                     >
                       <span className="material-symbols-outlined text-lg">schedule</span>
                       Fixed Time
@@ -1530,22 +1623,20 @@ const MobileZoneAddWizard: React.FC = () => {
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           onClick={() => updateZoneConfig({ solarEvent: 0 })}
-                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                            zoneConfig.solarEvent === 0
-                              ? 'bg-orange-500/20 text-orange-400 border border-orange-500'
-                              : 'bg-white/5 text-mobile-text-muted border border-transparent'
-                          }`}
+                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${zoneConfig.solarEvent === 0
+                            ? 'bg-orange-500/20 text-orange-400 border border-orange-500'
+                            : 'bg-white/5 text-mobile-text-muted border border-transparent'
+                            }`}
                         >
                           <span className="material-symbols-outlined">wb_twilight</span>
                           Sunset
                         </button>
                         <button
                           onClick={() => updateZoneConfig({ solarEvent: 1 })}
-                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                            zoneConfig.solarEvent === 1
-                              ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500'
-                              : 'bg-white/5 text-mobile-text-muted border border-transparent'
-                          }`}
+                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${zoneConfig.solarEvent === 1
+                            ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500'
+                            : 'bg-white/5 text-mobile-text-muted border border-transparent'
+                            }`}
                         >
                           <span className="material-symbols-outlined">wb_sunny</span>
                           Sunrise
@@ -1558,11 +1649,10 @@ const MobileZoneAddWizard: React.FC = () => {
                             <button
                               key={offset}
                               onClick={() => updateZoneConfig({ solarOffsetMinutes: offset })}
-                              className={`px-3 py-1.5 rounded-full text-xs font-bold ${
-                                zoneConfig.solarOffsetMinutes === offset
-                                  ? 'bg-mobile-primary text-mobile-bg-dark'
-                                  : 'bg-white/10 text-mobile-text-muted'
-                              }`}
+                              className={`px-3 py-1.5 rounded-full text-xs font-bold ${zoneConfig.solarOffsetMinutes === offset
+                                ? 'bg-mobile-primary text-mobile-bg-dark'
+                                : 'bg-white/10 text-mobile-text-muted'
+                                }`}
                             >
                               {offset === 0 ? 'At event' : offset > 0 ? `+${offset}m after` : `${offset}m before`}
                             </button>
@@ -1596,21 +1686,19 @@ const MobileZoneAddWizard: React.FC = () => {
                   <div className="flex gap-2 mb-3">
                     <button
                       onClick={() => updateZoneConfig({ scheduleType: 0 })}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                        zoneConfig.scheduleType === 0
-                          ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                          : 'bg-white/5 text-mobile-text-muted border border-transparent'
-                      }`}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${zoneConfig.scheduleType === 0
+                        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                        : 'bg-white/5 text-mobile-text-muted border border-transparent'
+                        }`}
                     >
                       Specific Days
                     </button>
                     <button
                       onClick={() => updateZoneConfig({ scheduleType: 1 })}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                        zoneConfig.scheduleType === 1
-                          ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                          : 'bg-white/5 text-mobile-text-muted border border-transparent'
-                      }`}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${zoneConfig.scheduleType === 1
+                        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                        : 'bg-white/5 text-mobile-text-muted border border-transparent'
+                        }`}
                     >
                       Every X Days
                     </button>
@@ -1631,11 +1719,10 @@ const MobileZoneAddWizard: React.FC = () => {
                                   : [...zoneConfig.scheduleDays, index].sort();
                                 updateZoneConfig({ scheduleDays: newDays });
                               }}
-                              className={`size-9 rounded-full text-xs font-bold ${
-                                isSelected
-                                  ? 'bg-mobile-primary text-mobile-bg-dark'
-                                  : 'bg-white/10 text-mobile-text-muted'
-                              }`}
+                              className={`size-9 rounded-full text-xs font-bold ${isSelected
+                                ? 'bg-mobile-primary text-mobile-bg-dark'
+                                : 'bg-white/10 text-mobile-text-muted'
+                                }`}
                             >
                               {day.charAt(0)}
                             </button>
@@ -1674,11 +1761,10 @@ const MobileZoneAddWizard: React.FC = () => {
                           <button
                             key={days}
                             onClick={() => updateZoneConfig({ scheduleIntervalDays: days })}
-                            className={`px-3 py-2 rounded-xl text-sm font-bold ${
-                              zoneConfig.scheduleIntervalDays === days
-                                ? 'bg-mobile-primary text-mobile-bg-dark'
-                                : 'bg-white/10 text-mobile-text-muted'
-                            }`}
+                            className={`px-3 py-2 rounded-xl text-sm font-bold ${zoneConfig.scheduleIntervalDays === days
+                              ? 'bg-mobile-primary text-mobile-bg-dark'
+                              : 'bg-white/10 text-mobile-text-muted'
+                              }`}
                           >
                             {days === 1 ? 'Daily' : `${days} days`}
                           </button>
@@ -1698,7 +1784,7 @@ const MobileZoneAddWizard: React.FC = () => {
                   <div>
                     <p className="text-white font-bold text-sm">How Automatic Mode Works</p>
                     <p className="text-mobile-text-muted text-xs mt-1">
-                      The system monitors soil moisture deficit using FAO-56 calculations and weather data. 
+                      The system monitors soil moisture deficit using FAO-56 calculations and weather data.
                       It waters at sunset when needed, using exactly the amount required to restore optimal moisture.
                     </p>
                   </div>
@@ -1742,17 +1828,65 @@ const MobileZoneAddWizard: React.FC = () => {
                   </div>
                   <button
                     onClick={() => updateZoneConfig({ [adj.key]: !zoneConfig[adj.key] })}
-                    className={`w-12 h-7 rounded-full transition-colors relative ${
-                      zoneConfig[adj.key] ? 'bg-mobile-primary' : 'bg-white/20'
-                    }`}
+                    className={`w-12 h-7 rounded-full transition-colors relative ${zoneConfig[adj.key] ? 'bg-mobile-primary' : 'bg-white/20'
+                      }`}
                   >
-                    <div className={`absolute top-1 size-5 rounded-full bg-white shadow-md transition-transform ${
-                      zoneConfig[adj.key] ? 'translate-x-6' : 'translate-x-1'
-                    }`} />
+                    <div className={`absolute top-1 size-5 rounded-full bg-white shadow-md transition-transform ${zoneConfig[adj.key] ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
                   </button>
                 </div>
               ))}
             </div>
+
+            {/* Advanced FAO-56 Settings - only show for Quality/Eco modes */}
+            {(zoneConfig.wateringMode === 'quality' || zoneConfig.wateringMode === 'eco') && (
+              <div className="mt-6 space-y-4">
+                <h3 className="text-mobile-text-muted text-sm font-semibold uppercase tracking-wider">Advanced Settings</h3>
+
+                {/* Cycle & Soak Toggle */}
+                <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-mobile-surface-dark border border-mobile-border-dark">
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400">
+                      <span className="material-symbols-outlined">autorenew</span>
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold">Cycle & Soak</p>
+                      <p className="text-mobile-text-muted text-sm">Break watering into cycles with soak periods</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => updateZoneConfig({ enableCycleSoak: !zoneConfig.enableCycleSoak })}
+                    className={`w-12 h-7 rounded-full transition-colors relative ${zoneConfig.enableCycleSoak ? 'bg-mobile-primary' : 'bg-white/20'}`}
+                  >
+                    <div className={`absolute top-1 size-5 rounded-full bg-white shadow-md transition-transform ${zoneConfig.enableCycleSoak ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+
+                {/* Max Volume Input */}
+                <div className="p-4 rounded-xl bg-mobile-surface-dark border border-mobile-border-dark">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="size-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400">
+                      <span className="material-symbols-outlined">water</span>
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold">Max Volume per Watering</p>
+                      <p className="text-mobile-text-muted text-sm">Maximum liters per watering session</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      value={zoneConfig.maxVolumeLimitL}
+                      onChange={(e) => updateZoneConfig({ maxVolumeLimitL: Math.max(1, parseInt(e.target.value) || 50) })}
+                      className="flex-1 bg-black/30 border border-mobile-border-dark rounded-lg px-4 py-3 text-white text-lg text-center"
+                      min="1"
+                      max="1000"
+                    />
+                    <span className="text-mobile-text-muted text-lg">L</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
 
@@ -1773,18 +1907,18 @@ const MobileZoneAddWizard: React.FC = () => {
         // Schedule display helpers
         const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const isFAO56Summary = zoneConfig.wateringMode === 'quality' || zoneConfig.wateringMode === 'eco';
-        
+
         // Get schedule description
         let scheduleDesc = '';
         if (isFAO56Summary && zoneConfig.scheduleType === 2) {
           scheduleDesc = 'Fully Automatic';
         } else if (zoneConfig.scheduleType === 0) {
-          scheduleDesc = zoneConfig.scheduleDays.length === 7 
-            ? 'Every day' 
+          scheduleDesc = zoneConfig.scheduleDays.length === 7
+            ? 'Every day'
             : zoneConfig.scheduleDays.map(d => dayNames[d]).join(', ');
         } else if (zoneConfig.scheduleType === 1) {
-          scheduleDesc = zoneConfig.scheduleIntervalDays === 1 
-            ? 'Daily' 
+          scheduleDesc = zoneConfig.scheduleIntervalDays === 1
+            ? 'Daily'
             : `Every ${zoneConfig.scheduleIntervalDays} days`;
         }
 
@@ -1817,29 +1951,31 @@ const MobileZoneAddWizard: React.FC = () => {
             { label: 'Plant Type', value: zoneConfig.plantType?.common_name_en || 'Not set', icon: 'eco' },
             { label: 'Soil Type', value: soilDisplay, icon: 'landscape' },
             { label: 'Sun Exposure', value: zoneConfig.sunExposure.charAt(0).toUpperCase() + zoneConfig.sunExposure.slice(1), icon: 'wb_sunny' },
+            { label: 'Max Volume', value: `${zoneConfig.maxVolumeLimitL} L`, icon: 'water' },
+            { label: 'Cycle & Soak', value: zoneConfig.enableCycleSoak ? 'Enabled' : 'Disabled', icon: 'autorenew' },
           );
         }
 
         // All modes show coverage and irrigation
         summaryItems.push(
-          { 
-            label: 'Coverage', 
-            value: zoneConfig.coverageType === 'area' 
-              ? `${zoneConfig.coverageValue} m²` 
-              : `${zoneConfig.coverageValue} plants`, 
-            icon: zoneConfig.coverageType === 'area' ? 'square_foot' : 'potted_plant' 
+          {
+            label: 'Coverage',
+            value: zoneConfig.coverageType === 'area'
+              ? `${zoneConfig.coverageValue} m²`
+              : `${zoneConfig.coverageValue} plants`,
+            icon: zoneConfig.coverageType === 'area' ? 'square_foot' : 'potted_plant'
           },
           { label: 'Irrigation', value: zoneConfig.irrigationMethodEntry?.name || zoneConfig.irrigationMethod.charAt(0).toUpperCase() + zoneConfig.irrigationMethod.slice(1), icon: 'water_drop' },
         );
 
         // Duration/Volume modes show duration/volume value
         if (!isFAO56Summary) {
-          summaryItems.push({ 
-            label: zoneConfig.wateringMode === 'duration' ? 'Duration' : 'Volume', 
-            value: zoneConfig.wateringMode === 'duration' 
-              ? `${zoneConfig.scheduleValue} min` 
-              : `${zoneConfig.scheduleValue} L`, 
-            icon: zoneConfig.wateringMode === 'duration' ? 'timer' : 'water_drop' 
+          summaryItems.push({
+            label: zoneConfig.wateringMode === 'duration' ? 'Duration' : 'Volume',
+            value: zoneConfig.wateringMode === 'duration'
+              ? `${zoneConfig.scheduleValue} min`
+              : `${zoneConfig.scheduleValue} L`,
+            icon: zoneConfig.wateringMode === 'duration' ? 'timer' : 'water_drop'
           });
         }
 
@@ -1925,16 +2061,16 @@ const MobileZoneAddWizard: React.FC = () => {
       {/* Header */}
       <div className="shrink-0 z-50 bg-mobile-bg-dark/90 backdrop-blur-md p-4 safe-area-top">
         <div className="flex items-center justify-between mb-3">
-          <button 
+          <button
             onClick={goBack}
             className="text-white flex size-10 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
           >
             <span className="material-symbols-outlined">arrow_back_ios_new</span>
           </button>
-          
+
           <h1 className="text-white font-bold">Add Zone</h1>
 
-          <button 
+          <button
             onClick={() => history.push('/zones')}
             className="text-mobile-text-muted flex items-center justify-center text-sm font-medium hover:text-white transition-colors"
           >
@@ -1977,11 +2113,10 @@ const MobileZoneAddWizard: React.FC = () => {
         <button
           onClick={goNext}
           disabled={!canProceed() || saving}
-          className={`w-full h-14 rounded-xl font-bold text-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${
-            !canProceed() || saving
-              ? 'bg-white/10 text-white/30 cursor-not-allowed'
-              : 'bg-mobile-primary text-mobile-bg-dark shadow-lg shadow-mobile-primary/20'
-          }`}
+          className={`w-full h-14 rounded-xl font-bold text-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${!canProceed() || saving
+            ? 'bg-white/10 text-white/30 cursor-not-allowed'
+            : 'bg-mobile-primary text-mobile-bg-dark shadow-lg shadow-mobile-primary/20'
+            }`}
         >
           {saving ? (
             <>

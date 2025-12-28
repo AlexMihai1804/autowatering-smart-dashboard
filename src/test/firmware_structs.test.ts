@@ -115,13 +115,14 @@ describe('firmware_structs - Enums', () => {
     describe('AlarmCode', () => {
         it('should have correct values for all alarm types', () => {
             expect(AlarmCode.NONE).toBe(0x00);
-            expect(AlarmCode.FLOW_SENSOR_FAULT).toBe(0x01);
-            expect(AlarmCode.VALVE_STUCK).toBe(0x02);
-            expect(AlarmCode.COMMUNICATION_ERROR).toBe(0x03);
-            expect(AlarmCode.LOW_BATTERY).toBe(0x04);
-            expect(AlarmCode.SENSOR_OFFLINE).toBe(0x05);
-            expect(AlarmCode.OVER_TEMPERATURE).toBe(0x06);
-            expect(AlarmCode.LEAK_DETECTED).toBe(0x07);
+            expect(AlarmCode.NO_FLOW).toBe(0x01);
+            expect(AlarmCode.UNEXPECTED_FLOW).toBe(0x02);
+            expect(AlarmCode.FREEZE_LOCKOUT).toBe(0x03);
+            expect(AlarmCode.HIGH_FLOW).toBe(0x04);
+            expect(AlarmCode.LOW_FLOW).toBe(0x05);
+            expect(AlarmCode.MAINLINE_LEAK).toBe(0x06);
+            expect(AlarmCode.CHANNEL_LOCK).toBe(0x07);
+            expect(AlarmCode.GLOBAL_LOCK).toBe(0x08);
         });
     });
 

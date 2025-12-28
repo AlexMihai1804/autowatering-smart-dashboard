@@ -124,8 +124,8 @@ const ChannelDistributionChart: React.FC<ChannelDistributionChartProps> = ({
     }));
 
     return (
-        <div style={{ height }} className="w-full">
-            <ResponsiveContainer width="100%" height="100%">
+        <div className="w-full min-w-0 relative" style={{ height }}>
+            <ResponsiveContainer width="100%" height={height} minWidth={0} minHeight={0}>
                 <PieChart>
                     <Pie
                         data={chartData}
@@ -169,10 +169,7 @@ const ChannelDistributionChart: React.FC<ChannelDistributionChartProps> = ({
             
             {/* Center text for donut chart */}
             {innerRadius > 0 && (
-                <div 
-                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                    style={{ height }}
-                >
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="text-center">
                         <div className="text-2xl font-bold text-white">
                             {totalVolume >= 1000 

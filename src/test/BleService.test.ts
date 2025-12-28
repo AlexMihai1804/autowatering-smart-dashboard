@@ -140,7 +140,7 @@ describe('BleService', () => {
             it('should parse alarm data correctly', () => {
                 // 7 bytes: code(1), data(2), timestamp(4)
                 const data = createDataView([
-                    0x01,                   // alarm_code = FLOW_SENSOR_FAULT
+                    0x01,                   // alarm_code = NO_FLOW
                     0x01, 0x00,             // alarm_data = 1 (LE)
                     0x90, 0x0E, 0x67, 0x66  // timestamp = 1718452880 (LE)
                 ]);
@@ -148,7 +148,7 @@ describe('BleService', () => {
                 // @ts-expect-error - accessing private method
                 const result = bleService.parseAlarm(data);
                 
-                expect(result.alarm_code).toBe(AlarmCode.FLOW_SENSOR_FAULT);
+                expect(result.alarm_code).toBe(AlarmCode.NO_FLOW);
                 expect(result.alarm_data).toBe(1);
                 // Just verify it's a reasonable Unix timestamp (> 2020)
                 expect(result.timestamp).toBeGreaterThan(1577836800);
@@ -421,7 +421,7 @@ describe('BleService', () => {
             bleService.connectedDeviceId = 'test-device';
 
             const data = new Uint8Array([
-                0x04,                   // LOW_BATTERY
+                0x04,                   // HIGH_FLOW
                 0x00, 0x00,             // data
                 0x00, 0x00, 0x00, 0x00  // timestamp
             ]);
@@ -429,7 +429,7 @@ describe('BleService', () => {
             // @ts-expect-error - accessing private method
             bleService.dispatchToStore(CHAR_UUIDS.ALARM_STATUS, data);
             
-            expect(useAppStore.getState().alarmStatus?.alarm_code).toBe(AlarmCode.LOW_BATTERY);
+            expect(useAppStore.getState().alarmStatus?.alarm_code).toBe(AlarmCode.HIGH_FLOW);
         });
 
         it('should update store when receiving diagnostics notification', () => {
@@ -567,7 +567,7 @@ describe('BleService', () => {
         });
 
         it('should clear specific alarm', async () => {
-            await bleService.clearAlarm(AlarmCode.FLOW_SENSOR_FAULT);
+            await bleService.clearAlarm(AlarmCode.NO_FLOW);
             expect(BleClient.write).toHaveBeenCalled();
         });
     });

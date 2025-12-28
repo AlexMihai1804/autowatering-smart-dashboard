@@ -1,6 +1,8 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { BleService } from '../../services/BleService';
+import { registerBackInterceptor } from '../../lib/backInterceptors';
 import {
   AreaChart,
   Area,
@@ -20,6 +22,7 @@ type TimeFrame = 'day' | 'week' | 'month';
 type HistoryTab = 'watering' | 'rain' | 'environment';
 
 const MobileHistory: React.FC = () => {
+  const history = useHistory();
   const {
     zones,
     wateringHistory,
@@ -32,11 +35,81 @@ const MobileHistory: React.FC = () => {
     connectionState,
   } = useAppStore();
   const bleService = BleService.getInstance();
-  
+
+  // Tab state with internal history tracking for back navigation
   const [activeTab, setActiveTab] = useState<HistoryTab>('watering');
+  const tabNavRef = useRef<{ stack: HistoryTab[]; index: number }>({ stack: ['watering'], index: 0 });
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('week');
   const [selectedZone, setSelectedZone] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const goBackInTabs = useCallback((): boolean => {
+    const nav = tabNavRef.current;
+    if (nav.index <= 0) return false;
+    nav.index -= 1;
+    const previousTab = nav.stack[nav.index] ?? 'watering';
+    setActiveTab(previousTab);
+    return true;
+  }, []);
+
+  // Tab selection that maintains history for back navigation.
+  const selectTab = useCallback((tab: HistoryTab) => {
+    setActiveTab((prev) => {
+      if (tab === prev) return prev;
+      const nav = tabNavRef.current;
+      if (nav.index < nav.stack.length - 1) {
+        nav.stack = nav.stack.slice(0, nav.index + 1);
+      }
+      if (nav.stack[nav.stack.length - 1] !== tab) {
+        nav.stack.push(tab);
+        nav.index = nav.stack.length - 1;
+      } else {
+        nav.index = nav.stack.length - 1;
+      }
+      return tab;
+    });
+  }, []);
+
+  // Keep stack in sync even if something changes the tab without calling selectTab().
+  useEffect(() => {
+    const nav = tabNavRef.current;
+    if (nav.stack.length === 0) {
+      nav.stack = [activeTab];
+      nav.index = 0;
+      return;
+    }
+
+    if (nav.stack[nav.index] === activeTab) return;
+    const last = nav.stack[nav.stack.length - 1];
+    if (last !== activeTab) {
+      nav.stack.push(activeTab);
+      nav.index = nav.stack.length - 1;
+    } else {
+      nav.index = nav.stack.length - 1;
+    }
+  }, [activeTab]);
+
+
+
+  // Intercept Android back: go to previous tab first, then let global handler navigate routes.
+  useEffect(() => {
+    const unregister = registerBackInterceptor({
+      id: 'mobile-history',
+      isActive: (pathname) => pathname === '/history',
+      onBack: () => {
+        return goBackInTabs();
+      },
+    });
+    return unregister;
+  }, [goBackInTabs]);
+
+  // Recharts can warn about width/height=-1 during the very first layout pass.
+  // Delay initial chart rendering by one tick so containers have real dimensions.
+  const [chartsReady, setChartsReady] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setChartsReady(true), 0);
+    return () => clearTimeout(t);
+  }, []);
   
   // Date navigation state - the "anchor" date for the selected period
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -542,7 +615,7 @@ const MobileHistory: React.FC = () => {
           ]).map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => selectTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
                 activeTab === tab.id
                   ? 'bg-mobile-primary text-mobile-bg-dark'
@@ -664,8 +737,8 @@ const MobileHistory: React.FC = () => {
 
               {/* Chart */}
               <div className="w-full h-56 min-w-0">
-                {wateringChartData.some(d => d.volume > 0) ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                {chartsReady && wateringChartData.some(d => d.volume > 0) ? (
+                  <ResponsiveContainer width="100%" height={224} minWidth={0} minHeight={0}>
                     <AreaChart data={wateringChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="wateringGradient" x1="0" y1="0" x2="0" y2="1">
@@ -743,8 +816,8 @@ const MobileHistory: React.FC = () => {
 
               {/* Chart */}
               <div className="w-full h-56 min-w-0">
-                {rainChartData.some(d => d.rainfall > 0) ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                {chartsReady && rainChartData.some(d => d.rainfall > 0) ? (
+                  <ResponsiveContainer width="100%" height={224} minWidth={0} minHeight={0}>
                     <BarChart data={rainChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="rainGradient" x1="0" y1="0" x2="0" y2="1">
@@ -835,8 +908,8 @@ const MobileHistory: React.FC = () => {
 
               {/* Chart */}
               <div className="w-full h-56 min-w-0">
-                {envChartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                {chartsReady && envChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={224} minWidth={0} minHeight={0}>
                     <LineChart data={envChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
                       <XAxis

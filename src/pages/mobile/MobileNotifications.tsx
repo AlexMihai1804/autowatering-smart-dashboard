@@ -121,9 +121,17 @@ const MobileNotifications: React.FC = () => {
             </button>
             <h1 className="text-2xl font-extrabold tracking-tight text-white">Notifications</h1>
           </div>
-          <button className="text-mobile-text-muted text-sm font-bold hover:text-mobile-primary transition-colors">
-            Clear All
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => history.push('/alarms')}
+              className="text-mobile-text-muted text-sm font-bold hover:text-mobile-primary transition-colors"
+            >
+              Alarms
+            </button>
+            <button className="text-mobile-text-muted text-sm font-bold hover:text-mobile-primary transition-colors">
+              Clear All
+            </button>
+          </div>
         </div>
 
         {/* Filter Chips */}

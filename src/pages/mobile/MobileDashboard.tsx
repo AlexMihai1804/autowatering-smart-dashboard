@@ -5,24 +5,37 @@ import { BleService } from '../../services/BleService';
 import { TaskStatus, SystemStatus } from '../../types/firmware_structs';
 import MobileHeader from '../../components/mobile/MobileHeader';
 import OnboardingWizard from '../../components/OnboardingWizard';
+import AlarmPopup from '../../components/mobile/AlarmPopup';
+import MobileAlarmCard from '../../components/mobile/MobileAlarmCard';
 import { useSettings } from '../../hooks/useSettings';
 import { useKnownDevices } from '../../hooks/useKnownDevices';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
+import {
+  calcAverageSoilMoisturePercentPreferred,
+  calcSoilMoisturePercentPreferred,
+  getSoilMoistureLabel
+} from '../../utils/soilMoisture';
+
+import HydraulicStatusWidget from '../../components/HydraulicStatusWidget';
+import { EcoBadge } from '../../components/EcoBadge';
 
 const MobileDashboard: React.FC = () => {
   const history = useHistory();
   const { formatTemperature, useCelsius } = useSettings();
-  const { 
-    zones, 
-    currentTask, 
-    envData, 
-    rainData, 
+  const {
+    zones,
+    currentTask,
+    envData,
+    rainData,
     systemStatus,
     autoCalcStatus,
     globalAutoCalcStatus,
+    soilMoistureConfig,
+    globalSoilMoistureConfig,
     onboardingState,
     connectionState,
-    connectedDeviceId
+    connectedDeviceId,
+    setAlarmPopupDismissed
   } = useAppStore();
   const bleService = BleService.getInstance();
   const { devices, setAsLastConnected, renameDevice } = useKnownDevices();
@@ -96,28 +109,22 @@ const MobileDashboard: React.FC = () => {
   const isWatering = currentTask?.status === TaskStatus.RUNNING;
   const activeWateringZone = isWatering ? zones.find(z => z.channel_id === currentTask?.channel_id) : null;
 
-  // Keep Auto Calc Status in sync (global via FFh + selected zone)
+  // Read Auto Calc Status on mount and when connection changes
   useEffect(() => {
     if (connectionState !== 'connected') return;
 
+    // Read global auto calc status (channel 0xFF)
     bleService.readAutoCalcStatusGlobal().catch((error) => {
-      console.warn('[MobileDashboard] Failed to read GLOBAL Auto Calc Status (FFh):', error);
+      console.warn('[MobileDashboard] Failed to read GLOBAL Auto Calc Status:', error);
     });
 
-    bleService
-      .readAutoCalcStatusGlobalRaw()
-      .then((raw) => setAutoCalcRaw(raw))
-      .catch((error) => {
-        setAutoCalcRaw(null);
-        console.warn('[MobileDashboard] Failed to read GLOBAL Auto Calc Status RAW (FFh):', error);
+    // Also read for active zone if available
+    if (activeZone) {
+      bleService.readAutoCalcStatus(activeZone.channel_id).catch((error) => {
+        console.warn('[MobileDashboard] Failed to read Auto Calc Status for channel:', activeZone.channel_id, error);
       });
-
-    if (!activeZone) return;
-
-    bleService.readAutoCalcStatus(activeZone.channel_id).catch((error) => {
-      console.warn('[MobileDashboard] Failed to read Auto Calc Status:', error);
-    });
-  }, [bleService, connectionState, activeZone?.channel_id, connectedDeviceId]);
+    }
+  }, [connectionState, activeZone?.channel_id]);
 
   // Calculate watering progress
   const wateringProgress = isWatering && currentTask && currentTask.target_value > 0
@@ -133,8 +140,29 @@ const MobileDashboard: React.FC = () => {
     return `${minutes}:${String(seconds).padStart(2, '0')}`;
   }, [isWatering, currentTask]);
 
-  // Soil moisture (mock or from data)
-  const soilMoisture = 75; // Mock - not available from firmware
+  // Soil moisture: prefer device-provided config (if present/enabled), otherwise FAO-derived estimate
+  const activeAutoCalc = activeZone ? autoCalcStatus.get(activeZone.channel_id) : null;
+  const avgSoilMoisture = calcAverageSoilMoisturePercentPreferred(
+    zones.map((z) => ({
+      autoCalc: autoCalcStatus.get(z.channel_id) ?? null,
+      perChannelConfig: soilMoistureConfig.get(z.channel_id) ?? null
+    })),
+    globalSoilMoistureConfig
+  );
+
+  const soilMoisture =
+    avgSoilMoisture ??
+    calcSoilMoisturePercentPreferred({
+      perChannelConfig: activeZone ? soilMoistureConfig.get(activeZone.channel_id) ?? null : null,
+      globalConfig: globalSoilMoistureConfig,
+      autoCalc: activeAutoCalc
+    }) ??
+    calcSoilMoisturePercentPreferred({
+      perChannelConfig: null,
+      globalConfig: globalSoilMoistureConfig,
+      autoCalc: globalAutoCalcStatus
+    });
+  const soilMoistureLabel = soilMoisture === null ? null : getSoilMoistureLabel(soilMoisture);
 
   const handleManualWater = async () => {
     if (!activeZone) return;
@@ -158,9 +186,9 @@ const MobileDashboard: React.FC = () => {
     }
   };
 
-  // Temperature with proper formatting
-  const tempC = envData?.temperature ?? 22;
-  const formattedTemp = formatTemperature(tempC, false);
+  // Temperature with proper formatting - show '--' when no data
+  const tempC = envData?.temperature;
+  const formattedTemp = tempC !== undefined ? formatTemperature(tempC, false) : '--';
   const tempUnit = useCelsius ? '°C' : '°F';
 
   const nextWatering = useMemo(() => {
@@ -304,7 +332,7 @@ const MobileDashboard: React.FC = () => {
             </div>
           </PopoverContent>
         </Popover>
-        
+
         <div className="flex items-center gap-2">
           {connectionState === 'connected' && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-900/30 rounded-full border border-green-800/50">
@@ -318,14 +346,24 @@ const MobileDashboard: React.FC = () => {
         </div>
       </header>
 
+      {/* Alarm Card - Persistent indicator when alarm is active */}
+      <MobileAlarmCard onTap={() => setAlarmPopupDismissed(false)} />
+
       {/* Main Scrollable Content */}
-      <main className="flex-1 overflow-y-auto px-4 pb-28 overscroll-contain">
-        {/* Hero Status Card */}
-        <div className="relative w-full rounded-3xl overflow-hidden bg-mobile-surface-dark shadow-sm border border-mobile-border-dark p-6 mb-6">
+      <main className="flex-1 flex flex-col p-4 gap-6 pb-24 overflow-y-auto">
+
+        {/* Hydraulic Status Widget */}
+        <HydraulicStatusWidget />
+
+        {/* Eco/Rain Badge */}
+        <EcoBadge />
+
+        {/* Status Cards Row */}
+        <div className="relative w-full rounded-3xl overflow-hidden bg-mobile-surface-dark shadow-sm border border-mobile-border-dark p-6 mb-6 min-h-[200px]">
           {/* Background decorative elements */}
           <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-mobile-primary/20 rounded-full blur-2xl"></div>
           <div className="absolute bottom-0 left-0 -ml-8 -mb-8 w-24 h-24 bg-blue-500/20 rounded-full blur-2xl"></div>
-          
+
           <div className="relative z-10">
             {isWatering ? (
               // Watering Active State
@@ -346,14 +384,14 @@ const MobileDashboard: React.FC = () => {
                       {activeWateringZone?.name || `Zone ${currentTask?.channel_id}`}
                     </p>
                   </div>
-                  <button 
+                  <button
                     onClick={handleEmergencyStop}
                     className="h-12 w-12 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 hover:bg-red-500/30 transition-colors"
                   >
                     <span className="material-symbols-outlined text-[28px]">stop</span>
                   </button>
                 </div>
-                
+
                 {/* Progress Bar */}
                 <div className="flex flex-col gap-2">
                   <div className="flex justify-between text-xs font-medium text-gray-400">
@@ -361,8 +399,8 @@ const MobileDashboard: React.FC = () => {
                     <span className="text-mobile-primary">{wateringProgress}%</span>
                   </div>
                   <div className="h-3 w-full bg-mobile-border-dark rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-green-400 to-mobile-primary rounded-full transition-all duration-1000 ease-out" 
+                    <div
+                      className="h-full bg-gradient-to-r from-green-400 to-mobile-primary rounded-full transition-all duration-1000 ease-out"
                       style={{ width: `${wateringProgress}%` }}
                     ></div>
                   </div>
@@ -374,50 +412,52 @@ const MobileDashboard: React.FC = () => {
                 <div className="flex justify-between items-start mb-6">
                   <div>
                     <p className="text-sm font-medium text-gray-400 mb-1">Next Watering Cycle</p>
-                    <h2 className="text-3xl font-extrabold text-white">
-                      {nextWatering.time}{' '}
-                      {nextWatering.meridiem && (
-                        <span className="text-lg font-bold text-gray-500">{nextWatering.meridiem}</span>
-                      )}
-                    </h2>
-                    {nextWatering.day && (
-                      <p className="text-xs text-mobile-primary font-semibold mt-1">{nextWatering.day}</p>
-                    )}
-
-                    {nextWateringRaw && (
-                      <div className="mt-3">
-                        <p className="text-[10px] font-medium text-gray-400">RAW Global Auto Calc Status (FFh, 64B)</p>
-                        <p className="text-[10px] font-mono text-gray-500 break-all">
-                          next_irrigation_time bytes @31..34: {nextWateringRaw.nextBytesHex} (epoch={nextWateringRaw.nextEpoch})
-                        </p>
-                        <p className="text-[10px] font-mono text-gray-500 break-all">{nextWateringRaw.payloadHex}</p>
-                      </div>
+                    {nextWatering.time ? (
+                      <>
+                        <h2 className="text-3xl font-extrabold text-white">
+                          {nextWatering.time}{' '}
+                          {nextWatering.meridiem && (
+                            <span className="text-lg font-bold text-gray-500">{nextWatering.meridiem}</span>
+                          )}
+                        </h2>
+                        {nextWatering.day && (
+                          <p className="text-xs text-mobile-primary font-semibold mt-1">{nextWatering.day}</p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <h2 className="text-2xl font-extrabold text-white/50">--:--</h2>
+                        <p className="text-xs text-gray-500 font-medium mt-1">No schedule configured</p>
+                      </>
                     )}
                   </div>
                   <div className="h-12 w-12 rounded-full bg-mobile-primary/20 flex items-center justify-center text-mobile-primary">
                     <span className="material-symbols-outlined text-[28px]">water_drop</span>
                   </div>
                 </div>
-                
-                {/* Soil Moisture Progress Bar */}
-                <div className="flex flex-col gap-2">
-                  <div className="flex justify-between text-xs font-medium text-gray-400">
-                    <span>Soil Moisture</span>
-                    <span className={soilMoisture > 60 ? 'text-mobile-primary' : soilMoisture > 30 ? 'text-yellow-500' : 'text-red-500'}>
-                      {soilMoisture > 60 ? 'Optimal' : soilMoisture > 30 ? 'Fair' : 'Low'} ({soilMoisture}%)
-                    </span>
-                  </div>
-                  <div className="h-3 w-full bg-mobile-border-dark rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full transition-all duration-1000 ease-out ${
-                        soilMoisture > 60 ? 'bg-gradient-to-r from-green-400 to-mobile-primary' :
-                        soilMoisture > 30 ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' :
-                        'bg-gradient-to-r from-red-400 to-red-500'
-                      }`}
-                      style={{ width: `${soilMoisture}%` }}
-                    ></div>
-                  </div>
-                </div>
+
+                {soilMoisture !== null && soilMoistureLabel && (
+                  <>
+                    {/* Soil Moisture Progress Bar */}
+                    <div className="flex flex-col gap-2">
+                      <div className="flex justify-between text-xs font-medium text-gray-400">
+                        <span>Soil Moisture</span>
+                        <span className={soilMoisture > 60 ? 'text-mobile-primary' : soilMoisture > 30 ? 'text-yellow-500' : 'text-red-500'}>
+                          {soilMoistureLabel} ({soilMoisture}%)
+                        </span>
+                      </div>
+                      <div className="h-3 w-full bg-mobile-border-dark rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-1000 ease-out ${soilMoisture > 60 ? 'bg-gradient-to-r from-green-400 to-mobile-primary' :
+                            soilMoisture > 30 ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' :
+                              'bg-gradient-to-r from-red-400 to-red-500'
+                            }`}
+                          style={{ width: `${soilMoisture}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -472,13 +512,13 @@ const MobileDashboard: React.FC = () => {
                 <span className="text-sm text-gray-400 font-medium ml-1">mm</span>
               </div>
             </div>
-            
+
             {/* Mini chart visualization */}
             <div className="h-10 w-24">
               <div className="flex items-end justify-between h-full gap-1">
                 {[30, 50, 20, 60, 80, 40, 35].map((h, i) => (
-                  <div 
-                    key={i} 
+                  <div
+                    key={i}
                     className={`w-1.5 rounded-t-sm ${i === 4 ? 'bg-indigo-500' : 'bg-indigo-500/20'}`}
                     style={{ height: `${h}%` }}
                   ></div>
@@ -492,7 +532,7 @@ const MobileDashboard: React.FC = () => {
         <div className="mb-6">
           <h3 className="text-sm font-semibold text-gray-400 mb-3 px-1 uppercase tracking-wider">Quick Actions</h3>
           <div className="flex flex-col gap-3">
-            <button 
+            <button
               onClick={handleManualWater}
               disabled={isWatering}
               className="flex items-center justify-between w-full p-4 rounded-3xl bg-mobile-primary text-mobile-bg-dark font-bold shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
@@ -505,8 +545,8 @@ const MobileDashboard: React.FC = () => {
               </div>
               <span className="material-symbols-outlined text-[20px] opacity-60">arrow_forward</span>
             </button>
-            
-            <button 
+
+            <button
               onClick={handlePauseSchedule}
               className="flex items-center justify-between w-full p-4 rounded-3xl bg-mobile-surface-dark border border-mobile-border-dark text-white font-bold active:scale-[0.98] transition-transform"
             >
@@ -528,12 +568,12 @@ const MobileDashboard: React.FC = () => {
               <span className="text-mobile-primary text-sm font-bold">{onboardingState.overall_completion_pct}%</span>
             </div>
             <div className="h-2 bg-mobile-border-dark rounded-full overflow-hidden mb-3">
-              <div 
+              <div
                 className="h-full bg-mobile-primary rounded-full transition-all"
                 style={{ width: `${onboardingState.overall_completion_pct}%` }}
               ></div>
             </div>
-            <button 
+            <button
               onClick={() => setShowWizard(true)}
               className="w-full py-3 rounded-full bg-mobile-primary/20 text-mobile-primary font-bold text-sm"
             >
@@ -547,10 +587,13 @@ const MobileDashboard: React.FC = () => {
       </main>
 
       {/* Onboarding Wizard Modal */}
-      <OnboardingWizard 
-        isOpen={showWizard} 
-        onClose={() => setShowWizard(false)} 
+      <OnboardingWizard
+        isOpen={showWizard}
+        onClose={() => setShowWizard(false)}
       />
+
+      {/* Alarm Popup - Bottom sheet for active alarms */}
+      <AlarmPopup />
     </div>
   );
 };

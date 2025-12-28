@@ -584,6 +584,21 @@ def run():
         if target:
             cap_cmd.extend(["--target", target])
 
+        # Ensure native project has latest plugin registrations and config.
+        # Without this, newly installed plugins (e.g. @capacitor/app for backButton)
+        # may not be present in the Android build and hardware back will exit the app.
+        try:
+            print("Syncing Capacitor Android (cap sync android)...", flush=True)
+            subprocess.run(
+                [npx_cmd, "cap", "sync", "android"],
+                cwd=project_root,
+                check=False,
+                capture_output=False,
+                text=True,
+            )
+        except Exception as e:
+            print(f"Warning: cap sync android failed: {e}", flush=True)
+
         print("Starting Capacitor run...", flush=True)
         cap_proc = subprocess.Popen(
             cap_cmd,

@@ -2,15 +2,40 @@ import React from 'react';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { useSettings } from '../../hooks/useSettings';
+import {
+  calcAverageSoilMoisturePercentPreferred,
+  calcSoilMoisturePercentPreferred,
+  getSoilMoistureLabel
+} from '../../utils/soilMoisture';
 
 const MobileWeatherDetails: React.FC = () => {
   const history = useHistory();
   const { formatTemperature, useCelsius } = useSettings();
-  const { envData, rainData, zones } = useAppStore();
-  
-  // Calculate estimated soil moisture based on rain and temp
-  const estimatedMoisture = 65; // Mock - would be calculated from sensors
-  const moistureStatus = estimatedMoisture >= 40 ? 'Optimal' : estimatedMoisture >= 20 ? 'Low' : 'Critical';
+  const {
+    envData,
+    rainData,
+    zones,
+    autoCalcStatus,
+    globalAutoCalcStatus,
+    soilMoistureConfig,
+    globalSoilMoistureConfig
+  } = useAppStore();
+
+  // Soil moisture: prefer device-provided config (if present/enabled), otherwise FAO-derived estimate
+  const moistureFromZones = calcAverageSoilMoisturePercentPreferred(
+    zones.map((z) => ({
+      autoCalc: autoCalcStatus.get(z.channel_id) ?? null,
+      perChannelConfig: soilMoistureConfig.get(z.channel_id) ?? null
+    })),
+    globalSoilMoistureConfig
+  );
+  const moistureFromGlobal = calcSoilMoisturePercentPreferred({
+    perChannelConfig: null,
+    globalConfig: globalSoilMoistureConfig,
+    autoCalc: globalAutoCalcStatus
+  });
+  const estimatedMoisture = moistureFromZones ?? moistureFromGlobal;
+  const moistureStatus = estimatedMoisture === null ? null : getSoilMoistureLabel(estimatedMoisture);
   
   const temperature = envData?.temperature ?? 24;
   const humidity = envData?.humidity ?? 45;
@@ -41,77 +66,81 @@ const MobileWeatherDetails: React.FC = () => {
       <div className="flex-1 overflow-y-auto pb-28 overscroll-contain">
         {/* Main Content */}
         <div className="flex flex-col gap-5 px-4">
-        {/* Soil Moisture Card */}
-        <div className="flex flex-col items-stretch rounded-2xl shadow-sm bg-mobile-card-dark overflow-hidden ring-1 ring-white/5">
-          <div className="p-6 flex flex-col gap-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white text-xl font-bold leading-tight">Soil Moisture Estimate</p>
-                <p className="text-mobile-text-muted text-sm font-medium mt-1">
-                  {zones[0]?.name ?? 'Zone 1'} • Overview
-                </p>
-              </div>
-              <div className="size-10 rounded-full bg-mobile-primary/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-mobile-primary">grass</span>
-              </div>
-            </div>
-            
-            <div className="flex flex-row items-center gap-6">
-              {/* SVG Gauge */}
-              <div className="relative size-32 shrink-0">
-                <svg className="size-full -rotate-90" viewBox="0 0 100 100">
-                  <circle
-                    className="text-white/10"
-                    cx="50" cy="50" r="42"
-                    fill="transparent"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                  />
-                  <circle
-                    className="text-mobile-primary"
-                    cx="50" cy="50" r="42"
-                    fill="transparent"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                    strokeDasharray="263.89"
-                    strokeDashoffset={263.89 * (1 - estimatedMoisture / 100)}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold text-white">{estimatedMoisture}%</span>
-                  <span className="text-[10px] font-bold text-mobile-primary uppercase tracking-wider">
-                    {moistureStatus}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="flex flex-col gap-2">
-                <div className="flex items-start gap-2">
-                  <span className="material-symbols-outlined text-mobile-primary text-xl mt-0.5">check_circle</span>
+        {estimatedMoisture !== null && moistureStatus && (
+          <>
+            {/* Soil Moisture Card */}
+            <div className="flex flex-col items-stretch rounded-2xl shadow-sm bg-mobile-card-dark overflow-hidden ring-1 ring-white/5">
+              <div className="p-6 flex flex-col gap-6">
+                <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-white text-sm font-bold leading-snug">
-                      {estimatedMoisture >= 40 ? 'Watering Skipped' : 'Watering Needed'}
+                    <p className="text-white text-xl font-bold leading-tight">Soil Moisture</p>
+                    <p className="text-mobile-text-muted text-sm font-medium mt-1">
+                      {zones[0]?.name ?? 'Zone 1'} • Overview
                     </p>
-                    <p className="text-mobile-text-muted text-xs leading-relaxed mt-1">
-                      {estimatedMoisture >= 40 
-                        ? 'Soil moisture is sufficient for the next 24 hours.'
-                        : 'Consider running a watering cycle soon.'}
-                    </p>
+                  </div>
+                  <div className="size-10 rounded-full bg-mobile-primary/10 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-mobile-primary">grass</span>
+                  </div>
+                </div>
+                
+                <div className="flex flex-row items-center gap-6">
+                  {/* SVG Gauge */}
+                  <div className="relative size-32 shrink-0">
+                    <svg className="size-full -rotate-90" viewBox="0 0 100 100">
+                      <circle
+                        className="text-white/10"
+                        cx="50" cy="50" r="42"
+                        fill="transparent"
+                        stroke="currentColor"
+                        strokeWidth="8"
+                      />
+                      <circle
+                        className="text-mobile-primary"
+                        cx="50" cy="50" r="42"
+                        fill="transparent"
+                        stroke="currentColor"
+                        strokeWidth="8"
+                        strokeLinecap="round"
+                        strokeDasharray="263.89"
+                        strokeDashoffset={263.89 * (1 - estimatedMoisture / 100)}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-2xl font-bold text-white">{estimatedMoisture}%</span>
+                      <span className="text-[10px] font-bold text-mobile-primary uppercase tracking-wider">
+                        {moistureStatus}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-start gap-2">
+                      <span className="material-symbols-outlined text-mobile-primary text-xl mt-0.5">check_circle</span>
+                      <div>
+                        <p className="text-white text-sm font-bold leading-snug">
+                          {estimatedMoisture >= 60 ? 'Watering Skipped' : 'Watering Needed'}
+                        </p>
+                        <p className="text-mobile-text-muted text-xs leading-relaxed mt-1">
+                          {estimatedMoisture >= 60 
+                            ? 'Soil moisture is sufficient for the next 24 hours.'
+                            : 'Consider running a watering cycle soon.'}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
+              
+              {/* Progress bar */}
+              <div className="h-1.5 w-full bg-white/5">
+                <div 
+                  className="h-full bg-mobile-primary rounded-r-full transition-all" 
+                  style={{ width: `${estimatedMoisture}%` }}
+                />
+              </div>
             </div>
-          </div>
-          
-          {/* Progress bar */}
-          <div className="h-1.5 w-full bg-white/5">
-            <div 
-              className="h-full bg-mobile-primary rounded-r-full transition-all" 
-              style={{ width: `${estimatedMoisture}%` }}
-            />
-          </div>
-        </div>
+          </>
+        )}
         
         {/* Sensor Grid */}
         <div className="grid grid-cols-2 gap-4">

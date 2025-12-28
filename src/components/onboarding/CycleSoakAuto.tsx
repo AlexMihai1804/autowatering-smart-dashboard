@@ -25,9 +25,9 @@ import {
 } from 'ionicons/icons';
 
 import { SoilDBEntry, IrrigationMethodEntry } from '../../services/DatabaseService';
-import { 
-    shouldEnableCycleSoak, 
-    calculateCycleSoakTiming 
+import {
+    shouldEnableCycleSoak,
+    calculateCycleSoakTiming
 } from '../../services/SoilGridsService';
 
 interface CycleSoakAutoProps {
@@ -37,6 +37,7 @@ interface CycleSoakAutoProps {
     autoEnabled: boolean;
     cycleMinutes: number;
     soakMinutes: number;
+    slope_percent?: number;  // NEW: Terrain slope for smart recommendations
     onChange: (config: {
         enabled: boolean;
         autoEnabled: boolean;
@@ -53,6 +54,7 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
     autoEnabled,
     cycleMinutes,
     soakMinutes,
+    slope_percent = 0,  // Default to flat terrain
     onChange,
     disabled = false,
 }) => {
@@ -61,36 +63,46 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
     // Calculate auto recommendation
     const autoConfig = useMemo(() => {
         if (!soil) return null;
-        
-        const shouldEnable = shouldEnableCycleSoak(soil);
-        const timing = calculateCycleSoakTiming(soil);
-        const infiltrationRate = typeof soil.infiltration_rate_mm_h === 'number' 
-            ? soil.infiltration_rate_mm_h 
+
+        const shouldEnable = shouldEnableCycleSoak(soil, slope_percent);
+        const timing = calculateCycleSoakTiming(soil, slope_percent);
+        const infiltrationRate = typeof soil.infiltration_rate_mm_h === 'number'
+            ? soil.infiltration_rate_mm_h
             : 10;
+
+        // Build recommendation reason
+        let reason: string;
+        if (shouldEnable) {
+            if (slope_percent > 3) {
+                reason = `Teren înclinat (${slope_percent.toFixed(1)}%) + sol ${infiltrationRate} mm/h`;
+            } else {
+                reason = `Sol lent (${infiltrationRate} mm/h) - previne scurgerea`;
+            }
+        } else {
+            reason = `Sol rapid (${infiltrationRate} mm/h) - nu e necesar`;
+        }
 
         return {
             shouldEnable,
             cycleMinutes: timing.cycleMinutes,
             soakMinutes: timing.soakMinutes,
             infiltrationRate,
-            reason: shouldEnable
-                ? `Sol lent (${infiltrationRate} mm/h) - previne scurgerea`
-                : `Sol rapid (${infiltrationRate} mm/h) - nu e necesar`,
+            reason,
         };
-    }, [soil]);
+    }, [soil, slope_percent]);
 
     // Auto-apply on mount or when soil changes
     useEffect(() => {
         if (!autoConfig || showManualConfig) return;
-        
+
         // Always auto-apply when:
         // 1. autoEnabled is true (was already auto-configured, update for new soil)
         // 2. OR enabled is false (user hasn't manually enabled, so apply auto)
         // This ensures Cycle & Soak is auto-enabled based on soil infiltration
         if (autoEnabled || !enabled) {
             console.log(`[CycleSoakAuto] Auto-applying: shouldEnable=${autoConfig.shouldEnable}, ` +
-                        `cycleMin=${autoConfig.cycleMinutes}, soakMin=${autoConfig.soakMinutes}, ` +
-                        `infiltration=${autoConfig.infiltrationRate}mm/h`);
+                `cycleMin=${autoConfig.cycleMinutes}, soakMin=${autoConfig.soakMinutes}, ` +
+                `infiltration=${autoConfig.infiltrationRate}mm/h`);
             onChange({
                 enabled: autoConfig.shouldEnable,
                 autoEnabled: true,
@@ -140,8 +152,8 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
                             <IonIcon icon={waterOutline} className="text-cyber-aqua text-xl" />
                             <IonLabel className="font-bold text-white">Cycle & Soak</IonLabel>
                         </div>
-                        <IonButton 
-                            fill="clear" 
+                        <IonButton
+                            fill="clear"
                             size="small"
                             onClick={handleResetToAuto}
                         >
@@ -187,11 +199,11 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
                                     max={15}
                                     step={1}
                                     value={cycleMinutes}
-                                    onIonChange={(e) => onChange({ 
-                                        enabled, 
-                                        autoEnabled: false, 
-                                        cycleMinutes: e.detail.value as number, 
-                                        soakMinutes 
+                                    onIonChange={(e) => onChange({
+                                        enabled,
+                                        autoEnabled: false,
+                                        cycleMinutes: e.detail.value as number,
+                                        soakMinutes
                                     })}
                                     disabled={disabled}
                                 />
@@ -211,11 +223,11 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
                                     max={30}
                                     step={5}
                                     value={soakMinutes}
-                                    onIonChange={(e) => onChange({ 
-                                        enabled, 
-                                        autoEnabled: false, 
-                                        cycleMinutes, 
-                                        soakMinutes: e.detail.value as number 
+                                    onIonChange={(e) => onChange({
+                                        enabled,
+                                        autoEnabled: false,
+                                        cycleMinutes,
+                                        soakMinutes: e.detail.value as number
                                     })}
                                     disabled={disabled}
                                 />
@@ -243,11 +255,10 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
             <IonCardContent className="py-3">
                 <div className="flex items-center gap-3">
                     {/* Icon */}
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        enabled ? 'bg-cyan-500/20' : 'bg-gray-500/20'
-                    }`}>
-                        <IonIcon 
-                            icon={waterOutline} 
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${enabled ? 'bg-cyan-500/20' : 'bg-gray-500/20'
+                        }`}>
+                        <IonIcon
+                            icon={waterOutline}
                             className={`text-xl ${enabled ? 'text-cyan-400' : 'text-gray-400'}`}
                         />
                     </div>
@@ -263,7 +274,7 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
                             )}
                         </div>
                         <p className="text-gray-400 text-sm m-0">
-                            {enabled 
+                            {enabled
                                 ? `${cycleMinutes} min udare • ${soakMinutes} min pauză`
                                 : autoConfig?.reason || 'Dezactivat'
                             }

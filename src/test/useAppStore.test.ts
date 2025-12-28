@@ -349,20 +349,20 @@ describe('useAppStore', () => {
     describe('Alarm Status', () => {
         it('should set alarm status', () => {
             const alarm: AlarmData = {
-                alarm_code: AlarmCode.FLOW_SENSOR_FAULT,
+                alarm_code: AlarmCode.NO_FLOW,
                 alarm_data: 1,
                 timestamp: 1718451600
             };
             useAppStore.getState().setAlarmStatus(alarm);
 
             const alarmState = useAppStore.getState().alarmStatus;
-            expect(alarmState?.alarm_code).toBe(AlarmCode.FLOW_SENSOR_FAULT);
+            expect(alarmState?.alarm_code).toBe(AlarmCode.NO_FLOW);
         });
 
         it('should clear alarm when alarm_code is NONE', () => {
             // First set an alarm
             useAppStore.getState().setAlarmStatus({
-                alarm_code: AlarmCode.LOW_BATTERY,
+                alarm_code: AlarmCode.HIGH_FLOW,
                 alarm_data: 0,
                 timestamp: 1718451600
             });
@@ -492,15 +492,15 @@ describe('useAppStore', () => {
         it('should update auto-calc status per channel', () => {
             const status: Partial<AutoCalcStatusData> = {
                 channel_id: 1,
-                calculation_active: true,
-                irrigation_needed: true,
+                calculation_active: 1,
+                irrigation_needed: 1,
                 current_deficit_mm: 2.5,
                 et0_mm_day: 4.5
             };
             useAppStore.getState().updateAutoCalc(status as AutoCalcStatusData);
 
             const calc = useAppStore.getState().autoCalcStatus.get(1);
-            expect(calc?.calculation_active).toBe(true);
+            expect(calc?.calculation_active).toBe(1);
             expect(calc?.current_deficit_mm).toBe(2.5);
         });
     });
@@ -859,7 +859,7 @@ describe('useAppStore', () => {
         it('should initialize channel wizard with default 8 channels', () => {
             useAppStore.getState().initChannelWizard();
             const cw = useAppStore.getState().channelWizard;
-            
+
             expect(cw.isOpen).toBe(true);
             expect(cw.zones).toHaveLength(8);
             expect(cw.currentZoneIndex).toBe(0);
@@ -870,7 +870,7 @@ describe('useAppStore', () => {
         it('should initialize channel wizard with custom number of channels', () => {
             useAppStore.getState().initChannelWizard(4);
             const cw = useAppStore.getState().channelWizard;
-            
+
             expect(cw.zones).toHaveLength(4);
             cw.zones.forEach((zone, idx) => {
                 expect(zone.channelId).toBe(idx);
@@ -881,11 +881,11 @@ describe('useAppStore', () => {
 
         it('should update current zone config', () => {
             useAppStore.getState().initChannelWizard(4);
-            useAppStore.getState().updateCurrentZoneConfig({ 
+            useAppStore.getState().updateCurrentZoneConfig({
                 wateringMode: 'fao56_auto',
-                name: 'Garden' 
+                name: 'Garden'
             });
-            
+
             const zone = useAppStore.getState().channelWizard.zones[0];
             expect(zone.wateringMode).toBe('fao56_auto');
             expect(zone.name).toBe('Garden');
@@ -894,18 +894,18 @@ describe('useAppStore', () => {
         it('should set wizard step', () => {
             useAppStore.getState().initChannelWizard();
             useAppStore.getState().setWizardStep('soil');
-            
+
             expect(useAppStore.getState().channelWizard.currentStep).toBe('soil');
         });
 
         it('should navigate to next wizard step for FAO56 mode', () => {
             useAppStore.getState().initChannelWizard();
             useAppStore.getState().updateCurrentZoneConfig({ wateringMode: 'fao56_auto' });
-            
+
             // FAO56 mode: mode -> plant -> location -> soil -> irrigation -> environment -> schedule -> summary
             useAppStore.getState().nextWizardStep();
             expect(useAppStore.getState().channelWizard.currentStep).toBe('plant');
-            
+
             useAppStore.getState().nextWizardStep();
             expect(useAppStore.getState().channelWizard.currentStep).toBe('location');
         });
@@ -914,19 +914,19 @@ describe('useAppStore', () => {
             useAppStore.getState().initChannelWizard();
             useAppStore.getState().updateCurrentZoneConfig({ wateringMode: 'fao56_auto' });
             useAppStore.getState().setWizardStep('soil');
-            
+
             useAppStore.getState().prevWizardStep();
             expect(useAppStore.getState().channelWizard.currentStep).toBe('location');
-            
+
             useAppStore.getState().prevWizardStep();
             expect(useAppStore.getState().channelWizard.currentStep).toBe('plant');
         });
 
         it('should skip current zone and move to next', () => {
             useAppStore.getState().initChannelWizard(4);
-            
+
             useAppStore.getState().skipCurrentZone();
-            
+
             const cw = useAppStore.getState().channelWizard;
             expect(cw.zones[0].skipped).toBe(true);
             expect(cw.zones[0].enabled).toBe(false);
@@ -938,7 +938,7 @@ describe('useAppStore', () => {
             useAppStore.getState().initChannelWizard(2);
             useAppStore.getState().skipCurrentZone(); // Skip zone 0
             useAppStore.getState().skipCurrentZone(); // Skip zone 1 (last)
-            
+
             const cw = useAppStore.getState().channelWizard;
             expect(cw.phase).toBe('final_summary');
         });
@@ -946,9 +946,9 @@ describe('useAppStore', () => {
         it('should skip all remaining zones', () => {
             useAppStore.getState().initChannelWizard(4);
             useAppStore.getState().skipCurrentZone(); // Skip zone 0
-            
+
             useAppStore.getState().skipAllRemainingZones(); // Skip zones 1, 2, 3
-            
+
             const cw = useAppStore.getState().channelWizard;
             expect(cw.zones[1].skipped).toBe(true);
             expect(cw.zones[2].skipped).toBe(true);
@@ -960,9 +960,9 @@ describe('useAppStore', () => {
         it('should save and move to next zone', () => {
             useAppStore.getState().initChannelWizard(4);
             useAppStore.getState().updateCurrentZoneConfig({ wateringMode: 'duration', name: 'Zone 1' });
-            
+
             useAppStore.getState().saveAndNextZone();
-            
+
             const cw = useAppStore.getState().channelWizard;
             expect(cw.zones[0].enabled).toBe(true);
             expect(cw.currentZoneIndex).toBe(1);
@@ -973,7 +973,7 @@ describe('useAppStore', () => {
             useAppStore.getState().initChannelWizard(2);
             useAppStore.getState().saveAndNextZone(); // Save zone 0
             useAppStore.getState().saveAndNextZone(); // Save zone 1 (last)
-            
+
             const cw = useAppStore.getState().channelWizard;
             expect(cw.phase).toBe('final_summary');
         });
@@ -981,25 +981,25 @@ describe('useAppStore', () => {
         it('should set shared location', () => {
             useAppStore.getState().initChannelWizard();
             const location = { latitude: 44.4268, longitude: 26.1025, source: 'gps' as const };
-            
+
             useAppStore.getState().setSharedLocation(location);
-            
+
             expect(useAppStore.getState().channelWizard.sharedLocation).toEqual(location);
         });
 
         it('should go to final summary phase', () => {
             useAppStore.getState().initChannelWizard();
-            
+
             useAppStore.getState().goToFinalSummary();
-            
+
             expect(useAppStore.getState().channelWizard.phase).toBe('final_summary');
         });
 
         it('should finish channel wizard', () => {
             useAppStore.getState().initChannelWizard();
-            
+
             useAppStore.getState().finishChannelWizard();
-            
+
             const cw = useAppStore.getState().channelWizard;
             expect(cw.phase).toBe('complete');
             expect(cw.isOpen).toBe(false);
@@ -1009,9 +1009,9 @@ describe('useAppStore', () => {
             useAppStore.getState().initChannelWizard(4);
             useAppStore.getState().updateCurrentZoneConfig({ wateringMode: 'fao56_auto' });
             useAppStore.getState().skipCurrentZone();
-            
+
             useAppStore.getState().closeChannelWizard();
-            
+
             const cw = useAppStore.getState().channelWizard;
             expect(cw.isOpen).toBe(false);
             expect(cw.phase).toBe('zones');
@@ -1020,9 +1020,9 @@ describe('useAppStore', () => {
 
         it('should set tiles progress', () => {
             useAppStore.getState().initChannelWizard();
-            
+
             useAppStore.getState().setTilesProgress(true, 50);
-            
+
             const cw = useAppStore.getState().channelWizard;
             expect(cw.tilesDownloading).toBe(true);
             expect(cw.tilesProgress).toBe(50);
@@ -1031,11 +1031,11 @@ describe('useAppStore', () => {
         it('should handle FAO56 eco mode navigation', () => {
             useAppStore.getState().initChannelWizard();
             useAppStore.getState().updateCurrentZoneConfig({ wateringMode: 'fao56_eco' });
-            
+
             // FAO56 mode: mode -> plant -> location -> soil -> irrigation -> environment -> schedule -> summary
             useAppStore.getState().nextWizardStep();
             expect(useAppStore.getState().channelWizard.currentStep).toBe('plant');
-            
+
             useAppStore.getState().nextWizardStep();
             expect(useAppStore.getState().channelWizard.currentStep).toBe('location');
         });
@@ -1043,7 +1043,7 @@ describe('useAppStore', () => {
         it('should handle manual duration mode navigation', () => {
             useAppStore.getState().initChannelWizard();
             useAppStore.getState().updateCurrentZoneConfig({ wateringMode: 'duration' });
-            
+
             // Manual mode: mode -> schedule -> summary
             useAppStore.getState().nextWizardStep();
             expect(useAppStore.getState().channelWizard.currentStep).toBe('schedule');
@@ -1052,7 +1052,7 @@ describe('useAppStore', () => {
         it('should handle manual volume mode navigation', () => {
             useAppStore.getState().initChannelWizard();
             useAppStore.getState().updateCurrentZoneConfig({ wateringMode: 'volume' });
-            
+
             // Manual mode: mode -> schedule -> summary
             useAppStore.getState().nextWizardStep();
             expect(useAppStore.getState().channelWizard.currentStep).toBe('schedule');
@@ -1062,9 +1062,9 @@ describe('useAppStore', () => {
             useAppStore.getState().initChannelWizard();
             useAppStore.getState().updateCurrentZoneConfig({ wateringMode: 'duration' });
             useAppStore.getState().setWizardStep('summary');
-            
+
             useAppStore.getState().nextWizardStep();
-            
+
             // Should stay at summary since there's no next step
             expect(useAppStore.getState().channelWizard.currentStep).toBe('summary');
         });
@@ -1073,16 +1073,16 @@ describe('useAppStore', () => {
             useAppStore.getState().initChannelWizard();
             useAppStore.getState().updateCurrentZoneConfig({ wateringMode: 'duration' });
             // Already at 'mode' which is first step
-            
+
             useAppStore.getState().prevWizardStep();
-            
+
             // Should stay at mode since there's no previous step
             expect(useAppStore.getState().channelWizard.currentStep).toBe('mode');
         });
 
         it('should open wizard with specific phase', () => {
             useAppStore.getState().openWizard(2);
-            
+
             expect(useAppStore.getState().wizardState.isOpen).toBe(true);
             expect(useAppStore.getState().wizardState.phase).toBe(2);
         });
@@ -1090,7 +1090,7 @@ describe('useAppStore', () => {
         it('should close wizard', () => {
             useAppStore.getState().openWizard(1);
             useAppStore.getState().closeWizard();
-            
+
             expect(useAppStore.getState().wizardState.isOpen).toBe(false);
         });
 

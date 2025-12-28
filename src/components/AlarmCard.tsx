@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { IonButton, IonIcon, IonSpinner, IonAlert } from '@ionic/react';
-import { warning, checkmarkCircle, close, alertCircle, water, flash, thermometer, bluetooth } from 'ionicons/icons';
+import { warning, checkmarkCircle, close, alertCircle, water, thermometer } from 'ionicons/icons';
 import { useAppStore } from '../store/useAppStore';
 import { BleService } from '../services/BleService';
 import { AlarmCode } from '../types/firmware_structs';
@@ -28,53 +28,60 @@ const AlarmCard: React.FC<AlarmCardProps> = ({ onToast }) => {
                     icon: checkmarkCircle,
                     color: 'text-cyber-emerald'
                 };
-            case AlarmCode.FLOW_SENSOR_FAULT:
+            case AlarmCode.NO_FLOW:
                 return { 
-                    name: 'Flow Sensor Fault', 
-                    description: 'No flow detected during watering. Check if water supply is on and sensor is connected.',
+                    name: 'No Flow', 
+                    description: 'No water flow detected during watering. Check supply, valve, filter, and sensor.',
                     icon: water,
                     color: 'text-red-500'
                 };
-            case AlarmCode.VALVE_STUCK:
+            case AlarmCode.UNEXPECTED_FLOW:
                 return { 
-                    name: 'Valve Stuck', 
-                    description: 'Valve failed to open or close properly. Manual inspection required.',
+                    name: 'Unexpected Flow', 
+                    description: 'Flow detected when all valves are closed. Check for leaks.',
+                    icon: water,
+                    color: 'text-red-500'
+                };
+            case AlarmCode.FREEZE_LOCKOUT:
+                return { 
+                    name: 'Freeze Protection', 
+                    description: 'Freeze protection is active. Watering is temporarily paused.',
+                    icon: thermometer,
+                    color: 'text-orange-500'
+                };
+            case AlarmCode.HIGH_FLOW:
+                return { 
+                    name: 'High Flow', 
+                    description: 'Flow exceeded the learned limit. Possible burst/leak.',
+                    icon: water,
+                    color: 'text-red-500'
+                };
+            case AlarmCode.LOW_FLOW:
+                return { 
+                    name: 'Low Flow', 
+                    description: 'Flow is below the learned limit. Check pressure and filters.',
+                    icon: water,
+                    color: 'text-yellow-500'
+                };
+            case AlarmCode.MAINLINE_LEAK:
+                return { 
+                    name: 'Mainline Leak', 
+                    description: 'Static test detected flow with zones off. Check for leaks.',
+                    icon: water,
+                    color: 'text-red-500'
+                };
+            case AlarmCode.CHANNEL_LOCK:
+                return { 
+                    name: 'Zone Locked', 
+                    description: 'Zone locked after repeated anomalies. Manual intervention required.',
                     icon: alertCircle,
                     color: 'text-red-500'
                 };
-            case AlarmCode.COMMUNICATION_ERROR:
+            case AlarmCode.GLOBAL_LOCK:
                 return { 
-                    name: 'Communication Error', 
-                    description: 'Internal communication failure. Try reconnecting.',
-                    icon: bluetooth,
-                    color: 'text-orange-500'
-                };
-            case AlarmCode.LOW_BATTERY:
-                return { 
-                    name: 'Low Battery', 
-                    description: 'Battery level is critically low. Replace or recharge soon.',
-                    icon: flash,
-                    color: 'text-yellow-500'
-                };
-            case AlarmCode.SENSOR_OFFLINE:
-                return { 
-                    name: 'Sensor Offline', 
-                    description: 'Environmental sensor not responding. Check BME280 connection.',
-                    icon: thermometer,
-                    color: 'text-orange-500'
-                };
-            case AlarmCode.OVER_TEMPERATURE:
-                return { 
-                    name: 'Over Temperature', 
-                    description: 'Device temperature exceeded safe limits. Allow cooling.',
-                    icon: thermometer,
-                    color: 'text-red-500'
-                };
-            case AlarmCode.LEAK_DETECTED:
-                return { 
-                    name: 'Leak Detected', 
-                    description: 'Unexpected water flow when all valves are closed. Check for leaks!',
-                    icon: water,
+                    name: 'System Locked', 
+                    description: 'System locked due to a critical water anomaly. Check for leaks.',
+                    icon: alertCircle,
                     color: 'text-red-500'
                 };
             default:

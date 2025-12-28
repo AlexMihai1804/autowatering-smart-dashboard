@@ -23,11 +23,11 @@ interface SettingsSection {
 
 const MobileSettings: React.FC = () => {
   const history = useHistory();
-  const { 
-    connectedDeviceId, 
-    connectionState, 
-    systemConfig, 
-    rtcConfig 
+  const {
+    connectedDeviceId,
+    connectionState,
+    systemConfig,
+    rtcConfig
   } = useAppStore();
   const bleService = BleService.getInstance();
 
@@ -49,14 +49,12 @@ const MobileSettings: React.FC = () => {
         e.stopPropagation();
         onChange(!enabled);
       }}
-      className={`relative w-14 h-8 rounded-full transition-colors ${
-        enabled ? 'bg-mobile-primary' : 'bg-mobile-border-dark'
-      }`}
+      className={`relative w-14 h-8 rounded-full transition-colors ${enabled ? 'bg-mobile-primary' : 'bg-mobile-border-dark'
+        }`}
     >
       <div
-        className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md transition-transform ${
-          enabled ? 'translate-x-6' : 'translate-x-0'
-        }`}
+        className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md transition-transform ${enabled ? 'translate-x-6' : 'translate-x-0'
+          }`}
       />
     </button>
   );
@@ -76,6 +74,13 @@ const MobileSettings: React.FC = () => {
 
   // Device Configuration Section
   const deviceConfigItems: SettingsItem[] = [
+    {
+      icon: 'developer_board',
+      label: 'Device Settings',
+      onClick: () => history.push('/device'),
+      iconBgClass: 'bg-mobile-primary/20',
+      iconTextClass: 'text-mobile-primary',
+    },
     {
       icon: 'water_drop',
       label: 'Zone Configuration',
@@ -104,7 +109,15 @@ const MobileSettings: React.FC = () => {
     {
       icon: 'notifications',
       label: 'Notifications',
-      onClick: () => console.log('Notifications'),
+      onClick: () => history.push('/notifications'),
+      iconBgClass: 'bg-gray-500/20',
+      iconTextClass: 'text-gray-400',
+    },
+
+    {
+      icon: 'warning',
+      label: 'Alarms',
+      onClick: () => history.push('/alarms'),
       iconBgClass: 'bg-gray-500/20',
       iconTextClass: 'text-gray-400',
     },
@@ -187,186 +200,183 @@ const MobileSettings: React.FC = () => {
       <div className="flex-1 overflow-y-auto pb-28 overscroll-contain">
         {/* Device Card */}
         <div className="px-4 mb-6">
-        <div className="flex flex-col gap-4 rounded-xl bg-mobile-surface-dark p-4 shadow-sm border border-mobile-border-dark">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex flex-col gap-2 flex-1">
-              <div className="flex flex-col">
-                <h2 className="text-lg font-bold leading-tight">
-                  {connectedDeviceId || 'AutoWater Device'}
-                </h2>
-                <div className="flex items-center gap-2 mt-1">
-                  {connectionState === 'connected' ? (
-                    <>
-                      <span className="relative flex h-2.5 w-2.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-mobile-primary opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-mobile-primary"></span>
-                      </span>
-                      <p className="text-mobile-text-muted text-sm font-medium">Status: Online</p>
-                    </>
-                  ) : (
-                    <>
-                      <span className="w-2.5 h-2.5 rounded-full bg-gray-500"></span>
-                      <p className="text-gray-500 text-sm font-medium">Status: Offline</p>
-                    </>
-                  )}
+          <div className="flex flex-col gap-4 rounded-xl bg-mobile-surface-dark p-4 shadow-sm border border-mobile-border-dark">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col gap-2 flex-1">
+                <div className="flex flex-col">
+                  <h2 className="text-lg font-bold leading-tight">
+                    {connectedDeviceId || 'AutoWater Device'}
+                  </h2>
+                  <div className="flex items-center gap-2 mt-1">
+                    {connectionState === 'connected' ? (
+                      <>
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-mobile-primary opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-mobile-primary"></span>
+                        </span>
+                        <p className="text-mobile-text-muted text-sm font-medium">Status: Online</p>
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-2.5 h-2.5 rounded-full bg-gray-500"></span>
+                        <p className="text-gray-500 text-sm font-medium">Status: Offline</p>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {/* Device Image Thumbnail */}
+              <div className="h-16 w-16 bg-mobile-primary/10 rounded-lg shrink-0 flex items-center justify-center">
+                <span className="material-symbols-outlined text-mobile-primary text-3xl">developer_board</span>
+              </div>
             </div>
-            
-            {/* Device Image Thumbnail */}
-            <div className="h-16 w-16 bg-mobile-primary/10 rounded-lg shrink-0 flex items-center justify-center">
-              <span className="material-symbols-outlined text-mobile-primary text-3xl">developer_board</span>
-            </div>
+
+            <button
+              onClick={handleSwitchDevice}
+              className="flex w-full cursor-pointer items-center justify-center rounded-full h-10 px-4 bg-mobile-border-dark active:scale-95 transition-transform"
+            >
+              <span className="text-sm font-semibold text-white">Switch Device</span>
+            </button>
           </div>
-          
-          <button 
-            onClick={handleSwitchDevice}
-            className="flex w-full cursor-pointer items-center justify-center rounded-full h-10 px-4 bg-mobile-border-dark active:scale-95 transition-transform"
-          >
-            <span className="text-sm font-semibold text-white">Switch Device</span>
-          </button>
         </div>
-      </div>
 
-      {/* Settings Sections */}
-      {renderSettingsSection({ title: 'Device Configuration', items: deviceConfigItems })}
-      {renderSettingsSection({ title: 'App Preferences', items: appPreferencesItems })}
-      
-      {/* Inline Interactive Settings */}
-      <div className="mb-6">
-        <div className="px-4 mb-2">
-          <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider pl-2 mb-2">
-            Customization
-          </h3>
-        </div>
-        <div className="px-4">
-          <div className="flex flex-col overflow-hidden rounded-xl bg-mobile-surface-dark shadow-sm divide-y divide-mobile-border-dark">
-            {/* Dark Mode Toggle */}
-            <div className="flex items-center gap-4 p-4">
-              <div className="flex items-center justify-center rounded-full shrink-0 w-10 h-10 bg-gray-500/20 text-gray-400">
-                <span className="material-symbols-outlined">palette</span>
-              </div>
-              <div className="flex-1">
-                <p className="text-base font-medium leading-normal text-white">Appearance</p>
-                <p className="text-sm text-gray-500">{resolvedTheme === 'dark' ? 'Dark' : 'Light'}</p>
-              </div>
-              <Toggle
-                enabled={resolvedTheme === 'dark'}
-                onChange={(enabled) => setTheme(enabled ? 'dark' : 'light')}
-              />
-            </div>
+        {/* Settings Sections */}
+        {renderSettingsSection({ title: 'Device Configuration', items: deviceConfigItems })}
+        {renderSettingsSection({ title: 'App Preferences', items: appPreferencesItems })}
 
-            {/* Language Selector */}
-            <div className="flex items-center gap-4 p-4">
-              <div className="flex items-center justify-center rounded-full shrink-0 w-10 h-10 bg-gray-500/20 text-gray-400">
-                <span className="material-symbols-outlined">language</span>
+        {/* Inline Interactive Settings */}
+        <div className="mb-6">
+          <div className="px-4 mb-2">
+            <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider pl-2 mb-2">
+              Customization
+            </h3>
+          </div>
+          <div className="px-4">
+            <div className="flex flex-col overflow-hidden rounded-xl bg-mobile-surface-dark shadow-sm divide-y divide-mobile-border-dark">
+              {/* Dark Mode Toggle */}
+              <div className="flex items-center gap-4 p-4">
+                <div className="flex items-center justify-center rounded-full shrink-0 w-10 h-10 bg-gray-500/20 text-gray-400">
+                  <span className="material-symbols-outlined">palette</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-base font-medium leading-normal text-white">Appearance</p>
+                  <p className="text-sm text-gray-500">{resolvedTheme === 'dark' ? 'Dark' : 'Light'}</p>
+                </div>
+                <Toggle
+                  enabled={resolvedTheme === 'dark'}
+                  onChange={(enabled) => setTheme(enabled ? 'dark' : 'light')}
+                />
               </div>
-              <div className="flex-1">
-                <p className="text-base font-medium leading-normal text-white">Language</p>
-                <p className="text-sm text-gray-500">{languageLabel}</p>
+
+              {/* Language Selector */}
+              <div className="flex items-center gap-4 p-4">
+                <div className="flex items-center justify-center rounded-full shrink-0 w-10 h-10 bg-gray-500/20 text-gray-400">
+                  <span className="material-symbols-outlined">language</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-base font-medium leading-normal text-white">Language</p>
+                  <p className="text-sm text-gray-500">{languageLabel}</p>
+                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                      className="px-4 py-2 rounded-xl bg-mobile-primary/10 text-mobile-primary text-sm font-bold hover:bg-mobile-primary/20 transition-colors"
+                    >
+                      Change
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[220px]">
+                    <div className="text-xs font-bold text-mobile-text-muted mb-2">Select language</div>
+                    <div className="flex flex-col gap-1">
+                      {availableLanguages.map((lang) => {
+                        const selected = lang.code === language;
+                        return (
+                          <button
+                            key={lang.code}
+                            type="button"
+                            onClick={() => setLanguage(lang.code)}
+                            className={`w-full rounded-xl px-3 py-2 text-left text-sm font-bold transition-colors ${selected
+                                ? 'bg-mobile-primary/20 text-mobile-primary'
+                                : 'text-white/80 hover:bg-white/5'
+                              }`}
+                          >
+                            {lang.nativeName}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                    className="px-4 py-2 rounded-xl bg-mobile-primary/10 text-mobile-primary text-sm font-bold hover:bg-mobile-primary/20 transition-colors"
-                  >
-                    Change
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[220px]">
-                  <div className="text-xs font-bold text-mobile-text-muted mb-2">Select language</div>
-                  <div className="flex flex-col gap-1">
-                    {availableLanguages.map((lang) => {
-                      const selected = lang.code === language;
-                      return (
-                        <button
-                          key={lang.code}
-                          type="button"
-                          onClick={() => setLanguage(lang.code)}
-                          className={`w-full rounded-xl px-3 py-2 text-left text-sm font-bold transition-colors ${
-                            selected
-                              ? 'bg-mobile-primary/20 text-mobile-primary'
-                              : 'text-white/80 hover:bg-white/5'
+
+              {/* Units Selector */}
+              <div className="flex items-center gap-4 p-4">
+                <div className="flex items-center justify-center rounded-full shrink-0 w-10 h-10 bg-gray-500/20 text-gray-400">
+                  <span className="material-symbols-outlined">straighten</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-base font-medium leading-normal text-white">Units</p>
+                  <p className="text-sm text-gray-500">{useMetric ? 'Metric' : 'Imperial'}</p>
+                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={(e) => e.stopPropagation()}
+                      className="px-4 py-2 rounded-xl bg-mobile-primary/10 text-mobile-primary text-sm font-bold hover:bg-mobile-primary/20 transition-colors"
+                    >
+                      Change
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[260px]">
+                    <div className="text-xs font-bold text-mobile-text-muted mb-2">Select units</div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleUnitChange(true)}
+                        className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all ${useMetric
+                            ? 'bg-mobile-primary text-mobile-bg-dark'
+                            : 'bg-white/5 text-white border border-white/10 hover:border-mobile-primary/50'
                           }`}
-                        >
-                          {lang.nativeName}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {/* Units Selector */}
-            <div className="flex items-center gap-4 p-4">
-              <div className="flex items-center justify-center rounded-full shrink-0 w-10 h-10 bg-gray-500/20 text-gray-400">
-                <span className="material-symbols-outlined">straighten</span>
+                      >
+                        Metric
+                      </button>
+                      <button
+                        onClick={() => handleUnitChange(false)}
+                        className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all ${!useMetric
+                            ? 'bg-mobile-primary text-mobile-bg-dark'
+                            : 'bg-white/5 text-white border border-white/10 hover:border-mobile-primary/50'
+                          }`}
+                      >
+                        Imperial
+                      </button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
-              <div className="flex-1">
-                <p className="text-base font-medium leading-normal text-white">Units</p>
-                <p className="text-sm text-gray-500">{useMetric ? 'Metric' : 'Imperial'}</p>
-              </div>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={(e) => e.stopPropagation()}
-                    className="px-4 py-2 rounded-xl bg-mobile-primary/10 text-mobile-primary text-sm font-bold hover:bg-mobile-primary/20 transition-colors"
-                  >
-                    Change
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[260px]">
-                  <div className="text-xs font-bold text-mobile-text-muted mb-2">Select units</div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleUnitChange(true)}
-                      className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all ${
-                        useMetric
-                          ? 'bg-mobile-primary text-mobile-bg-dark'
-                          : 'bg-white/5 text-white border border-white/10 hover:border-mobile-primary/50'
-                      }`}
-                    >
-                      Metric
-                    </button>
-                    <button
-                      onClick={() => handleUnitChange(false)}
-                      className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all ${
-                        !useMetric
-                          ? 'bg-mobile-primary text-mobile-bg-dark'
-                          : 'bg-white/5 text-white border border-white/10 hover:border-mobile-primary/50'
-                      }`}
-                    >
-                      Imperial
-                    </button>
-                  </div>
-                </PopoverContent>
-              </Popover>
             </div>
           </div>
         </div>
-      </div>
 
-      {renderSettingsSection({ title: 'Support', items: supportItems })}
+        {renderSettingsSection({ title: 'Support', items: supportItems })}
 
-      {/* Sign Out */}
-      <div className="px-4 mb-8">
-        <button 
-          onClick={handleDisconnect}
-          className="w-full py-3 text-red-500 bg-mobile-surface-dark rounded-xl text-base font-bold shadow-sm active:scale-95 transition-transform border border-mobile-border-dark"
-        >
-          Disconnect Device
-        </button>
-        <p className="text-center text-xs text-gray-600 mt-4">
-          AutoWatering App v1.0.0 (Build 1)
-        </p>
-      </div>
+        {/* Sign Out */}
+        <div className="px-4 mb-8">
+          <button
+            onClick={handleDisconnect}
+            className="w-full py-3 text-red-500 bg-mobile-surface-dark rounded-xl text-base font-bold shadow-sm active:scale-95 transition-transform border border-mobile-border-dark"
+          >
+            Disconnect Device
+          </button>
+          <p className="text-center text-xs text-gray-600 mt-4">
+            AutoWatering App v1.0.0 (Build 1)
+          </p>
+        </div>
 
-      {/* Spacer */}
-      <div className="h-8"></div>
+        {/* Spacer */}
+        <div className="h-8"></div>
       </div>
     </div>
   );

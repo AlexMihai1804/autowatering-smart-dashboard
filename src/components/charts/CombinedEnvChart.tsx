@@ -127,8 +127,8 @@ const CombinedEnvChart: React.FC<CombinedEnvChartProps> = ({
     };
 
     return (
-        <div style={{ height }} className="w-full">
-            <ResponsiveContainer width="100%" height="100%">
+        <div className="w-full min-w-0">
+            <ResponsiveContainer width="100%" height={height} minWidth={0} minHeight={0}>
                 <LineChart
                     data={chartData}
                     margin={{ top: 10, right: 50, left: 0, bottom: showBrush ? 40 : 0 }}

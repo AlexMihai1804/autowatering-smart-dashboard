@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import { 
-    ChannelConfigData, 
-    ValveControlData, 
-    RtcData, 
-    CalibrationData, 
+import {
+    ChannelConfigData,
+    ValveControlData,
+    RtcData,
+    CalibrationData,
     ResetControlData,
     SystemStatus,
     CurrentTaskData,
@@ -18,6 +18,7 @@ import {
     RainIntegrationStatusData,
     CompensationStatusData,
     AutoCalcStatusData,
+    SoilMoistureConfigData,
     ChannelCompensationConfigData,
     // New types
     FlowSensorData,
@@ -25,19 +26,22 @@ import {
     StatisticsData,
     AlarmData,
     DiagnosticsData,
+    HydraulicStatusData,
+    AlarmHistoryEntry,
     HistoryDetailedEntry,
     RainHourlyEntry,
     RainDailyEntry,
     EnvDetailedEntry,
     EnvHourlyEntry,
     EnvDailyEntry,
-    BulkSyncSnapshot
+    BulkSyncSnapshot,
+    CustomSoilConfigData
 } from '../types/firmware_structs';
 import { PlantDBEntry, SoilDBEntry, IrrigationMethodEntry } from '../services/DatabaseService';
-import { 
-    ChannelWizardState, 
-    UnifiedZoneConfig, 
-    WizardStep, 
+import {
+    ChannelWizardState,
+    UnifiedZoneConfig,
+    WizardStep,
     LocationData,
     DEFAULT_WIZARD_STATE,
     createInitialZones,
@@ -70,7 +74,7 @@ interface AppState {
     envData: EnvironmentalData | null;
     rainData: RainData | null;
     bulkSyncSnapshot: BulkSyncSnapshot | null;
-    
+
     // New Data States Initial Values
     systemConfig: SystemConfigData | null;
     rainConfig: RainConfigData | null;
@@ -79,17 +83,30 @@ interface AppState {
     compensationStatus: Map<number, CompensationStatusData>;
     autoCalcStatus: Map<number, AutoCalcStatusData>;
     globalAutoCalcStatus: AutoCalcStatusData | null;
+
+    // Soil moisture override config (Custom Config Service)
+    soilMoistureConfig: Map<number, SoilMoistureConfigData>; // channel_id -> config
+    globalSoilMoistureConfig: SoilMoistureConfigData | null;
     growingEnv: Map<number, GrowingEnvData>;
     schedules: Map<number, ScheduleConfigData>;
     channelCompensationConfig: Map<number, ChannelCompensationConfigData>;
-    
+    customSoilConfigs: Map<number, CustomSoilConfigData | null>;  // null = no custom soil for channel
+
     // New Characteristic Data (added from BLE docs)
     flowSensorData: FlowSensorData | null;
     taskQueue: TaskQueueData | null;
     statistics: Map<number, StatisticsData>;  // channel_id -> stats
     alarmStatus: AlarmData | null;
     diagnosticsData: DiagnosticsData | null;
-    
+    hydraulicStatus: HydraulicStatusData | null;
+    calibrationData: CalibrationData | null;
+    autoCalcData: Record<number, AutoCalcStatusData>; // channelId -> data
+
+    // Alarm UI state
+    alarmHistory: AlarmHistoryEntry[];
+    alarmPopupDismissed: boolean;
+    lastSeenAlarmTimestamp: number;
+
     // History data caches
     wateringHistory: HistoryDetailedEntry[];
     rainHistoryHourly: RainHourlyEntry[];
@@ -108,7 +125,7 @@ interface AppState {
     plantDb: PlantDBEntry[];
     soilDb: SoilDBEntry[];
     irrigationMethodDb: IrrigationMethodEntry[];
-    
+
     // Onboarding Wizard State (legacy)
     wizardState: {
         isOpen: boolean;
@@ -116,15 +133,15 @@ interface AppState {
         currentZone: number;  // 0-7 for zone config
         completedZones: number[];  // List of configured zone IDs
     };
-    
+
     // Channel Configuration Wizard State (new unified wizard)
     channelWizard: ChannelWizardState;
-    
+
     // Actions
     setConnectionState: (state: 'disconnected' | 'scanning' | 'connecting' | 'connected') => void;
     addDiscoveredDevice: (device: BleDevice) => void;
     setConnectedDeviceId: (id: string | null) => void;
-    
+
     // Data Actions
     updateZone: (channelId: number, data: Partial<ChannelConfigData>) => void;
     setZones: (zones: ChannelConfigData[]) => void;
@@ -137,27 +154,39 @@ interface AppState {
     setEnvData: (data: EnvironmentalData) => void;
     setRainData: (data: RainData) => void;
     setBulkSyncSnapshot: (snapshot: BulkSyncSnapshot | null) => void;
-    
+
     // New Data Actions Implementation
     setSystemConfig: (config: SystemConfigData) => void;
     setRainConfig: (config: RainConfigData) => void;
     setTimezoneConfig: (config: TimezoneConfigData) => void;
     setRainIntegration: (status: RainIntegrationStatusData) => void;
-    
+
     updateCompensation: (status: CompensationStatusData) => void;
     updateAutoCalc: (status: AutoCalcStatusData) => void;
     setGlobalAutoCalcStatus: (status: AutoCalcStatusData | null) => void;
+    setSoilMoistureConfig: (config: SoilMoistureConfigData) => void;
     updateGrowingEnv: (env: GrowingEnvData) => void;
     updateSchedule: (schedule: ScheduleConfigData) => void;
     updateChannelCompensationConfig: (config: ChannelCompensationConfigData) => void;
-    
+    updateCustomSoilConfig: (channelId: number, config: CustomSoilConfigData | null) => void;
+
     // New data actions
     setFlowSensor: (data: FlowSensorData) => void;
     setTaskQueue: (data: TaskQueueData) => void;
     updateStatistics: (data: StatisticsData) => void;
     setAlarmStatus: (data: AlarmData) => void;
     setDiagnostics: (data: DiagnosticsData) => void;
-    
+    setHydraulicStatus: (status: HydraulicStatusData) => void;
+    setAlarmHistory: (history: AlarmHistoryEntry[]) => void;
+    setCalibrationData: (data: CalibrationData | null) => void;
+    setAutoCalcData: (channelId: number, data: AutoCalcStatusData) => void;
+
+    // Alarm UI actions
+    addAlarmToHistory: (entry: Omit<AlarmHistoryEntry, 'channel_id'>) => void;
+    clearAlarmFromHistory: (timestamp: number) => void;
+    setAlarmPopupDismissed: (dismissed: boolean) => void;
+    setLastSeenAlarmTimestamp: (timestamp: number) => void;
+
     // History actions
     setWateringHistory: (entries: HistoryDetailedEntry[]) => void;
     appendWateringHistory: (entries: HistoryDetailedEntry[]) => void;
@@ -175,7 +204,7 @@ interface AppState {
     isZoneConfigured: (channelId: number) => boolean;
     openWizard: (phase?: 1 | 2 | 3) => void;
     closeWizard: () => void;
-    
+
     // Channel Wizard Actions
     initChannelWizard: (numChannels?: number) => void;
     updateCurrentZoneConfig: (updates: Partial<UnifiedZoneConfig>) => void;
@@ -190,7 +219,7 @@ interface AppState {
     finishChannelWizard: () => void;
     closeChannelWizard: () => void;
     setTilesProgress: (downloading: boolean, progress: number) => void;
-    
+
     resetStore: () => void;
 }
 
@@ -198,7 +227,7 @@ export const useAppStore = create<AppState>((set) => ({
     connectionState: 'disconnected',
     discoveredDevices: [],
     connectedDeviceId: null,
-    
+
     // Initial Data State
     zones: [],
     valveStatus: new Map(),
@@ -210,7 +239,7 @@ export const useAppStore = create<AppState>((set) => ({
     envData: null,
     rainData: null,
     bulkSyncSnapshot: null,
-    
+
     // New Data States Initial Values
     systemConfig: null,
     rainConfig: null,
@@ -219,17 +248,28 @@ export const useAppStore = create<AppState>((set) => ({
     compensationStatus: new Map<number, CompensationStatusData>(),
     autoCalcStatus: new Map<number, AutoCalcStatusData>(),
     globalAutoCalcStatus: null,
+    soilMoistureConfig: new Map<number, SoilMoistureConfigData>(),
+    globalSoilMoistureConfig: null,
     growingEnv: new Map<number, GrowingEnvData>(),
     schedules: new Map<number, ScheduleConfigData>(),
     channelCompensationConfig: new Map<number, ChannelCompensationConfigData>(),
-    
+    customSoilConfigs: new Map<number, CustomSoilConfigData | null>(),
+
     // New Characteristic Data (added from BLE docs)
     flowSensorData: null,
     taskQueue: null,
     statistics: new Map<number, StatisticsData>(),
     alarmStatus: null,
     diagnosticsData: null,
-    
+    hydraulicStatus: null,
+    calibrationData: null,
+    autoCalcData: {} as Record<number, AutoCalcStatusData>,
+
+    // Alarm UI state
+    alarmHistory: [],
+    alarmPopupDismissed: false,
+    lastSeenAlarmTimestamp: 0,
+
     // History data caches
     wateringHistory: [],
     rainHistoryHourly: [],
@@ -245,14 +285,14 @@ export const useAppStore = create<AppState>((set) => ({
     plantDb: [],
     soilDb: [],
     irrigationMethodDb: [],
-    
+
     wizardState: {
         isOpen: false,
         phase: 1,
         currentZone: 0,
         completedZones: []
     },
-    
+
     // Channel Wizard State
     channelWizard: { ...DEFAULT_WIZARD_STATE },
 
@@ -272,7 +312,7 @@ export const useAppStore = create<AppState>((set) => ({
             newZones[index] = { ...newZones[index], ...data };
         } else {
             // If we don't have it, we can't really update it partially, but for safety:
-             // In a real app we might fetch it first.
+            // In a real app we might fetch it first.
         }
         return { zones: newZones };
     }),
@@ -299,13 +339,13 @@ export const useAppStore = create<AppState>((set) => ({
     setRainConfig: (config) => set({ rainConfig: config }),
     setTimezoneConfig: (config) => set({ timezoneConfig: config }),
     setRainIntegration: (status) => set({ rainIntegration: status }),
-    
+
     updateCompensation: (status) => set((state) => {
         const newMap = new Map(state.compensationStatus);
         newMap.set(status.channel_id, status);
         return { compensationStatus: newMap };
     }),
-    
+
     updateAutoCalc: (status) => set((state) => {
         const newMap = new Map(state.autoCalcStatus);
         newMap.set(status.channel_id, status);
@@ -313,25 +353,42 @@ export const useAppStore = create<AppState>((set) => ({
     }),
 
     setGlobalAutoCalcStatus: (status) => set({ globalAutoCalcStatus: status }),
-    
+
+    setSoilMoistureConfig: (config) => set((state) => {
+        // 0xFF is the firmware "global" marker
+        if (config.channel_id === 0xFF) {
+            return { globalSoilMoistureConfig: config };
+        }
+
+        const newMap = new Map(state.soilMoistureConfig);
+        newMap.set(config.channel_id, config);
+        return { soilMoistureConfig: newMap };
+    }),
+
     updateGrowingEnv: (env) => set((state) => {
         const newMap = new Map(state.growingEnv);
         newMap.set(env.channel_id, env);
         return { growingEnv: newMap };
     }),
-    
+
     updateSchedule: (schedule) => set((state) => {
         const newMap = new Map(state.schedules);
         newMap.set(schedule.channel_id, schedule);
         return { schedules: newMap };
     }),
-    
+
     updateChannelCompensationConfig: (config) => set((state) => {
         const newMap = new Map(state.channelCompensationConfig);
         newMap.set(config.channel_id, config);
         return { channelCompensationConfig: newMap };
     }),
-    
+
+    updateCustomSoilConfig: (channelId, config) => set((state) => {
+        const newMap = new Map(state.customSoilConfigs);
+        newMap.set(channelId, config);
+        return { customSoilConfigs: newMap };
+    }),
+
     // New data actions
     setFlowSensor: (data) => set({ flowSensorData: data }),
     setTaskQueue: (data) => set({ taskQueue: data }),
@@ -342,7 +399,36 @@ export const useAppStore = create<AppState>((set) => ({
     }),
     setAlarmStatus: (data) => set({ alarmStatus: data }),
     setDiagnostics: (data) => set({ diagnosticsData: data }),
-    
+    setHydraulicStatus: (status) => set({ hydraulicStatus: status }),
+    setCalibrationData: (data) => set({ calibrationData: data }),
+    setAutoCalcData: (channelId, data) => set((state) => {
+        const newMap = new Map(state.autoCalcStatus);
+        newMap.set(channelId, data);
+        return { autoCalcStatus: newMap };
+    }),
+    setAlarmHistory: (history) => set({ alarmHistory: history }),
+
+    // Alarm UI actions
+    addAlarmToHistory: (entry) => set((state) => {
+        // Don't add duplicates based on timestamp
+        if (state.alarmHistory.some(h => h.timestamp === entry.timestamp)) {
+            return state;
+        }
+        return {
+            alarmHistory: [...state.alarmHistory, entry as AlarmHistoryEntry].slice(-50), // Keep last 50
+            alarmPopupDismissed: false // Reset dismissed state on new alarm
+        };
+    }),
+    clearAlarmFromHistory: (timestamp) => set((state) => ({
+        alarmHistory: state.alarmHistory.map(h =>
+            h.timestamp === timestamp
+                ? { ...h, cleared_at: Math.floor(Date.now() / 1000) }
+                : h
+        )
+    })),
+    setAlarmPopupDismissed: (dismissed) => set({ alarmPopupDismissed: dismissed }),
+    setLastSeenAlarmTimestamp: (timestamp) => set({ lastSeenAlarmTimestamp: timestamp }),
+
     // History actions
     setWateringHistory: (entries) => set({ wateringHistory: entries }),
     appendWateringHistory: (entries) => set((state) => ({
@@ -365,10 +451,10 @@ export const useAppStore = create<AppState>((set) => ({
     updateSystemStatus: (status) => set((state) => ({
         systemStatus: { ...state.systemStatus, ...status }
     })),
-    setDatabase: (plants, soils, irrigationMethods) => set({ 
-        plantDb: plants, 
-        soilDb: soils, 
-        irrigationMethodDb: irrigationMethods 
+    setDatabase: (plants, soils, irrigationMethods) => set({
+        plantDb: plants,
+        soilDb: soils,
+        irrigationMethodDb: irrigationMethods
     }),
     setWizardState: (wizardUpdate) => set((state) => ({
         wizardState: { ...state.wizardState, ...wizardUpdate }
@@ -393,7 +479,7 @@ export const useAppStore = create<AppState>((set) => ({
     closeWizard: () => set((state) => ({
         wizardState: { ...state.wizardState, isOpen: false }
     })),
-    
+
     // Channel Wizard Actions Implementation
     initChannelWizard: (numChannels = 8) => set({
         channelWizard: {
@@ -402,18 +488,18 @@ export const useAppStore = create<AppState>((set) => ({
             zones: createInitialZones(numChannels)
         }
     }),
-    
+
     updateCurrentZoneConfig: (updates) => set((state) => {
         const zones = [...state.channelWizard.zones];
         const idx = state.channelWizard.currentZoneIndex;
         zones[idx] = { ...zones[idx], ...updates };
         return { channelWizard: { ...state.channelWizard, zones } };
     }),
-    
+
     setWizardStep: (step) => set((state) => ({
         channelWizard: { ...state.channelWizard, currentStep: step }
     })),
-    
+
     nextWizardStep: () => set((state) => {
         const currentZone = state.channelWizard.zones[state.channelWizard.currentZoneIndex];
         const nextStep = getNextStep(state.channelWizard.currentStep, currentZone.wateringMode);
@@ -422,7 +508,7 @@ export const useAppStore = create<AppState>((set) => ({
         }
         return state;
     }),
-    
+
     prevWizardStep: () => set((state) => {
         const currentZone = state.channelWizard.zones[state.channelWizard.currentZoneIndex];
         const prevStep = getPrevStep(state.channelWizard.currentStep, currentZone.wateringMode);
@@ -431,98 +517,98 @@ export const useAppStore = create<AppState>((set) => ({
         }
         return state;
     }),
-    
+
     skipCurrentZone: () => set((state) => {
         const zones = [...state.channelWizard.zones];
         const idx = state.channelWizard.currentZoneIndex;
         zones[idx] = { ...zones[idx], skipped: true, enabled: false };
-        
+
         // Move to next zone or final summary
         const nextIdx = idx + 1;
         if (nextIdx >= zones.length) {
-            return { 
-                channelWizard: { 
-                    ...state.channelWizard, 
+            return {
+                channelWizard: {
+                    ...state.channelWizard,
                     zones,
-                    phase: 'final_summary' 
-                } 
+                    phase: 'final_summary'
+                }
             };
         }
-        return { 
-            channelWizard: { 
-                ...state.channelWizard, 
+        return {
+            channelWizard: {
+                ...state.channelWizard,
                 zones,
                 currentZoneIndex: nextIdx,
                 currentStep: 'mode'
-            } 
+            }
         };
     }),
-    
+
     skipAllRemainingZones: () => set((state) => {
         const zones = [...state.channelWizard.zones];
         for (let i = state.channelWizard.currentZoneIndex; i < zones.length; i++) {
             zones[i] = { ...zones[i], skipped: true, enabled: false };
         }
-        return { 
-            channelWizard: { 
-                ...state.channelWizard, 
+        return {
+            channelWizard: {
+                ...state.channelWizard,
                 zones,
                 skipAllRemaining: true,
                 phase: 'final_summary'
-            } 
+            }
         };
     }),
-    
+
     saveAndNextZone: () => set((state) => {
         const zones = [...state.channelWizard.zones];
         const idx = state.channelWizard.currentZoneIndex;
         zones[idx] = { ...zones[idx], enabled: true };
-        
+
         // Move to next zone or final summary
         const nextIdx = idx + 1;
         if (nextIdx >= zones.length) {
-            return { 
-                channelWizard: { 
-                    ...state.channelWizard, 
+            return {
+                channelWizard: {
+                    ...state.channelWizard,
                     zones,
-                    phase: 'final_summary' 
-                } 
+                    phase: 'final_summary'
+                }
             };
         }
-        return { 
-            channelWizard: { 
-                ...state.channelWizard, 
+        return {
+            channelWizard: {
+                ...state.channelWizard,
                 zones,
                 currentZoneIndex: nextIdx,
                 currentStep: 'mode'
-            } 
+            }
         };
     }),
-    
+
     setSharedLocation: (location) => set((state) => ({
         channelWizard: { ...state.channelWizard, sharedLocation: location }
     })),
-    
+
     goToFinalSummary: () => set((state) => ({
         channelWizard: { ...state.channelWizard, phase: 'final_summary' }
     })),
-    
+
     finishChannelWizard: () => set((state) => ({
         channelWizard: { ...state.channelWizard, phase: 'complete', isOpen: false }
     })),
-    
+
     closeChannelWizard: () => set({
         channelWizard: { ...DEFAULT_WIZARD_STATE }
     }),
-    
+
     setTilesProgress: (downloading, progress) => set((state) => ({
-        channelWizard: { 
-            ...state.channelWizard, 
-            tilesDownloading: downloading, 
-            tilesProgress: progress 
+        channelWizard: {
+            ...state.channelWizard,
+            tilesDownloading: downloading,
+            tilesProgress: progress
         }
     })),
-    
+
     resetStore: () => set({
         connectionState: 'disconnected',
         connectedDeviceId: null,
@@ -542,14 +628,22 @@ export const useAppStore = create<AppState>((set) => ({
         rainIntegration: null,
         compensationStatus: new Map(),
         autoCalcStatus: new Map(),
+        globalAutoCalcStatus: null,
+        soilMoistureConfig: new Map(),
+        globalSoilMoistureConfig: null,
         growingEnv: new Map(),
         schedules: new Map(),
+        customSoilConfigs: new Map(),
         // New states
         flowSensorData: null,
         taskQueue: null,
         statistics: new Map(),
         alarmStatus: null,
         diagnosticsData: null,
+        hydraulicStatus: null,
+        alarmHistory: [],
+        alarmPopupDismissed: false,
+        lastSeenAlarmTimestamp: 0,
         wateringHistory: [],
         rainHistoryHourly: [],
         rainHistoryDaily: [],

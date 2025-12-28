@@ -1,60 +1,156 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
+import { BleService } from '../../services/BleService';
+import { CalibrationData } from '../../types/firmware_structs';
 
 const MobileFlowCalibration: React.FC = () => {
   const history = useHistory();
-  const { zones } = useAppStore();
-  
+  const { zones, calibrationData } = useAppStore();
+  const bleService = BleService.getInstance();
+
   const [step, setStep] = useState<'intro' | 'running' | 'complete'>('intro');
   const [pulsesPerLiter, setPulsesPerLiter] = useState(450);
   const [testVolume, setTestVolume] = useState(10);
-  const [measuredPulses, setMeasuredPulses] = useState(0);
-  const [selectedZone, setSelectedZone] = useState(0);
+  const [selectedZone, setSelectedZone] = useState<number | null>(null);
   const [isRunning, setIsRunning] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [saveLoading, setSaveLoading] = useState(false);
+
+  // Sync state with firmware calibration feedback
+  useEffect(() => {
+    if (calibrationData) {
+      if (calibrationData.action === 1 || calibrationData.action === 2) {
+        // 1=Start, 2=In Progress
+        if (step !== 'running') setStep('running');
+        setIsRunning(true);
+      } else if (calibrationData.action === 0 && isRunning) {
+        // Stopped (externally or by us)
+        setIsRunning(false);
+        // We don't auto-advance to complete here because we need volume input first.
+        // User clicks "Stop" -> handleStop -> waits -> setStep('complete')
+      } else if (calibrationData.action === 3) {
+        // Calculated
+        if (step !== 'complete') setStep('complete');
+      }
+    }
+  }, [calibrationData, isRunning, step]);
 
   const handleStartCalibration = async () => {
-    setStep('running');
-    setIsRunning(true);
-    setMeasuredPulses(0);
-    
-    // Simulate calibration process
-    let elapsed = 0;
-    const interval = setInterval(() => {
-      elapsed += 1;
-      setProgress((elapsed / 30) * 100);
-      setMeasuredPulses(prev => prev + Math.floor(Math.random() * 20 + 10));
-      
-      if (elapsed >= 30) {
-        clearInterval(interval);
-        setIsRunning(false);
-        setStep('complete');
+    if (selectedZone === null) {
+      alert('Please select a zone first.');
+      return;
+    }
+    try {
+      // Ensure zone is selected/configured if needed? 
+      // Firmware doc says "START ... Resets pulse counter ... schedules progress work".
+      // But water needs to flow! app must open the valve?
+      // "Interactive flow sensor calibration... Hardware calibration is stored...".
+      // The doc doesn't explicitly say "OPEN VALVE". 
+      // Usually calibration implies running water. 
+      // Does 'START' open the valve? No. "START Begin measurement".
+      // So checking "Select a zone" implies we might need to open it.
+      // Or maybe the user manually opens it?
+      // "Running zone {selectedZone + 1}..." in mock UI implies we open it.
+      // I should probably fire a manual run command OR ask user to open valve.
+      // Implementation Plan: 
+      // 1. Select Zone
+      // 2. Start Calibration (Action 0x01)
+      // 3. Open Valve (Manual Run or Test) - Wait, if I open valve, `CurrentTask` changes.
+      // Let's assume we trigger a manual run on that zone concurrently.
+      // BLE Service has `runManualStation`? (Mock UIs used it?).
+      // I'll use `BleService.writeValveControl` or similar? 
+      // `writeValveControl` (Action 1 = Start, Action 0 = Stop).
+
+      // Let's Open Valve THEN Start Calibration? Or simultaneously?
+      // Pulse counting depends on flow.
+      await bleService.selectChannel(selectedZone);
+      await bleService.writeValveControl(selectedZone, 1, 600); // Run for 10 mins (safety)
+      await bleService.startFlowCalibration();
+
+      setStep('running');
+      setIsRunning(true);
+    } catch (e) {
+      console.error('Failed to start calibration:', e);
+      alert('Failed to start calibration.');
+    }
+  };
+
+  const handleStopCalibration = async () => {
+    try {
+      if (selectedZone !== null) {
+        await bleService.writeValveControl(selectedZone, 0, 0); // Stop Valve
       }
-    }, 1000);
+      await bleService.stopFlowCalibration();
+      setIsRunning(false);
+      setStep('complete');
+    } catch (e) {
+      console.error('Failed to stop calibration:', e);
+    }
   };
 
-  const handleSave = () => {
-    const newPulsesPerLiter = Math.round(measuredPulses / testVolume);
-    console.log('Saving flow calibration:', {
-      pulsesPerLiter: newPulsesPerLiter,
-      testVolume,
-      measuredPulses,
-    });
-    setPulsesPerLiter(newPulsesPerLiter);
-    history.goBack();
+  const handleCalculate = async () => {
+    try {
+      await bleService.calculateFlowCalibration(testVolume);
+      // Firmware will update calibrationData with new pulses_per_liter
+    } catch (e) {
+      console.error('Failed to calculate:', e);
+      alert('Failed to calculate calibration.');
+    }
   };
 
-  const handleManualSave = () => {
-    console.log('Saving manual calibration:', pulsesPerLiter);
-    history.goBack();
+  const handleSave = async () => {
+    setSaveLoading(true);
+    try {
+      // If we are in 'complete' step and logic was "Calc then Save":
+      // Verify we have a value.
+      // If we used wizard:
+      await handleCalculate();
+      // Wait for update?
+      await new Promise(r => setTimeout(r, 500));
+      await bleService.applyFlowCalibration();
+
+      history.goBack();
+    } catch (e) {
+      console.error('Failed to save flow calibration:', e);
+      alert('Failed to save configuration.');
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const handleManualSave = async () => {
+    setSaveLoading(true);
+    try {
+      console.log('Saving manual calibration:', pulsesPerLiter);
+      // To save manual value:
+      // We can't direct write pulses_per_liter easily if we don't cheat.
+      // But `writeSystemConfig` has `flow_calibration`.
+      // System Config is "flow_calibration" (global?).
+      // Yes, `SystemConfigData` has `flow_calibration`.
+      // So for manual entry, we use `writeSystemConfig`.
+      // NOTE: this overrides whatever `Calibration` service sees until next reset/read.
+      const { systemConfig } = useAppStore.getState();
+      if (systemConfig) {
+        await bleService.writeSystemConfigObject({
+          ...systemConfig,
+          flow_calibration: pulsesPerLiter
+        });
+        await bleService.readSystemConfig();
+      }
+      history.goBack();
+    } catch (e) {
+      console.error("Failed to save manual settings", e);
+      alert("Failed to save.");
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-mobile-bg-dark font-manrope pb-32">
       {/* Header */}
       <div className="sticky top-0 z-50 flex items-center bg-mobile-bg-dark/90 backdrop-blur-md p-4 justify-between">
-        <button 
+        <button
           onClick={() => history.goBack()}
           className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
         >
@@ -76,7 +172,7 @@ const MobileFlowCalibration: React.FC = () => {
             <div className="flex-1">
               <p className="text-mobile-text-muted text-sm">Current Calibration</p>
               <p className="text-white text-3xl font-bold">
-                {pulsesPerLiter}
+                {calibrationData?.pulses_per_liter ?? useAppStore.getState().systemConfig?.flow_calibration ?? 450}
                 <span className="text-lg text-mobile-text-muted ml-1">pulses/L</span>
               </p>
             </div>
@@ -88,7 +184,7 @@ const MobileFlowCalibration: React.FC = () => {
             {/* Wizard Steps */}
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-white px-1">Calibration Wizard</h3>
-              
+
               <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark overflow-hidden">
                 {[
                   { num: 1, title: 'Select a zone', desc: 'Choose a zone with known flow' },
@@ -119,20 +215,17 @@ const MobileFlowCalibration: React.FC = () => {
                   <button
                     key={zone.channel_id}
                     onClick={() => setSelectedZone(zone.channel_id)}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
-                      selectedZone === zone.channel_id
-                        ? 'bg-mobile-primary/10 border-mobile-primary'
-                        : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
-                    }`}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${selectedZone === zone.channel_id
+                      ? 'bg-mobile-primary/10 border-mobile-primary'
+                      : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
+                      }`}
                   >
-                    <span className={`material-symbols-outlined text-2xl ${
-                      selectedZone === zone.channel_id ? 'text-mobile-primary' : 'text-mobile-text-muted'
-                    }`}>
+                    <span className={`material-symbols-outlined text-2xl ${selectedZone === zone.channel_id ? 'text-mobile-primary' : 'text-mobile-text-muted'
+                      }`}>
                       water_drop
                     </span>
-                    <span className={`text-sm font-bold ${
-                      selectedZone === zone.channel_id ? 'text-white' : 'text-mobile-text-muted'
-                    }`}>
+                    <span className={`text-sm font-bold ${selectedZone === zone.channel_id ? 'text-white' : 'text-mobile-text-muted'
+                      }`}>
                       {zone.name}
                     </span>
                   </button>
@@ -143,7 +236,9 @@ const MobileFlowCalibration: React.FC = () => {
             {/* Start Button */}
             <button
               onClick={handleStartCalibration}
-              className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+              disabled={selectedZone === null || saveLoading}
+              className={`w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 ${(selectedZone === null || saveLoading) ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
             >
               <span className="material-symbols-outlined">play_arrow</span>
               Start Calibration
@@ -163,9 +258,10 @@ const MobileFlowCalibration: React.FC = () => {
               </div>
               <button
                 onClick={handleManualSave}
-                className="w-full h-12 bg-white/10 text-white font-bold rounded-xl active:scale-[0.98] transition-transform"
+                disabled={saveLoading}
+                className="w-full h-12 bg-white/10 text-white font-bold rounded-xl active:scale-[0.98] transition-transform disabled:opacity-50"
               >
-                Save Manual Value
+                {saveLoading ? 'Saving...' : 'Save Manual Value'}
               </button>
             </div>
           </>
@@ -173,50 +269,43 @@ const MobileFlowCalibration: React.FC = () => {
 
         {step === 'running' && (
           <div className="flex flex-col items-center justify-center py-12">
-            {/* Progress Ring */}
+            {/* Progress Ring (Indeterminate) */}
             <div className="relative size-48 mb-8">
-              <svg className="size-full -rotate-90 transform" viewBox="0 0 100 100">
-                <circle
-                  cx="50" cy="50" r="42"
-                  fill="transparent"
-                  stroke="#1a2e1d"
-                  strokeWidth="8"
-                />
-                <circle
-                  cx="50" cy="50" r="42"
-                  fill="transparent"
-                  stroke="#13ec37"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray="264"
-                  strokeDashoffset={264 * (1 - progress / 100)}
-                  className="transition-all duration-1000"
-                />
+              <svg className="animate-spin size-full" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="transparent" stroke="#1a2e1d" strokeWidth="8" />
+                <circle cx="50" cy="50" r="42" fill="transparent" stroke="#13ec37" strokeWidth="8"
+                  strokeDasharray="180" strokeDashoffset="90" strokeLinecap="round" />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-mobile-primary text-4xl font-bold">{Math.round(progress)}%</span>
-                <span className="text-mobile-text-muted text-sm">calibrating</span>
+                <span className="text-mobile-primary text-4xl font-bold">{calibrationData?.pulses ?? 0}</span>
+                <span className="text-mobile-text-muted text-sm">pulses</span>
               </div>
             </div>
 
             {/* Pulse Counter */}
             <div className="text-center mb-8">
-              <p className="text-mobile-text-muted text-sm mb-1">Pulses Counted</p>
-              <p className="text-white text-5xl font-bold tracking-tight">{measuredPulses}</p>
+              <p className="text-mobile-text-muted text-sm mb-1">Pulses Detected</p>
+              <p className="text-white text-5xl font-bold tracking-tight">{calibrationData?.pulses ?? 0}</p>
             </div>
 
             {/* Status */}
-            <div className="flex items-center gap-2 bg-mobile-primary/10 px-4 py-2 rounded-full">
+            <div className="flex items-center gap-2 bg-mobile-primary/10 px-4 py-2 rounded-full mb-8">
               <span className="relative flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-mobile-primary opacity-75" />
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-mobile-primary" />
               </span>
-              <span className="text-mobile-primary font-semibold">Running zone {selectedZone + 1}...</span>
+              <span className="text-mobile-primary font-semibold">
+                Running zone {(selectedZone !== null ? selectedZone + 1 : '?')}...
+              </span>
             </div>
 
-            <p className="text-mobile-text-muted text-sm text-center mt-8 max-w-xs">
-              Water is flowing. Collect the water in a measured container and note the exact volume.
-            </p>
+            <button
+              onClick={handleStopCalibration}
+              className="w-full h-14 bg-red-500/20 text-red-400 font-bold text-lg rounded-xl flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined">stop</span>
+              Stop & Measure Volume
+            </button>
           </div>
         )}
 
@@ -229,7 +318,7 @@ const MobileFlowCalibration: React.FC = () => {
               </div>
               <h3 className="text-white text-xl font-bold">Calibration Complete</h3>
               <p className="text-mobile-text-muted text-center mt-2">
-                Measured {measuredPulses} pulses
+                Collected {calibrationData?.pulses ?? 0} pulses
               </p>
             </div>
 
@@ -249,11 +338,17 @@ const MobileFlowCalibration: React.FC = () => {
               </div>
             </div>
 
+            <div className="flex justify-center">
+              <button onClick={handleCalculate} className="text-mobile-primary font-bold text-sm">
+                Recalculate Ratio
+              </button>
+            </div>
+
             {/* Result */}
             <div className="rounded-2xl bg-mobile-primary/10 border border-mobile-primary/30 p-5">
-              <p className="text-mobile-text-muted text-sm mb-1">New Calibration Value</p>
+              <p className="text-mobile-text-muted text-sm mb-1">Calculated Calibration Value</p>
               <p className="text-mobile-primary text-4xl font-bold">
-                {Math.round(measuredPulses / testVolume)}
+                {calibrationData?.pulses_per_liter ?? 0}
                 <span className="text-lg ml-2">pulses/L</span>
               </p>
             </div>
@@ -261,14 +356,16 @@ const MobileFlowCalibration: React.FC = () => {
             {/* Save Button */}
             <button
               onClick={handleSave}
+              disabled={saveLoading}
               className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined">save</span>
-              Save Calibration
+              {saveLoading ? 'Saving...' : 'Save Calibration'}
             </button>
 
             <button
               onClick={() => setStep('intro')}
+              disabled={saveLoading}
               className="w-full h-12 bg-white/10 text-white font-bold rounded-xl active:scale-[0.98] transition-transform"
             >
               Recalibrate

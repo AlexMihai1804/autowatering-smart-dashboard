@@ -57,6 +57,9 @@ ios/build/
 *.temp
 .cache/
 
+# Local scratch output
+errors.txt
+
 # GeoTiff test files
 *.tif
 *.tiff

@@ -59,15 +59,59 @@ export enum DataQuality {
     INVALID = 0x03
 }
 
+/**
+ * Alarm codes from firmware - matches BLE alarm characteristic documentation.
+ * These are the codes raised by watering_monitor.c and watering_tasks.c.
+ */
 export enum AlarmCode {
     NONE = 0x00,
-    FLOW_SENSOR_FAULT = 0x01,
-    VALVE_STUCK = 0x02,
-    COMMUNICATION_ERROR = 0x03,
-    LOW_BATTERY = 0x04,
-    SENSOR_OFFLINE = 0x05,
-    OVER_TEMPERATURE = 0x06,
-    LEAK_DETECTED = 0x07
+    NO_FLOW = 0x01,           // No flow detected when valve is open (after retries)
+    UNEXPECTED_FLOW = 0x02,   // Pulses detected with all valves closed
+    FREEZE_LOCKOUT = 0x03,    // Freeze safety triggered (temp below threshold)
+    HIGH_FLOW = 0x04,         // Flow exceeds learned high limit (burst/leak)
+    LOW_FLOW = 0x05,          // Flow below learned limit (warning only)
+    MAINLINE_LEAK = 0x06,     // Static test detected pulses with zones off
+    CHANNEL_LOCK = 0x07,      // Channel locked after persistent anomalies
+    GLOBAL_LOCK = 0x08        // Global lock due to leak/unexpected flow
+}
+
+/**
+ * Alarm severity classification for UI display
+ */
+export enum AlarmSeverity {
+    INFO = 'info',
+    WARNING = 'warning',
+    DANGER = 'danger',
+    CRITICAL = 'critical'
+}
+
+/**
+ * Hydraulic lock level from H.H.M. (Hydraulic Health Monitoring)
+ */
+export enum HydraulicLockLevel {
+    NONE = 0,     // No lock - normal operation
+    SOFT = 1,     // Soft lock - auto-retry scheduled
+    HARD = 2      // Hard lock - manual intervention required
+}
+
+/**
+ * Hydraulic lock reason from H.H.M.
+ */
+export enum HydraulicLockReason {
+    NONE = 0,
+    HIGH_FLOW = 1,      // Flow exceeded learned high limit
+    NO_FLOW = 2,        // No flow detected during watering
+    UNEXPECTED = 3,     // Flow detected with all valves closed
+    MAINLINE_LEAK = 4   // Static test detected leak
+}
+
+/**
+ * Hydraulic profile type - learned or manually set
+ */
+export enum HydraulicProfileType {
+    AUTO = 0,    // Auto-learning mode
+    SPRAY = 1,   // Manual spray profile
+    DRIP = 2     // Manual drip profile
 }
 
 export enum CalibrationAction {
@@ -246,6 +290,77 @@ export interface AlarmData {
     alarm_code: number;         /* uint8: alarm identifier (0=none) */
     alarm_data: number;         /* uint16: extra context */
     timestamp: number;          /* uint32: UTC seconds */
+}
+
+/**
+ * Alarm history entry for tracking past alarms
+ */
+export interface AlarmHistoryEntry {
+    alarm_code: AlarmCode;
+    alarm_data: number;
+    timestamp: number;          /* UTC seconds when raised */
+    cleared_at?: number;        /* UTC seconds when cleared (undefined if still active) */
+    channel_id?: number;        /* Extracted channel ID if applicable */
+}
+
+// ============================================================================
+// Auto Calculation Status (Characteristic #15) - 64 bytes
+// ============================================================================
+export interface AutoCalcStatusData {
+    channel_id: number;          /* uint8 */
+    calculation_active: number;  /* uint8 */
+    irrigation_needed: number;   /* uint8 */
+    current_deficit_mm: number;  /* float */
+    et0_mm_day: number;          /* float */
+    crop_coefficient: number;    /* float */
+    net_irrigation_mm: number;   /* float */
+    gross_irrigation_mm: number; /* float */
+    calculated_volume_l: number; /* float */
+    last_calculation_time: number; /* uint32 */
+    next_irrigation_time: number;  /* uint32 */
+    days_after_planting: number;   /* uint16 */
+    phenological_stage: number;    /* uint8 */
+    quality_mode: number;          /* uint8 */
+    volume_limited: number;        /* uint8 */
+    auto_mode: number;            /* uint8 */
+    raw_mm: number;               /* float */
+    effective_rain_mm: number;    /* float */
+    calculation_error: number;    /* uint8 */
+    etc_mm_day: number;           /* float */
+    volume_liters: number;        /* float (legacy alias) */
+    cycle_count: number;          /* uint8 */
+    cycle_duration_min: number;   /* uint8 */
+    reserved?: number[];          /* uint8[4] */
+}
+
+// ============================================================================
+// Hydraulic Status Data (Characteristic #29 - UUID: de22) - 48 bytes
+// ============================================================================
+export interface HydraulicStatusData {
+    channel_id: number;             /* uint8: channel 0-7 */
+    profile_type: HydraulicProfileType; /* uint8: 0=auto, 1=spray, 2=drip */
+    lock_level: HydraulicLockLevel; /* uint8: 0=none, 1=soft, 2=hard */
+    lock_reason: HydraulicLockReason; /* uint8: 0=none, 1=high flow, 2=no flow, 3=unexpected, 4=mainline leak */
+    nominal_flow_ml_min: number;    /* uint32: learned nominal flow (ml/min) */
+    ramp_up_time_sec: number;       /* uint16: learned ramp-up time (seconds) */
+    tolerance_high_percent: number; /* uint8: high flow tolerance percentage */
+    tolerance_low_percent: number;  /* uint8: low flow tolerance percentage */
+    is_calibrated: boolean;         /* uint8: 1 if stable runs met */
+    monitoring_enabled: boolean;    /* uint8: 1 if monitoring enabled */
+    learning_runs: number;          /* uint8: total learning runs */
+    stable_runs: number;            /* uint8: stable learning runs */
+    estimated: boolean;             /* uint8: 1 if nominal flow is estimated */
+    manual_override_active: boolean; /* uint8: 1 if manual override active */
+    lock_at_epoch: number;          /* uint32: channel lock timestamp (UTC epoch) */
+    retry_after_epoch: number;      /* uint32: channel retry timestamp (UTC epoch) */
+    no_flow_runs: number;           /* uint8: persistent NO_FLOW count */
+    high_flow_runs: number;         /* uint8: persistent HIGH_FLOW count */
+    unexpected_flow_runs: number;   /* uint8: persistent UNEXPECTED_FLOW count */
+    last_anomaly_epoch: number;     /* uint32: last anomaly timestamp (UTC epoch) */
+    global_lock_level: HydraulicLockLevel; /* uint8: global lock level */
+    global_lock_reason: HydraulicLockReason; /* uint8: global lock reason */
+    global_lock_at_epoch: number;   /* uint32: global lock timestamp (UTC epoch) */
+    global_retry_after_epoch: number; /* uint32: global retry timestamp (UTC epoch) */
 }
 
 // ============================================================================
@@ -591,10 +706,10 @@ export function isChannelConfigComplete(extendedFlags: bigint, channelIndex: num
  */
 export function isChannelFao56Complete(channelFlags: bigint, channelIndex: number): boolean {
     return hasChannelFlag(channelFlags, channelIndex, CHANNEL_FLAG.PLANT_TYPE) &&
-           hasChannelFlag(channelFlags, channelIndex, CHANNEL_FLAG.SOIL_TYPE) &&
-           hasChannelFlag(channelFlags, channelIndex, CHANNEL_FLAG.IRRIGATION_METHOD) &&
-           hasChannelFlag(channelFlags, channelIndex, CHANNEL_FLAG.COVERAGE) &&
-           hasChannelFlag(channelFlags, channelIndex, CHANNEL_FLAG.SUN_EXPOSURE);
+        hasChannelFlag(channelFlags, channelIndex, CHANNEL_FLAG.SOIL_TYPE) &&
+        hasChannelFlag(channelFlags, channelIndex, CHANNEL_FLAG.IRRIGATION_METHOD) &&
+        hasChannelFlag(channelFlags, channelIndex, CHANNEL_FLAG.COVERAGE) &&
+        hasChannelFlag(channelFlags, channelIndex, CHANNEL_FLAG.SUN_EXPOSURE);
 }
 
 /**
@@ -602,7 +717,7 @@ export function isChannelFao56Complete(channelFlags: bigint, channelIndex: numbe
  */
 export function isChannelBasicComplete(channelFlags: bigint, channelIndex: number): boolean {
     return hasChannelFlag(channelFlags, channelIndex, CHANNEL_FLAG.NAME) &&
-           hasChannelFlag(channelFlags, channelIndex, CHANNEL_FLAG.ENABLED);
+        hasChannelFlag(channelFlags, channelIndex, CHANNEL_FLAG.ENABLED);
 }
 
 /**
@@ -611,7 +726,7 @@ export function isChannelBasicComplete(channelFlags: bigint, channelIndex: numbe
  */
 export function hasAnyConfiguredChannel(channelFlags: bigint): boolean {
     const REQUIRED_FLAGS = 0x0F; // bits 0-3: plant + soil + irrigation + coverage
-    
+
     for (let ch = 0; ch < 8; ch++) {
         const flags = Number((channelFlags >> BigInt(ch * 8)) & BigInt(0xFF));
         if ((flags & REQUIRED_FLAGS) === REQUIRED_FLAGS) {
@@ -627,8 +742,8 @@ export function hasAnyConfiguredChannel(channelFlags: bigint): boolean {
  */
 export function isInitialSetupComplete(systemFlags: number, channelFlags: bigint): boolean {
     return hasSystemFlag(systemFlags, SYSTEM_FLAG.RTC) &&
-           hasSystemFlag(systemFlags, SYSTEM_FLAG.TIMEZONE) &&
-           hasAnyConfiguredChannel(channelFlags);
+        hasSystemFlag(systemFlags, SYSTEM_FLAG.TIMEZONE) &&
+        hasAnyConfiguredChannel(channelFlags);
 }
 
 export interface OnboardingStatusData {
@@ -723,6 +838,13 @@ export interface SystemConfigData {
     };
     last_config_update: number;      /* uint32 - Unix UTC seconds, read only */
     last_sensor_reading: number;     /* uint32 - Unix UTC seconds, read only */
+}
+
+export interface CalibrationData {
+    action: number; // 0=Stop, 1=Start, 2=In Progress, 3=Calculated, 4=Apply, 5=Reset
+    pulses: number;
+    volume_ml: number;
+    pulses_per_liter: number;
 }
 
 export interface ScheduleConfigData {
@@ -845,31 +967,6 @@ export interface CompensationStatusData {
     any_compensation_active: boolean;/* uint8 */
 }
 
-export interface AutoCalcStatusData {
-    channel_id: number;              /* uint8 */
-    calculation_active: boolean;     /* uint8 */
-    irrigation_needed: boolean;      /* uint8 */
-    current_deficit_mm: number;      /* float */
-    et0_mm_day: number;              /* float */
-    crop_coefficient: number;        /* float */
-    net_irrigation_mm: number;       /* float */
-    gross_irrigation_mm: number;     /* float */
-    calculated_volume_l: number;     /* float */
-    last_calculation_time: number;   /* uint32 */
-    next_irrigation_time: number;    /* uint32 */
-    days_after_planting: number;     /* uint16 */
-    phenological_stage: number;      /* uint8 */
-    quality_mode: number;            /* uint8 */
-    volume_limited: boolean;         /* uint8 */
-    auto_mode: number;               /* uint8 */
-    raw_mm: number;                  /* float */
-    effective_rain_mm: number;       /* float */
-    calculation_error: boolean;      /* uint8 */
-    etc_mm_day: number;              /* float */
-    volume_liters: number;           /* float */
-    cycle_count: number;             /* uint8 */
-    cycle_duration_min: number;      /* uint8 */
-}
 
 /**
  * Per-channel Rain and Temperature Compensation Configuration (44 bytes)
@@ -970,3 +1067,182 @@ export const CUSTOM_SOIL_STATUS = {
     INVALID_PARAM: -22
 } as const;
 
+
+/**
+ * Soil Moisture Configuration Data (8 bytes)
+ *
+ * Part of Custom Configuration Service (UUID: 12345678-1234-5678-9abc-def123456780)
+ * Characteristic UUID: 12345678-1234-5678-9abc-def123456784
+ *
+ * Configures the antecedent soil moisture estimate used by FAO-56 effective precipitation/runoff.
+ */
+export interface SoilMoistureConfigData {
+    channel_id: number;              /* uint8  @ 0 - 0..7 per-channel, 0xFF global */
+    operation: number;               /* uint8  @ 1 - 0=read, 1=set */
+    enabled: boolean;                /* uint8  @ 2 - override enable */
+    moisture_pct: number;            /* uint8  @ 3 - 0..100 */
+    status: number;                  /* uint8  @ 4 - watering_error_t (0=success) */
+    has_data: boolean;               /* uint8  @ 5 - 0=no NVS record, 1=value present */
+    /* reserved[2] @ 6-7 - must be 0 */
+}
+
+export const SOIL_MOISTURE_OPERATIONS = {
+    READ: 0,
+    SET: 1
+} as const;
+
+export const SOIL_MOISTURE_STATUS = {
+    SUCCESS: 0
+} as const;
+
+
+// ============================================================================
+// Alarm Helper Functions
+// ============================================================================
+
+/**
+ * Get the severity level of an alarm for UI display prioritization
+ */
+export function getAlarmSeverity(code: AlarmCode): AlarmSeverity {
+    switch (code) {
+        case AlarmCode.NONE:
+            return AlarmSeverity.INFO;
+        case AlarmCode.LOW_FLOW:
+            return AlarmSeverity.WARNING;
+        case AlarmCode.FREEZE_LOCKOUT:
+        case AlarmCode.NO_FLOW:
+        case AlarmCode.CHANNEL_LOCK:
+            return AlarmSeverity.DANGER;
+        case AlarmCode.HIGH_FLOW:
+        case AlarmCode.UNEXPECTED_FLOW:
+        case AlarmCode.MAINLINE_LEAK:
+        case AlarmCode.GLOBAL_LOCK:
+            return AlarmSeverity.CRITICAL;
+        default:
+            return AlarmSeverity.WARNING;
+    }
+}
+
+/**
+ * Get human-readable title for an alarm code
+ */
+export function getAlarmTitle(code: AlarmCode): string {
+    switch (code) {
+        case AlarmCode.NONE:
+            return 'No Alarm';
+        case AlarmCode.NO_FLOW:
+            return 'No Water Flow';
+        case AlarmCode.UNEXPECTED_FLOW:
+            return 'Unexpected Flow Detected';
+        case AlarmCode.FREEZE_LOCKOUT:
+            return 'Freeze Protection Active';
+        case AlarmCode.HIGH_FLOW:
+            return 'High Flow Alert';
+        case AlarmCode.LOW_FLOW:
+            return 'Low Flow Warning';
+        case AlarmCode.MAINLINE_LEAK:
+            return 'Mainline Leak Detected';
+        case AlarmCode.CHANNEL_LOCK:
+            return 'Zone Locked';
+        case AlarmCode.GLOBAL_LOCK:
+            return 'System Locked';
+        default:
+            return `Unknown Alarm (${code})`;
+    }
+}
+
+/**
+ * Get human-readable description for an alarm code with optional channel info
+ */
+export function getAlarmDescription(code: AlarmCode, channelId?: number, alarmData?: number): string {
+    const zoneText = channelId !== undefined ? ` Zone ${channelId + 1}` : '';
+
+    switch (code) {
+        case AlarmCode.NONE:
+            return 'System operating normally.';
+        case AlarmCode.NO_FLOW:
+            return `No water flow detected${zoneText ? ' in' + zoneText : ''} during watering. Check water supply and connections.`;
+        case AlarmCode.UNEXPECTED_FLOW:
+            return `Water flow detected while all valves are closed (${alarmData || 0} pulses). Possible leak or stuck valve.`;
+        case AlarmCode.FREEZE_LOCKOUT:
+            const tempText = alarmData === 0xFFFF ? 'stale sensor data' :
+                alarmData ? `${(alarmData / 10).toFixed(1)}°C` : 'low temperature';
+            return `Watering suspended due to freeze risk (${tempText}). Will resume when safe.`;
+        case AlarmCode.HIGH_FLOW:
+            return `Flow rate exceeded safe limits${zoneText ? ' in' + zoneText : ''}. Possible burst pipe or leak.`;
+        case AlarmCode.LOW_FLOW:
+            return `Flow rate below expected${zoneText ? ' in' + zoneText : ''}. Check for blockages or low pressure.`;
+        case AlarmCode.MAINLINE_LEAK:
+            return `Static test detected flow (${alarmData || 0} pulses) with all zones off. Mainline leak suspected.`;
+        case AlarmCode.CHANNEL_LOCK:
+            return `${zoneText ? zoneText + ' has been' : 'Zone'} locked due to repeated anomalies. Manual unlock required.`;
+        case AlarmCode.GLOBAL_LOCK:
+            return 'System locked due to critical hydraulic issue. All watering suspended until cleared.';
+        default:
+            return 'Unrecognized alarm. Contact support if issue persists.';
+    }
+}
+
+/**
+ * Extract channel ID from alarm_data field based on alarm code.
+ * Returns undefined if the alarm doesn't carry channel info.
+ */
+export function getAffectedChannelFromAlarmData(code: AlarmCode, alarmData: number): number | undefined {
+    switch (code) {
+        case AlarmCode.HIGH_FLOW:
+        case AlarmCode.LOW_FLOW:
+        case AlarmCode.CHANNEL_LOCK:
+        case AlarmCode.GLOBAL_LOCK:
+            // These alarms store channel_id in alarm_data
+            return alarmData >= 0 && alarmData <= 7 ? alarmData : undefined;
+        case AlarmCode.NO_FLOW:
+            // NO_FLOW stores retry count in alarm_data, not channel - channel comes from context
+            return undefined;
+        default:
+            return undefined;
+    }
+}
+
+/**
+ * Check if an alarm requires immediate attention (popup)
+ */
+export function isAlarmCritical(code: AlarmCode): boolean {
+    const severity = getAlarmSeverity(code);
+    return severity === AlarmSeverity.CRITICAL || severity === AlarmSeverity.DANGER;
+}
+
+/**
+ * Get the lock reason description
+ */
+export function getLockReasonDescription(reason: HydraulicLockReason): string {
+    switch (reason) {
+        case HydraulicLockReason.NONE:
+            return 'None';
+        case HydraulicLockReason.HIGH_FLOW:
+            return 'High flow detected';
+        case HydraulicLockReason.NO_FLOW:
+            return 'No flow detected';
+        case HydraulicLockReason.UNEXPECTED:
+            return 'Unexpected flow';
+        case HydraulicLockReason.MAINLINE_LEAK:
+            return 'Mainline leak';
+        default:
+            return 'Unknown';
+    }
+}
+
+// ============================================================================
+// Interval Mode Configuration (Characteristic #32) - 16 bytes
+// UUID: 12345678-1234-5678-9abc-def123456785
+// Controls Cycle & Soak ON/OFF timing durations per-channel
+// ============================================================================
+export interface IntervalModeConfigData {
+    channel_id: number;       // 0-7
+    enabled: boolean;         // 0=disabled, 1=enabled
+    watering_minutes: number; // 0-60, cycle duration
+    watering_seconds: number; // 0-59, additional seconds
+    pause_minutes: number;    // 0-60, soak duration
+    pause_seconds: number;    // 0-59, additional seconds
+    configured: boolean;      // Read-only, runtime gate
+    last_update: number;      // uint32 timestamp
+}
