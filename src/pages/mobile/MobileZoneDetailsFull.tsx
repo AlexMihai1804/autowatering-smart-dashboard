@@ -73,6 +73,11 @@ const MobileZoneDetailsFull: React.FC = () => {
   const [editSheet, setEditSheet] = useState<EditSheetType>(null);
   const [saving, setSaving] = useState(false);
 
+  // "Press back again to exit" confirmation state
+  const [showExitToast, setShowExitToast] = useState(false);
+  const lastBackPressRef = useRef<number>(0);
+
+
   // Tab selection that maintains history for back navigation.
   // Use a functional update so rapid taps can't suffer from stale closures.
   const selectTab = useCallback((tab: TabType) => {
@@ -116,14 +121,61 @@ const MobileZoneDetailsFull: React.FC = () => {
 
   const goBackInTabs = useCallback((): boolean => {
     const nav = tabNavRef.current;
-    if (nav.index <= 0) {
-      return false;
+    const now = Date.now();
+
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.log('[ZoneDetails] goBackInTabs called', {
+        stack: [...nav.stack],
+        index: nav.index,
+        canGoBack: nav.index > 0
+      });
     }
-    nav.index -= 1;
-    const previousTab = nav.stack[nav.index] ?? 'overview';
-    setActiveTab(previousTab);
-    return true;
+
+    // If we can go back in tabs, do it
+    if (nav.index > 0) {
+      nav.index -= 1;
+      const previousTab = nav.stack[nav.index] ?? 'overview';
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.log('[ZoneDetails] going to previous tab:', previousTab);
+      }
+      setActiveTab(previousTab);
+      setShowExitToast(false);
+      lastBackPressRef.current = 0;
+      return true;
+    }
+
+    // We're on the first tab - check for double-back to exit
+    const timeSinceLastBack = now - lastBackPressRef.current;
+    if (timeSinceLastBack < 2000 && lastBackPressRef.current > 0) {
+      // Second press within 2 seconds - allow exit
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.log('[ZoneDetails] double-back detected, allowing exit');
+      }
+      setShowExitToast(false);
+      lastBackPressRef.current = 0;
+      return false; // Let the navigation handler take over
+    }
+
+    // First press on first tab - show toast
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.log('[ZoneDetails] showing exit toast');
+    }
+    lastBackPressRef.current = now;
+    setShowExitToast(true);
+
+    // Auto-hide toast after 2 seconds
+    setTimeout(() => {
+      setShowExitToast(false);
+    }, 2000);
+
+    return true; // Intercept back to show toast
   }, []);
+
+
 
   const handleBack = useCallback(() => {
     if (goBackInTabs()) return;
@@ -3421,7 +3473,18 @@ const MobileZoneDetailsFull: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Exit confirmation toast */}
+      {showExitToast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-mobile-surface-dark border border-white/10 text-white px-6 py-3 rounded-full shadow-xl z-50 animate-fade-in">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-mobile-primary">arrow_back</span>
+            <span className="font-medium">Apasă din nou pentru a ieși</span>
+          </div>
+        </div>
+      )}
     </div>
+
   );
 };
 

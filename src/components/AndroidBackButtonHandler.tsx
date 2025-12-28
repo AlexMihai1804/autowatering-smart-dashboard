@@ -3,42 +3,19 @@ import { useHistory, useLocation } from 'react-router-dom';
 import { Capacitor, PluginListenerHandle } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { runBackInterceptors } from '../lib/backInterceptors';
+import { navigationStack } from '../lib/navigationStack';
 
 const ROOT_EXIT_PATHS = new Set<string>(['/', '/welcome', '/dashboard']);
-
-function getFallbackBackPath(pathname: string): string | null {
-  // Device sub-pages should go back to device settings list.
-  if (pathname.startsWith('/device/') && pathname !== '/device') return '/device';
-
-  // App sub-pages should go back to settings.
-  if (pathname.startsWith('/app-settings/') && pathname !== '/app-settings') return '/app-settings';
-
-  // Zones details/config pages should go back to zones list or zone detail.
-  if (pathname.startsWith('/zones/')) {
-    const match = pathname.match(/^\/zones\/([^/]+)(?:\/(.*))?$/);
-    const channelId = match?.[1];
-    const rest = match?.[2];
-    if (channelId && rest) return `/zones/${channelId}`;
-    return '/zones';
-  }
-
-  // Welcome flow pages should go back to welcome.
-  if (pathname === '/scan' || pathname === '/permissions' || pathname === '/onboarding' || pathname === '/connection-success') {
-    return '/welcome';
-  }
-
-  // Default safe landing.
-  if (pathname !== '/dashboard') return '/dashboard';
-  return null;
-}
 
 export default function AndroidBackButtonHandler(): null {
   const history = useHistory();
   const location = useLocation();
   const currentPathRef = useRef(location.pathname);
 
+  // Track route changes in the navigation stack
   useEffect(() => {
     currentPathRef.current = location.pathname;
+    navigationStack.push(location.pathname);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -53,46 +30,67 @@ export default function AndroidBackButtonHandler(): null {
     let handle: PluginListenerHandle | null = null;
 
     (async () => {
-      handle = await CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      handle = await CapacitorApp.addListener('backButton', () => {
         const path = currentPathRef.current;
-        
+
         if (import.meta.env.DEV) {
           // eslint-disable-next-line no-console
-          console.log('[back] pressed', { canGoBack, path });
+          console.log('[back] pressed', { path, stackSize: navigationStack.size() });
         }
 
         // PRIORITY 0: Let the current page intercept back (e.g. go to previous tab).
         // This must be done here (single listener) because Capacitor calls ALL listeners.
         if (runBackInterceptors(path)) {
-          // Some stacks (notably Ionic/WebView integrations) may still perform a route back
-          // via another back listener even if we "handle" the event here.
-          // Push a no-op entry so any subsequent goBack() stays on the same route.
+          if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.log('[back] intercepted by page');
+          }
+          // CRITICAL: Push a no-op history entry to prevent other Ionic/Capacitor
+          // back listeners from also performing navigation. Without this, the
+          // IonRouterOutlet's internal back handling may still trigger.
           history.push(path);
           return;
         }
 
-        // PRIORITY 1: Use browser/router history if available
-        const browserCanGoBack = typeof window !== 'undefined' && window.history && window.history.length > 1;
-
-        if (canGoBack || browserCanGoBack) {
-          history.goBack();
-          return;
-        }
-
-        // PRIORITY 2: Use fallback path mapping
-        const fallback = getFallbackBackPath(path);
-        if (fallback && fallback !== path) {
-          history.replace(fallback);
-          return;
-        }
-
-        // PRIORITY 3: Exit app only on root paths
+        // PRIORITY 1: Exit app on root paths (dashboard, welcome, etc.)
+        // This must come BEFORE navigation stack to prevent going back to welcome from dashboard
         if (ROOT_EXIT_PATHS.has(path)) {
+          if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.log('[back] on root path, exiting app');
+          }
           CapacitorApp.exitApp();
           return;
         }
 
+        // PRIORITY 2: Use our explicit navigation stack
+        const previousPath = navigationStack.pop();
+        // Skip navigation to root/transitional paths - use parent path instead
+        if (previousPath && previousPath !== path && !ROOT_EXIT_PATHS.has(previousPath)) {
+          if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.log('[back] using nav stack →', previousPath);
+          }
+          history.replace(previousPath);
+          return;
+        }
+
+        // PRIORITY 3: Use logical parent path mapping as fallback
+        const parentPath = navigationStack.getParentPath(path);
+        if (parentPath && parentPath !== path) {
+          if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.log('[back] using parent path →', parentPath);
+          }
+          history.replace(parentPath);
+          return;
+        }
+
         // Final fallback
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.log('[back] final fallback → /dashboard');
+        }
         history.replace('/dashboard');
       });
 
