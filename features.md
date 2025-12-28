@@ -1,6 +1,10 @@
 # AutoWatering App - Implemented Features (cod verificat)
 ---
 
+## Verificare cod (2025-12-28 17:24)
+- `npm run test:run`: 1 test esuat (`src/test/BleService.test.ts` - auto-calc NOTIFY next_irrigation_time nu actualizeaza store-ul).
+- `npm run build`: OK (vite warnings: CJS API deprecated + chunk size/dynamic import; module type warning pentru `postcss.config.js`).
+
 ## Future (Roadmap)
 
 Roadmap-ul comun (firmware + app) este tinut in GitHub Project:
@@ -31,25 +35,31 @@ Scop: pentru fiecare zona majora din aplicatie, lista de mai jos indica ce face 
 - Zone config (desktop): `src/components/ZoneConfigModal.tsx`
 - Mobile connection/onboarding flow: `src/pages/mobile/MobileWelcome.tsx`, `src/pages/mobile/MobilePermissions.tsx`, `src/pages/mobile/MobileDeviceScan.tsx`, `src/pages/mobile/MobileConnectionSuccess.tsx`, `src/pages/mobile/MobileNoDevices.tsx`, `src/pages/mobile/MobileManageDevices.tsx`, `src/pages/mobile/MobileOnboardingWizard.tsx`
 - Mobile zone flows: `src/pages/mobile/MobileZones.tsx`, `src/pages/mobile/MobileZoneAddWizard.tsx`, `src/pages/mobile/MobileZoneDetailsFull.tsx`, `src/pages/mobile/MobileZoneConfig.tsx`
+- Mobile device subpages: `src/pages/mobile/MobileDeviceInfo.tsx`, `src/pages/mobile/MobileMasterValve.tsx`, `src/pages/mobile/MobilePowerMode.tsx`, `src/pages/mobile/MobileFlowCalibration.tsx`, `src/pages/mobile/MobileDeviceReset.tsx`, `src/pages/mobile/MobileTimeLocation.tsx`
+- Mobile app settings/help/alerts/weather: `src/pages/mobile/MobileAppSettings.tsx`, `src/pages/mobile/MobileHelpAbout.tsx`, `src/pages/mobile/MobileNotifications.tsx`, `src/pages/mobile/MobileAlarmHistory.tsx`, `src/pages/mobile/MobileWeatherDetails.tsx`
 - Desktop pages: `src/pages/Dashboard.tsx`, `src/pages/Zones.tsx`, `src/pages/HistoryDashboard.tsx`, `src/pages/Analytics.tsx`, `src/pages/Settings.tsx`
-- Mobile pages: `src/pages/mobile/MobileDashboard.tsx`, `src/pages/mobile/MobileHistory.tsx`, `src/pages/mobile/MobileSettings.tsx`, `src/pages/mobile/MobileDeviceSettings.tsx`
+- Mobile pages (core): `src/pages/mobile/MobileDashboard.tsx`, `src/pages/mobile/MobileHistory.tsx`, `src/pages/mobile/MobileSettings.tsx`, `src/pages/mobile/MobileDeviceSettings.tsx`, `src/pages/mobile/MobileWeatherDetails.tsx`, `src/pages/mobile/MobileNotifications.tsx`, `src/pages/mobile/MobileAlarmHistory.tsx`
+- Alarm UX: `src/components/mobile/AlarmPopup.tsx`, `src/components/mobile/MobileAlarmCard.tsx`
+- Hydraulic/soil moisture UI: `src/components/HydraulicStatusWidget.tsx`, `src/components/HydraulicDetailsCard.tsx`, `src/components/SoilTankWidget.tsx`, `src/utils/soilMoisture.ts`
+- Eco/rain badge: `src/components/EcoBadge.tsx`
 - History + cache: `src/services/HistoryService.ts`, `src/components/*HistoryCard.tsx`
 - Calibration/Reset: `src/services/CalibrationService.ts`, `src/components/CalibrationWizard.tsx`, `src/services/ResetService.ts`, `src/components/ResetModal.tsx`
 - Settings/preferences: `src/hooks/useSettings.ts`, `src/hooks/useTheme.ts`, `src/hooks/useKnownDevices.ts`, `src/i18n/*`
+- Android back handling: `src/components/AndroidBackButtonHandler.tsx`, `src/lib/backInterceptors.ts`
 - Dev tooling: `src/utils/consoleForwarder.ts`, `scripts/run_android_live_reload.py`
 
 ---
 ## Conectivitate & sincronizare BLE
 - Scanare si selectare device via `BleClient.requestDevice`, auto-connect dupa selectie.
 - Conectare cu priority HIGH pe Android, bonding (Android) + fallback de pairing (read initial + retry).
-- Subscrieri notificari pentru system status, valve control, calibration, reset, current task, flow sensor, task queue, statistics, alarms, diagnostics, onboarding status, env, rain, system config, rain config, timezone config, auto-calc, compensation status, channel compensation config (daca FW suporta), history (watering/rain/env).
+- Subscrieri notificari pentru system status, valve control, calibration, reset, current task, flow sensor, task queue, statistics, alarms, diagnostics, onboarding status, env, rain, system config, rain config, timezone config, rain integration, soil moisture config, auto-calc, compensation status, hydraulic status, channel compensation config (daca FW suporta), history (watering/rain/env).
 - Fragmentare pentru WRITE-uri si reassembly pentru notificari cu unified header (history), cu pacing intre fragmente.
 - Initial sync secvential cu delay-uri; foloseste Bulk Sync Snapshot (char #28) cand este disponibil pentru a scurta lectura.
 - CRUD pentru Custom Soil in custom config service (read/create/update/delete).
 - Principiu "read/notify as truth": store-ul se actualizeaza doar pe READ/NOTIFY, nu dupa WRITE.
 
 ## Stare globala & baze de date
-- Store Zustand cu state pentru zones, RTC, calibrare/reset, current task, onboarding flags, env/rain data, system/rain/timezone configs, rain integration, compensation status, auto-calc status, schedules, growing env, statistics, alarms, diagnostics, task queue, history caches.
+- Store Zustand cu state pentru zones, RTC, calibrare/reset, current task, onboarding flags, env/rain data, system/rain/timezone configs, rain integration, compensation status, auto-calc status, soil moisture config, hydraulic status, alarm history, schedules, growing env, statistics, alarms, diagnostics, task queue, history caches.
 - DB locale incarcate din `/assets` prin `DatabaseService`: 223 plante, 15 soluri, 15 metode de irigare; search + filtre; sortare metode dupa popularitate.
 
 ## Onboarding & configurare sistem
@@ -84,6 +94,7 @@ Scop: pentru fiecare zona majora din aplicatie, lista de mai jos indica ce face 
 ## Senzori & telemetrie live
 - Environmental data (temp/humidity/pressure), rain gauge, flow sensor, system status.
 - Alarme si diagnostic live din caracteristici dedicate.
+- Hydraulic Health Monitoring (lock level/reason + retry) si soil moisture config (global/per-channel).
 - Bulk Sync Snapshot folosit pentru status rapid (cand FW suporta).
 
 ## Istoric, analitice & statistici
@@ -94,17 +105,20 @@ Scop: pentru fiecare zona majora din aplicatie, lista de mai jos indica ce face 
 - StatisticsData per canal (char #8) afisat in MobileZoneDetailsFull.
 
 ## Alerte & diagnostic
-- AlarmCard: cod alarma, timestamp, clear/ack via BLE.
+- AlarmCard (desktop) + MobileAlarmCard/AlarmPopup (mobile): cod alarma, timestamp, clear via BLE.
+- MobileAlarmHistory: lista alarme + status activ din store.
 - DiagnosticsCard: uptime, error count, last error, valve bitmask, battery/mains, flow, task queue; refresh manual.
 
 ## Calibrare & reset
 - CalibrationWizard + CalibrationService (start/finish/apply/reset, validari, error mapping).
 - ResetModal + ResetService (confirmare in 2 pasi, toate opcode-urile).
-- Mobile Flow Calibration / Device Reset sunt UI-only (vezi Gap-uri).
+- Mobile Device Reset foloseste BLE `performReset` (cu redirect la welcome pentru factory reset).
+- Mobile Flow Calibration: UI wizard; start/stop/calc/apply sunt stubs in BleService, manual override scrie `flow_calibration`.
 
 ## Setari & utilitare
 - Settings (desktop): RTC, master valve, rain sensor config, CalibrationWizard, ResetModal.
-- Mobile Settings: theme (useTheme), units/locale (useSettings), language (i18n), device switch/rename (useKnownDevices).
+- Mobile Settings/App Settings: theme (useTheme), units/locale (useSettings), language (i18n), device switch/rename (useKnownDevices).
+- Mobile Device subpages: Time & Location (sync time + timezone + locatie), Master Valve, Power Mode, Device Reset.
 - LocationPicker: GPS (Capacitor + browser fallback), Leaflet map, input manual.
 - QRCodeSharing: export pe canvas + clipboard/share fallback (placeholder).
 - Dev: console forwarder in DEV (`src/utils/consoleForwarder.ts`), script live reload Android (`scripts/run_android_live_reload.py`).
@@ -118,13 +132,19 @@ Scop: pentru fiecare zona majora din aplicatie, lista de mai jos indica ce face 
 - FAO-56 auto/eco, max volume limit, cycle & soak, auto-calc status live.
 - Master valve delays, flow/rain/env senzori, statistics, alarms, diagnostics.
 - Manual watering + task queue, reseturi, calibrare, history (watering/rain/env).
+- Rain integration status + soil moisture config + hydraulic monitoring (cand FW suporta).
 
 ## Gap-uri ramase (pentru roadmap)
 - UI wiring pentru Channel Compensation Config (char #27): exista read/write in `BleService`, dar nu este folosit in UI; wizard-ul si mobile zone add colecteaza optiuni fara persistenta.
-- Timezone/DST config: `writeTimezoneConfig` exista, dar nu este expus in UI; `MobileTimeLocation` este UI-only.
-- Mobile device subpages (Device Info, Master Valve, Flow Calibration, Power Mode, Device Reset) sunt mock UI fara BLE reads/writes.
-- Mobile dashboard: "Pause Schedule" este placeholder; soil moisture si unele tile-uri meteo/next-run sunt mock.
-- Mobile Zones: weather summary/next run/status labels sunt hard-coded (nu vin din BLE).
+- Flow calibration BLE: start/stop/calc/apply sunt stubs in `BleService`; doar override manual via SystemConfig.
+- Timezone/DST config: `MobileTimeLocation` scrie timezone, dar DST este hardcodat si lista timezone este preset.
+- Mobile Device Info foloseste date mock (model/firmware/serial/RSSI/uptime); Update/Reboot sunt placeholder.
+- Mobile Notifications este mock (fara sursa reala de notificari/push).
+- Mobile Dashboard: "Pause Schedule" este placeholder; mini chart rainfall este mock.
+- Mobile Weather Details: wind speed + forecast chart sunt mock; "Updated 2 mins ago" e static.
+- Mobile Zones: weather summary/status labels sunt hard-coded; "Last: Yesterday (20m)" e placeholder (next run e din auto-calc).
+- Mobile Settings: "Watering Schedules" si "Rain Delay" sunt placeholder; Support (Help/Firmware/About) este stub.
+- Mobile App Settings: Export Data/Clear App Data sunt placeholder.
 - Mobile Zone Add Wizard: camera plant identification (TODO) + weather adjustments toggles nu sunt mapate in firmware.
 - QR sharing real (encode/decode + import aplicat) lipseste.
 - Offline mode hooks (`useOfflineMode`) si map tile cache (`mapOffline`) nu sunt integrate in UI.
@@ -134,11 +154,12 @@ Scop: pentru fiecare zona majora din aplicatie, lista de mai jos indica ce face 
 ## Ecrane principale (UX confirmat in cod)
 - Desktop: Dashboard, Zones, HistoryDashboard, Analytics, Settings.
 - Mobile connection flow: Welcome, Permissions, Device Scan, Connection Success, No Devices, Manage Devices, Onboarding (UI-only).
-- Mobile main app: Dashboard, Zones, Zone Add Wizard, Zone Details Full, History, Settings, Weather Details, Notifications, Device Settings.
+- Mobile main app: Dashboard, Zones, Zone Add Wizard, Zone Details Full, History, Settings, Weather Details, Notifications, Alarm History, App Settings, Help/About.
+- Mobile device subpages: Device Settings, Device Info, Time & Location, Master Valve, Flow Calibration, Power Mode, Device Reset.
 
 ## Componente & wizards
-- OnboardingWizard (desktop/modal), ZoneConfigModal, CalibrationWizard, ResetModal, QRCodeSharing, LocationPicker.
-- Mobile UI: MobileBottomNav, MobileHeader, MobileBottomSheet, MobileConfirmModal, MobileDeviceSelector.
+- OnboardingWizard (desktop/modal), ZoneConfigModal, CalibrationWizard, ResetModal, QRCodeSharing, LocationPicker, EcoBadge, HydraulicStatusWidget, HydraulicDetailsCard, SoilTankWidget.
+- Mobile UI: MobileBottomNav, MobileHeader, MobileBottomSheet, MobileConfirmModal, MobileDeviceSelector, MobileAlarmCard, AlarmPopup, AndroidBackButtonHandler.
 
 ## Servicii & date
 - BleService (+ BleFragmentationManager), BleServiceMock (test/dev).
@@ -146,12 +167,13 @@ Scop: pentru fiecare zona majora din aplicatie, lista de mai jos indica ce face 
 - CalibrationService, ResetService.
 
 ## Stare & persistenta
-- `useAppStore.ts` acopera connection, devices, zones, valve status, rtc/calib/reset, current task, onboarding flags + extended flags, env/rain/system/timezone configs, rain integration, compensation, auto-calc, growing env, schedules, statistics, alarms, diagnostics, history caches.
+- `useAppStore.ts` acopera connection, devices, zones, valve status, rtc/calib/reset, current task, onboarding flags + extended flags, env/rain/system/timezone configs, rain integration, compensation, auto-calc, soil moisture config, hydraulic status, alarm history, growing env, schedules, statistics, alarms, diagnostics, history caches.
 
 ## UX, accesibilitate & erori
 - Validari si feedback in wizard (zone name, required fields).
 - Tooltips/help, skeleton loaders, keyboard navigation, toasts.
 - I18n partial pentru wizard si selectoare.
+- Android back handling cu interceptors (MobileHistory, MobileZoneDetailsFull).
 
 ## Offline & cache
 - History cache TTL 5m (IndexedDB), SoilGrids cache 7 zile (localStorage).
