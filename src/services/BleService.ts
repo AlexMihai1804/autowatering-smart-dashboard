@@ -94,6 +94,10 @@ export class BleService {
         type: number;
     } | null = null;
 
+    // Lock to prevent duplicate connection attempts
+    private isConnecting: boolean = false;
+    private connectionId: number = 0;  // Monotonically increasing connection ID
+
     private constructor() {
         this.fragmentationManager = BleFragmentationManager.getInstance();
     }
@@ -245,11 +249,35 @@ export class BleService {
     }
 
     public async connect(deviceId: string): Promise<void> {
+        // Prevent duplicate connection attempts
+        if (this.isConnecting) {
+            console.warn('[BLE] Connection already in progress, ignoring duplicate connect call');
+            return;
+        }
+
+        // If already connected to this device, skip
+        if (this.connectedDeviceId === deviceId) {
+            console.warn('[BLE] Already connected to this device, ignoring duplicate connect call');
+            return;
+        }
+
+        this.isConnecting = true;
+        this.connectionId++;
+        const myConnectionId = this.connectionId;
+        console.log(`[BLE] Starting connection ${myConnectionId} to ${deviceId}...`);
+
         try {
             useAppStore.getState().setConnectionState('connecting');
             console.log(`Connecting to ${deviceId}...`);
 
             await BleClient.connect(deviceId, (deviceId) => this.onDisconnect(deviceId));
+
+            // Check if this connection was superseded
+            if (this.connectionId !== myConnectionId) {
+                console.warn(`[BLE] Connection ${myConnectionId} superseded by ${this.connectionId}, aborting`);
+                return;
+            }
+
             console.log('Connected!');
 
             this.connectedDeviceId = deviceId;
@@ -453,6 +481,9 @@ export class BleService {
                 }
 
                 console.log('[BLE] Initial Data Sync Complete.');
+
+                // Mark connection as no longer in progress
+                this.isConnecting = false;
             } catch (syncError) {
                 console.warn('[BLE] Initial data sync failed:', syncError);
             }
@@ -463,6 +494,9 @@ export class BleService {
             useAppStore.getState().setConnectionState('disconnected');
             useAppStore.getState().setConnectedDeviceId(null);
             throw error;
+        } finally {
+            // Always reset the connecting flag
+            this.isConnecting = false;
         }
     }
 

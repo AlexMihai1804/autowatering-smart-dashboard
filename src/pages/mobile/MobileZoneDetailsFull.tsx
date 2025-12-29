@@ -73,9 +73,8 @@ const MobileZoneDetailsFull: React.FC = () => {
   const [editSheet, setEditSheet] = useState<EditSheetType>(null);
   const [saving, setSaving] = useState(false);
 
-  // "Press back again to exit" confirmation state
-  const [showExitToast, setShowExitToast] = useState(false);
-  const lastBackPressRef = useRef<number>(0);
+  // Note: "Press back again to exit" is handled ONLY by AndroidBackButtonHandler on Dashboard
+  // In zone details, back navigates through tabs then back to zones list
 
 
   // Tab selection that maintains history for back navigation.
@@ -121,7 +120,6 @@ const MobileZoneDetailsFull: React.FC = () => {
 
   const goBackInTabs = useCallback((): boolean => {
     const nav = tabNavRef.current;
-    const now = Date.now();
 
     if (import.meta.env.DEV) {
       // eslint-disable-next-line no-console
@@ -141,38 +139,16 @@ const MobileZoneDetailsFull: React.FC = () => {
         console.log('[ZoneDetails] going to previous tab:', previousTab);
       }
       setActiveTab(previousTab);
-      setShowExitToast(false);
-      lastBackPressRef.current = 0;
       return true;
     }
 
-    // We're on the first tab - check for double-back to exit
-    const timeSinceLastBack = now - lastBackPressRef.current;
-    if (timeSinceLastBack < 2000 && lastBackPressRef.current > 0) {
-      // Second press within 2 seconds - allow exit
-      if (import.meta.env.DEV) {
-        // eslint-disable-next-line no-console
-        console.log('[ZoneDetails] double-back detected, allowing exit');
-      }
-      setShowExitToast(false);
-      lastBackPressRef.current = 0;
-      return false; // Let the navigation handler take over
-    }
-
-    // First press on first tab - show toast
+    // We're on the first tab - let the navigation handler take over
+    // (AndroidBackButtonHandler will navigate back to /zones)
     if (import.meta.env.DEV) {
       // eslint-disable-next-line no-console
-      console.log('[ZoneDetails] showing exit toast');
+      console.log('[ZoneDetails] on first tab, allowing navigation');
     }
-    lastBackPressRef.current = now;
-    setShowExitToast(true);
-
-    // Auto-hide toast after 2 seconds
-    setTimeout(() => {
-      setShowExitToast(false);
-    }, 2000);
-
-    return true; // Intercept back to show toast
+    return false;
   }, []);
 
 
@@ -3474,15 +3450,7 @@ const MobileZoneDetailsFull: React.FC = () => {
         )}
       </div>
 
-      {/* Exit confirmation toast */}
-      {showExitToast && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-mobile-surface-dark border border-white/10 text-white px-6 py-3 rounded-full shadow-xl z-50 animate-fade-in">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-mobile-primary">arrow_back</span>
-            <span className="font-medium">Apasă din nou pentru a ieși</span>
-          </div>
-        </div>
-      )}
+      {/* Exit toast removed - double-back-to-exit is handled only in AndroidBackButtonHandler on Dashboard */}
     </div>
 
   );

@@ -17,6 +17,24 @@ android {
         }
     }
     buildTypes {
+        // Default debug build (used by Capacitor live-reload / debugging).
+        debug {
+        }
+
+        // Standalone build that can be installed alongside the debug/live-reload app.
+        standalone {
+            initWith debug
+            matchingFallbacks = ['debug']
+            applicationIdSuffix ".standalone"
+            versionNameSuffix "-standalone"
+
+            // Override display name + any package-derived strings for this variant.
+            resValue "string", "app_name", "AutoWatering Standalone"
+            resValue "string", "title_activity_main", "AutoWatering Standalone"
+            resValue "string", "package_name", "com.autowatering.smartdashboard.standalone"
+            resValue "string", "custom_url_scheme", "com.autowatering.smartdashboard.standalone"
+        }
+
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

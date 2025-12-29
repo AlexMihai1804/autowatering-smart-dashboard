@@ -309,10 +309,21 @@ export const useAppStore = create<AppState>((set) => ({
         const newZones = [...state.zones];
         const index = newZones.findIndex(z => z.channel_id === channelId);
         if (index !== -1) {
-            newZones[index] = { ...newZones[index], ...data };
+            const existing = newZones[index];
+            // Prevent overwriting a valid name with an empty one
+            // (protects against race conditions from duplicate connections)
+            if (data.name !== undefined && data.name.trim() === '' && existing.name && existing.name.trim() !== '') {
+                console.log(`[Store] Ignoring empty name update for channel ${channelId}, keeping: "${existing.name}"`);
+                const { name, ...restData } = data;
+                newZones[index] = { ...existing, ...restData };
+            } else {
+                newZones[index] = { ...existing, ...data };
+            }
         } else {
-            // If we don't have it, we can't really update it partially, but for safety:
-            // In a real app we might fetch it first.
+            // Zone not found - add it as a new zone if it has a channel_id
+            if (data.channel_id !== undefined) {
+                newZones.push(data as ChannelConfigData);
+            }
         }
         return { zones: newZones };
     }),

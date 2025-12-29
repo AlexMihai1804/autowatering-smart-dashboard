@@ -2,15 +2,20 @@ import { useEffect, useRef } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import { Capacitor, PluginListenerHandle } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
+import { Toast } from '@capacitor/toast';
 import { runBackInterceptors } from '../lib/backInterceptors';
 import { navigationStack } from '../lib/navigationStack';
 
-const ROOT_EXIT_PATHS = new Set<string>(['/', '/welcome', '/dashboard']);
+// Only show "press back again to exit" on the main dashboard
+// Other paths like /welcome or / should navigate normally
+const ROOT_EXIT_PATHS = new Set<string>(['/dashboard']);
+const DOUBLE_BACK_TIMEOUT_MS = 2000; // Time window for double-back to exit
 
 export default function AndroidBackButtonHandler(): null {
   const history = useHistory();
   const location = useLocation();
   const currentPathRef = useRef(location.pathname);
+  const lastBackPressRef = useRef<number>(0);
 
   // Track route changes in the navigation stack
   useEffect(() => {
@@ -52,14 +57,32 @@ export default function AndroidBackButtonHandler(): null {
           return;
         }
 
-        // PRIORITY 1: Exit app on root paths (dashboard, welcome, etc.)
+        // PRIORITY 1: Double-back to exit on root paths (dashboard, welcome, etc.)
         // This must come BEFORE navigation stack to prevent going back to welcome from dashboard
         if (ROOT_EXIT_PATHS.has(path)) {
-          if (import.meta.env.DEV) {
-            // eslint-disable-next-line no-console
-            console.log('[back] on root path, exiting app');
+          const now = Date.now();
+          const timeSinceLastBack = now - lastBackPressRef.current;
+
+          if (timeSinceLastBack < DOUBLE_BACK_TIMEOUT_MS) {
+            // Second press within timeout - exit the app
+            if (import.meta.env.DEV) {
+              // eslint-disable-next-line no-console
+              console.log('[back] double-back confirmed, exiting app');
+            }
+            CapacitorApp.exitApp();
+          } else {
+            // First press - show toast and record timestamp
+            lastBackPressRef.current = now;
+            if (import.meta.env.DEV) {
+              // eslint-disable-next-line no-console
+              console.log('[back] first back press, waiting for confirmation');
+            }
+            Toast.show({
+              text: 'Press back again to exit',
+              duration: 'short',
+              position: 'bottom',
+            });
           }
-          CapacitorApp.exitApp();
           return;
         }
 
