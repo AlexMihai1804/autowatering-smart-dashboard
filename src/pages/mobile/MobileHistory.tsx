@@ -17,6 +17,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
+import { ChartSkeleton } from '../../components/mobile/LoadingSkeleton';
 
 type TimeFrame = 'day' | 'week' | 'month';
 type HistoryTab = 'watering' | 'rain' | 'environment';
@@ -110,7 +111,7 @@ const MobileHistory: React.FC = () => {
     const t = setTimeout(() => setChartsReady(true), 0);
     return () => clearTimeout(t);
   }, []);
-  
+
   // Date navigation state - the "anchor" date for the selected period
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
@@ -195,7 +196,7 @@ const MobileHistory: React.FC = () => {
   const dateRange = useMemo(() => {
     const endOfDay = new Date(selectedDate);
     endOfDay.setHours(23, 59, 59, 999);
-    
+
     let startDate: Date;
     switch (timeFrame) {
       case 'day':
@@ -214,7 +215,7 @@ const MobileHistory: React.FC = () => {
       default:
         startDate = new Date(selectedDate);
     }
-    
+
     return {
       start: Math.floor(startDate.getTime() / 1000),
       end: Math.floor(endOfDay.getTime() / 1000),
@@ -307,7 +308,7 @@ const MobileHistory: React.FC = () => {
   const dateRangeLabel = useMemo(() => {
     const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
     const optsWithYear: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
-    
+
     switch (timeFrame) {
       case 'day':
         const isToday = selectedDate.toDateString() === new Date().toDateString();
@@ -354,7 +355,7 @@ const MobileHistory: React.FC = () => {
   const wateringChartData = useMemo(() => {
     const bucketCount = timeFrame === 'day' ? 24 : timeFrame === 'week' ? 7 : new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
     const bucketMs = timeFrame === 'day' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-    
+
     let baseDate: Date;
     if (timeFrame === 'month') {
       baseDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
@@ -366,11 +367,11 @@ const MobileHistory: React.FC = () => {
       baseDate = new Date(selectedDate);
       baseDate.setHours(0, 0, 0, 0);
     }
-    
+
     const data: { name: string; volume: number }[] = [];
     for (let i = 0; i < bucketCount; i++) {
       let bucketStart: number, bucketEnd: number;
-      
+
       if (timeFrame === 'day') {
         bucketStart = baseDate.getTime() + i * bucketMs;
         bucketEnd = bucketStart + bucketMs;
@@ -385,15 +386,15 @@ const MobileHistory: React.FC = () => {
         bucketStart = dayStart.getTime();
         bucketEnd = bucketStart + 24 * 60 * 60 * 1000;
       }
-      
+
       const bucketTotal = wateringHistory
         .filter(e => {
           const entryMs = e.timestamp * 1000;
-          return entryMs >= bucketStart && entryMs < bucketEnd && 
-                 (selectedZone === null || e.channel_id === selectedZone);
+          return entryMs >= bucketStart && entryMs < bucketEnd &&
+            (selectedZone === null || e.channel_id === selectedZone);
         })
         .reduce((sum, e) => sum + (e.actual_value_ml || 0), 0);
-      
+
       // Generate label
       let label: string;
       if (timeFrame === 'day') {
@@ -406,10 +407,10 @@ const MobileHistory: React.FC = () => {
       } else {
         label = `${i + 1}`;
       }
-      
+
       data.push({ name: label, volume: bucketTotal / 1000 }); // Convert to liters
     }
-    
+
     return data;
   }, [wateringHistory, timeFrame, selectedZone, selectedDate]);
 
@@ -426,12 +427,12 @@ const MobileHistory: React.FC = () => {
 
   // Combine rain history (hourly + daily) sorted by timestamp
   const combinedRainHistory = useMemo(() => {
-    const hourly = rainHistoryHourly.map(e => ({ 
+    const hourly = rainHistoryHourly.map(e => ({
       timestamp: e.hour_epoch,
       rainfall_mm: e.rainfall_mm_x100 / 100,
-      type: 'hourly' as const 
+      type: 'hourly' as const
     }));
-    const daily = rainHistoryDaily.map(e => ({ 
+    const daily = rainHistoryDaily.map(e => ({
       timestamp: e.day_epoch,
       rainfall_mm: e.total_rainfall_mm_x100 / 100,
       type: 'daily' as const,
@@ -482,7 +483,7 @@ const MobileHistory: React.FC = () => {
   const rainChartData = useMemo(() => {
     const bucketCount = timeFrame === 'day' ? 24 : timeFrame === 'week' ? 7 : new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
     const bucketMs = timeFrame === 'day' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-    
+
     let baseDate: Date;
     if (timeFrame === 'month') {
       baseDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
@@ -494,11 +495,11 @@ const MobileHistory: React.FC = () => {
       baseDate = new Date(selectedDate);
       baseDate.setHours(0, 0, 0, 0);
     }
-    
+
     const data: { name: string; rainfall: number }[] = [];
     for (let i = 0; i < bucketCount; i++) {
       let bucketStart: number, bucketEnd: number;
-      
+
       if (timeFrame === 'day') {
         bucketStart = baseDate.getTime() + i * bucketMs;
         bucketEnd = bucketStart + bucketMs;
@@ -513,14 +514,14 @@ const MobileHistory: React.FC = () => {
         bucketStart = dayStart.getTime();
         bucketEnd = bucketStart + 24 * 60 * 60 * 1000;
       }
-      
+
       const bucketTotal = combinedRainHistory
         .filter(e => {
           const entryMs = e.timestamp * 1000;
           return entryMs >= bucketStart && entryMs < bucketEnd;
         })
         .reduce((sum, e) => sum + e.rainfall_mm, 0);
-      
+
       let label: string;
       if (timeFrame === 'day') {
         label = `${i}:00`;
@@ -532,10 +533,10 @@ const MobileHistory: React.FC = () => {
       } else {
         label = `${i + 1}`;
       }
-      
+
       data.push({ name: label, rainfall: Math.round(bucketTotal * 10) / 10 });
     }
-    
+
     return data;
   }, [combinedRainHistory, timeFrame, selectedDate]);
 
@@ -596,7 +597,7 @@ const MobileHistory: React.FC = () => {
       <header className="sticky top-0 z-50 bg-mobile-bg-dark/90 backdrop-blur-md transition-colors safe-area-top shrink-0">
         <div className="flex items-center justify-between px-4 py-4">
           <h1 className="text-2xl font-extrabold tracking-tight">History</h1>
-          <button 
+          <button
             onClick={() => bleService.queryWateringHistory()}
             className="flex items-center justify-center w-10 h-10 rounded-full bg-mobile-surface-dark text-gray-300 hover:bg-white/10 transition-colors"
           >
@@ -605,7 +606,7 @@ const MobileHistory: React.FC = () => {
             </span>
           </button>
         </div>
-        
+
         {/* Tab Navigation */}
         <div className="flex px-4 gap-2 pb-3">
           {([
@@ -616,11 +617,10 @@ const MobileHistory: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => selectTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                activeTab === tab.id
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === tab.id
                   ? 'bg-mobile-primary text-mobile-bg-dark'
                   : 'bg-mobile-surface-dark text-gray-400 hover:bg-white/10'
-              }`}
+                }`}
             >
               <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
               <span>{tab.label}</span>
@@ -631,7 +631,7 @@ const MobileHistory: React.FC = () => {
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto pb-28 overscroll-contain">
-        
+
         {/* Shared Controls - TimeFrame & Date Navigation */}
         <section className="px-4 py-4 space-y-3">
           {/* Segmented Control for Day/Week/Month */}
@@ -640,11 +640,10 @@ const MobileHistory: React.FC = () => {
               <button
                 key={tf}
                 onClick={() => setTimeFrame(tf)}
-                className={`flex-1 py-2 px-4 rounded-full text-sm font-semibold transition-all capitalize ${
-                  timeFrame === tf
+                className={`flex-1 py-2 px-4 rounded-full text-sm font-semibold transition-all capitalize ${timeFrame === tf
                     ? 'bg-mobile-border-dark text-white shadow-md'
                     : 'text-gray-500'
-                }`}
+                  }`}
               >
                 {tf}
               </button>
@@ -659,22 +658,21 @@ const MobileHistory: React.FC = () => {
             >
               <span className="material-symbols-outlined">chevron_left</span>
             </button>
-            
+
             <div className="text-center">
               <p className="text-white font-bold text-lg">{dateRangeLabel}</p>
               <p className="text-mobile-text-muted text-xs">
                 {timeFrame === 'day' ? '24 hours' : timeFrame === 'week' ? '7 days' : 'Full month'}
               </p>
             </div>
-            
+
             <button
               onClick={navigateNext}
               disabled={!canNavigateNext}
-              className={`w-10 h-10 rounded-full bg-mobile-bg-dark flex items-center justify-center transition-colors ${
-                canNavigateNext 
-                  ? 'text-gray-400 hover:text-white hover:bg-white/10' 
+              className={`w-10 h-10 rounded-full bg-mobile-bg-dark flex items-center justify-center transition-colors ${canNavigateNext
+                  ? 'text-gray-400 hover:text-white hover:bg-white/10'
                   : 'text-gray-700 cursor-not-allowed'
-              }`}
+                }`}
             >
               <span className="material-symbols-outlined">chevron_right</span>
             </button>
@@ -683,13 +681,12 @@ const MobileHistory: React.FC = () => {
           {/* Zone Filter - only for watering */}
           {activeTab === 'watering' && (
             <div className="flex gap-2 overflow-x-auto no-scrollbar">
-              <button 
+              <button
                 onClick={() => setSelectedZone(null)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${
-                  selectedZone === null
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${selectedZone === null
                     ? 'bg-mobile-primary text-mobile-bg-dark font-bold'
                     : 'bg-mobile-surface-dark border border-mobile-border-dark text-gray-400 font-medium'
-                }`}
+                  }`}
               >
                 <span>All Zones</span>
               </button>
@@ -697,11 +694,10 @@ const MobileHistory: React.FC = () => {
                 <button
                   key={zone.channel_id}
                   onClick={() => setSelectedZone(zone.channel_id)}
-                  className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${
-                    selectedZone === zone.channel_id
+                  className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${selectedZone === zone.channel_id
                       ? 'bg-mobile-primary text-mobile-bg-dark font-bold'
                       : 'bg-mobile-surface-dark border border-mobile-border-dark text-gray-400 font-medium hover:bg-white/5'
-                  }`}
+                    }`}
                 >
                   {zone.name || `Zone ${zone.channel_id + 1}`}
                 </button>
@@ -709,7 +705,7 @@ const MobileHistory: React.FC = () => {
             </div>
           )}
         </section>
-        
+
         {/* Watering Tab */}
         {activeTab === 'watering' && (
           <section className="px-4 space-y-4">

@@ -2,16 +2,43 @@ import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import MobileConfirmModal from '../../components/mobile/MobileConfirmModal';
 import { BleService } from '../../services/BleService';
+import { useAppStore } from '../../store/useAppStore';
+import { ResetStatus, FactoryWipeStep } from '../../types/firmware_structs';
 
 type ResetType = 'settings' | 'schedule' | 'stats' | 'full';
+
+/**
+ * Human-readable step names for factory wipe progress
+ */
+const WIPE_STEP_NAMES: Record<FactoryWipeStep, string> = {
+  [FactoryWipeStep.PREPARE]: 'Preparing...',
+  [FactoryWipeStep.RESET_CHANNELS]: 'Resetting channels...',
+  [FactoryWipeStep.RESET_SYSTEM]: 'Resetting system...',
+  [FactoryWipeStep.RESET_CALIBRATION]: 'Clearing calibration...',
+  [FactoryWipeStep.CLEAR_RAIN_HIST]: 'Clearing rain history...',
+  [FactoryWipeStep.CLEAR_ENV_HIST]: 'Clearing environment history...',
+  [FactoryWipeStep.CLEAR_ONBOARDING]: 'Clearing onboarding...',
+  [FactoryWipeStep.VERIFY]: 'Verifying...',
+  [FactoryWipeStep.DONE]: 'Finalizing...',
+};
 
 const MobileDeviceReset: React.FC = () => {
   const history = useHistory();
   const bleService = BleService.getInstance();
 
+  // Subscribe to reset state for progress updates
+  const resetState = useAppStore(state => state.resetState);
+
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedReset, setSelectedReset] = useState<ResetType | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Determine if factory reset is in progress
+  const isFactoryWipeInProgress = resetState?.status === ResetStatus.IN_PROGRESS;
+  const progressPct = resetState?.progress_pct ?? 0;
+  const currentStep = resetState?.wipe_step ?? 0;
+  const retryCount = resetState?.retry_count ?? 0;
+  const stepName = WIPE_STEP_NAMES[currentStep as FactoryWipeStep] ?? 'Processing...';
 
   const resetOptions = [
     {
@@ -191,12 +218,47 @@ const MobileDeviceReset: React.FC = () => {
         requireConfirmation={selectedReset === 'full' ? 'RESET' : undefined}
       />
 
-      {/* Loading Overlay */}
+      {/* Loading Overlay with Factory Wipe Progress */}
       {loading && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-mobile-primary mb-4"></div>
-            <p className="text-white font-bold">Resetting...</p>
+          <div className="flex flex-col items-center max-w-xs w-full px-6">
+            {/* Icon and Title */}
+            <div className="size-16 rounded-full bg-red-500/20 flex items-center justify-center mb-4">
+              <span className="material-symbols-outlined text-red-400 text-3xl">restart_alt</span>
+            </div>
+
+            {isFactoryWipeInProgress ? (
+              <>
+                {/* Factory Wipe Progress UI */}
+                <p className="text-white font-bold text-lg mb-2">Factory Reset</p>
+                <p className="text-mobile-text-muted text-sm mb-4 text-center">{stepName}</p>
+
+                {/* Progress Bar */}
+                <div className="w-full bg-white/10 rounded-full h-2 mb-3">
+                  <div
+                    className="bg-gradient-to-r from-red-500 to-orange-400 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+
+                {/* Progress Percentage */}
+                <p className="text-mobile-text-muted text-sm mb-2">{progressPct}% complete</p>
+
+                {/* Retry indicator */}
+                {retryCount > 0 && (
+                  <p className="text-yellow-400 text-xs flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm">refresh</span>
+                    Retry attempt {retryCount}
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                {/* Simple spinner for non-factory resets */}
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-mobile-primary mb-4"></div>
+                <p className="text-white font-bold">Resetting...</p>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -205,3 +267,4 @@ const MobileDeviceReset: React.FC = () => {
 };
 
 export default MobileDeviceReset;
+

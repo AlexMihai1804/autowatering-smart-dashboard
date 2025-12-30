@@ -12,6 +12,7 @@ import {
     CalibrationAction,
     ResetOpcode,
     ResetStatus,
+    FactoryWipeStep,
     CalibrationState,
     TaskQueueCommand,
     HistoryCommand,
@@ -154,8 +155,14 @@ describe('firmware_structs - Enums', () => {
 
     describe('ResetStatus', () => {
         it('should have correct values', () => {
+            expect(ResetStatus.IDLE).toBe(0x00);
+            expect(ResetStatus.AWAIT_CONFIRM).toBe(0x01);
+            expect(ResetStatus.IN_PROGRESS).toBe(0x02);
+            expect(ResetStatus.DONE_OK).toBe(0x03);
+            expect(ResetStatus.DONE_ERROR).toBe(0x04);
+            // Backwards compatibility aliases
             expect(ResetStatus.PENDING).toBe(0x01);
-            expect(ResetStatus.IDLE).toBe(0xFF);
+            expect(ResetStatus.LEGACY_IDLE).toBe(0xFF);
         });
     });
 

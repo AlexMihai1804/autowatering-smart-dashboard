@@ -134,8 +134,30 @@ export enum ResetOpcode {
 }
 
 export enum ResetStatus {
-    PENDING = 0x01,
-    IDLE = 0xFF
+    IDLE = 0x00,             // No operation pending or in progress
+    AWAIT_CONFIRM = 0x01,    // Confirmation code is active, waiting for execution
+    IN_PROGRESS = 0x02,      // Factory wipe executing step-by-step
+    DONE_OK = 0x03,          // Factory wipe completed successfully
+    DONE_ERROR = 0x04,       // Factory wipe failed (check last_error)
+    /** @deprecated Use AWAIT_CONFIRM instead */
+    PENDING = 0x01,          // Alias for backwards compatibility
+    LEGACY_IDLE = 0xFF       // Old idle value (for backwards compatibility)
+}
+
+/**
+ * Factory wipe step identifiers from reset control reserved[1] field
+ * @see docs-embedded/ble-api/characteristics/25-reset-control.md
+ */
+export enum FactoryWipeStep {
+    PREPARE = 0,             // Initialize wipe, persist state
+    RESET_CHANNELS = 1,      // Reset all 8 channel configurations
+    RESET_SYSTEM = 2,        // Reset system configuration
+    RESET_CALIBRATION = 3,   // Reset calibration data
+    CLEAR_RAIN_HIST = 4,     // Clear rain history (flash erase)
+    CLEAR_ENV_HIST = 5,      // Clear environmental history
+    CLEAR_ONBOARDING = 6,    // Clear onboarding NVS flags
+    VERIFY = 7,              // Verify all data erased
+    DONE = 8                 // Cleanup and finalize
 }
 
 export enum CalibrationState {
@@ -242,13 +264,21 @@ export interface CalibrationData {
     pulses_per_liter: number;/* uint32 */
 }
 
+/**
+ * Reset Control Data (16 bytes)
+ * @see docs-embedded/ble-api/characteristics/25-reset-control.md
+ */
 export interface ResetControlData {
-    reset_type: number;      /* Opcode */
-    channel_id: number;      /* 0-7 or 0xFF */
-    confirmation_code: number; /* uint32 */
-    status: number;          /* 0x01=pending, 0xFF=idle */
-    timestamp: number;       /* uint32 */
-    reserved?: number[];     /* uint8[5], offset 11-15 */
+    reset_type: number;       /* uint8, offset 0 - Opcode */
+    channel_id: number;       /* uint8, offset 1 - 0-7 or 0xFF */
+    confirmation_code: number; /* uint32 LE, offset 2 */
+    status: number;           /* uint8, offset 6 - ResetStatus */
+    timestamp: number;        /* uint32 LE, offset 7 - Generation time (s since boot) */
+    // Factory wipe progress fields from reserved bytes (only set when status=IN_PROGRESS)
+    progress_pct?: number;    /* uint8, offset 11 - Progress percentage (0-100) */
+    wipe_step?: number;       /* uint8, offset 12 - Current FactoryWipeStep */
+    retry_count?: number;     /* uint8, offset 13 - Retry attempts for current step */
+    last_error?: number;      /* uint16 LE, offset 14 - Last error code (0=none) */
 }
 
 // ============================================================================

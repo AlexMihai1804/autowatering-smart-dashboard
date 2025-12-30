@@ -351,13 +351,6 @@ export class BleService {
                 }
             }
 
-            // Setup notifications
-            await this.setupNotifications(deviceId);
-
-            // Wait a bit before starting the heavy data sync to let the MCU breathe
-            console.log('[BLE] Waiting 500ms before Initial Data Sync...');
-            await this.delay(500);
-
             // Optional Bulk Sync Snapshot (newer firmware only)
             const bulkSnapshot = await this.readBulkSyncSnapshot();
             const interReadDelay = bulkSnapshot ? 80 : 200;
@@ -370,7 +363,14 @@ export class BleService {
             // Initial Data Sync
             console.log('[BLE] Starting Initial Data Sync Sequence...');
             try {
-                // Sequential reads with delays to avoid overwhelming the MCU
+                // ========================================
+                // PHASE 1: Essential Dashboard Data (fast)
+                // Show UI as soon as this completes
+                // ========================================
+                console.log('[BLE] Phase 1: Essential Dashboard Data...');
+                useAppStore.getState().setSyncProgress(10, 'Reading sensors...');
+
+                // Environmental Data - for temperature/humidity display
                 if (!bulkSnapshot?.env_valid) {
                     console.log('[BLE] Reading Environmental Data...');
                     const env = await this.readEnvironmentalData();
@@ -378,66 +378,97 @@ export class BleService {
                     await this.delay(interReadDelay);
                 } else {
                     console.log('[BLE] Using Bulk Sync Snapshot for Environmental Data');
-                    await this.delay(interReadDelay);
                 }
+                useAppStore.getState().setSyncProgress(30, 'Reading rain data...');
 
+                // Rain Data - for rainfall display
                 if (shouldReadRainData) {
                     console.log('[BLE] Reading Rain Data...');
                     const rain = await this.readRainData();
                     console.log('[BLE] Got Rain Data:', rain);
                     await this.delay(interReadDelay);
-                } else {
-                    console.log('[BLE] Skipping Rain Data (snapshot invalid).');
-                    await this.delay(interReadDelay);
                 }
+                useAppStore.getState().setSyncProgress(50, 'Reading system status...');
 
-                console.log('[BLE] Reading Onboarding Status...');
-                const onboarding = await this.readOnboardingStatus();
-                console.log('[BLE] Got Onboarding Data:', onboarding);
-                await this.delay(interReadDelay);
-
+                // Current Task - for watering status on dashboard
                 if (shouldReadCurrentTask) {
                     console.log('[BLE] Reading Current Task...');
                     const task = await this.readCurrentTask();
                     console.log('[BLE] Got Task Data:', task);
                     await this.delay(interReadDelay);
-                } else {
-                    console.log('[BLE] Skipping Current Task (idle snapshot).');
+                }
+                useAppStore.getState().setSyncProgress(65, 'Reading configuration...');
+
+                // System Config - need num_channels for zones
+                console.log('[BLE] Reading System Config...');
+                const sysConfig = await this.readSystemConfig();
+                console.log('[BLE] Got System Config:', sysConfig);
+                await this.delay(interReadDelay);
+
+                // Global Soil Moisture Config - for dashboard moisture display
+                useAppStore.getState().setSyncProgress(80, 'Reading moisture...');
+                try {
+                    console.log('[BLE] Reading Global Soil Moisture Config...');
+                    await this.readSoilMoistureConfig(0xFF);
                     await this.delay(interReadDelay);
+                } catch (err) {
+                    console.warn('[BLE] Global Soil Moisture Config read failed:', err);
                 }
 
+                // ========================================
+                // PHASE 1 COMPLETE - SHOW UI NOW
+                // ========================================
+                useAppStore.getState().setSyncProgress(100, 'Ready!');
+                console.log('[BLE] Phase 1 Complete - Dashboard ready!');
+                useAppStore.getState().setInitialSyncComplete(true);
+
+                // ========================================
+                // PHASE 2: Background Data (deferred)
+                // Loads while user sees the dashboard
+                // ========================================
+                console.log('[BLE] Phase 2: Loading remaining data in background...');
+
+                // Setup notifications for real-time updates (deferred to not block UI)
+                await this.setupNotifications(deviceId);
+
+                // Global Auto Calc Status - for next watering time
+                try {
+                    await this.readAutoCalcStatusGlobal();
+                    await this.delay(interReadDelay);
+                } catch (err) {
+                    console.warn('[BLE] Auto Calc Status read failed:', err);
+                }
+
+                // Onboarding Status - for config wizard
+                console.log('[BLE] Reading Onboarding Status...');
+                const onboarding = await this.readOnboardingStatus();
+                console.log('[BLE] Got Onboarding Data:', onboarding);
+                await this.delay(interReadDelay);
+
+                // Valve Control
                 if (shouldReadValveControl) {
                     console.log('[BLE] Reading Valve Control...');
                     const valve = await this.readValveControl();
                     console.log('[BLE] Got Valve Data:', valve);
                     await this.delay(interReadDelay);
-                } else {
-                    console.log('[BLE] Skipping Valve Control (no active valves).');
-                    await this.delay(interReadDelay);
                 }
 
+                // RTC Config
                 if (shouldReadRtcConfig) {
                     console.log('[BLE] Reading RTC Config...');
                     const rtc = await this.readRtcConfig();
                     console.log('[BLE] Got RTC Data:', rtc);
                     await this.checkTimeDrift(rtc);
                     await this.delay(interReadDelay);
-                } else {
-                    console.log('[BLE] Skipping RTC Config (snapshot valid).');
-                    await this.delay(interReadDelay);
                 }
 
-                console.log('[BLE] Reading System Config...');
-                const sysConfig = await this.readSystemConfig();
-                console.log('[BLE] Got System Config:', sysConfig);
-                await this.delay(interReadDelay);
-
+                // Rain Config
                 console.log('[BLE] Reading Rain Config...');
                 const rainCfg = await this.readRainConfig();
                 console.log('[BLE] Got Rain Config:', rainCfg);
                 await this.delay(interReadDelay);
 
-                // Read all 8 channel configurations
+                // Read all channel configurations
                 console.log('[BLE] Reading Channel Configs (0-7)...');
                 const zones: any[] = [];
                 for (let i = 0; i < sysConfig.num_channels; i++) {
@@ -452,7 +483,7 @@ export class BleService {
                 }
                 useAppStore.getState().setZones(zones);
 
-                // Hydraulic Status: do an initial snapshot read (notifications may fail on low MTU)
+                // Hydraulic Status
                 try {
                     console.log('[BLE] Reading Hydraulic Status (active channel)...');
                     await this.readHydraulicStatus(0xFF);
@@ -461,7 +492,7 @@ export class BleService {
                     console.warn('[BLE] Hydraulic Status read skipped/failed (likely unsupported firmware):', hydErr);
                 }
 
-                // Custom Config Service: Soil Moisture Configuration (global + per-channel)
+                // Soil Moisture Configuration (global + per-channel)
                 try {
                     console.log('[BLE] Reading Soil Moisture Config (global)...');
                     await this.readSoilMoistureConfig(0xFF);
@@ -480,12 +511,14 @@ export class BleService {
                     console.warn('[BLE] Soil Moisture Config read skipped/failed (likely unsupported firmware):', soilErr);
                 }
 
-                console.log('[BLE] Initial Data Sync Complete.');
+                console.log('[BLE] Phase 2 Complete - All data synced!');
 
                 // Mark connection as no longer in progress
                 this.isConnecting = false;
             } catch (syncError) {
                 console.warn('[BLE] Initial data sync failed:', syncError);
+                // Even on error, mark sync as complete so UI can show
+                useAppStore.getState().setInitialSyncComplete(true);
             }
 
         } catch (error) {
@@ -958,7 +991,12 @@ export class BleService {
                     channel_id: view.getUint8(1),
                     confirmation_code: view.getUint32(2, true),
                     status: view.getUint8(6),
-                    timestamp: view.getUint32(7, true)
+                    timestamp: view.getUint32(7, true),
+                    // Parse factory wipe progress fields from reserved bytes
+                    progress_pct: view.byteLength > 11 ? view.getUint8(11) : undefined,
+                    wipe_step: view.byteLength > 12 ? view.getUint8(12) : undefined,
+                    retry_count: view.byteLength > 13 ? view.getUint8(13) : undefined,
+                    last_error: view.byteLength > 15 ? view.getUint16(14, true) : undefined
                 };
                 store.setResetState(resetData);
 
@@ -970,9 +1008,19 @@ export class BleService {
                     // The doc says "Notify... after successful execution" (idle frame).
                     // But current architecture might only wait for code. 
                     // Let's implement full flow in performReset.
-                } else if (this.pendingResetResolver && resetData.status === 0xFF) {
-                    // Reset complete (idle)
+                } else if (this.pendingResetResolver &&
+                    (resetData.status === 0xFF ||
+                        resetData.status === 0x00 ||
+                        resetData.status === 0x03)) {
+                    // Reset complete: legacy IDLE (0xFF), new IDLE (0x00), or DONE_OK (0x03)
                     this.pendingResetResolver.resolveComplete();
+                    this.pendingResetResolver = null;
+                } else if (this.pendingResetResolver && resetData.status === 0x04) {
+                    // Reset failed: DONE_ERROR
+                    const errorMsg = resetData.last_error
+                        ? `Reset failed with error code ${resetData.last_error}`
+                        : 'Reset failed';
+                    this.pendingResetResolver.reject(new Error(errorMsg));
                     this.pendingResetResolver = null;
                 }
                 break;
@@ -1794,7 +1842,12 @@ export class BleService {
             channel_id: data.getUint8(1),
             confirmation_code: data.getUint32(2, true),
             status: data.getUint8(6),
-            timestamp: data.getUint32(7, true)
+            timestamp: data.getUint32(7, true),
+            // Parse factory wipe progress fields from reserved bytes
+            progress_pct: data.byteLength > 11 ? data.getUint8(11) : undefined,
+            wipe_step: data.byteLength > 12 ? data.getUint8(12) : undefined,
+            retry_count: data.byteLength > 13 ? data.getUint8(13) : undefined,
+            last_error: data.byteLength > 15 ? data.getUint16(14, true) : undefined
         };
         // Update store with data READ from device
         useAppStore.getState().setResetState(resetData);

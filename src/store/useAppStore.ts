@@ -74,6 +74,9 @@ interface AppState {
     envData: EnvironmentalData | null;
     rainData: RainData | null;
     bulkSyncSnapshot: BulkSyncSnapshot | null;
+    isInitialSyncComplete: boolean;
+    syncProgress: number; // 0-100 progress
+    syncMessage: string;  // Current loading step message
 
     // New Data States Initial Values
     systemConfig: SystemConfigData | null;
@@ -154,6 +157,8 @@ interface AppState {
     setEnvData: (data: EnvironmentalData) => void;
     setRainData: (data: RainData) => void;
     setBulkSyncSnapshot: (snapshot: BulkSyncSnapshot | null) => void;
+    setInitialSyncComplete: (complete: boolean) => void;
+    setSyncProgress: (progress: number, message?: string) => void;
 
     // New Data Actions Implementation
     setSystemConfig: (config: SystemConfigData) => void;
@@ -239,6 +244,9 @@ export const useAppStore = create<AppState>((set) => ({
     envData: null,
     rainData: null,
     bulkSyncSnapshot: null,
+    isInitialSyncComplete: false,
+    syncProgress: 0,
+    syncMessage: 'Connecting...',
 
     // New Data States Initial Values
     systemConfig: null,
@@ -344,6 +352,11 @@ export const useAppStore = create<AppState>((set) => ({
     setEnvData: (data) => set({ envData: data }),
     setRainData: (data) => set({ rainData: data }),
     setBulkSyncSnapshot: (snapshot) => set({ bulkSyncSnapshot: snapshot }),
+    setInitialSyncComplete: (complete) => set({ isInitialSyncComplete: complete }),
+    setSyncProgress: (progress, message) => set((state) => ({
+        syncProgress: progress,
+        syncMessage: message ?? state.syncMessage
+    })),
 
     // New Data Actions Implementation
     setSystemConfig: (config) => set({ systemConfig: config }),
@@ -633,6 +646,7 @@ export const useAppStore = create<AppState>((set) => ({
         envData: null,
         rainData: null,
         bulkSyncSnapshot: null,
+        isInitialSyncComplete: false,
         systemConfig: null,
         rainConfig: null,
         timezoneConfig: null,
