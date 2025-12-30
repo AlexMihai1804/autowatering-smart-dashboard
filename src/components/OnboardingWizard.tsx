@@ -96,6 +96,7 @@ import {
 import { SoilSelector } from './onboarding/SoilSelectorSimple';
 import { SoilGridsService, SoilGridsResult, shouldEnableCycleSoak, calculateCycleSoakTiming } from '../services/SoilGridsService';
 import { WIZARD_TOOLTIPS } from '../utils/onboardingHelpers';
+import { getRecommendedCoverageType, getCoverageModeExplanation } from '../utils/plantCoverageHelper';
 // i18n and enhancements
 import { useI18n } from '../i18n';
 import { LanguageSelector } from './LanguageSelector';
@@ -1869,6 +1870,12 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                 updateCurrentZone({ irrigationMethod: method });
                                             }
                                         }
+
+                                        // Auto-select coverage type based on plant density
+                                        const recommendedCoverage = getRecommendedCoverageType(plant);
+                                        if (recommendedCoverage !== 'both') {
+                                            updateCurrentZone({ coverageType: recommendedCoverage });
+                                        }
                                     }}
                                 />
                             </>
@@ -2195,18 +2202,41 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                 </div>
                             </IonCardHeader>
                             <IonCardContent className="space-y-4">
-                                <IonSegment
-                                    value={currentZone.coverageType}
-                                    onIonChange={e => updateCurrentZone({ coverageType: e.detail.value as 'area' | 'plants' })}
-                                    color="primary"
-                                >
-                                    <IonSegmentButton value="area">
-                                        <IonLabel style={{ color: currentZone.coverageType === 'area' ? 'var(--ion-color-primary)' : 'white' }}>Area (m²)</IonLabel>
-                                    </IonSegmentButton>
-                                    <IonSegmentButton value="plants">
-                                        <IonLabel style={{ color: currentZone.coverageType === 'plants' ? 'var(--ion-color-primary)' : 'white' }}>Plant Count</IonLabel>
-                                    </IonSegmentButton>
-                                </IonSegment>
+                                {(() => {
+                                    const coverageMode = getRecommendedCoverageType(currentZone.plant);
+                                    const explanation = getCoverageModeExplanation(currentZone.plant, coverageMode);
+
+                                    // Show toggle only if both options are available
+                                    if (coverageMode === 'both') {
+                                        return (
+                                            <IonSegment
+                                                value={currentZone.coverageType}
+                                                onIonChange={e => updateCurrentZone({ coverageType: e.detail.value as 'area' | 'plants' })}
+                                                color="primary"
+                                            >
+                                                <IonSegmentButton value="area">
+                                                    <IonLabel style={{ color: currentZone.coverageType === 'area' ? 'var(--ion-color-primary)' : 'white' }}>Area (m²)</IonLabel>
+                                                </IonSegmentButton>
+                                                <IonSegmentButton value="plants">
+                                                    <IonLabel style={{ color: currentZone.coverageType === 'plants' ? 'var(--ion-color-primary)' : 'white' }}>Plant Count</IonLabel>
+                                                </IonSegmentButton>
+                                            </IonSegment>
+                                        );
+                                    }
+
+                                    // Show explanation for locked mode
+                                    return (
+                                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5">
+                                            <IonIcon icon={coverageMode === 'area' ? appsOutline : leafOutline} className="text-cyber-emerald" />
+                                            <span className="text-white font-medium">
+                                                {coverageMode === 'area' ? 'Suprafață (m²)' : 'Număr plante'}
+                                            </span>
+                                            {explanation && (
+                                                <span className="text-gray-400 text-sm ml-auto">{explanation}</span>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
 
                                 <div className="flex items-center gap-3 mt-2">
                                     <span style={{ color: 'white' }}>

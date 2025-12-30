@@ -8,6 +8,7 @@ import { TimePicker } from '../../components/ui/time-picker';
 import { PlantDBEntry, SoilDBEntry, IrrigationMethodEntry, PLANT_CATEGORIES } from '../../services/DatabaseService';
 import { isChannelConfigComplete } from '../../types/firmware_structs';
 import SoilGridsServiceInstance, { CustomSoilParameters, estimateSoilParametersFromTexture } from '../../services/SoilGridsService';
+import { getRecommendedCoverageType, getCoverageModeExplanation } from '../../utils/plantCoverageHelper';
 
 type WizardStep =
   | 'select-channel'
@@ -733,7 +734,14 @@ const MobileZoneAddWizard: React.FC = () => {
               {filteredPlants.map((plant: PlantDBEntry) => (
                 <button
                   key={plant.id}
-                  onClick={() => updateZoneConfig({ plantType: plant })}
+                  onClick={() => {
+                    const recommendedCoverage = getRecommendedCoverageType(plant);
+                    updateZoneConfig({
+                      plantType: plant,
+                      // Auto-set coverage type if only one mode is available
+                      ...(recommendedCoverage !== 'both' ? { coverageType: recommendedCoverage } : {})
+                    });
+                  }}
                   className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${zoneConfig.plantType?.id === plant.id
                     ? 'bg-mobile-primary/10 border-mobile-primary'
                     : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
@@ -1212,27 +1220,51 @@ const MobileZoneAddWizard: React.FC = () => {
               </p>
             </div>
 
-            {/* Coverage Type Toggle */}
-            <div className="flex h-12 items-center justify-center rounded-full bg-mobile-surface-dark p-1">
-              <button
-                onClick={() => updateZoneConfig({ coverageType: 'area' })}
-                className={`flex h-full flex-1 items-center justify-center rounded-full px-4 text-sm font-bold transition-all ${zoneConfig.coverageType === 'area'
-                  ? 'bg-mobile-primary text-black shadow-md'
-                  : 'text-mobile-text-muted hover:text-white'
-                  }`}
-              >
-                Specify by Area
-              </button>
-              <button
-                onClick={() => updateZoneConfig({ coverageType: 'plants' })}
-                className={`flex h-full flex-1 items-center justify-center rounded-full px-4 text-sm font-bold transition-all ${zoneConfig.coverageType === 'plants'
-                  ? 'bg-mobile-primary text-black shadow-md'
-                  : 'text-mobile-text-muted hover:text-white'
-                  }`}
-              >
-                Specify by Plants
-              </button>
-            </div>
+            {/* Coverage Type Toggle - conditionally show based on plant density */}
+            {(() => {
+              const coverageMode = getRecommendedCoverageType(zoneConfig.plantType || null);
+              const explanation = getCoverageModeExplanation(zoneConfig.plantType || null, coverageMode);
+
+              if (coverageMode === 'both') {
+                return (
+                  <div className="flex h-12 items-center justify-center rounded-full bg-mobile-surface-dark p-1">
+                    <button
+                      onClick={() => updateZoneConfig({ coverageType: 'area' })}
+                      className={`flex h-full flex-1 items-center justify-center rounded-full px-4 text-sm font-bold transition-all ${zoneConfig.coverageType === 'area'
+                        ? 'bg-mobile-primary text-black shadow-md'
+                        : 'text-mobile-text-muted hover:text-white'
+                        }`}
+                    >
+                      Specify by Area
+                    </button>
+                    <button
+                      onClick={() => updateZoneConfig({ coverageType: 'plants' })}
+                      className={`flex h-full flex-1 items-center justify-center rounded-full px-4 text-sm font-bold transition-all ${zoneConfig.coverageType === 'plants'
+                        ? 'bg-mobile-primary text-black shadow-md'
+                        : 'text-mobile-text-muted hover:text-white'
+                        }`}
+                    >
+                      Specify by Plants
+                    </button>
+                  </div>
+                );
+              }
+
+              // Show locked mode with explanation
+              return (
+                <div className="flex items-center justify-center gap-3 px-4 py-3 rounded-2xl bg-mobile-primary/10 border border-mobile-primary/30">
+                  <span className="material-symbols-outlined text-mobile-primary text-xl">
+                    {coverageMode === 'area' ? 'grid_4x4' : 'potted_plant'}
+                  </span>
+                  <span className="text-white font-bold">
+                    {coverageMode === 'area' ? 'Suprafață (m²)' : 'Număr plante'}
+                  </span>
+                  {explanation && (
+                    <span className="text-mobile-text-muted text-sm ml-auto">{explanation}</span>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Visual Icon */}
             <div className="flex justify-center">
