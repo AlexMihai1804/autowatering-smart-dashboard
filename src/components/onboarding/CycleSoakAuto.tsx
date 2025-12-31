@@ -29,6 +29,7 @@ import {
     shouldEnableCycleSoak,
     calculateCycleSoakTiming
 } from '../../services/SoilGridsService';
+import { useI18n } from '../../i18n';
 
 interface CycleSoakAutoProps {
     soil: SoilDBEntry | null;
@@ -58,6 +59,7 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
     onChange,
     disabled = false,
 }) => {
+    const { t } = useI18n();
     const [showManualConfig, setShowManualConfig] = useState(false);
 
     // Calculate auto recommendation
@@ -134,7 +136,7 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
                 <IonCardContent className="py-3">
                     <div className="flex items-center gap-2">
                         <IonIcon icon={waterOutline} className="text-gray-400 text-xl" />
-                        <span className="text-gray-400">Cycle & Soak - selectează solul mai întâi</span>
+                        <span className="text-gray-400">{t('cycleSoak.selectSoilFirst')}</span>
                     </div>
                 </IonCardContent>
             </IonCard>
@@ -150,7 +152,7 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                             <IonIcon icon={waterOutline} className="text-cyber-aqua text-xl" />
-                            <IonLabel className="font-bold text-white">Cycle & Soak</IonLabel>
+                            <IonLabel className="font-bold text-white">{t('cycleSoak.title')}</IonLabel>
                         </div>
                         <IonButton
                             fill="clear"
@@ -158,7 +160,7 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
                             onClick={handleResetToAuto}
                         >
                             <IonIcon icon={settingsOutline} slot="start" />
-                            Auto
+                            {t('cycleSoak.auto')}
                         </IonButton>
                     </div>
 
@@ -170,7 +172,7 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
                             onClick={() => onChange({ enabled: true, autoEnabled: false, cycleMinutes, soakMinutes })}
                         >
                             <IonIcon icon={checkmarkCircle} />
-                            Activat
+                            {t('cycleSoak.activated')}
                         </IonChip>
                         <IonChip
                             color={!enabled ? 'danger' : 'medium'}
@@ -178,7 +180,7 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
                             onClick={() => onChange({ enabled: false, autoEnabled: false, cycleMinutes, soakMinutes })}
                         >
                             <IonIcon icon={closeCircle} />
-                            Dezactivat
+                            {t('cycleSoak.deactivated')}
                         </IonChip>
                     </div>
 
@@ -190,7 +192,7 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
                                 <div className="flex items-center justify-between mb-1">
                                     <span className="text-gray-300 text-sm">
                                         <IonIcon icon={timerOutline} className="mr-1 align-middle" />
-                                        Ciclu udare
+                                        {t('cycleSoak.cycleWatering')}
                                     </span>
                                     <IonBadge color="primary">{cycleMinutes} min</IonBadge>
                                 </div>
@@ -214,7 +216,7 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
                                 <div className="flex items-center justify-between mb-1">
                                     <span className="text-gray-300 text-sm">
                                         <IonIcon icon={timerOutline} className="mr-1 align-middle" />
-                                        Pauză absorbție
+                                        {t('cycleSoak.soakAbsorption')}
                                     </span>
                                     <IonBadge color="secondary">{soakMinutes} min</IonBadge>
                                 </div>
@@ -242,7 +244,7 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
                         onClick={handleManualSave}
                         className="mt-3"
                     >
-                        Gata
+                        {t('cycleSoak.done')}
                     </IonButton>
                 </IonCardContent>
             </IonCard>
@@ -275,8 +277,8 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
                         </div>
                         <p className="text-gray-400 text-sm m-0">
                             {enabled
-                                ? `${cycleMinutes} min udare • ${soakMinutes} min pauză`
-                                : autoConfig?.reason || 'Dezactivat'
+                                ? `${cycleMinutes} min ${t('cycleSoak.wateringPause').split(' • ')[0]} • ${soakMinutes} min ${t('cycleSoak.wateringPause').split(' • ')[1]}`
+                                : autoConfig?.reason || t('cycleSoak.deactivated')
                             }
                         </p>
                     </div>
@@ -284,7 +286,7 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
                     {/* Status badge + modify button */}
                     <div className="flex items-center gap-2">
                         <IonBadge color={enabled ? 'success' : 'medium'}>
-                            {enabled ? 'Activ' : 'Off'}
+                            {enabled ? t('cycleSoak.active') : t('cycleSoak.off')}
                         </IonBadge>
                         <IonButton
                             fill="clear"

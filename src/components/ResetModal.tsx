@@ -26,6 +26,7 @@ import {
 import { warning, checkmarkCircle, closeCircle, refresh, trash } from 'ionicons/icons';
 import { useReset, RESET_OPTIONS } from '../hooks/useReset';
 import { ResetOpcode } from '../types/firmware_structs';
+import { useI18n } from '../i18n';
 
 interface ResetModalProps {
     isOpen: boolean;
@@ -45,6 +46,8 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, channelNames }
         getResetDescription,
         isChannelRequired
     } = useReset();
+
+    const { t } = useI18n();
 
     const [step, setStep] = useState<ModalStep>('select');
     const [selectedType, setSelectedType] = useState<ResetOpcode | null>(null);
@@ -67,7 +70,7 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, channelNames }
 
     const handleProceed = () => {
         if (!selectedType) return;
-        
+
         if (selectedOption?.dangerous) {
             setShowDangerConfirm(true);
         } else {
@@ -101,7 +104,7 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, channelNames }
         if (channelNames && channelNames[index]) {
             return channelNames[index];
         }
-        return `Canal ${index + 1}`;
+        return `${t('reset.channel')} ${index + 1}`;
     };
 
     const renderStep = () => {
@@ -114,21 +117,21 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, channelNames }
                                 <IonIcon icon={refresh} className="text-3xl text-amber-400" />
                             </div>
                             <h2 className="text-xl font-semibold text-white mb-2">
-                                Resetare Dispozitiv
+                                {t('reset.deviceReset')}
                             </h2>
                             <p className="text-gray-400 text-sm">
-                                Selectați tipul de resetare dorit.
+                                {t('reset.selectType')}
                             </p>
                         </div>
 
-                        <IonRadioGroup 
-                            value={selectedType} 
+                        <IonRadioGroup
+                            value={selectedType}
                             onIonChange={e => setSelectedType(e.detail.value)}
                         >
                             <IonList className="bg-transparent">
                                 {RESET_OPTIONS.map(option => (
-                                    <IonItem 
-                                        key={option.type} 
+                                    <IonItem
+                                        key={option.type}
                                         className={`bg-gray-800/50 rounded-lg mb-2 ${option.dangerous ? 'border border-red-900/50' : ''}`}
                                         lines="none"
                                     >
@@ -149,7 +152,7 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, channelNames }
 
                         {requiresChannel && (
                             <div className="bg-gray-800/50 rounded-lg p-4">
-                                <IonLabel className="text-gray-400 text-sm">Selectați canalul:</IonLabel>
+                                <IonLabel className="text-gray-400 text-sm">{t('reset.selectChannel')}</IonLabel>
                                 <IonSelect
                                     value={selectedChannel}
                                     onIonChange={e => setSelectedChannel(e.detail.value)}
@@ -175,16 +178,16 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, channelNames }
 
                         <div className="flex gap-3">
                             <IonButton expand="block" fill="outline" onClick={onClose} className="flex-1">
-                                Anulează
+                                {t('common.cancel')}
                             </IonButton>
-                            <IonButton 
-                                expand="block" 
+                            <IonButton
+                                expand="block"
                                 color={selectedOption?.dangerous ? 'danger' : 'primary'}
-                                onClick={handleProceed} 
+                                onClick={handleProceed}
                                 disabled={!selectedType}
                                 className="flex-1"
                             >
-                                Continuă
+                                {t('reset.continue')}
                             </IonButton>
                         </div>
                     </div>
@@ -194,10 +197,10 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, channelNames }
                 return (
                     <div className="text-center space-y-6 py-8">
                         <IonSpinner name="crescent" className="w-16 h-16 text-cyan-400" />
-                        
+
                         <div>
                             <h2 className="text-xl font-semibold text-white mb-2">
-                                {progress?.stage === 'waiting_confirmation' ? 'Aștept confirmare...' : 'Execut resetare...'}
+                                {progress?.stage === 'waiting_confirmation' ? t('reset.waitingConfirmation') : t('reset.executing')}
                             </h2>
                             <p className="text-gray-400">
                                 {selectedType !== null && getResetName(selectedType)}
@@ -206,7 +209,7 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, channelNames }
 
                         {progress?.confirmationCode && (
                             <div className="bg-gray-800/50 rounded-lg p-4">
-                                <p className="text-sm text-gray-400">Cod de confirmare:</p>
+                                <p className="text-sm text-gray-400">{t('reset.confirmationCode')}</p>
                                 <p className="text-2xl font-mono text-cyan-400">
                                     {progress.confirmationCode}
                                 </p>
@@ -214,7 +217,7 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, channelNames }
                         )}
 
                         <p className="text-sm text-amber-400">
-                            Nu închideți această fereastră
+                            {t('reset.doNotClose')}
                         </p>
                     </div>
                 );
@@ -228,7 +231,7 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, channelNames }
 
                         <div>
                             <h2 className="text-xl font-semibold text-white mb-2">
-                                Resetare Completă!
+                                {t('reset.complete')}
                             </h2>
                             <p className="text-gray-400">
                                 {selectedType !== null && getResetName(selectedType)}
@@ -236,7 +239,7 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, channelNames }
                         </div>
 
                         <IonButton expand="block" onClick={onClose}>
-                            Închide
+                            {t('common.close')}
                         </IonButton>
                     </div>
                 );
@@ -250,7 +253,7 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, channelNames }
 
                         <div>
                             <h2 className="text-xl font-semibold text-white mb-2">
-                                Eroare la Resetare
+                                {t('reset.error')}
                             </h2>
                             <p className="text-red-400">
                                 {error}
@@ -259,10 +262,10 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, channelNames }
 
                         <div className="flex gap-3">
                             <IonButton expand="block" fill="outline" onClick={onClose} className="flex-1">
-                                Închide
+                                {t('common.close')}
                             </IonButton>
                             <IonButton expand="block" onClick={() => setStep('select')} className="flex-1">
-                                Încearcă din nou
+                                {t('reset.tryAgain')}
                             </IonButton>
                         </div>
                     </div>
@@ -275,7 +278,7 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, channelNames }
             <IonModal isOpen={isOpen} onDidDismiss={onClose}>
                 <IonHeader>
                     <IonToolbar className="bg-gray-900">
-                        <IonTitle className="text-white">Resetare</IonTitle>
+                        <IonTitle className="text-white">{t('reset.title')}</IonTitle>
                     </IonToolbar>
                 </IonHeader>
                 <IonContent className="bg-gray-900">
@@ -288,15 +291,15 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, channelNames }
             <IonAlert
                 isOpen={showDangerConfirm}
                 onDidDismiss={() => setShowDangerConfirm(false)}
-                header="⚠️ Atenție!"
-                message={`Sunteți sigur că doriți să executați "${selectedType !== null ? getResetName(selectedType) : ''}"? Această acțiune nu poate fi anulată!`}
+                header={`⚠️ ${t('reset.warning')}`}
+                message={t('reset.confirmDanger')}
                 buttons={[
                     {
-                        text: 'Anulează',
+                        text: t('common.cancel'),
                         role: 'cancel'
                     },
                     {
-                        text: 'Da, continuă',
+                        text: t('reset.yesContinue'),
                         role: 'destructive',
                         handler: () => {
                             setShowDangerConfirm(false);

@@ -979,9 +979,25 @@ export class BleService {
                 break;
 
             case CHAR_UUIDS.AUTO_CALC_STATUS:
-                // Auto Calc Status is 64 bytes
+                // Auto Calc Status is 64 bytes (READ) or 72 bytes (8B header + 64B NOTIFY)
                 console.log('[DEBUG BLE] AUTO_CALC_STATUS notification received, byteLength:', view.byteLength);
-                const autoCalc = this.parseAutoCalcStatus(view);
+                let autoCalcView = view;
+                const AUTO_CALC_HEADER_LEN = 8;
+                const AUTO_CALC_PAYLOAD_LEN = 64;
+
+                if (view.byteLength === AUTO_CALC_HEADER_LEN + AUTO_CALC_PAYLOAD_LEN) {
+                    // Strip unified header for NOTIFY frames
+                    autoCalcView = new DataView(
+                        data.buffer,
+                        data.byteOffset + AUTO_CALC_HEADER_LEN,
+                        AUTO_CALC_PAYLOAD_LEN
+                    );
+                } else if (view.byteLength < AUTO_CALC_PAYLOAD_LEN) {
+                    console.warn('[BLE] AUTO_CALC_STATUS packet too short:', view.byteLength);
+                    break;
+                }
+
+                const autoCalc = this.parseAutoCalcStatus(autoCalcView);
                 store.setAutoCalcData(autoCalc.channel_id, autoCalc);
                 break;
 

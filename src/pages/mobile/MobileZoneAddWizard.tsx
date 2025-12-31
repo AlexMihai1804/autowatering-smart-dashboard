@@ -9,6 +9,7 @@ import { PlantDBEntry, SoilDBEntry, IrrigationMethodEntry, PLANT_CATEGORIES } fr
 import { isChannelConfigComplete } from '../../types/firmware_structs';
 import SoilGridsServiceInstance, { CustomSoilParameters, estimateSoilParametersFromTexture } from '../../services/SoilGridsService';
 import { getRecommendedCoverageType, getCoverageModeExplanation } from '../../utils/plantCoverageHelper';
+import { useI18n } from '../../i18n';
 
 type WizardStep =
   | 'select-channel'
@@ -84,6 +85,7 @@ const MobileZoneAddWizard: React.FC = () => {
 
   const { zones, systemConfig, onboardingState, wizardState, plantDb, soilDb, irrigationMethodDb } = useAppStore();
   const bleService = BleService.getInstance();
+  const { t } = useI18n();
 
   // Get unconfigured channels
   const unconfiguredChannels = useMemo(() => {
@@ -480,19 +482,19 @@ const MobileZoneAddWizard: React.FC = () => {
               <div className="size-16 rounded-full bg-mobile-primary/10 flex items-center justify-center mx-auto mb-4">
                 <span className="material-symbols-outlined text-mobile-primary text-3xl">water_drop</span>
               </div>
-              <h2 className="text-white text-2xl font-bold mb-2">Select Channel</h2>
-              <p className="text-mobile-text-muted">Choose an unconfigured channel for your new zone</p>
+              <h2 className="text-white text-2xl font-bold mb-2">{t('zoneWizard.selectChannel.title')}</h2>
+              <p className="text-mobile-text-muted">{t('zoneWizard.selectChannel.subtitle')}</p>
             </div>
 
             {unconfiguredChannels.length === 0 ? (
               <div className="text-center py-8">
                 <span className="material-symbols-outlined text-5xl text-gray-500 mb-4 block">check_circle</span>
-                <p className="text-mobile-text-muted">All channels are already configured!</p>
+                <p className="text-mobile-text-muted">{t('zoneWizard.selectChannel.allConfigured')}</p>
                 <button
                   onClick={() => history.goBack()}
                   className="mt-4 px-6 py-2 bg-mobile-surface-dark border border-mobile-border-dark rounded-xl text-white font-semibold"
                 >
-                  Go Back
+                  {t('zoneWizard.selectChannel.goBack')}
                 </button>
               </div>
             ) : (
@@ -514,10 +516,10 @@ const MobileZoneAddWizard: React.FC = () => {
                     </div>
                     <div className="flex-1 text-left">
                       <p className={`font-bold ${zoneConfig.channelId === channelId ? 'text-white' : 'text-mobile-text-muted'}`}>
-                        Channel {channelId + 1}
+                        {t('zoneWizard.selectChannel.channel')} {channelId + 1}
                       </p>
                       <p className="text-mobile-text-muted text-sm">
-                        Not configured
+                        {t('zoneWizard.selectChannel.notConfigured')}
                       </p>
                     </div>
                     {zoneConfig.channelId === channelId && (
@@ -538,21 +540,28 @@ const MobileZoneAddWizard: React.FC = () => {
                 <span className="material-symbols-outlined text-mobile-primary text-3xl">edit</span>
               </div>
               <p className="text-mobile-primary text-sm font-bold uppercase tracking-wider mb-1">
-                Channel {zoneConfig.channelId + 1}
+                {t('zoneWizard.selectChannel.channel')} {zoneConfig.channelId + 1}
               </p>
-              <h2 className="text-white text-2xl font-bold">Name This Zone</h2>
+              <h2 className="text-white text-2xl font-bold">{t('zoneWizard.zoneName.title')}</h2>
             </div>
 
             <input
               type="text"
               value={zoneConfig.name}
               onChange={(e) => updateZoneConfig({ name: e.target.value })}
-              placeholder="e.g., Front Lawn"
+              placeholder={t('zoneWizard.zoneName.placeholder')}
               className="w-full h-16 bg-mobile-surface-dark border border-mobile-border-dark rounded-2xl px-5 text-white text-xl font-semibold placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary transition-colors text-center"
             />
 
             <div className="grid grid-cols-3 gap-3">
-              {['Front Lawn', 'Back Garden', 'Flower Bed', 'Vegetables', 'Trees', 'Patio'].map(suggestion => (
+              {[
+                t('zoneWizard.zoneName.suggestions.frontLawn'),
+                t('zoneWizard.zoneName.suggestions.backGarden'),
+                t('zoneWizard.zoneName.suggestions.flowerBed'),
+                t('zoneWizard.zoneName.suggestions.vegetables'),
+                t('zoneWizard.zoneName.suggestions.trees'),
+                t('zoneWizard.zoneName.suggestions.patio')
+              ].map(suggestion => (
                 <button
                   key={suggestion}
                   onClick={() => updateZoneConfig({ name: suggestion })}
@@ -571,7 +580,7 @@ const MobileZoneAddWizard: React.FC = () => {
           <div className="space-y-6">
             <div className="pt-4 pb-4">
               <h1 className="text-white text-[32px] font-extrabold leading-[1.1] tracking-tight">
-                Select Plant Type
+                {t('zoneWizard.plantMethod.title')}
               </h1>
               <p className="text-mobile-primary text-sm font-semibold uppercase tracking-wider pt-2 opacity-90">
                 {zoneConfig.name}
@@ -584,9 +593,9 @@ const MobileZoneAddWizard: React.FC = () => {
               <div className="flex flex-row items-start gap-3 z-10">
                 <span className="material-symbols-outlined text-mobile-primary shrink-0 mt-0.5">info</span>
                 <div className="flex flex-col gap-1">
-                  <p className="text-white text-base font-bold leading-tight">Optimization Tip</p>
+                  <p className="text-white text-base font-bold leading-tight">{t('zoneWizard.plantMethod.optimizationTip.title')}</p>
                   <p className="text-mobile-text-muted text-sm font-medium leading-relaxed">
-                    Knowing your plant type helps calculate the perfect soil moisture levels and watering schedule.
+                    {t('zoneWizard.plantMethod.optimizationTip.text')}
                   </p>
                 </div>
               </div>
@@ -597,7 +606,7 @@ const MobileZoneAddWizard: React.FC = () => {
               onClick={() => {
                 setPlantMethod('camera');
                 // TODO: Implement camera plant identification
-                alert('Camera identification coming soon! Please use manual search for now.');
+                alert(t('zoneWizard.plantMethod.camera.alert'));
               }}
               className={`relative w-full flex flex-col items-center gap-4 rounded-[2rem] border-2 p-6 transition-all hover:scale-[1.02] ${plantMethod === 'camera'
                 ? 'border-mobile-primary bg-mobile-surface-dark shadow-[0_0_20px_rgba(19,236,55,0.15)]'
@@ -614,8 +623,8 @@ const MobileZoneAddWizard: React.FC = () => {
                 <span className="material-symbols-outlined text-[40px]">photo_camera</span>
               </div>
               <div className="text-center space-y-1">
-                <h3 className="text-xl font-bold text-white">Identify with Camera</h3>
-                <p className="text-sm text-mobile-text-muted">Use AI to detect your plant instantly</p>
+                <h3 className="text-xl font-bold text-white">{t('zoneWizard.plantMethod.camera.title')}</h3>
+                <p className="text-sm text-mobile-text-muted">{t('zoneWizard.plantMethod.camera.desc')}</p>
               </div>
             </button>
 
@@ -637,8 +646,8 @@ const MobileZoneAddWizard: React.FC = () => {
                 <span className="material-symbols-outlined text-[40px]">potted_plant</span>
               </div>
               <div className="text-center space-y-1">
-                <h3 className="text-xl font-bold text-white">Manual Search</h3>
-                <p className="text-sm text-mobile-text-muted">Browse the botanical database</p>
+                <h3 className="text-xl font-bold text-white">{t('zoneWizard.plantMethod.manual.title')}</h3>
+                <p className="text-sm text-mobile-text-muted">{t('zoneWizard.plantMethod.manual.desc')}</p>
               </div>
             </button>
           </div>
@@ -663,10 +672,10 @@ const MobileZoneAddWizard: React.FC = () => {
           <div className="space-y-5">
             <div className="pb-2">
               <h1 className="text-white text-[28px] font-extrabold leading-[1.1] tracking-tight">
-                Browse Plants
+                {t('zoneWizard.plantSelection.title')}
               </h1>
               <p className="text-mobile-text-muted text-sm mt-2">
-                Select a category or search the database
+                {t('zoneWizard.plantSelection.subtitle')}
               </p>
             </div>
 
@@ -677,7 +686,7 @@ const MobileZoneAddWizard: React.FC = () => {
                 type="text"
                 value={plantSearch}
                 onChange={(e) => setPlantSearch(e.target.value)}
-                placeholder="Search plants..."
+                placeholder={t('zoneWizard.plantSelection.searchPlaceholder')}
                 className="w-full h-14 bg-mobile-surface-dark border border-mobile-border-dark rounded-2xl pl-12 pr-4 text-white placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary text-lg"
               />
             </div>
@@ -692,7 +701,7 @@ const MobileZoneAddWizard: React.FC = () => {
                     : 'bg-mobile-surface-dark text-mobile-text-muted hover:bg-white/10'
                     }`}
                 >
-                  All
+                  {t('zoneWizard.plantSelection.categories.all')}
                 </button>
                 {PLANT_CATEGORIES.map(cat => (
                   <button
@@ -765,7 +774,7 @@ const MobileZoneAddWizard: React.FC = () => {
               {filteredPlants.length === 0 && (
                 <div className="text-center py-8 text-mobile-text-muted">
                   <span className="material-symbols-outlined text-4xl mb-2">search_off</span>
-                  <p>No plants found</p>
+                  <p>{t('zoneWizard.plantSelection.noPlantsFound')}</p>
                 </div>
               )}
             </div>
@@ -873,7 +882,7 @@ const MobileZoneAddWizard: React.FC = () => {
               } else {
                 // SoilGrids is down/unstable (or returned fallback). Don't pretend this is a GPS-derived soil.
                 // Keep any existing selection; if none, set a conservative default and let user choose manually.
-                setLocationError('Soil detection is temporarily unavailable (SoilGrids). Please select soil manually.');
+                setLocationError(t('zoneWizard.locationSetup.errors.soilFailed'));
                 const loamSoil = soilDb.find(s =>
                   s.soil_type?.toLowerCase().includes('loam')
                 );
@@ -887,7 +896,7 @@ const MobileZoneAddWizard: React.FC = () => {
             } catch (soilErr) {
               console.warn('[ZoneAddWizard] SoilGrids API error, using fallback:', soilErr);
               // SoilGrids failed. Keep current soil if set; otherwise choose a safe default.
-              setLocationError('Soil detection is temporarily unavailable (SoilGrids). Please select soil manually.');
+              setLocationError(t('zoneWizard.locationSetup.errors.soilFailed'));
               const loamSoil = soilDb.find(s =>
                 s.soil_type?.toLowerCase().includes('loam')
               );
@@ -903,11 +912,11 @@ const MobileZoneAddWizard: React.FC = () => {
           } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             if (message === 'GPS_DENIED') {
-              setLocationError('Location permission denied. Please enable GPS permissions in settings.');
+              setLocationError(t('zoneWizard.locationSetup.errors.denied'));
             } else if (message === 'GPS_NOT_AVAILABLE') {
-              setLocationError('Geolocation is not available on this device/browser.');
+              setLocationError(t('zoneWizard.locationSetup.errors.unavailable'));
             } else {
-              setLocationError('Failed to get location. Please try again.');
+              setLocationError(t('zoneWizard.locationSetup.errors.failed'));
             }
             setDetectingLocation(false);
           }
@@ -917,10 +926,10 @@ const MobileZoneAddWizard: React.FC = () => {
           <div className="space-y-6">
             <div className="pt-2 pb-4">
               <h1 className="text-white text-[32px] font-extrabold leading-[1.1] tracking-tight">
-                Set Location
+                {t('zoneWizard.locationSetup.title')}
               </h1>
               <p className="text-mobile-text-muted mt-3 text-base font-medium leading-relaxed">
-                Location helps us determine soil type and optimize watering based on local weather.
+                {t('zoneWizard.locationSetup.subtitle')}
               </p>
             </div>
 
@@ -936,14 +945,14 @@ const MobileZoneAddWizard: React.FC = () => {
                 <span className="material-symbols-outlined text-[40px]">satellite_alt</span>
               </div>
 
-              <h3 className="text-2xl font-bold leading-tight mb-2 tracking-tight text-white">Auto-Detect via GPS</h3>
+              <h3 className="text-2xl font-bold leading-tight mb-2 tracking-tight text-white">{t('zoneWizard.locationSetup.cardTitle')}</h3>
               <p className="text-mobile-text-muted text-sm leading-relaxed max-w-[260px] mb-6 font-medium text-center">
-                We'll use your location to identify local soil composition and weather patterns.
+                {t('zoneWizard.locationSetup.cardDesc')}
               </p>
 
               {zoneConfig.latitude && zoneConfig.longitude ? (
                 <div className="w-full p-4 rounded-2xl bg-mobile-primary/10 border border-mobile-primary text-center mb-4">
-                  <p className="text-mobile-primary font-bold mb-1">Location Detected!</p>
+                  <p className="text-mobile-primary font-bold mb-1">{t('zoneWizard.locationSetup.locationDetected')}</p>
                   <p className="text-mobile-text-muted text-sm">
                     {zoneConfig.latitude.toFixed(4)}°N, {zoneConfig.longitude.toFixed(4)}°W
                   </p>
@@ -957,12 +966,12 @@ const MobileZoneAddWizard: React.FC = () => {
                   {detectingLocation ? (
                     <>
                       <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                      <span>Detecting...</span>
+                      <span>{t('zoneWizard.locationSetup.detecting')}</span>
                     </>
                   ) : (
                     <>
                       <span className="material-symbols-outlined">my_location</span>
-                      <span>Start Detection</span>
+                      <span>{t('zoneWizard.locationSetup.startDetection')}</span>
                     </>
                   )}
                 </button>
@@ -976,12 +985,12 @@ const MobileZoneAddWizard: React.FC = () => {
             {/* Skip option */}
             <div className="flex items-center gap-4">
               <div className="h-px bg-mobile-border-dark flex-1"></div>
-              <span className="text-xs font-bold uppercase tracking-widest text-mobile-text-muted">Or skip this step</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-mobile-text-muted">{t('zoneWizard.locationSetup.skip')}</span>
               <div className="h-px bg-mobile-border-dark flex-1"></div>
             </div>
 
             <p className="text-mobile-text-muted text-sm text-center">
-              You can manually select soil type in the next step
+              {t('zoneWizard.locationSetup.skipDesc')}
             </p>
           </div>
         );
@@ -991,12 +1000,12 @@ const MobileZoneAddWizard: React.FC = () => {
           <div className="space-y-5">
             <div className="pb-2">
               <h1 className="text-white text-[28px] font-extrabold leading-[1.1] tracking-tight">
-                Soil Type
+                {t('zoneWizard.soilType.title')}
               </h1>
               <p className="text-mobile-text-muted mt-2 text-sm font-medium">
                 {zoneConfig.customSoilFromDetection?.enabled
-                  ? 'Custom soil profile created from GPS location'
-                  : 'Select your soil type for accurate watering'}
+                  ? t('zoneWizard.soilType.customProfileCreated')
+                  : t('zoneWizard.soilType.selectSoilForAccuracy')}
               </p>
             </div>
 
@@ -1013,39 +1022,39 @@ const MobileZoneAddWizard: React.FC = () => {
                       <span className="rounded-full bg-mobile-primary px-2 py-0.5 text-[10px] font-bold text-black">CUSTOM</span>
                     </div>
                     <p className="text-mobile-text-muted text-xs">
-                      Detected at {zoneConfig.latitude?.toFixed(4)}°, {zoneConfig.longitude?.toFixed(4)}°
+                      {t('zoneWizard.soilType.detectedAt')} {zoneConfig.latitude?.toFixed(4)}°, {zoneConfig.longitude?.toFixed(4)}°
                     </p>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="p-2 rounded-lg bg-white/5">
                     <p className="text-orange-400 text-lg font-bold">{zoneConfig.customSoilFromDetection.clay.toFixed(0)}%</p>
-                    <p className="text-mobile-text-muted text-xs">Clay</p>
+                    <p className="text-mobile-text-muted text-xs">{t('zoneWizard.soilType.clay')}</p>
                   </div>
                   <div className="p-2 rounded-lg bg-white/5">
                     <p className="text-yellow-400 text-lg font-bold">{zoneConfig.customSoilFromDetection.sand.toFixed(0)}%</p>
-                    <p className="text-mobile-text-muted text-xs">Sand</p>
+                    <p className="text-mobile-text-muted text-xs">{t('zoneWizard.soilType.sand')}</p>
                   </div>
                   <div className="p-2 rounded-lg bg-white/5">
                     <p className="text-blue-400 text-lg font-bold">{zoneConfig.customSoilFromDetection.silt.toFixed(0)}%</p>
-                    <p className="text-mobile-text-muted text-xs">Silt</p>
+                    <p className="text-mobile-text-muted text-xs">{t('zoneWizard.soilType.silt')}</p>
                   </div>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-mobile-text-muted">Field Capacity:</span>
+                    <span className="text-mobile-text-muted">{t('zoneWizard.soilType.fieldCapacity')}:</span>
                     <span className="text-white font-medium">{zoneConfig.customSoilFromDetection.field_capacity.toFixed(1)}%</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-mobile-text-muted">Wilting Point:</span>
+                    <span className="text-mobile-text-muted">{t('zoneWizard.soilType.wiltingPoint')}:</span>
                     <span className="text-white font-medium">{zoneConfig.customSoilFromDetection.wilting_point.toFixed(1)}%</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-mobile-text-muted">Infiltration:</span>
+                    <span className="text-mobile-text-muted">{t('zoneWizard.soilType.infiltration')}:</span>
                     <span className="text-white font-medium">{zoneConfig.customSoilFromDetection.infiltration_rate.toFixed(1)} mm/h</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-mobile-text-muted">Bulk Density:</span>
+                    <span className="text-mobile-text-muted">{t('zoneWizard.soilType.bulkDensity')}:</span>
                     <span className="text-white font-medium">{zoneConfig.customSoilFromDetection.bulk_density.toFixed(2)} g/cm³</span>
                   </div>
                 </div>
@@ -1059,7 +1068,11 @@ const MobileZoneAddWizard: React.FC = () => {
                   <span className="material-symbols-outlined text-mobile-primary">check_circle</span>
                   <div className="flex-1">
                     <p className="text-white font-bold">{zoneConfig.soilType.soil_type}</p>
-                    <p className="text-mobile-text-muted text-xs">Based on location ({zoneConfig.latitude?.toFixed(2)}°, {zoneConfig.longitude?.toFixed(2)}°)</p>
+                    <p className="text-mobile-text-muted text-xs">
+                      {t('zoneWizard.soilType.basedOnLocation')
+                        .replace('{lat}', zoneConfig.latitude?.toFixed(2) ?? '')
+                        .replace('{lon}', zoneConfig.longitude?.toFixed(2) ?? '')}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1069,7 +1082,7 @@ const MobileZoneAddWizard: React.FC = () => {
             <div className="flex items-center gap-4">
               <div className="h-px bg-mobile-border-dark flex-1"></div>
               <span className="text-xs font-bold uppercase tracking-widest text-mobile-text-muted">
-                {zoneConfig.customSoilFromDetection?.enabled || zoneConfig.soilType ? 'Or select manually' : 'Select soil type'}
+                {zoneConfig.customSoilFromDetection?.enabled || zoneConfig.soilType ? t('zoneWizard.soilType.orSelectManually') : t('zoneWizard.soilType.selectSoilType')}
               </span>
               <div className="h-px bg-mobile-border-dark flex-1"></div>
             </div>
@@ -1114,7 +1127,7 @@ const MobileZoneAddWizard: React.FC = () => {
                 <div className="flex items-center gap-4 mb-3">
                   <div className="h-px bg-mobile-border-dark flex-1"></div>
                   <span className="text-xs font-bold uppercase tracking-widest text-mobile-text-muted">
-                    Water Management
+                    {t('zoneWizard.soilType.waterManagement')}
                   </span>
                   <div className="h-px bg-mobile-border-dark flex-1"></div>
                 </div>
@@ -1133,7 +1146,7 @@ const MobileZoneAddWizard: React.FC = () => {
                   </div>
                   <div className="flex-1 text-left">
                     <p className={`font-bold ${zoneConfig.enableCycleSoak ? 'text-white' : 'text-mobile-text-muted'}`}>
-                      Cycle & Soak
+                      {t('zoneWizard.soilType.cycleSoak.title')}
                     </p>
                     <p className="text-mobile-text-muted text-xs">
                       {(() => {
@@ -1142,12 +1155,12 @@ const MobileZoneAddWizard: React.FC = () => {
                           : zoneConfig.soilType?.infiltration_rate_mm_h ?? 10;
                         if (infiltration < 10) {
                           return zoneConfig.enableCycleSoak
-                            ? `Activ - Sol lent (${infiltration.toFixed(1)} mm/h) - previne scurgerea`
-                            : `Recomandat - Sol lent (${infiltration.toFixed(1)} mm/h)`;
+                            ? t('zoneWizard.soilType.cycleSoak.activeSlowSoil').replace('{infiltration}', infiltration.toFixed(1))
+                            : t('zoneWizard.soilType.cycleSoak.recommendedSlowSoil').replace('{infiltration}', infiltration.toFixed(1));
                         }
                         return zoneConfig.enableCycleSoak
-                          ? `Activ - Previne scurgerea pe terenuri în pantă`
-                          : `Dezactivat - Sol rapid (${infiltration.toFixed(1)} mm/h)`;
+                          ? t('zoneWizard.soilType.cycleSoak.activeSlopedTerrain')
+                          : t('zoneWizard.soilType.cycleSoak.disabledFastSoil').replace('{infiltration}', infiltration.toFixed(1));
                       })()}
                     </p>
                   </div>
@@ -1162,6 +1175,7 @@ const MobileZoneAddWizard: React.FC = () => {
             )}
           </div>
         );
+
       case 'sun-exposure':
         return (
           <div className="space-y-6">
@@ -1172,14 +1186,14 @@ const MobileZoneAddWizard: React.FC = () => {
               <p className="text-mobile-primary text-sm font-bold uppercase tracking-wider mb-1">
                 {zoneConfig.name}
               </p>
-              <h2 className="text-white text-2xl font-bold">Sun Exposure</h2>
+              <h2 className="text-white text-2xl font-bold">{t('zoneWizard.sunExposure.title')}</h2>
             </div>
 
             <div className="space-y-3">
               {[
-                { value: 'full' as const, name: 'Full Sun', desc: '6+ hours of direct sunlight', icon: 'wb_sunny' },
-                { value: 'partial' as const, name: 'Partial Sun', desc: '3-6 hours of direct sunlight', icon: 'partly_cloudy_day' },
-                { value: 'shade' as const, name: 'Shade', desc: 'Less than 3 hours of sunlight', icon: 'cloud' },
+                { value: 'full' as const, name: t('zoneWizard.sunExposure.full.name'), desc: t('zoneWizard.sunExposure.full.desc'), icon: 'wb_sunny' },
+                { value: 'partial' as const, name: t('zoneWizard.sunExposure.partial.name'), desc: t('zoneWizard.sunExposure.partial.desc'), icon: 'partly_cloudy_day' },
+                { value: 'shade' as const, name: t('zoneWizard.sunExposure.shade.name'), desc: t('zoneWizard.sunExposure.shade.desc'), icon: 'cloud' },
               ].map(sun => (
                 <button
                   key={sun.value}
@@ -1189,7 +1203,7 @@ const MobileZoneAddWizard: React.FC = () => {
                     : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
                     }`}
                 >
-                  <div className={`size-14 rounded-full flex items-center justify-center ${zoneConfig.sunExposure === sun.value ? 'bg-orange-500/20 text-orange-400' : 'bg-white/5 text-mobile-text-muted'
+                  <div className={`size-14 rounded-full flex items-center justify-center transition-colors ${zoneConfig.sunExposure === sun.value ? 'bg-orange-500/20 text-orange-400' : 'bg-white/5 text-mobile-text-muted'
                     }`}>
                     <span className="material-symbols-outlined text-3xl">{sun.icon}</span>
                   </div>
@@ -1211,19 +1225,22 @@ const MobileZoneAddWizard: React.FC = () => {
       case 'coverage-area':
         return (
           <div className="space-y-6 pb-4">
-            <div className="pt-2 pb-2">
-              <h1 className="text-white text-[32px] font-extrabold leading-[1.1] tracking-tight text-center">
-                Define Coverage
+            <div className="pt-2 pb-4">
+              <h1 className="text-white text-[32px] font-extrabold leading-[1.1] tracking-tight">
+                {t('zoneWizard.coverage.title')}
               </h1>
-              <p className="text-mobile-text-muted mt-3 text-base font-medium leading-relaxed text-center">
-                How should we calculate water usage for this zone?
+              <p className="text-mobile-text-muted mt-3 text-base font-medium leading-relaxed">
+                {t('zoneWizard.coverage.subtitle')}
               </p>
             </div>
 
             {/* Coverage Type Toggle - conditionally show based on plant density */}
             {(() => {
               const coverageMode = getRecommendedCoverageType(zoneConfig.plantType || null);
-              const explanation = getCoverageModeExplanation(zoneConfig.plantType || null, coverageMode);
+              const explanation = getCoverageModeExplanation(zoneConfig.plantType || null, coverageMode, {
+                coverageDenseExplanation: t('zoneWizard.coverage.coverageDenseExplanation'),
+                coverageSparseExplanation: t('zoneWizard.coverage.coverageSparseExplanation')
+              });
 
               if (coverageMode === 'both') {
                 return (
@@ -1235,7 +1252,7 @@ const MobileZoneAddWizard: React.FC = () => {
                         : 'text-mobile-text-muted hover:text-white'
                         }`}
                     >
-                      Specify by Area
+                      {t('zoneWizard.coverage.specifyByArea')}
                     </button>
                     <button
                       onClick={() => updateZoneConfig({ coverageType: 'plants' })}
@@ -1244,7 +1261,7 @@ const MobileZoneAddWizard: React.FC = () => {
                         : 'text-mobile-text-muted hover:text-white'
                         }`}
                     >
-                      Specify by Plants
+                      {t('zoneWizard.coverage.specifyByPlants')}
                     </button>
                   </div>
                 );
@@ -1257,7 +1274,7 @@ const MobileZoneAddWizard: React.FC = () => {
                     {coverageMode === 'area' ? 'grid_4x4' : 'potted_plant'}
                   </span>
                   <span className="text-white font-bold">
-                    {coverageMode === 'area' ? 'Suprafață (m²)' : 'Număr plante'}
+                    {coverageMode === 'area' ? t('zoneWizard.coverage.areaUnit') : t('zoneWizard.coverage.plantsUnit')}
                   </span>
                   {explanation && (
                     <span className="text-mobile-text-muted text-sm ml-auto">{explanation}</span>
@@ -1289,7 +1306,7 @@ const MobileZoneAddWizard: React.FC = () => {
               {/* Unit display */}
               <div className="mt-4 flex items-center justify-center bg-mobile-surface-dark rounded-full p-1 border border-mobile-border-dark">
                 <span className="px-4 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white">
-                  {zoneConfig.coverageType === 'area' ? 'm²' : 'plants'}
+                  {zoneConfig.coverageType === 'area' ? t('zoneWizard.coverage.areaUnit') : t('zoneWizard.coverage.plantsUnit')}
                 </span>
               </div>
             </div>
@@ -1308,29 +1325,32 @@ const MobileZoneAddWizard: React.FC = () => {
                     : 'bg-white/5 text-mobile-text-muted hover:bg-white/10'
                     }`}
                 >
-                  {val}{zoneConfig.coverageType === 'area' ? 'm²' : ''}
+                  {val}{zoneConfig.coverageType === 'area' ? t('zoneWizard.coverage.areaUnit') : ''}
                 </button>
               ))}
             </div>
 
             {/* Helper text */}
-            <p className="text-mobile-text-muted text-sm font-medium text-center">
-              {zoneConfig.coverageType === 'area'
-                ? "We'll use this to estimate the liters required for optimal hydration."
-                : "Each plant will receive individual watering calculations."}
-            </p>
+            <div className="bg-mobile-surface-light rounded-xl p-4 flex gap-3 text-sm text-mobile-text-muted">
+              <span className="material-symbols-outlined text-mobile-primary shrink-0">info</span>
+              <p>
+                {zoneConfig.coverageType === 'area'
+                  ? t('zoneWizard.coverage.helperArea')
+                  : t('zoneWizard.coverage.helperPlants')}
+              </p>
+            </div>
           </div>
         );
 
       case 'irrigation-method':
         return (
           <div className="space-y-5">
-            <div className="pb-2">
-              <h1 className="text-white text-[28px] font-extrabold leading-[1.1] tracking-tight">
-                Irrigation Method
+            <div className="pt-2 pb-4">
+              <h1 className="text-white text-[32px] font-extrabold leading-[1.1] tracking-tight">
+                {t('zoneWizard.irrigation.title')}
               </h1>
-              <p className="text-mobile-text-muted mt-2 text-sm font-medium">
-                Select your irrigation system type
+              <p className="text-mobile-text-muted mt-3 text-base font-medium leading-relaxed">
+                {t('zoneWizard.irrigation.subtitle')}
               </p>
             </div>
 
@@ -1364,10 +1384,10 @@ const MobileZoneAddWizard: React.FC = () => {
                       <p className="text-white font-semibold">{method.name}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         {method.efficiency_pct && (
-                          <span className="text-mobile-text-muted text-xs">{method.efficiency_pct}% eff.</span>
+                          <span className="text-mobile-text-muted text-xs">{method.efficiency_pct}% {t('zoneWizard.irrigation.efficiency')}</span>
                         )}
                         {method.application_rate_mm_h && (
-                          <span className="text-mobile-text-muted text-xs">• {method.application_rate_mm_h}</span>
+                          <span className="text-mobile-text-muted text-xs">• {method.application_rate_mm_h} mm/h</span>
                         )}
                       </div>
                     </div>
@@ -1386,38 +1406,38 @@ const MobileZoneAddWizard: React.FC = () => {
         const wateringModes = [
           {
             value: 'quality' as const,
-            label: 'Smart Auto',
+            label: t('zoneWizard.wateringMode.modes.quality.label'),
             badge: 'FAO-56 • 100%',
             badgeColor: 'bg-mobile-primary/20 text-mobile-primary',
             icon: 'psychology',
-            desc: 'Calculates water needs using weather data. Maximizes plant health.',
+            desc: t('zoneWizard.wateringMode.modes.quality.desc'),
             recommended: true
           },
           {
             value: 'eco' as const,
-            label: 'Eco Saver',
+            label: t('zoneWizard.wateringMode.modes.eco.label'),
             badge: 'FAO-56 • 70%',
             badgeColor: 'bg-blue-400/20 text-blue-400',
             icon: 'eco',
-            desc: 'Same as Smart Auto but uses 30% less water. Trains deeper roots.',
+            desc: t('zoneWizard.wateringMode.modes.eco.desc'),
             recommended: false
           },
           {
             value: 'duration' as const,
-            label: 'Fixed Duration',
+            label: t('zoneWizard.wateringMode.modes.duration.label'),
             badge: 'Manual',
             badgeColor: 'bg-orange-400/20 text-orange-400',
             icon: 'timer',
-            desc: 'Waters for a fixed time (e.g., 10 minutes). You control the schedule.',
+            desc: t('zoneWizard.wateringMode.modes.duration.desc'),
             recommended: false
           },
           {
             value: 'volume' as const,
-            label: 'Fixed Volume',
+            label: t('zoneWizard.wateringMode.modes.volume.label'),
             badge: 'Manual',
             badgeColor: 'bg-purple-400/20 text-purple-400',
             icon: 'water_drop',
-            desc: 'Waters until a specific volume is reached (e.g., 5 liters).',
+            desc: t('zoneWizard.wateringMode.modes.volume.desc'),
             recommended: false
           },
         ];
@@ -1426,10 +1446,10 @@ const MobileZoneAddWizard: React.FC = () => {
           <div className="space-y-5 pb-4">
             <div className="pt-2 pb-4">
               <h1 className="text-white text-[32px] font-extrabold leading-[1.1] tracking-tight">
-                Watering Mode
+                {t('zoneWizard.wateringMode.title')}
               </h1>
               <p className="text-mobile-text-muted mt-3 text-base font-medium leading-relaxed">
-                Choose how {zoneConfig.name || 'this zone'} is watered based on your landscape needs.
+                {t('zoneWizard.wateringMode.subtitle')}
               </p>
             </div>
 
@@ -1454,8 +1474,8 @@ const MobileZoneAddWizard: React.FC = () => {
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         <h4 className="text-white font-bold text-xl">{mode.label}</h4>
                         {mode.recommended && (
-                          <span className="rounded-full bg-mobile-primary px-3 py-0.5 text-[10px] font-bold uppercase tracking-wide text-black">
-                            Recommended
+                          <span className="px-2 py-0.5 rounded bg-mobile-primary text-black text-[10px] font-bold uppercase tracking-wider ml-2">
+                            {t('zoneWizard.wateringMode.recommended')}
                           </span>
                         )}
                       </div>
@@ -1482,13 +1502,11 @@ const MobileZoneAddWizard: React.FC = () => {
 
             {/* Info tip for FAO-56 modes */}
             {(zoneConfig.wateringMode === 'quality' || zoneConfig.wateringMode === 'eco') && (
-              <div className="flex items-start gap-3 p-4 rounded-2xl bg-mobile-primary/5 border border-mobile-primary/20">
-                <span className="material-symbols-outlined text-mobile-primary mt-0.5">info</span>
+              <div className="bg-mobile-surface-light rounded-xl p-4 flex gap-3 text-sm text-mobile-text-muted mb-4">
+                <span className="material-symbols-outlined text-mobile-primary shrink-0">info</span>
                 <div>
-                  <p className="text-white font-bold text-sm">Next: Plant & Soil Setup</p>
-                  <p className="text-mobile-text-muted text-sm mt-1">
-                    FAO-56 modes need to know your plant type and soil to calculate accurate water needs.
-                  </p>
+                  <span className="text-white font-bold block mb-1">{t('zoneWizard.wateringMode.nextStepTip.title')}</span>
+                  {t('zoneWizard.wateringMode.nextStepTip.text')}
                 </div>
               </div>
             )}
@@ -1505,12 +1523,12 @@ const MobileZoneAddWizard: React.FC = () => {
           <div className="space-y-4">
             <div className="pb-1">
               <h1 className="text-white text-[28px] font-extrabold leading-[1.1] tracking-tight">
-                Schedule
+                {t('zoneWizard.schedule.title')}
               </h1>
               <p className="text-mobile-text-muted mt-2 text-sm font-medium">
                 {isFAO56Mode
-                  ? 'Choose when to water. Amount is calculated automatically.'
-                  : 'Set when and how much to water.'}
+                  ? t('zoneWizard.schedule.subtitleFao')
+                  : t('zoneWizard.schedule.subtitleManual')}
               </p>
             </div>
 
@@ -1531,10 +1549,10 @@ const MobileZoneAddWizard: React.FC = () => {
                   </div>
                   <div className="flex-1 text-left">
                     <div className="flex items-center gap-2">
-                      <p className="text-white font-bold">Fully Automatic</p>
-                      <span className="rounded-full bg-mobile-primary/20 px-2 py-0.5 text-[10px] font-bold text-mobile-primary">RECOMMENDED</span>
+                      <p className="text-white font-bold">{t('zoneWizard.schedule.auto.title')}</p>
+                      <span className="rounded-full bg-mobile-primary/20 px-2 py-0.5 text-[10px] font-bold text-mobile-primary">{t('zoneWizard.schedule.auto.recommended')}</span>
                     </div>
-                    <p className="text-mobile-text-muted text-xs">System decides when & how much based on soil moisture deficit</p>
+                    <p className="text-mobile-text-muted text-xs">{t('zoneWizard.schedule.auto.desc')}</p>
                   </div>
                   {zoneConfig.scheduleType === 2 && (
                     <span className="material-symbols-outlined text-mobile-primary">check_circle</span>
@@ -1554,8 +1572,8 @@ const MobileZoneAddWizard: React.FC = () => {
                     <span className="material-symbols-outlined">edit_calendar</span>
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="text-white font-bold">Custom Schedule</p>
-                    <p className="text-mobile-text-muted text-xs">Set specific days/times, amount still auto-calculated</p>
+                    <p className="text-white font-bold">{t('zoneWizard.schedule.custom.title')}</p>
+                    <p className="text-mobile-text-muted text-xs">{t('zoneWizard.schedule.custom.desc')}</p>
                   </div>
                   {zoneConfig.scheduleType !== 2 && (
                     <span className="material-symbols-outlined text-mobile-primary">check_circle</span>
@@ -1575,7 +1593,7 @@ const MobileZoneAddWizard: React.FC = () => {
                     </span>
                   </div>
                   <p className="text-white font-bold text-sm">
-                    {isDurationMode ? 'Duration' : 'Volume'}
+                    {isDurationMode ? t('zoneWizard.schedule.duration') : t('zoneWizard.schedule.volume')}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -1622,7 +1640,7 @@ const MobileZoneAddWizard: React.FC = () => {
                     <div className="size-9 rounded-full bg-purple-400/20 flex items-center justify-center text-purple-400">
                       <span className="material-symbols-outlined text-lg">schedule</span>
                     </div>
-                    <p className="text-white font-bold text-sm">Start Time</p>
+                    <p className="text-white font-bold text-sm">{t('zoneWizard.schedule.startTime')}</p>
                   </div>
 
                   {/* Solar vs Fixed toggle */}
@@ -1635,7 +1653,7 @@ const MobileZoneAddWizard: React.FC = () => {
                         }`}
                     >
                       <span className="material-symbols-outlined text-lg">wb_twilight</span>
-                      Solar
+                      {t('zoneWizard.schedule.solar')}
                     </button>
                     <button
                       onClick={() => updateZoneConfig({ useSolarTiming: false })}
@@ -1645,7 +1663,7 @@ const MobileZoneAddWizard: React.FC = () => {
                         }`}
                     >
                       <span className="material-symbols-outlined text-lg">schedule</span>
-                      Fixed Time
+                      {t('zoneWizard.schedule.fixedTime')}
                     </button>
                   </div>
 
@@ -1661,7 +1679,7 @@ const MobileZoneAddWizard: React.FC = () => {
                             }`}
                         >
                           <span className="material-symbols-outlined">wb_twilight</span>
-                          Sunset
+                          {t('zoneWizard.schedule.solarEvents.sunset')}
                         </button>
                         <button
                           onClick={() => updateZoneConfig({ solarEvent: 1 })}
@@ -1671,11 +1689,11 @@ const MobileZoneAddWizard: React.FC = () => {
                             }`}
                         >
                           <span className="material-symbols-outlined">wb_sunny</span>
-                          Sunrise
+                          {t('zoneWizard.schedule.solarEvents.sunrise')}
                         </button>
                       </div>
                       <div>
-                        <p className="text-mobile-text-muted text-xs mb-2">Offset from {zoneConfig.solarEvent === 0 ? 'sunset' : 'sunrise'}</p>
+                        <p className="text-mobile-text-muted text-xs mb-2">{t('zoneWizard.schedule.solarOffset').replace('{event}', zoneConfig.solarEvent === 0 ? t('zoneWizard.schedule.solarEvents.sunset').toLowerCase() : t('zoneWizard.schedule.solarEvents.sunrise').toLowerCase())}</p>
                         <div className="flex gap-1.5 flex-wrap">
                           {[-60, -30, 0, 30, 60].map(offset => (
                             <button
@@ -1686,7 +1704,7 @@ const MobileZoneAddWizard: React.FC = () => {
                                 : 'bg-white/10 text-mobile-text-muted'
                                 }`}
                             >
-                              {offset === 0 ? 'At event' : offset > 0 ? `+${offset}m after` : `${offset}m before`}
+                              {offset === 0 ? t('zoneWizard.schedule.solarOffsetOptions.atEvent') : offset > 0 ? t('zoneWizard.schedule.solarOffsetOptions.after').replace('{offset}', offset.toString()) : t('zoneWizard.schedule.solarOffsetOptions.before').replace('{offset}', Math.abs(offset).toString())}
                             </button>
                           ))}
                         </div>
@@ -1711,7 +1729,7 @@ const MobileZoneAddWizard: React.FC = () => {
                     <div className="size-9 rounded-full bg-green-400/20 flex items-center justify-center text-green-400">
                       <span className="material-symbols-outlined text-lg">calendar_month</span>
                     </div>
-                    <p className="text-white font-bold text-sm">Frequency</p>
+                    <p className="text-white font-bold text-sm">{t('zoneWizard.schedule.frequency')}</p>
                   </div>
 
                   {/* DAILY vs PERIODIC toggle */}
@@ -1723,7 +1741,7 @@ const MobileZoneAddWizard: React.FC = () => {
                         : 'bg-white/5 text-mobile-text-muted border border-transparent'
                         }`}
                     >
-                      Specific Days
+                      {t('zoneWizard.schedule.specificDays')}
                     </button>
                     <button
                       onClick={() => updateZoneConfig({ scheduleType: 1 })}
@@ -1732,7 +1750,7 @@ const MobileZoneAddWizard: React.FC = () => {
                         : 'bg-white/5 text-mobile-text-muted border border-transparent'
                         }`}
                     >
-                      Every X Days
+                      {t('zoneWizard.schedule.everyXDays')}
                     </button>
                   </div>
 
@@ -1766,19 +1784,19 @@ const MobileZoneAddWizard: React.FC = () => {
                           onClick={() => updateZoneConfig({ scheduleDays: [0, 1, 2, 3, 4, 5, 6] })}
                           className="px-2.5 py-1 rounded-full text-xs font-bold bg-white/10 text-mobile-text-muted"
                         >
-                          Every Day
+                          {t('zoneWizard.schedule.days.everyDay')}
                         </button>
                         <button
                           onClick={() => updateZoneConfig({ scheduleDays: [1, 3, 5] })}
                           className="px-2.5 py-1 rounded-full text-xs font-bold bg-white/10 text-mobile-text-muted"
                         >
-                          M/W/F
+                          {t('zoneWizard.schedule.days.mwf')}
                         </button>
                         <button
                           onClick={() => updateZoneConfig({ scheduleDays: [2, 4, 6] })}
                           className="px-2.5 py-1 rounded-full text-xs font-bold bg-white/10 text-mobile-text-muted"
                         >
-                          T/Th/S
+                          {t('zoneWizard.schedule.days.tts')}
                         </button>
                       </div>
                     </>
@@ -1787,7 +1805,7 @@ const MobileZoneAddWizard: React.FC = () => {
                   {/* PERIODIC - interval picker */}
                   {zoneConfig.scheduleType === 1 && (
                     <div>
-                      <p className="text-mobile-text-muted text-xs mb-2">Water every</p>
+                      <p className="text-mobile-text-muted text-xs mb-2">{t('zoneWizard.schedule.waterEvery')}</p>
                       <div className="flex gap-1.5 flex-wrap">
                         {[1, 2, 3, 4, 5, 7, 10, 14].map(days => (
                           <button
@@ -1798,7 +1816,7 @@ const MobileZoneAddWizard: React.FC = () => {
                               : 'bg-white/10 text-mobile-text-muted'
                               }`}
                           >
-                            {days === 1 ? 'Daily' : `${days} days`}
+                            {days === 1 ? t('zoneWizard.schedule.daily') : t('zoneWizard.schedule.everyXDaysValue').replace('{days}', days.toString())}
                           </button>
                         ))}
                       </div>
@@ -1814,10 +1832,9 @@ const MobileZoneAddWizard: React.FC = () => {
                 <div className="flex items-start gap-3">
                   <span className="material-symbols-outlined text-mobile-primary mt-0.5">auto_awesome</span>
                   <div>
-                    <p className="text-white font-bold text-sm">How Automatic Mode Works</p>
+                    <p className="text-white font-bold text-sm">{t('zoneWizard.schedule.auto.howItWorks.title')}</p>
                     <p className="text-mobile-text-muted text-xs mt-1">
-                      The system monitors soil moisture deficit using FAO-56 calculations and weather data.
-                      It waters at sunset when needed, using exactly the amount required to restore optimal moisture.
+                      {t('zoneWizard.schedule.auto.howItWorks.text')}
                     </p>
                   </div>
                 </div>
@@ -1836,14 +1853,14 @@ const MobileZoneAddWizard: React.FC = () => {
               <p className="text-mobile-primary text-sm font-bold uppercase tracking-wider mb-1">
                 {zoneConfig.name}
               </p>
-              <h2 className="text-white text-2xl font-bold">Weather Adjustments</h2>
+              <h2 className="text-white text-2xl font-bold">{t('zoneWizard.weather.title')}</h2>
             </div>
 
             <div className="space-y-3">
               {[
-                { key: 'rainSkip' as const, icon: 'water_drop', iconBg: 'bg-blue-500/20', iconColor: 'text-blue-400', name: 'Rain Skip', desc: 'Skip watering when rain is expected' },
-                { key: 'tempAdjust' as const, icon: 'thermostat', iconBg: 'bg-orange-500/20', iconColor: 'text-orange-400', name: 'Temperature Adjust', desc: 'Increase watering on hot days' },
-                { key: 'windSkip' as const, icon: 'air', iconBg: 'bg-gray-500/20', iconColor: 'text-gray-400', name: 'Wind Skip', desc: 'Skip watering on windy days' },
+                { key: 'rainSkip' as const, icon: 'water_drop', iconBg: 'bg-blue-500/20', iconColor: 'text-blue-400', name: t('zoneWizard.weather.rainSkip.name'), desc: t('zoneWizard.weather.rainSkip.desc') },
+                { key: 'tempAdjust' as const, icon: 'thermostat', iconBg: 'bg-orange-500/20', iconColor: 'text-orange-400', name: t('zoneWizard.weather.tempAdjust.name'), desc: t('zoneWizard.weather.tempAdjust.desc') },
+                { key: 'windSkip' as const, icon: 'air', iconBg: 'bg-gray-500/20', iconColor: 'text-gray-400', name: t('zoneWizard.weather.windSkip.name'), desc: t('zoneWizard.weather.windSkip.desc') },
               ].map(adj => (
                 <div
                   key={adj.key}
@@ -1873,7 +1890,7 @@ const MobileZoneAddWizard: React.FC = () => {
             {/* Advanced FAO-56 Settings - only show for Quality/Eco modes */}
             {(zoneConfig.wateringMode === 'quality' || zoneConfig.wateringMode === 'eco') && (
               <div className="mt-6 space-y-4">
-                <h3 className="text-mobile-text-muted text-sm font-semibold uppercase tracking-wider">Advanced Settings</h3>
+                <h3 className="text-mobile-text-muted text-sm font-semibold uppercase tracking-wider">{t('zoneWizard.weather.advanced')}</h3>
 
                 {/* Cycle & Soak Toggle */}
                 <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-mobile-surface-dark border border-mobile-border-dark">
@@ -1882,8 +1899,8 @@ const MobileZoneAddWizard: React.FC = () => {
                       <span className="material-symbols-outlined">autorenew</span>
                     </div>
                     <div>
-                      <p className="text-white font-semibold">Cycle & Soak</p>
-                      <p className="text-mobile-text-muted text-sm">Break watering into cycles with soak periods</p>
+                      <p className="text-white font-semibold">{t('zoneWizard.weather.cycleSoak.title')}</p>
+                      <p className="text-mobile-text-muted text-sm">{t('zoneWizard.weather.cycleSoak.explanation')}</p>
                     </div>
                   </div>
                   <button
@@ -1901,8 +1918,8 @@ const MobileZoneAddWizard: React.FC = () => {
                       <span className="material-symbols-outlined">water</span>
                     </div>
                     <div>
-                      <p className="text-white font-semibold">Max Volume per Watering</p>
-                      <p className="text-mobile-text-muted text-sm">Maximum liters per watering session</p>
+                      <p className="text-white font-semibold">{t('zoneWizard.weather.maxVolume.title')}</p>
+                      <p className="text-mobile-text-muted text-sm">{t('zoneWizard.weather.maxVolume.desc')}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -1925,47 +1942,47 @@ const MobileZoneAddWizard: React.FC = () => {
       case 'zone-summary':
         // Map watering mode to display name
         const wateringModeLabels: Record<string, string> = {
-          'quality': 'Smart Auto (100%)',
-          'eco': 'Eco Saver (70%)',
-          'duration': 'Fixed Duration',
-          'volume': 'Fixed Volume',
+          'quality': t('zoneWizard.summary.wateringModes.quality'),
+          'eco': t('zoneWizard.summary.wateringModes.eco'),
+          'duration': t('zoneWizard.summary.wateringModes.duration'),
+          'volume': t('zoneWizard.summary.wateringModes.volume'),
         };
 
         // Get soil display info
         const soilDisplay = zoneConfig.customSoilFromDetection?.enabled
-          ? `${zoneConfig.customSoilFromDetection.name} (GPS)`
-          : zoneConfig.soilType?.soil_type || 'Not set';
+          ? `${zoneConfig.customSoilFromDetection.name} (${t('zoneWizard.summary.gps')})`
+          : zoneConfig.soilType?.soil_type || t('zoneWizard.summary.notSet');
 
         // Schedule display helpers
-        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const dayNames = [t('zoneWizard.summary.days.sun'), t('zoneWizard.summary.days.mon'), t('zoneWizard.summary.days.tue'), t('zoneWizard.summary.days.wed'), t('zoneWizard.summary.days.thu'), t('zoneWizard.summary.days.fri'), t('zoneWizard.summary.days.sat')];
         const isFAO56Summary = zoneConfig.wateringMode === 'quality' || zoneConfig.wateringMode === 'eco';
 
         // Get schedule description
         let scheduleDesc = '';
         if (isFAO56Summary && zoneConfig.scheduleType === 2) {
-          scheduleDesc = 'Fully Automatic';
+          scheduleDesc = t('zoneWizard.summary.scheduleTypes.fullyAutomatic');
         } else if (zoneConfig.scheduleType === 0) {
           scheduleDesc = zoneConfig.scheduleDays.length === 7
-            ? 'Every day'
+            ? t('zoneWizard.summary.scheduleTypes.everyDay')
             : zoneConfig.scheduleDays.map(d => dayNames[d]).join(', ');
         } else if (zoneConfig.scheduleType === 1) {
           scheduleDesc = zoneConfig.scheduleIntervalDays === 1
-            ? 'Daily'
-            : `Every ${zoneConfig.scheduleIntervalDays} days`;
+            ? t('zoneWizard.summary.scheduleTypes.daily')
+            : t('zoneWizard.summary.scheduleTypes.everyXDays').replace('{days}', zoneConfig.scheduleIntervalDays.toString());
         }
 
         // Get time description
         let timeDesc = '';
         if (isFAO56Summary && zoneConfig.scheduleType === 2) {
-          timeDesc = 'At sunset (auto)';
+          timeDesc = t('zoneWizard.summary.timeDescriptions.sunsetAuto');
         } else if (zoneConfig.useSolarTiming) {
-          const eventName = zoneConfig.solarEvent === 0 ? 'Sunset' : 'Sunrise';
+          const eventName = zoneConfig.solarEvent === 0 ? t('zoneWizard.summary.solarEvents.sunset') : t('zoneWizard.summary.solarEvents.sunrise');
           if (zoneConfig.solarOffsetMinutes === 0) {
-            timeDesc = `At ${eventName.toLowerCase()}`;
+            timeDesc = t('zoneWizard.summary.timeDescriptions.atEvent').replace('{event}', eventName.toLowerCase());
           } else if (zoneConfig.solarOffsetMinutes > 0) {
-            timeDesc = `${zoneConfig.solarOffsetMinutes}m after ${eventName.toLowerCase()}`;
+            timeDesc = t('zoneWizard.summary.timeDescriptions.afterEvent').replace('{offset}', zoneConfig.solarOffsetMinutes.toString()).replace('{event}', eventName.toLowerCase());
           } else {
-            timeDesc = `${Math.abs(zoneConfig.solarOffsetMinutes)}m before ${eventName.toLowerCase()}`;
+            timeDesc = t('zoneWizard.summary.timeDescriptions.beforeEvent').replace('{offset}', Math.abs(zoneConfig.solarOffsetMinutes).toString()).replace('{event}', eventName.toLowerCase());
           }
         } else {
           timeDesc = `${zoneConfig.scheduleHour.toString().padStart(2, '0')}:${zoneConfig.scheduleMinute.toString().padStart(2, '0')}`;
@@ -1973,37 +1990,37 @@ const MobileZoneAddWizard: React.FC = () => {
 
         // Build summary items based on watering mode
         const summaryItems = [
-          { label: 'Channel', value: `Channel ${zoneConfig.channelId + 1}`, icon: 'tag' },
-          { label: 'Mode', value: wateringModeLabels[zoneConfig.wateringMode] || zoneConfig.wateringMode, icon: 'settings_suggest' },
+          { label: t('zoneWizard.summary.items.channel'), value: `${t('zoneWizard.summary.channel')} ${zoneConfig.channelId + 1}`, icon: 'tag' },
+          { label: t('zoneWizard.summary.items.mode'), value: wateringModeLabels[zoneConfig.wateringMode] || zoneConfig.wateringMode, icon: 'settings_suggest' },
         ];
 
         // FAO-56 modes show plant/soil info
         if (isFAO56Summary) {
           summaryItems.push(
-            { label: 'Plant Type', value: zoneConfig.plantType?.common_name_en || 'Not set', icon: 'eco' },
-            { label: 'Soil Type', value: soilDisplay, icon: 'landscape' },
-            { label: 'Sun Exposure', value: zoneConfig.sunExposure.charAt(0).toUpperCase() + zoneConfig.sunExposure.slice(1), icon: 'wb_sunny' },
-            { label: 'Max Volume', value: `${zoneConfig.maxVolumeLimitL} L`, icon: 'water' },
-            { label: 'Cycle & Soak', value: zoneConfig.enableCycleSoak ? 'Enabled' : 'Disabled', icon: 'autorenew' },
+            { label: t('zoneWizard.summary.items.plantType'), value: zoneConfig.plantType?.common_name_en || t('zoneWizard.summary.notSet'), icon: 'eco' },
+            { label: t('zoneWizard.summary.items.soilType'), value: soilDisplay, icon: 'landscape' },
+            { label: t('zoneWizard.summary.items.sunExposure'), value: zoneConfig.sunExposure === 'full' ? t('zoneWizard.summary.sunExposure.full') : zoneConfig.sunExposure === 'partial' ? t('zoneWizard.summary.sunExposure.partial') : t('zoneWizard.summary.sunExposure.shade'), icon: 'wb_sunny' },
+            { label: t('zoneWizard.summary.items.maxVolume'), value: `${zoneConfig.maxVolumeLimitL} L`, icon: 'water' },
+            { label: t('zoneWizard.summary.items.cycleSoak'), value: zoneConfig.enableCycleSoak ? t('zoneWizard.summary.enabled') : t('zoneWizard.summary.disabled'), icon: 'autorenew' },
           );
         }
 
         // All modes show coverage and irrigation
         summaryItems.push(
           {
-            label: 'Coverage',
+            label: t('zoneWizard.summary.items.coverage'),
             value: zoneConfig.coverageType === 'area'
-              ? `${zoneConfig.coverageValue} m²`
-              : `${zoneConfig.coverageValue} plants`,
+              ? `${zoneConfig.coverageValue} ${t('zoneWizard.coverage.areaUnit')}`
+              : `${zoneConfig.coverageValue} ${t('zoneWizard.coverage.plantsUnit')}`,
             icon: zoneConfig.coverageType === 'area' ? 'square_foot' : 'potted_plant'
           },
-          { label: 'Irrigation', value: zoneConfig.irrigationMethodEntry?.name || zoneConfig.irrigationMethod.charAt(0).toUpperCase() + zoneConfig.irrigationMethod.slice(1), icon: 'water_drop' },
+          { label: t('zoneWizard.summary.items.irrigation'), value: zoneConfig.irrigationMethodEntry?.name || zoneConfig.irrigationMethod.charAt(0).toUpperCase() + zoneConfig.irrigationMethod.slice(1), icon: 'water_drop' },
         );
 
         // Duration/Volume modes show duration/volume value
         if (!isFAO56Summary) {
           summaryItems.push({
-            label: zoneConfig.wateringMode === 'duration' ? 'Duration' : 'Volume',
+            label: zoneConfig.wateringMode === 'duration' ? t('zoneWizard.schedule.duration') : t('zoneWizard.schedule.volume'),
             value: zoneConfig.wateringMode === 'duration'
               ? `${zoneConfig.scheduleValue} min`
               : `${zoneConfig.scheduleValue} L`,
@@ -2013,8 +2030,8 @@ const MobileZoneAddWizard: React.FC = () => {
 
         // Schedule info - different display based on AUTO vs manual
         summaryItems.push(
-          { label: 'Schedule', value: scheduleDesc, icon: 'calendar_month' },
-          { label: 'Start Time', value: timeDesc, icon: zoneConfig.useSolarTiming || (isFAO56Summary && zoneConfig.scheduleType === 2) ? 'wb_twilight' : 'schedule' },
+          { label: t('zoneWizard.summary.items.schedule'), value: scheduleDesc, icon: 'calendar_month' },
+          { label: t('zoneWizard.summary.items.startTime'), value: timeDesc, icon: zoneConfig.useSolarTiming || (isFAO56Summary && zoneConfig.scheduleType === 2) ? 'wb_twilight' : 'schedule' },
         );
 
         return (
@@ -2076,13 +2093,13 @@ const MobileZoneAddWizard: React.FC = () => {
         <div className="size-24 rounded-full bg-mobile-primary/10 flex items-center justify-center mb-6">
           <span className="material-symbols-outlined text-mobile-primary text-5xl">check_circle</span>
         </div>
-        <h2 className="text-white text-2xl font-bold mb-2 text-center">All Zones Configured!</h2>
-        <p className="text-mobile-text-muted text-center mb-6">All available channels have been set up.</p>
+        <h2 className="text-white text-2xl font-bold mb-2 text-center">{t('zoneWizard.allConfigured.title')}</h2>
+        <p className="text-mobile-text-muted text-center mb-6">{t('zoneWizard.allConfigured.message')}</p>
         <button
           onClick={() => history.goBack()}
           className="px-8 py-3 bg-mobile-primary text-mobile-bg-dark font-bold rounded-xl"
         >
-          Go Back
+          {t('zoneWizard.allConfigured.button')}
         </button>
       </div>
     );
@@ -2100,13 +2117,13 @@ const MobileZoneAddWizard: React.FC = () => {
             <span className="material-symbols-outlined">arrow_back_ios_new</span>
           </button>
 
-          <h1 className="text-white font-bold">Add Zone</h1>
+          <h1 className="text-white font-bold">{t('zoneWizard.header.addZone')}</h1>
 
           <button
             onClick={() => history.push('/zones')}
             className="text-mobile-text-muted flex items-center justify-center text-sm font-medium hover:text-white transition-colors"
           >
-            Cancel
+            {t('zoneWizard.header.cancel')}
           </button>
         </div>
 
@@ -2153,16 +2170,16 @@ const MobileZoneAddWizard: React.FC = () => {
           {saving ? (
             <>
               <span className="material-symbols-outlined animate-spin">progress_activity</span>
-              Saving...
+              {t('zoneWizard.summary.saving')}...
             </>
           ) : currentStep === 'zone-summary' ? (
             <>
               <span className="material-symbols-outlined">check</span>
-              Save Zone
+              {t('zoneWizard.summary.save')}
             </>
           ) : (
             <>
-              Continue
+              {t('zoneWizard.common.continue')}
               <span className="material-symbols-outlined">arrow_forward</span>
             </>
           )}
@@ -2172,7 +2189,7 @@ const MobileZoneAddWizard: React.FC = () => {
       <MobileBottomSheet
         isOpen={showPlantSheet}
         onClose={() => setShowPlantSheet(false)}
-        title="Select Plant Type"
+        title={t('zoneWizard.plantSelection.title')}
       >
         <div className="p-4 border-b border-mobile-border-dark">
           <div className="relative">
@@ -2181,7 +2198,7 @@ const MobileZoneAddWizard: React.FC = () => {
               type="text"
               value={plantSearch}
               onChange={(e) => setPlantSearch(e.target.value)}
-              placeholder="Search plants..."
+              placeholder={t('zoneWizard.plantSelection.searchPlaceholder')}
               className="w-full h-12 bg-mobile-surface-dark border border-mobile-border-dark rounded-xl pl-12 pr-4 text-white placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary"
             />
           </div>
@@ -2216,7 +2233,7 @@ const MobileZoneAddWizard: React.FC = () => {
       <MobileBottomSheet
         isOpen={showSoilSheet}
         onClose={() => setShowSoilSheet(false)}
-        title="Select Soil Type"
+        title={t('zoneWizard.soilType.title')}
       >
         <div className="p-4 border-b border-mobile-border-dark">
           <div className="relative">
@@ -2225,7 +2242,7 @@ const MobileZoneAddWizard: React.FC = () => {
               type="text"
               value={soilSearch}
               onChange={(e) => setSoilSearch(e.target.value)}
-              placeholder="Search soils..."
+              placeholder={t('zoneWizard.soilType.searchPlaceholder')}
               className="w-full h-12 bg-mobile-surface-dark border border-mobile-border-dark rounded-xl pl-12 pr-4 text-white placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary"
             />
           </div>
@@ -2259,7 +2276,7 @@ const MobileZoneAddWizard: React.FC = () => {
       <MobileBottomSheet
         isOpen={showIrrigationSheet}
         onClose={() => setShowIrrigationSheet(false)}
-        title="Select Irrigation Method"
+        title={t('zoneWizard.irrigation.title')}
       >
         <div className="max-h-[60vh] overflow-y-auto divide-y divide-mobile-border-dark">
           {irrigationMethodDb.map((method: IrrigationMethodEntry) => (
@@ -2277,7 +2294,7 @@ const MobileZoneAddWizard: React.FC = () => {
               <div className="flex-1 text-left">
                 <span className="text-white font-semibold">{method.name}</span>
                 {method.efficiency_pct && (
-                  <p className="text-mobile-text-muted text-xs">Efficiency: {method.efficiency_pct}%</p>
+                  <p className="text-mobile-text-muted text-xs">{t('zoneWizard.irrigation.efficiency')}: {method.efficiency_pct}%</p>
                 )}
               </div>
             </button>

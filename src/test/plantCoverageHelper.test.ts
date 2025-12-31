@@ -184,30 +184,63 @@ describe('plantCoverageHelper', () => {
     });
 
     describe('getCoverageModeExplanation', () => {
+        const roTranslations = {
+            coverageDenseExplanation: 'Cultură densă - folosim suprafața',
+            coverageSparseExplanation: 'Plantare rară - introduci numărul de plante',
+        };
+
+        const enTranslations = {
+            coverageDenseExplanation: 'Dense crop - using area measurement',
+            coverageSparseExplanation: 'Sparse planting - enter number of plants',
+        };
+
         it('should return empty string for null plant', () => {
             expect(getCoverageModeExplanation(null, 'both')).toBe('');
         });
 
-        it('should return explanation for dense crop (area mode)', () => {
+        it('should return Romanian explanation for dense crop with RO translations', () => {
             const wheat = createPlant({
                 default_density_plants_m2: 222.22
             });
-            const explanation = getCoverageModeExplanation(wheat, 'area');
+            const explanation = getCoverageModeExplanation(wheat, 'area', roTranslations);
             expect(explanation).toContain('densă');
         });
 
-        it('should return explanation for sparse planting (plants mode)', () => {
+        it('should return English explanation for dense crop with EN translations', () => {
+            const wheat = createPlant({
+                default_density_plants_m2: 222.22
+            });
+            const explanation = getCoverageModeExplanation(wheat, 'area', enTranslations);
+            expect(explanation).toContain('Dense crop');
+        });
+
+        it('should return Romanian explanation for sparse planting', () => {
             const tomato = createPlant({
                 spacing_row_m: 1.0,
                 spacing_plant_m: 0.5
             });
-            const explanation = getCoverageModeExplanation(tomato, 'plants');
+            const explanation = getCoverageModeExplanation(tomato, 'plants', roTranslations);
             expect(explanation).toContain('rară');
+        });
+
+        it('should return English explanation for sparse planting', () => {
+            const tomato = createPlant({
+                spacing_row_m: 1.0,
+                spacing_plant_m: 0.5
+            });
+            const explanation = getCoverageModeExplanation(tomato, 'plants', enTranslations);
+            expect(explanation).toContain('Sparse');
         });
 
         it('should return empty for both mode', () => {
             const unknown = createPlant();
             expect(getCoverageModeExplanation(unknown, 'both')).toBe('');
+        });
+
+        it('should fall back to Romanian when no translations provided', () => {
+            const wheat = createPlant({ default_density_plants_m2: 222.22 });
+            const explanation = getCoverageModeExplanation(wheat, 'area');
+            expect(explanation).toContain('densă');
         });
     });
 });

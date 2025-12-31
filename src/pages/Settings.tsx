@@ -6,11 +6,13 @@ import { useAppStore } from '../store/useAppStore';
 import CalibrationWizard from '../components/CalibrationWizard';
 import ResetModal from '../components/ResetModal';
 import { initCalibrationService, initResetService } from '../services';
+import { useI18n } from '../i18n';
 
 const Settings: React.FC = () => {
+  const { t } = useI18n();
   const { rtcConfig, calibrationState, systemConfig, rainConfig } = useAppStore();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  
+
   // UI modals
   const [showCalibrationWizard, setShowCalibrationWizard] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
@@ -62,10 +64,10 @@ const Settings: React.FC = () => {
           current_state: false
         }
       });
-      setToastMessage("Master Valve config saved");
+      setToastMessage(t('settings.masterValveSaved'));
     } catch (e) {
       console.error(e);
-      setToastMessage("Failed to save Master Valve config");
+      setToastMessage(t('settings.masterValveFailed'));
     }
   };
 
@@ -79,10 +81,10 @@ const Settings: React.FC = () => {
         rain_sensitivity_pct: rainConfig?.rain_sensitivity_pct || 100,
         skip_threshold_mm: rainSkipThreshold
       });
-      setToastMessage("Rain Sensor config saved");
+      setToastMessage(t('settings.rainSensorSaved'));
     } catch (e) {
       console.error(e);
-      setToastMessage("Failed to save Rain Sensor config");
+      setToastMessage(t('settings.rainSensorFailed'));
     }
   };
 
@@ -92,23 +94,23 @@ const Settings: React.FC = () => {
     <IonPage>
       <IonContent className="bg-cyber-dark">
         <div className="p-6 max-w-3xl mx-auto pb-24">
-          <h1 className="text-3xl font-bold text-white mb-8">System Settings</h1>
+          <h1 className="text-3xl font-bold text-white mb-8">{t('settings.systemSettings')}</h1>
 
           {/* Time Status (Auto-synced on connect) */}
           <IonCard className="bg-gray-900/80 border border-gray-800 mb-6">
             <IonCardHeader>
               <IonCardTitle className="text-white flex items-center gap-2">
                 <IonIcon icon={time} className="text-cyber-cyan" />
-                Device Time
+                {t('settings.deviceTime')}
               </IonCardTitle>
             </IonCardHeader>
             <IonCardContent>
               <p className="text-gray-400">
-                  {rtcConfig ? 
-                    `${String(rtcConfig.hour).padStart(2,'0')}:${String(rtcConfig.minute).padStart(2,'0')}:${String(rtcConfig.second).padStart(2,'0')} - ${rtcConfig.day}/${rtcConfig.month}/20${rtcConfig.year}` : 
-                    "Not connected"}
+                {rtcConfig ?
+                  `${String(rtcConfig.hour).padStart(2, '0')}:${String(rtcConfig.minute).padStart(2, '0')}:${String(rtcConfig.second).padStart(2, '0')} - ${rtcConfig.day}/${rtcConfig.month}/20${rtcConfig.year}` :
+                  t('settings.notConnected')}
               </p>
-              <p className="text-xs text-cyber-emerald mt-2">✓ Auto-synced on connection</p>
+              <p className="text-xs text-cyber-emerald mt-2">✓ {t('settings.autoSynced')}</p>
             </IonCardContent>
           </IonCard>
 
@@ -117,45 +119,45 @@ const Settings: React.FC = () => {
             <IonCardHeader>
               <IonCardTitle className="text-white flex items-center gap-2">
                 <IonIcon icon={settings} className="text-purple-400" />
-                Master Valve
+                {t('settings.masterValve')}
               </IonCardTitle>
             </IonCardHeader>
             <IonCardContent>
               <div className="space-y-4">
                 <IonItem className="bg-transparent" lines="none">
-                  <IonLabel className="text-white">Enable Master Valve</IonLabel>
-                  <IonToggle 
-                    checked={masterEnabled} 
+                  <IonLabel className="text-white">{t('settings.enableMasterValve')}</IonLabel>
+                  <IonToggle
+                    checked={masterEnabled}
                     onIonChange={e => setMasterEnabled(e.detail.checked)}
                     color="secondary"
                   />
                 </IonItem>
-                
+
                 {masterEnabled && (
                   <>
                     <IonItem className="bg-transparent border-gray-700 rounded-lg" lines="none">
-                      <IonLabel position="stacked" className="text-gray-400">Pre-delay (seconds)</IonLabel>
-                      <IonInput 
-                        type="number" 
-                        value={masterPreDelay} 
+                      <IonLabel position="stacked" className="text-gray-400">{t('settings.preDelay')}</IonLabel>
+                      <IonInput
+                        type="number"
+                        value={masterPreDelay}
                         onIonChange={(e: any) => setMasterPreDelay(parseInt(e.detail.value!) || 0)}
                         className="text-white"
                       />
                     </IonItem>
                     <IonItem className="bg-transparent border-gray-700 rounded-lg" lines="none">
-                      <IonLabel position="stacked" className="text-gray-400">Post-delay (seconds)</IonLabel>
-                      <IonInput 
-                        type="number" 
-                        value={masterPostDelay} 
+                      <IonLabel position="stacked" className="text-gray-400">{t('settings.postDelay')}</IonLabel>
+                      <IonInput
+                        type="number"
+                        value={masterPostDelay}
                         onIonChange={(e: any) => setMasterPostDelay(parseInt(e.detail.value!) || 0)}
                         className="text-white"
                       />
                     </IonItem>
                   </>
                 )}
-                
+
                 <IonButton expand="block" color="secondary" onClick={handleSaveMasterValve}>
-                  Save Master Valve Config
+                  {t('settings.saveMasterValveConfig')}
                 </IonButton>
               </div>
             </IonCardContent>
@@ -166,48 +168,48 @@ const Settings: React.FC = () => {
             <IonCardHeader>
               <IonCardTitle className="text-white flex items-center gap-2">
                 <IonIcon icon={rainy} className="text-blue-400" />
-                Rain Sensor
+                {t('settings.rainSensor')}
               </IonCardTitle>
             </IonCardHeader>
             <IonCardContent>
               <div className="space-y-4">
                 <IonItem className="bg-transparent" lines="none">
-                  <IonLabel className="text-white">Enable Rain Sensor</IonLabel>
-                  <IonToggle 
-                    checked={rainEnabled} 
+                  <IonLabel className="text-white">{t('settings.enableRainSensor')}</IonLabel>
+                  <IonToggle
+                    checked={rainEnabled}
                     onIonChange={e => setRainEnabled(e.detail.checked)}
                     color="secondary"
                   />
                 </IonItem>
-                
+
                 {rainEnabled && (
                   <>
                     <IonItem className="bg-transparent border-gray-700 rounded-lg" lines="none">
-                      <IonLabel position="stacked" className="text-gray-400">mm per pulse</IonLabel>
-                      <IonInput 
-                        type="number" 
+                      <IonLabel position="stacked" className="text-gray-400">{t('settings.mmPerPulse')}</IonLabel>
+                      <IonInput
+                        type="number"
                         step="0.01"
-                        value={rainMmPerPulse} 
+                        value={rainMmPerPulse}
                         onIonChange={(e: any) => setRainMmPerPulse(parseFloat(e.detail.value!) || 0.2)}
                         className="text-white"
                       />
                     </IonItem>
                     <IonItem className="bg-transparent border-gray-700 rounded-lg" lines="none">
-                      <IonLabel position="stacked" className="text-gray-400">Skip threshold (mm)</IonLabel>
-                      <IonInput 
-                        type="number" 
+                      <IonLabel position="stacked" className="text-gray-400">{t('settings.skipThreshold')}</IonLabel>
+                      <IonInput
+                        type="number"
                         step="0.5"
-                        value={rainSkipThreshold} 
+                        value={rainSkipThreshold}
                         onIonChange={(e: any) => setRainSkipThreshold(parseFloat(e.detail.value!) || 5.0)}
                         className="text-white"
                       />
                     </IonItem>
-                    <p className="text-xs text-gray-500 px-4">Skip irrigation if rain exceeds threshold in last 24h</p>
+                    <p className="text-xs text-gray-500 px-4">{t('settings.skipThresholdHint')}</p>
                   </>
                 )}
-                
+
                 <IonButton expand="block" color="secondary" onClick={handleSaveRainConfig}>
-                  Save Rain Sensor Config
+                  {t('settings.saveRainSensorConfig')}
                 </IonButton>
               </div>
             </IonCardContent>
@@ -218,33 +220,33 @@ const Settings: React.FC = () => {
             <IonCardHeader>
               <IonCardTitle className="text-white flex items-center gap-2">
                 <IonIcon icon={water} className="text-blue-400" />
-                Flow Sensor Calibration
+                {t('settings.flowCalibration')}
               </IonCardTitle>
             </IonCardHeader>
             <IonCardContent>
               <div className="space-y-4">
                 <div className="text-sm text-gray-400">
-                    {calibrationState && (
-                        <div className="grid grid-cols-3 gap-2 mb-4 bg-gray-800/50 rounded-lg p-3">
-                            <div className="text-center">
-                              <div className="text-lg font-bold text-white">{calibrationState.pulses}</div>
-                              <div className="text-xs">Pulsuri</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-lg font-bold text-white">{calibrationState.volume_ml}</div>
-                              <div className="text-xs">ml</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-lg font-bold text-cyan-400">{calibrationState.pulses_per_liter}</div>
-                              <div className="text-xs">pulsuri/L</div>
-                            </div>
-                        </div>
-                    )}
+                  {calibrationState && (
+                    <div className="grid grid-cols-3 gap-2 mb-4 bg-gray-800/50 rounded-lg p-3">
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-white">{calibrationState.pulses}</div>
+                        <div className="text-xs">{t('settings.pulses')}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-white">{calibrationState.volume_ml}</div>
+                        <div className="text-xs">ml</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-cyan-400">{calibrationState.pulses_per_liter}</div>
+                        <div className="text-xs">{t('settings.pulsesPerLiter')}</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <IonButton expand="block" color="primary" onClick={() => setShowCalibrationWizard(true)}>
                   <IonIcon icon={water} slot="start" />
-                  Pornește Calibrare
+                  {t('settings.startCalibration')}
                 </IonButton>
               </div>
             </IonCardContent>
@@ -255,16 +257,16 @@ const Settings: React.FC = () => {
             <IonCardHeader>
               <IonCardTitle className="text-red-500 flex items-center gap-2">
                 <IonIcon icon={warning} />
-                Danger Zone
+                {t('settings.dangerZone')}
               </IonCardTitle>
             </IonCardHeader>
             <IonCardContent>
-              <p className="text-red-400/80 mb-4">Resetările pot șterge configurații, programări sau istoric.</p>
-              
+              <p className="text-red-400/80 mb-4">{t('settings.dangerWarning')}</p>
+
               {/* New Reset Modal Button */}
               <IonButton expand="block" color="danger" onClick={() => setShowResetModal(true)}>
                 <IonIcon icon={refresh} slot="start" />
-                Opțiuni Resetare
+                {t('settings.resetOptions')}
               </IonButton>
             </IonCardContent>
           </IonCard>
@@ -272,15 +274,15 @@ const Settings: React.FC = () => {
         </div>
 
         {/* Calibration Wizard Modal */}
-        <CalibrationWizard 
-          isOpen={showCalibrationWizard} 
-          onClose={() => setShowCalibrationWizard(false)} 
+        <CalibrationWizard
+          isOpen={showCalibrationWizard}
+          onClose={() => setShowCalibrationWizard(false)}
         />
 
         {/* Reset Modal */}
-        <ResetModal 
-          isOpen={showResetModal} 
-          onClose={() => setShowResetModal(false)} 
+        <ResetModal
+          isOpen={showResetModal}
+          onClose={() => setShowResetModal(false)}
         />
 
         <IonToast

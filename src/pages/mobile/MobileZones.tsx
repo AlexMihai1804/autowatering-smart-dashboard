@@ -5,9 +5,11 @@ import { BleService } from '../../services/BleService';
 import { TaskStatus, isChannelConfigComplete } from '../../types/firmware_structs';
 import { useSettings } from '../../hooks/useSettings';
 import { ZonesLoadingSkeleton } from '../../components/mobile/LoadingSkeleton';
+import { useI18n } from '../../i18n';
 
 const MobileZones: React.FC = () => {
   const history = useHistory();
+  const { t } = useI18n();
   const { formatTemperature } = useSettings();
   const {
     zones,
@@ -47,7 +49,7 @@ const MobileZones: React.FC = () => {
     const autoCalc = autoCalcStatus.get(channelId);
     const nextEpoch = autoCalc?.next_irrigation_time ?? 0;
     if (!nextEpoch) {
-      return 'Not scheduled';
+      return t('zones.notScheduled');
     }
     const d = new Date(nextEpoch * 1000);
     const now = new Date();
@@ -57,8 +59,8 @@ const MobileZones: React.FC = () => {
     const isTomorrow = d.toDateString() === tomorrow.toDateString();
 
     const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-    if (isToday) return `Today, ${time}`;
-    if (isTomorrow) return `Tomorrow, ${time}`;
+    if (isToday) return `${t('zones.today')}, ${time}`;
+    if (isTomorrow) return `${t('zones.tomorrow')}, ${time}`;
     return d.toLocaleDateString(undefined, { weekday: 'short' }) + ', ' + time;
   };
 
@@ -152,12 +154,12 @@ const MobileZones: React.FC = () => {
   // Mock status for zones - in real app would come from zone data
   const getZoneStatus = (channelId: number): { label: string; color: string; bgColor: string } => {
     if (isWatering && wateringChannelId === channelId) {
-      return { label: 'Watering Now', color: 'text-mobile-primary', bgColor: 'border-mobile-primary' };
+      return { label: t('zones.wateringNow'), color: 'text-mobile-primary', bgColor: 'border-mobile-primary' };
     }
-    // Random mock statuses for demo
+    // Status options
     const statuses = [
-      { label: 'Auto', color: 'text-gray-400', bgColor: 'border-mobile-border-dark' },
-      { label: 'Rain Skip', color: 'text-blue-500', bgColor: 'border-mobile-border-dark' },
+      { label: t('zones.auto'), color: 'text-gray-400', bgColor: 'border-mobile-border-dark' },
+      { label: t('zones.rainSkip'), color: 'text-blue-500', bgColor: 'border-mobile-border-dark' },
     ];
     return statuses[channelId % 2];
   };
@@ -171,8 +173,8 @@ const MobileZones: React.FC = () => {
             <span className="material-symbols-outlined">water_drop</span>
           </div>
           <div>
-            <h1 className="text-xl font-bold leading-tight">Irrigation Zones</h1>
-            <p className="text-xs text-gray-400 font-medium">{visibleZones.length} zones configured</p>
+            <h1 className="text-xl font-bold leading-tight">{t('zones.irrigationZones')}</h1>
+            <p className="text-xs text-gray-400 font-medium">{visibleZones.length} {t('zones.zonesConfigured')}</p>
           </div>
         </div>
         <button className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors relative">
@@ -190,7 +192,7 @@ const MobileZones: React.FC = () => {
             {/* Status Summary */}
             <div className="px-4 pt-4 pb-2">
               <h2 className="text-2xl font-bold tracking-tight mb-4">
-                {isWatering ? 'Watering in Progress' : 'All Systems Normal'}
+                {isWatering ? t('zones.wateringInProgress') : t('zones.allSystemsNormal')}
               </h2>
 
               {/* Weather Widget */}
@@ -200,17 +202,17 @@ const MobileZones: React.FC = () => {
                     <span className="text-3xl font-bold">{formatTemperature(envData?.temperature ?? 22)}</span>
                     <span className="material-symbols-outlined text-yellow-500 text-3xl">sunny</span>
                   </div>
-                  <p className="text-mobile-text-muted text-sm font-medium">Mostly Sunny</p>
-                  <p className="text-gray-500 text-xs mt-1">No rain expected for 3 days.</p>
+                  <p className="text-mobile-text-muted text-sm font-medium">{t('weather.mostlySunny')}</p>
+                  <p className="text-gray-500 text-xs mt-1">{t('weather.noRainExpected')}</p>
                 </div>
                 <div className="h-16 w-px bg-white/10 mx-2"></div>
                 <div className="flex flex-col items-end gap-1">
                   <div className="text-right">
-                    <p className="text-xs text-gray-500 uppercase tracking-wider font-bold">Next Run</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wider font-bold">{t('weather.nextRun')}</p>
                     <p className="text-sm font-bold text-white">{globalNextRun}</p>
                   </div>
                   <div className="bg-mobile-primary/20 text-mobile-primary text-xs font-bold px-2 py-1 rounded-full mt-1">
-                    -15% Water Save
+                    -15% {t('weather.waterSave')}
                   </div>
                 </div>
               </div>
@@ -219,26 +221,26 @@ const MobileZones: React.FC = () => {
             {/* Zones List Section */}
             <div className="px-4 pt-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold">Irrigation Zones</h3>
+                <h3 className="text-lg font-bold">{t('zones.irrigationZones')}</h3>
                 <button
                   onClick={handleAddZone}
                   className="text-mobile-primary text-sm font-bold flex items-center gap-1"
                 >
                   <span className="material-symbols-outlined text-lg">add</span>
-                  Add Zone
+                  {t('zones.addZone')}
                 </button>
               </div>
 
               {visibleZones.length === 0 ? (
                 <div className="text-center py-20">
                   <span className="material-symbols-outlined text-6xl text-gray-600 mb-4 block">yard</span>
-                  <h3 className="text-xl font-bold text-white mb-2">No Zones Configured</h3>
-                  <p className="text-gray-400 mb-6">Tap Add Zone to set up your first irrigation zone</p>
+                  <h3 className="text-xl font-bold text-white mb-2">{t('zones.noZonesConfigured')}</h3>
+                  <p className="text-gray-400 mb-6">{t('zones.tapAddZone')}</p>
                   <button
                     onClick={handleAddZone}
                     className="px-6 py-3 bg-mobile-primary text-mobile-bg-dark font-bold rounded-full"
                   >
-                    Add First Zone
+                    {t('zones.addFirstZone')}
                   </button>
                 </div>
               ) : (
@@ -278,11 +280,11 @@ const MobileZones: React.FC = () => {
                               {isZoneWatering ? (
                                 <div className="flex items-center gap-1 text-mobile-primary text-xs font-bold mt-0.5">
                                   <span className="material-symbols-outlined text-sm animate-pulse">water_drop</span>
-                                  <span>Watering Now</span>
+                                  <span>{t('zones.wateringNow')}</span>
                                 </div>
                               ) : (
                                 <p className="text-xs text-mobile-text-muted">
-                                  Next: {getChannelNextRun(zone.channel_id)}
+                                  {t('zones.next')}: {getChannelNextRun(zone.channel_id)}
                                 </p>
                               )}
                             </div>
@@ -290,7 +292,7 @@ const MobileZones: React.FC = () => {
 
                           {isZoneWatering && remaining && (
                             <div className="bg-mobile-primary text-mobile-bg-dark px-3 py-1 rounded-full text-xs font-extrabold">
-                              {remaining} LEFT
+                              {remaining} {t('zones.left')}
                             </div>
                           )}
 
@@ -313,7 +315,7 @@ const MobileZones: React.FC = () => {
 
                         <div className="flex items-center justify-between">
                           <div className="text-xs text-mobile-text-muted">
-                            {isZoneWatering ? 'Started: Just now' : 'Last: Yesterday (20m)'}
+                            {isZoneWatering ? `${t('zones.started')}: ${t('zones.justNow')}` : `${t('zones.last')}: ${t('zones.yesterday')} (20m)`}
                           </div>
 
                           <div className="flex gap-2">
@@ -338,7 +340,7 @@ const MobileZones: React.FC = () => {
                                 className="flex items-center gap-1 bg-mobile-primary text-mobile-bg-dark px-3 py-1.5 rounded-full text-xs font-bold hover:brightness-110 transition-all"
                               >
                                 <span className="material-symbols-outlined text-sm">play_arrow</span>
-                                Water
+                                {t('zones.water')}
                               </button>
                             )}
                           </div>

@@ -7,6 +7,7 @@ import { PlantDBEntry, SoilDBEntry, IrrigationMethodEntry, PLANT_CATEGORIES } fr
 import { LocationData } from '../../types/wizard';
 import SoilGridsServiceInstance, { estimateSoilParametersFromTexture } from '../../services/SoilGridsService';
 import { registerBackInterceptor } from '../../lib/backInterceptors';
+import { useI18n } from '../../i18n';
 
 type TabType = 'overview' | 'schedule' | 'compensation' | 'history';
 type EditSheetType = 'schedule' | 'watering-mode' | 'plant' | 'soil' | 'irrigation' | 'coverage' | 'sun' | 'rain-compensation' | 'temp-compensation' | 'water-management' | null;
@@ -40,6 +41,7 @@ const MobileZoneDetailsFull: React.FC = () => {
 
   const channelIdNum = parseInt(channelId, 10);
   const bleService = BleService.getInstance();
+  const { t } = useI18n();
 
   // Derived state
   const zone = useMemo(() => zones.find(z => z.channel_id === channelIdNum), [zones, channelIdNum]);
@@ -265,7 +267,7 @@ const MobileZoneDetailsFull: React.FC = () => {
 
   // Lookup helpers - respect initialization state
   const plantName = useMemo(() => {
-    if (!isChannelInitialized || !growing) return 'Not configured';
+    if (!isChannelInitialized || !growing) return t('zoneDetails.notConfigured');
     // Check for custom name first
     if (growing.custom_name && growing.custom_name.trim()) {
       return growing.custom_name;
@@ -277,7 +279,7 @@ const MobileZoneDetailsFull: React.FC = () => {
   }, [growing, plantDb, isChannelInitialized]);
 
   const soilName = useMemo(() => {
-    if (!isChannelInitialized || !growing) return 'Not configured';
+    if (!isChannelInitialized || !growing) return t('zoneDetails.notConfigured');
 
     // Check if we have a custom soil configuration from store (from device read)
     if (customSoilConfig && customSoilConfig.status === 0 && customSoilConfig.name) {
@@ -294,7 +296,7 @@ const MobileZoneDetailsFull: React.FC = () => {
       return 'Custom (Satellite)';
     }
 
-    if (growing.soil_db_index === 0) return 'Not configured';
+    if (growing.soil_db_index === 0) return t('zoneDetails.notConfigured');
 
     // Clamp to valid range for lookup (firmware uses 0-7)
     const lookupIndex = growing.soil_db_index <= 7 ? growing.soil_db_index : (growing.soil_db_index % 8);
@@ -303,8 +305,8 @@ const MobileZoneDetailsFull: React.FC = () => {
   }, [growing, soilDb, isChannelInitialized, pendingCustomSoil, customSoilConfig]);
 
   const irrigationMethodName = useMemo(() => {
-    if (!isChannelInitialized || !growing) return 'Not configured';
-    if (growing.irrigation_method_index === 0) return 'Not configured';
+    if (!isChannelInitialized || !growing) return t('zoneDetails.notConfigured');
+    if (growing.irrigation_method_index === 0) return t('zoneDetails.notConfigured');
     const entry = irrigationMethodDb.find(m => m.id === growing.irrigation_method_index);
     return entry?.name || `Method #${growing.irrigation_method_index}`;
   }, [growing, irrigationMethodDb, isChannelInitialized]);
@@ -312,7 +314,7 @@ const MobileZoneDetailsFull: React.FC = () => {
   // Next watering time from auto calc
   const nextWateringDisplay = useMemo(() => {
     const nextEpoch = autoCalc?.next_irrigation_time ?? 0;
-    if (!nextEpoch) return { time: '--:--', date: 'Not scheduled' };
+    if (!nextEpoch) return { time: '--:--', date: t('zoneDetails.notScheduled') };
     const d = new Date(nextEpoch * 1000);
     return {
       time: d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
@@ -327,9 +329,9 @@ const MobileZoneDetailsFull: React.FC = () => {
   const scheduleTypeLabel = useMemo(() => {
     if (!schedule) return 'Unknown';
     switch (schedule.schedule_type) {
-      case 0: return 'Daily';
-      case 1: return 'Periodic';
-      case 2: return 'Auto (FAO-56)';
+      case 0: return t('zoneDetails.daily');
+      case 1: return t('zoneDetails.periodic');
+      case 2: return t('zoneDetails.autoFao56');
       default: return `Type ${schedule.schedule_type}`;
     }
   }, [schedule]);
@@ -338,8 +340,8 @@ const MobileZoneDetailsFull: React.FC = () => {
   const wateringModeLabel = useMemo(() => {
     if (!schedule) return 'Unknown';
     switch (schedule.watering_mode) {
-      case 0: return 'Duration';
-      case 1: return 'Volume';
+      case 0: return t('zoneDetails.duration');
+      case 1: return t('zoneDetails.volume');
       default: return `Mode ${schedule.watering_mode}`;
     }
   }, [schedule]);
@@ -348,9 +350,9 @@ const MobileZoneDetailsFull: React.FC = () => {
   const autoModeLabel = useMemo(() => {
     if (!growing) return 'Unknown';
     switch (growing.auto_mode) {
-      case 0: return 'Manual';
-      case 1: return 'Auto Quality';
-      case 2: return 'Auto Eco';
+      case 0: return t('zoneDetails.manual');
+      case 1: return t('zoneDetails.autoQuality');
+      case 2: return t('zoneDetails.autoEco');
       default: return `Mode ${growing.auto_mode}`;
     }
   }, [growing]);
@@ -362,7 +364,7 @@ const MobileZoneDetailsFull: React.FC = () => {
     if (schedule.schedule_type === 2) return 'Auto';
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const active = days.filter((_, i) => (schedule.days_mask >> i) & 1);
-    return active.length === 7 ? 'Every day' : active.join(', ');
+    return active.length === 7 ? t('zoneDetails.everyDay') : active.join(', ');
   }, [schedule]);
 
   // Formatted schedule time
@@ -394,17 +396,17 @@ const MobileZoneDetailsFull: React.FC = () => {
   const totalDuration = currentTask?.target_value ?? 1;
 
   const tabs: { key: TabType; label: string; icon: string }[] = [
-    { key: 'overview', label: 'Overview', icon: 'dashboard' },
-    { key: 'schedule', label: 'Schedule', icon: 'calendar_month' },
-    { key: 'compensation', label: 'Adjust', icon: 'tune' },
-    { key: 'history', label: 'History', icon: 'history' },
+    { key: 'overview', label: t('zoneDetails.overview'), icon: 'dashboard' },
+    { key: 'schedule', label: t('zoneDetails.schedule'), icon: 'calendar_month' },
+    { key: 'compensation', label: t('zoneDetails.adjust'), icon: 'tune' },
+    { key: 'history', label: t('zoneDetails.history'), icon: 'history' },
   ];
 
   const durations = [
-    { label: 'Quick', value: 5 },
-    { label: 'Standard', value: 10 },
-    { label: 'Deep', value: 20 },
-    { label: 'Custom', value: 0 },
+    { label: t('zoneDetails.quick'), value: 5 },
+    { label: t('zoneDetails.standard'), value: 10 },
+    { label: t('zoneDetails.deep'), value: 20 },
+    { label: t('zoneDetails.custom'), value: 0 },
   ];
 
   const handleStartWatering = async () => {
@@ -1105,7 +1107,7 @@ const MobileZoneDetailsFull: React.FC = () => {
         </button>
         <div className="flex-1 text-center">
           <h2 className="text-white text-lg font-bold leading-tight">{zone.name}</h2>
-          <p className="text-mobile-text-muted text-xs">Zone {zone.channel_id + 1}</p>
+          <p className="text-mobile-text-muted text-xs">{t('dashboard.zone')} {zone.channel_id + 1}</p>
         </div>
         {/* Empty spacer for symmetry */}
         <div className="size-12" />
@@ -1158,7 +1160,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                   )}
                   <span className={`text-sm font-bold tracking-wide uppercase ${isWatering ? 'text-mobile-primary' : 'text-white'
                     }`}>
-                    {isWatering ? 'Watering Active' : 'Idle'}
+                    {isWatering ? t('zoneDetails.wateringActive') : t('zoneDetails.idle')}
                   </span>
                 </div>
 
@@ -1203,7 +1205,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                         </div>
                         <div>
                           <h3 className="text-white font-semibold text-sm">
-                            {autoCalc?.next_irrigation_time ? 'Next Watering' : 'Schedule'}
+                            {autoCalc?.next_irrigation_time ? t('zoneDetails.nextWatering') : t('zoneDetails.schedule')}
                           </h3>
                           <div className="flex items-center gap-2">
                             <span className="text-mobile-primary/80 text-xs">
@@ -1211,7 +1213,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                                 ? `${nextWateringDisplay.date} • ${nextWateringDisplay.time}`
                                 : schedule?.auto_enabled
                                   ? `${scheduleDaysLabel} • ${scheduleTimeLabel}`
-                                  : 'Not Scheduled'}
+                                  : t('zoneDetails.notScheduled')}
                             </span>
                           </div>
                         </div>
@@ -1243,7 +1245,7 @@ const MobileZoneDetailsFull: React.FC = () => {
 
             {/* Quick Actions */}
             <div>
-              <h3 className="text-white text-base font-bold mb-4 px-1">Quick Actions</h3>
+              <h3 className="text-white text-base font-bold mb-4 px-1">{t('dashboard.quickActions')}</h3>
               <div className="grid grid-cols-3 gap-3">
                 <button
                   onClick={handleStopWatering}
@@ -1252,14 +1254,14 @@ const MobileZoneDetailsFull: React.FC = () => {
                   <div className="flex size-12 items-center justify-center rounded-full bg-red-500/10 text-red-500 group-hover:bg-red-500 group-hover:text-white transition-colors">
                     <span className="material-symbols-outlined text-[28px]">stop_circle</span>
                   </div>
-                  <span className="text-mobile-text-muted text-xs font-bold group-hover:text-white">Stop</span>
+                  <span className="text-mobile-text-muted text-xs font-bold group-hover:text-white">{t('common.stop')}</span>
                 </button>
 
                 <button className="group flex flex-col items-center justify-center gap-2 rounded-2xl bg-mobile-surface-dark p-4 hover:bg-mobile-primary/10 transition-all active:scale-95 border border-mobile-border-dark">
                   <div className="flex size-12 items-center justify-center rounded-full bg-mobile-primary/10 text-mobile-primary group-hover:bg-mobile-primary group-hover:text-mobile-bg-dark transition-colors">
                     <span className="material-symbols-outlined text-[28px]">skip_next</span>
                   </div>
-                  <span className="text-mobile-text-muted text-xs font-bold group-hover:text-white">Skip Next</span>
+                  <span className="text-mobile-text-muted text-xs font-bold group-hover:text-white">{t('common.skip')}</span>
                 </button>
 
                 <button
@@ -1269,7 +1271,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                   <div className="flex size-12 items-center justify-center rounded-full bg-white/5 text-white group-hover:bg-white group-hover:text-mobile-bg-dark transition-colors">
                     <span className="material-symbols-outlined text-[28px]">calendar_clock</span>
                   </div>
-                  <span className="text-mobile-text-muted text-xs font-bold group-hover:text-white">Schedule</span>
+                  <span className="text-mobile-text-muted text-xs font-bold group-hover:text-white">{t('zoneDetails.schedule')}</span>
                 </button>
               </div>
             </div>
@@ -1501,7 +1503,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                   }`}
               >
                 <span className="material-symbols-outlined text-[28px]">water_drop</span>
-                <span className="uppercase tracking-wide">Water Now</span>
+                <span className="uppercase tracking-wide">{t('zoneDetails.startWatering')}</span>
               </button>
               <p className="text-center text-white/30 text-xs mt-4">
                 Tap to start {selectedDuration}m cycle immediately
@@ -1515,7 +1517,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                 className="w-full flex items-center justify-center gap-2 py-3 text-red-400 hover:text-red-300 transition-colors"
               >
                 <span className="material-symbols-outlined">restart_alt</span>
-                <span className="font-medium">Reset Zone Configuration</span>
+                <span className="font-medium">{t('zoneDetails.resetZone')}</span>
               </button>
             </div>
           </div>
@@ -1530,7 +1532,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                   <span className="material-symbols-outlined text-red-400 text-3xl">warning</span>
                 </div>
               </div>
-              <h3 className="text-white text-lg font-bold text-center mb-2">Reset Zone?</h3>
+              <h3 className="text-white text-lg font-bold text-center mb-2">{t('zoneDetails.resetZone')}?</h3>
               <p className="text-mobile-text-muted text-sm text-center mb-6">
                 This will reset all configuration for Zone {zone.channel_id + 1} ({zone.name}) including schedule, growing environment, and calculated data.
               </p>
@@ -1552,7 +1554,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                   ) : (
                     <>
                       <span className="material-symbols-outlined text-lg">restart_alt</span>
-                      Reset
+                      {t('common.confirm')}
                     </>
                   )}
                 </button>
@@ -2330,7 +2332,7 @@ const MobileZoneDetailsFull: React.FC = () => {
               {/* Coverage Value */}
               <div>
                 <label className="text-white font-bold mb-4 block">
-                  {growingForm.use_area_based ? 'Total Area' : 'Total Plants'}
+                  {growingForm.use_area_based ? t('zoneDetails.totalArea') : t('zoneDetails.totalPlants')}
                 </label>
                 <div className="flex items-center gap-6 bg-mobile-surface-dark rounded-2xl p-6 border border-mobile-border-dark">
                   <button

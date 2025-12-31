@@ -86,17 +86,27 @@ export function getRecommendedCoverageType(plant: PlantDBEntry | null): Coverage
  * 
  * @param plant - Plant database entry
  * @param mode - The recommended coverage mode
- * @returns Explanation string in Romanian
+ * @param translations - Optional translations object with keys:
+ *   - coverageDenseExplanation: string for 'area' mode
+ *   - coverageSparseExplanation: string for 'plants' mode
+ * @returns Explanation string
  */
-export function getCoverageModeExplanation(plant: PlantDBEntry | null, mode: CoverageMode): string {
+export function getCoverageModeExplanation(
+    plant: PlantDBEntry | null,
+    mode: CoverageMode,
+    translations?: {
+        coverageDenseExplanation: string;
+        coverageSparseExplanation: string
+    }
+): string {
     if (!plant) return '';
 
     if (mode === 'area') {
-        return 'Cultură densă - folosim suprafața';
+        return translations?.coverageDenseExplanation ?? 'Cultură densă - folosim suprafața';
     }
 
     if (mode === 'plants') {
-        return 'Plantare rară - introduci numărul de plante';
+        return translations?.coverageSparseExplanation ?? 'Plantare rară - introduci numărul de plante';
     }
 
     return '';

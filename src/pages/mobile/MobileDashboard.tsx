@@ -9,6 +9,7 @@ import AlarmPopup from '../../components/mobile/AlarmPopup';
 import MobileAlarmCard from '../../components/mobile/MobileAlarmCard';
 import { useSettings } from '../../hooks/useSettings';
 import { useKnownDevices } from '../../hooks/useKnownDevices';
+import { useI18n } from '../../i18n';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
 import {
   calcAverageSoilMoisturePercentPreferred,
@@ -22,6 +23,7 @@ import { EcoBadge } from '../../components/EcoBadge';
 
 const MobileDashboard: React.FC = () => {
   const history = useHistory();
+  const { t } = useI18n();
   const { formatTemperature, useCelsius } = useSettings();
   const {
     zones,
@@ -234,7 +236,7 @@ const MobileDashboard: React.FC = () => {
           <PopoverTrigger asChild>
             <button className="flex flex-col cursor-pointer group text-left">
               <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                {isSwitchingDevice ? 'Switching...' : 'Device'}
+                {isSwitchingDevice ? 'Switching...' : t('dashboard.device')}
               </span>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold tracking-tight">
@@ -247,7 +249,7 @@ const MobileDashboard: React.FC = () => {
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-[280px]" align="start">
-            <div className="text-xs font-bold text-mobile-text-muted mb-2">Device</div>
+            <div className="text-xs font-bold text-mobile-text-muted mb-2">{t('dashboard.device')}</div>
             <div className="flex flex-col gap-1">
               {/* Current device with rename */}
               {connectedDeviceId && (
@@ -268,13 +270,13 @@ const MobileDashboard: React.FC = () => {
                           onClick={() => setIsRenaming(false)}
                           className="flex-1 py-2 rounded-lg text-sm font-bold text-gray-400 hover:text-white transition-colors"
                         >
-                          Cancel
+                          {t('common.cancel')}
                         </button>
                         <button
                           onClick={handleSaveRename}
                           className="flex-1 py-2 rounded-lg bg-mobile-primary text-mobile-bg-dark text-sm font-bold"
                         >
-                          Save
+                          {t('common.save')}
                         </button>
                       </div>
                     </div>
@@ -287,7 +289,7 @@ const MobileDashboard: React.FC = () => {
                         <p className="text-sm font-bold text-mobile-primary">
                           {currentDevice?.name || formatDeviceLabel(connectedDeviceId)}
                         </p>
-                        <p className="text-xs text-mobile-primary/60">Connected</p>
+                        <p className="text-xs text-mobile-primary/60">{t('dashboard.connected')}</p>
                       </div>
                       <button
                         onClick={handleStartRename}
@@ -302,7 +304,7 @@ const MobileDashboard: React.FC = () => {
 
               {/* Other devices */}
               {otherDevices.length > 0 && (
-                <div className="text-xs font-bold text-mobile-text-muted mt-3 mb-1">Other Devices</div>
+                <div className="text-xs font-bold text-mobile-text-muted mt-3 mb-1">{t('dashboard.otherDevices')}</div>
               )}
               {otherDevices.map((device) => (
                 <button
@@ -316,7 +318,7 @@ const MobileDashboard: React.FC = () => {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-bold text-white">{device.name}</p>
-                    <p className="text-xs text-gray-500">Tap to connect</p>
+                    <p className="text-xs text-gray-500">{t('dashboard.tapToConnect')}</p>
                   </div>
                 </button>
               ))}
@@ -329,7 +331,7 @@ const MobileDashboard: React.FC = () => {
                 <div className="w-8 h-8 rounded-full bg-mobile-primary/10 flex items-center justify-center">
                   <span className="material-symbols-outlined text-mobile-primary text-[18px]">add</span>
                 </div>
-                <p className="text-sm font-semibold text-mobile-primary">Add New Device</p>
+                <p className="text-sm font-semibold text-mobile-primary">{t('dashboard.addNewDevice')}</p>
               </button>
             </div>
           </PopoverContent>
@@ -342,7 +344,7 @@ const MobileDashboard: React.FC = () => {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-mobile-primary opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-mobile-primary"></span>
               </span>
-              <span className="text-xs font-bold text-mobile-primary uppercase tracking-wide">Online</span>
+              <span className="text-xs font-bold text-mobile-primary uppercase tracking-wide">{t('dashboard.online')}</span>
             </div>
           )}
         </div>
@@ -382,10 +384,10 @@ const MobileDashboard: React.FC = () => {
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-mobile-primary opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-mobile-primary"></span>
                           </span>
-                          <span className="text-mobile-primary text-sm font-bold uppercase">Watering Active</span>
+                          <span className="text-mobile-primary text-sm font-bold uppercase">{t('dashboard.wateringActive')}</span>
                         </div>
                         <h2 className="text-3xl font-extrabold text-white">
-                          {remainingTime} <span className="text-lg font-bold text-gray-500">remaining</span>
+                          {remainingTime} <span className="text-lg font-bold text-gray-500">{t('dashboard.remaining')}</span>
                         </h2>
                         <p className="text-xs text-mobile-primary font-semibold mt-1">
                           {activeWateringZone?.name || `Zone ${currentTask?.channel_id}`}
@@ -402,7 +404,7 @@ const MobileDashboard: React.FC = () => {
                     {/* Progress Bar */}
                     <div className="flex flex-col gap-2">
                       <div className="flex justify-between text-xs font-medium text-gray-400">
-                        <span>Progress</span>
+                        <span>{t('dashboard.progress')}</span>
                         <span className="text-mobile-primary">{wateringProgress}%</span>
                       </div>
                       <div className="h-3 w-full bg-mobile-border-dark rounded-full overflow-hidden">
@@ -418,7 +420,7 @@ const MobileDashboard: React.FC = () => {
                   <>
                     <div className="flex justify-between items-start mb-6">
                       <div>
-                        <p className="text-sm font-medium text-gray-400 mb-1">Next Watering Cycle</p>
+                        <p className="text-sm font-medium text-gray-400 mb-1">{t('dashboard.nextWateringCycle')}</p>
                         {nextWatering.time ? (
                           <>
                             <h2 className="text-3xl font-extrabold text-white">
@@ -434,7 +436,7 @@ const MobileDashboard: React.FC = () => {
                         ) : (
                           <>
                             <h2 className="text-2xl font-extrabold text-white/50">--:--</h2>
-                            <p className="text-xs text-gray-500 font-medium mt-1">No schedule configured</p>
+                            <p className="text-xs text-gray-500 font-medium mt-1">{t('dashboard.noScheduleConfigured')}</p>
                           </>
                         )}
                       </div>
@@ -448,7 +450,7 @@ const MobileDashboard: React.FC = () => {
                         {/* Soil Moisture Progress Bar */}
                         <div className="flex flex-col gap-2">
                           <div className="flex justify-between text-xs font-medium text-gray-400">
-                            <span>Soil Moisture</span>
+                            <span>{t('dashboard.soilMoisture')}</span>
                             <span className={soilMoisture > 60 ? 'text-mobile-primary' : soilMoisture > 30 ? 'text-yellow-500' : 'text-red-500'}>
                               {soilMoistureLabel} ({soilMoisture}%)
                             </span>
@@ -481,7 +483,7 @@ const MobileDashboard: React.FC = () => {
                   <span className="p-1.5 rounded-lg bg-orange-500/10 text-orange-500 flex items-center justify-center">
                     <span className="material-symbols-outlined text-[20px]">thermostat</span>
                   </span>
-                  <span className="text-xs font-medium text-gray-400">Temp</span>
+                  <span className="text-xs font-medium text-gray-400">{t('dashboard.temp')}</span>
                 </div>
                 <div>
                   <span className="text-2xl font-bold">{formattedTemp}{tempUnit}</span>
@@ -497,7 +499,7 @@ const MobileDashboard: React.FC = () => {
                   <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
                     <span className="material-symbols-outlined text-[20px]">water_drop</span>
                   </span>
-                  <span className="text-xs font-medium text-gray-400">Humidity</span>
+                  <span className="text-xs font-medium text-gray-400">{t('dashboard.humidity')}</span>
                 </div>
                 <div>
                   <span className="text-2xl font-bold">{envData?.humidity?.toFixed(0) ?? '--'}%</span>
@@ -512,7 +514,7 @@ const MobileDashboard: React.FC = () => {
                     <span className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
                       <span className="material-symbols-outlined text-[20px]">rainy</span>
                     </span>
-                    <span className="text-xs font-medium text-gray-400">Rainfall (24h)</span>
+                    <span className="text-xs font-medium text-gray-400">{t('dashboard.rainfall24h')}</span>
                   </div>
                   <div className="mt-1">
                     <span className="text-2xl font-bold">{rainData?.today_total_mm?.toFixed(1) ?? '0.0'}</span>
@@ -537,7 +539,7 @@ const MobileDashboard: React.FC = () => {
 
             {/* Quick Actions */}
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-gray-400 mb-3 px-1 uppercase tracking-wider">Quick Actions</h3>
+              <h3 className="text-sm font-semibold text-gray-400 mb-3 px-1 uppercase tracking-wider">{t('dashboard.quickActions')}</h3>
               <div className="flex flex-col gap-3">
                 <button
                   onClick={handleManualWater}
@@ -548,7 +550,7 @@ const MobileDashboard: React.FC = () => {
                     <span className="bg-black/10 p-2 rounded-full">
                       <span className="material-symbols-outlined text-[24px]">play_arrow</span>
                     </span>
-                    <span>Manual Water</span>
+                    <span>{t('dashboard.manualWater')}</span>
                   </div>
                   <span className="material-symbols-outlined text-[20px] opacity-60">arrow_forward</span>
                 </button>
@@ -561,7 +563,7 @@ const MobileDashboard: React.FC = () => {
                     <span className="bg-white/5 p-2 rounded-full text-gray-300">
                       <span className="material-symbols-outlined text-[24px]">pause</span>
                     </span>
-                    <span>Pause Schedule</span>
+                    <span>{t('dashboard.pauseSchedule')}</span>
                   </div>
                 </button>
               </div>
@@ -571,7 +573,7 @@ const MobileDashboard: React.FC = () => {
             {onboardingState && onboardingState.overall_completion_pct < 100 && (
               <div className="bg-mobile-surface-dark border border-mobile-primary/30 rounded-3xl p-4 mb-6">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-bold text-white">Complete Setup</h3>
+                  <h3 className="font-bold text-white">{t('dashboard.completeSetup')}</h3>
                   <span className="text-mobile-primary text-sm font-bold">{onboardingState.overall_completion_pct}%</span>
                 </div>
                 <div className="h-2 bg-mobile-border-dark rounded-full overflow-hidden mb-3">

@@ -36,11 +36,12 @@ import {
 
 import { SoilDBEntry } from '../../services/DatabaseService';
 import { IrrigationMethodEntry } from '../../services/DatabaseService';
-import { 
-    shouldEnableCycleSoak, 
-    calculateCycleSoakTiming 
+import {
+    shouldEnableCycleSoak,
+    calculateCycleSoakTiming
 } from '../../services/SoilGridsService';
 import { WhatsThisTooltip, LabelWithHelp } from './WhatsThisTooltip';
+import { useI18n } from '../../i18n';
 
 interface CycleSoakConfigProps {
     /** Selected soil */
@@ -76,15 +77,16 @@ export const CycleSoakConfig: React.FC<CycleSoakConfigProps> = ({
     onChange,
     disabled = false,
 }) => {
+    const { t } = useI18n();
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [manualOverride, setManualOverride] = useState(false);
 
     // Calculate whether Cycle & Soak should be recommended
     const recommendation = useMemo(() => {
         if (!soil) return null;
-        
-        const infiltrationRate = typeof soil.infiltration_rate_mm_h === 'number' 
-            ? soil.infiltration_rate_mm_h 
+
+        const infiltrationRate = typeof soil.infiltration_rate_mm_h === 'number'
+            ? soil.infiltration_rate_mm_h
             : 10; // Default
 
         // Parse application rate from irrigation method (it's a string like "10-20")
@@ -178,8 +180,8 @@ export const CycleSoakConfig: React.FC<CycleSoakConfigProps> = ({
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <IonIcon icon={waterOutline} className="text-cyber-aqua text-xl" />
-                        <LabelWithHelp 
-                            label="Cycle & Soak" 
+                        <LabelWithHelp
+                            label="Cycle & Soak"
                             tooltipKey="cycle_soak"
                             className="font-bold text-white"
                         />
@@ -197,26 +199,26 @@ export const CycleSoakConfig: React.FC<CycleSoakConfigProps> = ({
                 {recommendation && (
                     <div className={`
                         rounded-lg p-3 mb-4
-                        ${enabled 
+                        ${enabled
                             ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30'
                             : 'bg-white/5 border border-white/10'
                         }
                     `}>
                         <div className="flex items-start gap-2">
-                            <IonIcon 
-                                icon={enabled ? checkmarkCircle : informationCircleOutline} 
+                            <IonIcon
+                                icon={enabled ? checkmarkCircle : informationCircleOutline}
                                 className={`text-lg mt-0.5 ${enabled ? 'text-cyan-400' : 'text-gray-400'}`}
                             />
                             <div className="flex-1">
                                 <p className={`text-sm m-0 ${enabled ? 'text-white' : 'text-gray-400'}`}>
-                                    {enabled 
-                                        ? `Activat: ${cycleMinutes} min udare, ${soakMinutes} min pauză`
-                                        : 'Dezactivat'
+                                    {enabled
+                                        ? `${t('cycleSoak.activated')}: ${cycleMinutes} min ${t('cycleSoak.wateringPause').split(' • ')[0]}, ${soakMinutes} min ${t('cycleSoak.wateringPause').split(' • ')[1]}`
+                                        : t('cycleSoak.deactivated')
                                     }
                                 </p>
                                 {autoEnabled && (
                                     <IonChip outline color="primary" className="h-5 text-xs mt-1">
-                                        🤖 Auto-configurat
+                                        🤖 {t('cycleSoak.auto')}
                                     </IonChip>
                                 )}
                             </div>
@@ -228,12 +230,12 @@ export const CycleSoakConfig: React.FC<CycleSoakConfigProps> = ({
                 {recommendation && (
                     <div className="bg-white/5 rounded-lg p-3 mb-4">
                         <div className="flex items-center gap-2 mb-2">
-                            <IonIcon 
-                                icon={recommendation.shouldEnable ? alertCircle : checkmarkCircle} 
+                            <IonIcon
+                                icon={recommendation.shouldEnable ? alertCircle : checkmarkCircle}
                                 className={recommendation.shouldEnable ? 'text-amber-400' : 'text-green-400'}
                             />
                             <span className="text-sm text-white font-medium">
-                                {recommendation.shouldEnable ? 'Recomandat' : 'Opțional'}
+                                {recommendation.shouldEnable ? t('zoneDetails.recommended') : t('zoneDetails.optional')}
                             </span>
                         </div>
                         <p className="text-sm text-gray-400 m-0">
@@ -243,13 +245,13 @@ export const CycleSoakConfig: React.FC<CycleSoakConfigProps> = ({
                         {/* Visual comparison */}
                         <div className="grid grid-cols-2 gap-2 mt-3">
                             <div className="bg-white/5 rounded p-2 text-center">
-                                <p className="text-xs text-gray-400 m-0">Infiltrare sol</p>
+                                <p className="text-xs text-gray-400 m-0">{t('zoneDetails.soilInfiltration')}</p>
                                 <p className="text-white font-bold m-0">
                                     {recommendation.infiltrationRate} mm/h
                                 </p>
                             </div>
                             <div className="bg-white/5 rounded p-2 text-center">
-                                <p className="text-xs text-gray-400 m-0">Rată aplicare</p>
+                                <p className="text-xs text-gray-400 m-0">{t('zoneDetails.applicationRate')}</p>
                                 <p className="text-white font-bold m-0">
                                     {recommendation.applicationRate} mm/h
                                 </p>
@@ -266,7 +268,7 @@ export const CycleSoakConfig: React.FC<CycleSoakConfigProps> = ({
                             <div className="flex items-center justify-between mb-1">
                                 <span className="text-gray-300 text-sm">
                                     <IonIcon icon={timerOutline} className="mr-1 align-middle" />
-                                    Durată ciclu udare
+                                    {t('cycleSoak.cycleWatering')}
                                 </span>
                                 <IonBadge color="primary">{cycleMinutes} min</IonBadge>
                             </div>
@@ -290,7 +292,7 @@ export const CycleSoakConfig: React.FC<CycleSoakConfigProps> = ({
                             <div className="flex items-center justify-between mb-1">
                                 <span className="text-gray-300 text-sm">
                                     <IonIcon icon={timerOutline} className="mr-1 align-middle" />
-                                    Durată pauză (absorbție)
+                                    {t('cycleSoak.soakAbsorption')}
                                 </span>
                                 <IonBadge color="secondary">{soakMinutes} min</IonBadge>
                             </div>
@@ -318,7 +320,7 @@ export const CycleSoakConfig: React.FC<CycleSoakConfigProps> = ({
                                 disabled={disabled}
                             >
                                 <IonIcon icon={settingsOutline} slot="start" />
-                                Resetează la valori automate
+                                {t('zoneDetails.resetToAuto')}
                             </IonButton>
                         )}
                     </div>
@@ -330,7 +332,7 @@ export const CycleSoakConfig: React.FC<CycleSoakConfigProps> = ({
                         <IonItem slot="header" lines="none" className="--background-transparent">
                             <IonIcon icon={informationCircleOutline} slot="start" className="text-gray-400" />
                             <IonLabel className="text-gray-400 text-sm">
-                                Cum funcționează Cycle & Soak?
+                                {t('zoneDetails.howCycleSoakWorks')}
                             </IonLabel>
                         </IonItem>
                         <div slot="content" className="px-4 pb-4">
@@ -338,7 +340,7 @@ export const CycleSoakConfig: React.FC<CycleSoakConfigProps> = ({
                                 <p className="text-gray-300 text-sm m-0 mb-3">
                                     <strong>Cycle & Soak</strong> previne scurgerea apei prin împărțirea udării în cicluri mici cu pauze între ele.
                                 </p>
-                                
+
                                 <div className="space-y-2">
                                     <div className="flex items-start gap-2">
                                         <span className="text-cyan-400">1.</span>
