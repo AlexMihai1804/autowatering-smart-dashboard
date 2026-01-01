@@ -228,30 +228,45 @@ const MobileZoneDetailsFull: React.FC = () => {
     maxVolumeLimitL: number;
   } | null>(null);
 
+  const zoneFetchInFlightRef = useRef<Promise<void> | null>(null);
+
   // Fetch zone data on mount and connection changes
   useEffect(() => {
     if (connectionState !== 'connected') return;
     const fetchZoneData = async () => {
+      if (zoneFetchInFlightRef.current) return;
       setLoading(true);
-      try {
-        // Read custom soil config and update store (null if not found)
-        const customSoil = await bleService.readCustomSoilConfig(channelIdNum).catch(() => null);
-        updateCustomSoilConfig(channelIdNum, customSoil);
+      const promise = (async () => {
+        try {
+          // Read custom soil config and update store (null if not found)
+          const customSoil = await bleService.readCustomSoilConfig(channelIdNum).catch(() => null);
+          updateCustomSoilConfig(channelIdNum, customSoil);
 
-        await Promise.all([
-          bleService.readAutoCalcStatus(channelIdNum).catch(() => { }),
-          bleService.readScheduleConfig(channelIdNum).catch(() => { }),
-          bleService.readGrowingEnvironment(channelIdNum).catch(() => { }),
-          bleService.readCompensationStatus(channelIdNum).catch(() => { }),
-          bleService.readChannelCompensationConfig(channelIdNum).catch(() => { }),
-          bleService.readStatistics(channelIdNum).catch(() => { }),
-          bleService.readHydraulicStatus(channelIdNum).catch(() => { }),
-          bleService.fetchWateringHistory(0, channelIdNum, 0, 20).catch(() => { }),
-        ]);
-      } catch (e) {
-        console.warn('[ZoneDetails] Failed to fetch zone data:', e);
+          // Kick off state reads first; watering history should be requested last so its
+          // timeout doesn't start while still waiting behind queued GATT operations.
+          await Promise.all([
+            bleService.readAutoCalcStatus(channelIdNum).catch(() => { }),
+            bleService.readScheduleConfig(channelIdNum).catch(() => { }),
+            bleService.readGrowingEnvironment(channelIdNum).catch(() => { }),
+            bleService.readCompensationStatus(channelIdNum).catch(() => { }),
+            bleService.readChannelCompensationConfig(channelIdNum).catch(() => { }),
+            bleService.readStatistics(channelIdNum).catch(() => { }),
+            bleService.readHydraulicStatus(channelIdNum).catch(() => { }),
+          ]);
+
+          await bleService.fetchWateringHistory(0, channelIdNum, 0, 20, 0, 0, 12000).catch(() => { });
+        } catch (e) {
+          console.warn('[ZoneDetails] Failed to fetch zone data:', e);
+        } finally {
+          setLoading(false);
+        }
+      })();
+
+      zoneFetchInFlightRef.current = promise;
+      try {
+        await promise;
       } finally {
-        setLoading(false);
+        zoneFetchInFlightRef.current = null;
       }
     };
     fetchZoneData();
@@ -1107,7 +1122,7 @@ const MobileZoneDetailsFull: React.FC = () => {
         </button>
         <div className="flex-1 text-center">
           <h2 className="text-white text-lg font-bold leading-tight">{zone.name}</h2>
-          <p className="text-mobile-text-muted text-xs">{t('dashboard.zone')} {zone.channel_id + 1}</p>
+          <p className="text-mobile-text-muted text-xs">{t('zones.zone')} {zone.channel_id + 1}</p>
         </div>
         {/* Empty spacer for symmetry */}
         <div className="size-12" />
@@ -1254,7 +1269,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                   <div className="flex size-12 items-center justify-center rounded-full bg-red-500/10 text-red-500 group-hover:bg-red-500 group-hover:text-white transition-colors">
                     <span className="material-symbols-outlined text-[28px]">stop_circle</span>
                   </div>
-                  <span className="text-mobile-text-muted text-xs font-bold group-hover:text-white">{t('common.stop')}</span>
+                  <span className="text-mobile-text-muted text-xs font-bold group-hover:text-white">{t('zoneDetails.stopWatering')}</span>
                 </button>
 
                 <button className="group flex flex-col items-center justify-center gap-2 rounded-2xl bg-mobile-surface-dark p-4 hover:bg-mobile-primary/10 transition-all active:scale-95 border border-mobile-border-dark">

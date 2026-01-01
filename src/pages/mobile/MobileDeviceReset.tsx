@@ -108,8 +108,18 @@ const MobileDeviceReset: React.FC = () => {
       await bleService.performReset(opcode);
 
       if (selectedReset === 'full') {
+        // Factory reset changes device state dramatically.
+        // Ensure we drop any cached app/device state (incl. onboarding %) and force a clean reconnect.
+        try {
+          await bleService.disconnect();
+        } catch (disconnectErr) {
+          console.warn('[MobileDeviceReset] Disconnect after factory reset failed (continuing):', disconnectErr);
+          // Fallback: at least clear local store so UI doesn't keep stale state.
+          useAppStore.getState().resetStore();
+        }
+
         // Navigate to welcome after factory reset
-        history.push('/welcome');
+        history.replace('/welcome');
       } else {
         alert('Reset successful.');
         history.goBack();

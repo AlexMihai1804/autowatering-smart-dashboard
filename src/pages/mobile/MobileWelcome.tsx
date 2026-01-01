@@ -6,18 +6,27 @@ import { BleService } from '../../services/BleService';
 
 const MobileWelcome: React.FC = () => {
   const history = useHistory();
-  const { connectionState } = useAppStore();
+  const { connectionState, onboardingState } = useAppStore();
   const { devices, lastDevice, isLoaded, clearLastDevice } = useKnownDevices();
   const bleService = BleService.getInstance();
   const [isAutoConnecting, setIsAutoConnecting] = useState(false);
   const [autoConnectFailed, setAutoConnectFailed] = useState(false);
 
-  // Auto-redirect if connected
+  // Auto-redirect if connected.
+  // IMPORTANT: BLE sets connectionState='connected' before Phase 2 reads onboarding status.
+  // Wait for onboardingState so we can route to onboarding when setup is incomplete.
   useEffect(() => {
-    if (connectionState === 'connected') {
-      history.replace('/dashboard');
-    }
-  }, [connectionState, history]);
+    if (connectionState !== 'connected') return;
+
+    // If we haven't received onboarding status yet, don't redirect.
+    if (!onboardingState) return;
+
+    // If user has at least one zone configured, go straight to dashboard
+    // (don't force them through onboarding wizard every time)
+    const hasConfiguredZone = onboardingState.channels_completion_pct > 0;
+    const nextPath = hasConfiguredZone ? '/dashboard' : '/onboarding';
+    history.replace(nextPath);
+  }, [connectionState, onboardingState, history]);
 
   // Auto-connect to last known device
   useEffect(() => {
@@ -54,7 +63,8 @@ const MobileWelcome: React.FC = () => {
   const handleConnectToDevice = async (deviceId: string) => {
     setIsAutoConnecting(true);
     try {
-      await bleService.connect(deviceId);
+      // Use force=true to ensure we can reconnect even if state thinks we're connected
+      await bleService.connect(deviceId, true);
     } catch (error) {
       console.error('Connection failed:', error);
       setAutoConnectFailed(true);

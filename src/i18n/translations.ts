@@ -658,9 +658,21 @@ export interface TranslationKeys {
             solar: string;
             fixedTime: string;
             frequency: string;
+            daily: string;
             specificDays: string;
             everyXDays: string;
+            everyXDaysValue: string;
             waterEvery: string;
+            solarEvents: {
+                sunrise: string;
+                sunset: string;
+            };
+            solarOffset: string;
+            solarOffsetOptions: {
+                before: string;
+                atEvent: string;
+                after: string;
+            };
             days: {
                 everyDay: string;
                 mwf: string;
@@ -673,12 +685,61 @@ export interface TranslationKeys {
             tempAdjust: { name: string; desc: string; };
             windSkip: { name: string; desc: string; };
             advanced: string;
+            cycleSoak: {
+                title: string;
+                explanation: string;
+            };
+            maxVolume: {
+                title: string;
+                desc: string;
+            };
         };
         summary: {
             title: string;
             subtitle: string;
             save: string;
             saving: string;
+            channel: string;
+            enabled: string;
+            disabled: string;
+            gps: string;
+            notSet: string;
+            wateringModes: {
+                quality: string;
+                eco: string;
+                duration: string;
+                volume: string;
+            };
+            sunExposure: {
+                full: string;
+                partial: string;
+                shade: string;
+            };
+            scheduleTypes: {
+                fullyAutomatic: string;
+                everyDay: string;
+                daily: string;
+                everyXDays: string;
+            };
+            solarEvents: {
+                sunrise: string;
+                sunset: string;
+            };
+            timeDescriptions: {
+                sunsetAuto: string;
+                atEvent: string;
+                afterEvent: string;
+                beforeEvent: string;
+            };
+            days: {
+                sun: string;
+                mon: string;
+                tue: string;
+                wed: string;
+                thu: string;
+                fri: string;
+                sat: string;
+            };
             items: {
                 channel: string;
                 mode: string;
@@ -1329,9 +1390,21 @@ export const en: TranslationKeys = {
             solar: 'Solar',
             fixedTime: 'Fixed Time',
             frequency: 'Frequency',
+            daily: 'Daily',
             specificDays: 'Specific Days',
             everyXDays: 'Every X Days',
+            everyXDaysValue: 'Every {days} days',
             waterEvery: 'Water every',
+            solarEvents: {
+                sunrise: 'Sunrise',
+                sunset: 'Sunset',
+            },
+            solarOffset: 'Offset',
+            solarOffsetOptions: {
+                before: 'Before',
+                atEvent: 'At event',
+                after: 'After',
+            },
             days: {
                 everyDay: 'Every Day',
                 mwf: 'M/W/F',
@@ -1344,12 +1417,61 @@ export const en: TranslationKeys = {
             tempAdjust: { name: 'Temperature Adjust', desc: 'Increase watering on hot days' },
             windSkip: { name: 'Wind Skip', desc: 'Skip watering on windy days' },
             advanced: 'Advanced Settings',
+            cycleSoak: {
+                title: 'Cycle & Soak',
+                explanation: 'Helps prevent runoff by splitting watering into cycles.',
+            },
+            maxVolume: {
+                title: 'Max Volume',
+                desc: 'Caps the amount of water applied per watering event.',
+            },
         },
         summary: {
             title: 'Summary',
             subtitle: 'Review your zone configuration',
             save: 'Save Zone',
             saving: 'Saving...',
+            channel: 'Channel',
+            enabled: 'Enabled',
+            disabled: 'Disabled',
+            gps: 'GPS detected',
+            notSet: 'Not set',
+            wateringModes: {
+                quality: 'Quality Mode',
+                eco: 'Eco Mode',
+                duration: 'Duration Mode',
+                volume: 'Volume Mode',
+            },
+            sunExposure: {
+                full: 'Full Sun',
+                partial: 'Partial Shade',
+                shade: 'Full Shade',
+            },
+            scheduleTypes: {
+                fullyAutomatic: 'Fully Automatic',
+                everyDay: 'Every Day',
+                daily: 'Daily',
+                everyXDays: 'Every {days} days',
+            },
+            solarEvents: {
+                sunrise: 'Sunrise',
+                sunset: 'Sunset',
+            },
+            timeDescriptions: {
+                sunsetAuto: 'Sunset (auto)',
+                atEvent: 'At {event}',
+                afterEvent: '{offset} min after {event}',
+                beforeEvent: '{offset} min before {event}',
+            },
+            days: {
+                sun: 'Sun',
+                mon: 'Mon',
+                tue: 'Tue',
+                wed: 'Wed',
+                thu: 'Thu',
+                fri: 'Fri',
+                sat: 'Sat',
+            },
             items: {
                 channel: 'Channel',
                 mode: 'Mode',
@@ -2000,9 +2122,21 @@ export const ro: TranslationKeys = {
             solar: 'Solar',
             fixedTime: 'Timp Fix',
             frequency: 'Frecvență',
+            daily: 'Zilnic',
             specificDays: 'Zile Specifice',
             everyXDays: 'La fiecare X zile',
+            everyXDaysValue: 'La fiecare {days} zile',
             waterEvery: 'Udă la fiecare',
+            solarEvents: {
+                sunrise: 'Răsărit',
+                sunset: 'Apus',
+            },
+            solarOffset: 'Decalaj',
+            solarOffsetOptions: {
+                before: 'Înainte',
+                atEvent: 'La eveniment',
+                after: 'După',
+            },
             days: {
                 everyDay: 'În fiecare zi',
                 mwf: 'L/M/V',
@@ -2015,12 +2149,61 @@ export const ro: TranslationKeys = {
             tempAdjust: { name: 'Ajustare Temp', desc: 'Crește udarea în zilele caniculare' },
             windSkip: { name: 'Sărit Vânt', desc: 'Sari peste udare când bate vântul' },
             advanced: 'Setări Avansate',
+            cycleSoak: {
+                title: 'Ciclu & Pauză',
+                explanation: 'Previne scurgerea împărțind udarea în cicluri.',
+            },
+            maxVolume: {
+                title: 'Volum Maxim',
+                desc: 'Limitează cantitatea de apă aplicată per udare.',
+            },
         },
         summary: {
             title: 'Sumar',
             subtitle: 'Revizuiește configurația zonei',
             save: 'Salvează Zona',
             saving: 'Se salvează...',
+            channel: 'Canal',
+            enabled: 'Activat',
+            disabled: 'Dezactivat',
+            gps: 'detectat GPS',
+            notSet: 'Nesetat',
+            wateringModes: {
+                quality: 'Mod Calitate',
+                eco: 'Mod Eco',
+                duration: 'Mod Durată',
+                volume: 'Mod Volum',
+            },
+            sunExposure: {
+                full: 'Soare Direct',
+                partial: 'Umbră Parțială',
+                shade: 'Umbră Totală',
+            },
+            scheduleTypes: {
+                fullyAutomatic: 'Complet Automat',
+                everyDay: 'În Fiecare Zi',
+                daily: 'Zilnic',
+                everyXDays: 'La fiecare {days} zile',
+            },
+            solarEvents: {
+                sunrise: 'Răsărit',
+                sunset: 'Apus',
+            },
+            timeDescriptions: {
+                sunsetAuto: 'Apus (automat)',
+                atEvent: 'La {event}',
+                afterEvent: '{offset} min după {event}',
+                beforeEvent: '{offset} min înainte de {event}',
+            },
+            days: {
+                sun: 'Dum',
+                mon: 'Lun',
+                tue: 'Mar',
+                wed: 'Mie',
+                thu: 'Joi',
+                fri: 'Vin',
+                sat: 'Sâm',
+            },
             items: {
                 channel: 'Canal',
                 mode: 'Mod',

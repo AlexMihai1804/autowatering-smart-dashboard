@@ -15,11 +15,23 @@ const PARENT_PATH_MAP: Record<string, string> = {
     '/notifications': '/dashboard',
 };
 
-// Paths that should never be added to the stack (transitional pages)
-const EXCLUDED_PATHS = new Set(['/scan', '/permissions', '/connection-success']);
+// Paths that should never be added to the stack (transitional pages / wizards)
+// We keep onboarding flows out of the explicit back stack so Android Back returns to
+// logical parents (or exits from /dashboard) instead of replaying wizard steps.
+const EXCLUDED_PATHS = new Set([
+    '/scan',
+    '/permissions',
+    '/connection-success',
+    '/onboarding',
+    '/zones/add'
+]);
 
 // Root paths where back should exit the app
 const ROOT_PATHS = new Set(['/', '/welcome', '/dashboard']);
+
+// Main tab/root routes. Switching between these should not create a long
+// back-history of alternating tabs.
+const TAB_ROOT_PATHS = new Set(['/dashboard', '/zones', '/history', '/settings']);
 
 class NavigationStack {
     private stack: string[] = [];
@@ -41,6 +53,19 @@ class NavigationStack {
         // Skip duplicate consecutive entries
         if (this.stack.length > 0 && this.stack[this.stack.length - 1] === normalizedPath) {
             return;
+        }
+
+        // Tab switching: replace the current tab root instead of pushing.
+        if (TAB_ROOT_PATHS.has(normalizedPath) && this.stack.length > 0) {
+            const last = this.stack[this.stack.length - 1];
+            if (last && TAB_ROOT_PATHS.has(last)) {
+                this.stack[this.stack.length - 1] = normalizedPath;
+                if (import.meta.env.DEV) {
+                    // eslint-disable-next-line no-console
+                    console.log('[NavStack] replace(tab):', normalizedPath, '| stack:', [...this.stack]);
+                }
+                return;
+            }
         }
 
         this.stack.push(normalizedPath);

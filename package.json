@@ -6,6 +6,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "check:i18n": "node scripts/check_i18n_keys.js",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",

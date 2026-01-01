@@ -82,6 +82,7 @@ const MobileZoneAddWizard: React.FC = () => {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const preselectedChannel = params.get('channel') ? parseInt(params.get('channel')!, 10) : null;
+  const fromOnboarding = params.get('fromOnboarding') === 'true';
 
   const { zones, systemConfig, onboardingState, wizardState, plantDb, soilDb, irrigationMethodDb } = useAppStore();
   const bleService = BleService.getInstance();
@@ -264,7 +265,12 @@ const MobileZoneAddWizard: React.FC = () => {
     if (prevIndex >= 0) {
       setCurrentStep(stepOrder[prevIndex]);
     } else {
-      history.goBack();
+      // If coming from onboarding and on first step, go back to onboarding select-zones
+      if (fromOnboarding) {
+        history.replace('/onboarding');
+      } else {
+        history.goBack();
+      }
     }
   };
 
@@ -423,7 +429,13 @@ const MobileZoneAddWizard: React.FC = () => {
       });
 
       console.log('[ZoneAddWizard] Zone configured:', zoneConfig);
-      history.push('/zones');
+      
+      // If coming from onboarding, return there with the configured channel info
+      if (fromOnboarding) {
+        history.replace(`/onboarding?continueFromZone=true&configured=${zoneConfig.channelId}`);
+      } else {
+        history.push('/zones');
+      }
     } catch (error) {
       console.error('[ZoneAddWizard] Failed to save zone:', error);
       setSaving(false);

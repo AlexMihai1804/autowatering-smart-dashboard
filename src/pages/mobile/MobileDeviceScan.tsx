@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { BleService } from '../../services/BleService';
 import { useAppStore } from '../../store/useAppStore';
@@ -12,12 +12,13 @@ interface DiscoveredDevice {
 
 const MobileDeviceScan: React.FC = () => {
   const history = useHistory();
-  const { connectionState, discoveredDevices, connectedDeviceId } = useAppStore();
+  const { connectionState, discoveredDevices, connectedDeviceId, onboardingState } = useAppStore();
   const bleService = BleService.getInstance();
   const { addDevice } = useKnownDevices();
   const [isScanning, setIsScanning] = useState(false);
   const [connectingTo, setConnectingTo] = useState<string | null>(null);
   const [lastConnectedName, setLastConnectedName] = useState<string | null>(null);
+  const didSaveDeviceRef = useRef(false);
 
   // Start scanning on mount
   useEffect(() => {
@@ -27,14 +28,26 @@ const MobileDeviceScan: React.FC = () => {
     };
   }, []);
 
-  // Save device and redirect on successful connection
+  // Save device on successful connection (once)
   useEffect(() => {
     if (connectionState === 'connected' && connectedDeviceId) {
-      // Save the device to known devices
-      addDevice(connectedDeviceId, lastConnectedName || 'AutoWater Device');
-      history.replace('/dashboard');
+      if (!didSaveDeviceRef.current) {
+        addDevice(connectedDeviceId, lastConnectedName || 'AutoWater Device');
+        didSaveDeviceRef.current = true;
+      }
     }
-  }, [connectionState, connectedDeviceId, history, addDevice, lastConnectedName]);
+  }, [connectionState, connectedDeviceId, addDevice, lastConnectedName]);
+
+  // Redirect once we know onboarding completion
+  useEffect(() => {
+    if (connectionState !== 'connected') return;
+    if (!onboardingState) return;
+
+    // If user has at least one zone configured, go straight to dashboard
+    const hasConfiguredZone = onboardingState.channels_completion_pct > 0;
+    const nextPath = hasConfiguredZone ? '/dashboard' : '/onboarding';
+    history.replace(nextPath);
+  }, [connectionState, onboardingState, history]);
 
   const startScan = async () => {
     setIsScanning(true);
@@ -50,7 +63,8 @@ const MobileDeviceScan: React.FC = () => {
     setConnectingTo(device.deviceId);
     setLastConnectedName(device.name || null);
     try {
-      await bleService.connect(device.deviceId);
+      // Use force=true to handle any stale connection state
+      await bleService.connect(device.deviceId, true);
     } catch (error) {
       console.error('Connection failed:', error);
       setConnectingTo(null);
