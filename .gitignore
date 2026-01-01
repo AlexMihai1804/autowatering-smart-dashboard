@@ -60,6 +60,9 @@ ios/build/
 # Local scratch output
 errors.txt
 
+# Local analysis outputs
+*_output.txt
+
 # GeoTiff test files
 *.tif
 *.tiff

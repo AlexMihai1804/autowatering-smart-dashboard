@@ -9,6 +9,8 @@ import {
     SensorStatus,
     DataQuality,
     AlarmCode,
+    AlarmSeverity,
+    HydraulicLockReason,
     CalibrationAction,
     ResetOpcode,
     ResetStatus,
@@ -36,7 +38,13 @@ import {
     isChannelFao56Complete,
     isChannelBasicComplete,
     hasAnyConfiguredChannel,
-    isInitialSetupComplete
+    isInitialSetupComplete,
+    getAlarmSeverity,
+    getAlarmTitle,
+    getAlarmDescription,
+    getAffectedChannelFromAlarmData,
+    isAlarmCritical,
+    getLockReasonDescription
 } from '../types/firmware_structs';
 
 describe('firmware_structs - Enums', () => {
@@ -501,6 +509,201 @@ describe('firmware_structs - Type Guards', () => {
             validCommands.forEach(cmd => {
                 expect(Object.values(TaskQueueCommand).includes(cmd)).toBe(true);
             });
+        });
+    });
+});
+
+describe('firmware_structs - Alarm Helper Functions', () => {
+    describe('getAlarmSeverity', () => {
+        it('should return INFO for NONE alarm', () => {
+            expect(getAlarmSeverity(AlarmCode.NONE)).toBe(AlarmSeverity.INFO);
+        });
+
+        it('should return WARNING for LOW_FLOW', () => {
+            expect(getAlarmSeverity(AlarmCode.LOW_FLOW)).toBe(AlarmSeverity.WARNING);
+        });
+
+        it('should return DANGER for NO_FLOW', () => {
+            expect(getAlarmSeverity(AlarmCode.NO_FLOW)).toBe(AlarmSeverity.DANGER);
+        });
+
+        it('should return DANGER for FREEZE_LOCKOUT', () => {
+            expect(getAlarmSeverity(AlarmCode.FREEZE_LOCKOUT)).toBe(AlarmSeverity.DANGER);
+        });
+
+        it('should return DANGER for CHANNEL_LOCK', () => {
+            expect(getAlarmSeverity(AlarmCode.CHANNEL_LOCK)).toBe(AlarmSeverity.DANGER);
+        });
+
+        it('should return CRITICAL for HIGH_FLOW', () => {
+            expect(getAlarmSeverity(AlarmCode.HIGH_FLOW)).toBe(AlarmSeverity.CRITICAL);
+        });
+
+        it('should return CRITICAL for UNEXPECTED_FLOW', () => {
+            expect(getAlarmSeverity(AlarmCode.UNEXPECTED_FLOW)).toBe(AlarmSeverity.CRITICAL);
+        });
+
+        it('should return CRITICAL for MAINLINE_LEAK', () => {
+            expect(getAlarmSeverity(AlarmCode.MAINLINE_LEAK)).toBe(AlarmSeverity.CRITICAL);
+        });
+
+        it('should return CRITICAL for GLOBAL_LOCK', () => {
+            expect(getAlarmSeverity(AlarmCode.GLOBAL_LOCK)).toBe(AlarmSeverity.CRITICAL);
+        });
+
+        it('should return WARNING for unknown alarm code', () => {
+            expect(getAlarmSeverity(99 as AlarmCode)).toBe(AlarmSeverity.WARNING);
+        });
+    });
+
+    describe('getAlarmTitle', () => {
+        it('should return correct title for each alarm code', () => {
+            expect(getAlarmTitle(AlarmCode.NONE)).toBe('No Alarm');
+            expect(getAlarmTitle(AlarmCode.NO_FLOW)).toBe('No Water Flow');
+            expect(getAlarmTitle(AlarmCode.UNEXPECTED_FLOW)).toBe('Unexpected Flow Detected');
+            expect(getAlarmTitle(AlarmCode.FREEZE_LOCKOUT)).toBe('Freeze Protection Active');
+            expect(getAlarmTitle(AlarmCode.HIGH_FLOW)).toBe('High Flow Alert');
+            expect(getAlarmTitle(AlarmCode.LOW_FLOW)).toBe('Low Flow Warning');
+            expect(getAlarmTitle(AlarmCode.MAINLINE_LEAK)).toBe('Mainline Leak Detected');
+            expect(getAlarmTitle(AlarmCode.CHANNEL_LOCK)).toBe('Zone Locked');
+            expect(getAlarmTitle(AlarmCode.GLOBAL_LOCK)).toBe('System Locked');
+        });
+
+        it('should return Unknown Alarm for unrecognized codes', () => {
+            expect(getAlarmTitle(99 as AlarmCode)).toBe('Unknown Alarm (99)');
+        });
+    });
+
+    describe('getAlarmDescription', () => {
+        it('should return normal operation message for NONE', () => {
+            expect(getAlarmDescription(AlarmCode.NONE)).toBe('System operating normally.');
+        });
+
+        it('should include zone text for NO_FLOW when channelId provided', () => {
+            const desc = getAlarmDescription(AlarmCode.NO_FLOW, 2);
+            expect(desc).toContain('Zone 3');
+            expect(desc).toContain('No water flow');
+        });
+
+        it('should include pulse count for UNEXPECTED_FLOW', () => {
+            const desc = getAlarmDescription(AlarmCode.UNEXPECTED_FLOW, undefined, 15);
+            expect(desc).toContain('15 pulses');
+        });
+
+        it('should format temperature for FREEZE_LOCKOUT', () => {
+            // alarmData = temperature * 10, so 25 means 2.5°C
+            const desc = getAlarmDescription(AlarmCode.FREEZE_LOCKOUT, undefined, 25);
+            expect(desc).toContain('2.5°C');
+        });
+
+        it('should show stale sensor data for FREEZE_LOCKOUT with 0xFFFF', () => {
+            const desc = getAlarmDescription(AlarmCode.FREEZE_LOCKOUT, undefined, 0xFFFF);
+            expect(desc).toContain('stale sensor data');
+        });
+
+        it('should include zone for HIGH_FLOW', () => {
+            const desc = getAlarmDescription(AlarmCode.HIGH_FLOW, 0);
+            expect(desc).toContain('Zone 1');
+            expect(desc).toContain('exceeded safe limits');
+        });
+
+        it('should include zone for LOW_FLOW', () => {
+            const desc = getAlarmDescription(AlarmCode.LOW_FLOW, 3);
+            expect(desc).toContain('Zone 4');
+            expect(desc).toContain('below expected');
+        });
+
+        it('should include pulse count for MAINLINE_LEAK', () => {
+            const desc = getAlarmDescription(AlarmCode.MAINLINE_LEAK, undefined, 8);
+            expect(desc).toContain('8 pulses');
+        });
+
+        it('should include zone for CHANNEL_LOCK', () => {
+            const desc = getAlarmDescription(AlarmCode.CHANNEL_LOCK, 5);
+            expect(desc).toContain('Zone 6');
+            expect(desc).toContain('locked');
+        });
+
+        it('should describe system lock for GLOBAL_LOCK', () => {
+            const desc = getAlarmDescription(AlarmCode.GLOBAL_LOCK);
+            expect(desc).toContain('System locked');
+            expect(desc).toContain('critical hydraulic issue');
+        });
+
+        it('should return generic message for unrecognized code', () => {
+            const desc = getAlarmDescription(99 as AlarmCode);
+            expect(desc).toContain('Unrecognized alarm');
+        });
+    });
+
+    describe('getAffectedChannelFromAlarmData', () => {
+        it('should return channel for HIGH_FLOW', () => {
+            expect(getAffectedChannelFromAlarmData(AlarmCode.HIGH_FLOW, 3)).toBe(3);
+        });
+
+        it('should return channel for LOW_FLOW', () => {
+            expect(getAffectedChannelFromAlarmData(AlarmCode.LOW_FLOW, 5)).toBe(5);
+        });
+
+        it('should return channel for CHANNEL_LOCK', () => {
+            expect(getAffectedChannelFromAlarmData(AlarmCode.CHANNEL_LOCK, 2)).toBe(2);
+        });
+
+        it('should return channel for GLOBAL_LOCK', () => {
+            expect(getAffectedChannelFromAlarmData(AlarmCode.GLOBAL_LOCK, 0)).toBe(0);
+        });
+
+        it('should return undefined for invalid channel (>7)', () => {
+            expect(getAffectedChannelFromAlarmData(AlarmCode.HIGH_FLOW, 10)).toBeUndefined();
+        });
+
+        it('should return undefined for NO_FLOW (uses retry count, not channel)', () => {
+            expect(getAffectedChannelFromAlarmData(AlarmCode.NO_FLOW, 3)).toBeUndefined();
+        });
+
+        it('should return undefined for NONE', () => {
+            expect(getAffectedChannelFromAlarmData(AlarmCode.NONE, 0)).toBeUndefined();
+        });
+
+        it('should return undefined for FREEZE_LOCKOUT', () => {
+            expect(getAffectedChannelFromAlarmData(AlarmCode.FREEZE_LOCKOUT, 0)).toBeUndefined();
+        });
+    });
+
+    describe('isAlarmCritical', () => {
+        it('should return false for NONE', () => {
+            expect(isAlarmCritical(AlarmCode.NONE)).toBe(false);
+        });
+
+        it('should return false for LOW_FLOW (warning)', () => {
+            expect(isAlarmCritical(AlarmCode.LOW_FLOW)).toBe(false);
+        });
+
+        it('should return true for DANGER severity alarms', () => {
+            expect(isAlarmCritical(AlarmCode.NO_FLOW)).toBe(true);
+            expect(isAlarmCritical(AlarmCode.FREEZE_LOCKOUT)).toBe(true);
+            expect(isAlarmCritical(AlarmCode.CHANNEL_LOCK)).toBe(true);
+        });
+
+        it('should return true for CRITICAL severity alarms', () => {
+            expect(isAlarmCritical(AlarmCode.HIGH_FLOW)).toBe(true);
+            expect(isAlarmCritical(AlarmCode.UNEXPECTED_FLOW)).toBe(true);
+            expect(isAlarmCritical(AlarmCode.MAINLINE_LEAK)).toBe(true);
+            expect(isAlarmCritical(AlarmCode.GLOBAL_LOCK)).toBe(true);
+        });
+    });
+
+    describe('getLockReasonDescription', () => {
+        it('should return correct description for each reason', () => {
+            expect(getLockReasonDescription(HydraulicLockReason.NONE)).toBe('None');
+            expect(getLockReasonDescription(HydraulicLockReason.HIGH_FLOW)).toBe('High flow detected');
+            expect(getLockReasonDescription(HydraulicLockReason.NO_FLOW)).toBe('No flow detected');
+            expect(getLockReasonDescription(HydraulicLockReason.UNEXPECTED)).toBe('Unexpected flow');
+            expect(getLockReasonDescription(HydraulicLockReason.MAINLINE_LEAK)).toBe('Mainline leak');
+        });
+
+        it('should return Unknown for unrecognized reason', () => {
+            expect(getLockReasonDescription(99 as HydraulicLockReason)).toBe('Unknown');
         });
     });
 });
