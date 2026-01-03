@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
+import { useI18n } from '../../i18n';
 
 interface NotificationItem {
   id: string;
@@ -10,76 +11,82 @@ interface NotificationItem {
   zone?: string;
 }
 
-// Mock notification data
-const mockNotifications: { section: string; items: NotificationItem[] }[] = [
+const buildMockNotifications = (t: (key: string) => string): { section: string; items: NotificationItem[] }[] => [
   {
-    section: 'Today',
+    section: t('mobileNotifications.sections.today'),
     items: [
       {
         id: '1',
         type: 'success',
-        title: 'Irrigation Completed',
-        message: 'Front Lawn • 15 mins • Saved 2L',
+        title: t('mobileNotifications.mock.irrigationCompleted.title'),
+        message: t('mobileNotifications.mock.irrigationCompleted.message')
+          .replace('{zone}', 'Front Lawn')
+          .replace('{duration}', '15')
+          .replace('{saved}', '2'),
         time: '7:00 AM',
       },
       {
         id: '2',
         type: 'warning',
-        title: 'Moisture Sensor Alert',
-        message: 'Moisture levels below 15% threshold',
+        title: t('mobileNotifications.mock.moistureAlert.title'),
+        message: t('mobileNotifications.mock.moistureAlert.message').replace('{threshold}', '15'),
         time: '6:45 AM',
       },
     ],
   },
   {
-    section: 'Yesterday',
+    section: t('mobileNotifications.sections.yesterday'),
     items: [
       {
         id: '3',
         type: 'info',
-        title: 'Schedule Skipped',
-        message: 'Rain detected in local forecast',
+        title: t('mobileNotifications.mock.scheduleSkipped.title'),
+        message: t('mobileNotifications.mock.scheduleSkipped.message'),
         time: '5:30 PM',
       },
       {
         id: '4',
         type: 'info',
-        title: 'Firmware Updated',
-        message: 'Version 2.4.1 installed successfully',
+        title: t('mobileNotifications.mock.firmwareUpdated.title'),
+        message: t('mobileNotifications.mock.firmwareUpdated.message').replace('{version}', '2.4.1'),
         time: '2:00 PM',
       },
     ],
   },
   {
-    section: 'Last Week',
+    section: t('mobileNotifications.sections.lastWeek'),
     items: [
       {
         id: '5',
         type: 'success',
-        title: 'Irrigation Completed',
-        message: 'Backyard Garden • 20 mins',
-        time: 'Mon',
+        title: t('mobileNotifications.mock.irrigationCompleted.title'),
+        message: t('mobileNotifications.mock.irrigationCompletedShort.message')
+          .replace('{zone}', 'Backyard Garden')
+          .replace('{duration}', '20'),
+        time: t('mobileNotifications.days.mon'),
       },
       {
         id: '6',
         type: 'error',
-        title: 'Connection Lost',
-        message: 'Device offline for 30 minutes',
-        time: 'Sun',
+        title: t('mobileNotifications.mock.connectionLost.title'),
+        message: t('mobileNotifications.mock.connectionLost.message').replace('{minutes}', '30'),
+        time: t('mobileNotifications.days.sun'),
       },
     ],
   },
 ];
-
 const MobileNotifications: React.FC = () => {
   const history = useHistory();
+  const { t } = useI18n();
   const [activeFilter, setActiveFilter] = useState<'all' | 'errors' | 'warnings' | 'info'>('all');
 
+  const mockNotifications = buildMockNotifications(t);
+
   const filters = [
-    { key: 'all', label: 'All' },
-    { key: 'errors', label: 'Errors' },
-    { key: 'warnings', label: 'Warnings' },
-    { key: 'info', label: 'Info' },
+    { key: 'all', label: t('mobileNotifications.filters.all') },
+    { key: 'errors', label: t('mobileNotifications.filters.errors') },
+    { key: 'warnings', label: t('mobileNotifications.filters.warnings') },
+    { key: 'info', label: t('mobileNotifications.filters.info') },
   ];
 
   const getTypeStyles = (type: NotificationItem['type']) => {
@@ -119,17 +126,17 @@ const MobileNotifications: React.FC = () => {
             >
               <span className="material-symbols-outlined">arrow_back</span>
             </button>
-            <h1 className="text-2xl font-extrabold tracking-tight text-white">Notifications</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight text-white">{t('mobileNotifications.title')}</h1>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => history.push('/alarms')}
               className="text-mobile-text-muted text-sm font-bold hover:text-mobile-primary transition-colors"
             >
-              Alarms
+              {t('mobileNotifications.alarms')}
             </button>
             <button className="text-mobile-text-muted text-sm font-bold hover:text-mobile-primary transition-colors">
-              Clear All
+              {t('mobileNotifications.clearAll')}
             </button>
           </div>
         </div>
@@ -166,7 +173,7 @@ const MobileNotifications: React.FC = () => {
             {/* Items */}
             {section.items.map((item, idx) => {
               const styles = getTypeStyles(item.type);
-              const isOld = section.section === 'Last Week';
+              const isOld = section.section === t('mobileNotifications.sections.lastWeek');
               
               return (
                 <div
@@ -209,8 +216,8 @@ const MobileNotifications: React.FC = () => {
             <div className="size-20 rounded-full bg-mobile-surface-dark flex items-center justify-center mb-4">
               <span className="material-symbols-outlined text-4xl text-mobile-text-muted">notifications_off</span>
             </div>
-            <p className="text-white font-bold text-lg">No notifications</p>
-            <p className="text-mobile-text-muted text-sm mt-1">You're all caught up!</p>
+            <p className="text-white font-bold text-lg">{t('mobileNotifications.emptyTitle')}</p>
+            <p className="text-mobile-text-muted text-sm mt-1">{t('mobileNotifications.emptyMessage')}</p>
           </div>
         )}
 
@@ -221,3 +228,4 @@ const MobileNotifications: React.FC = () => {
 };
 
 export default MobileNotifications;
+

@@ -61,6 +61,11 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
 }) => {
     const { t } = useI18n();
     const [showManualConfig, setShowManualConfig] = useState(false);
+    const minutesShort = t('common.minutesShort');
+    const separator = ' \u2022 ';
+    const pauseLabels = t('cycleSoak.wateringPause').split(separator);
+    const wateringLabel = pauseLabels[0] || t('cycleSoak.cycleWatering');
+    const pauseLabel = pauseLabels[1] || t('cycleSoak.soakAbsorption');
 
     // Calculate auto recommendation
     const autoConfig = useMemo(() => {
@@ -73,15 +78,17 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
             : 10;
 
         // Build recommendation reason
-        let reason: string;
+        let reason = t('cycleSoak.reasonFast')
+            .replace('{rate}', infiltrationRate.toFixed(1));
         if (shouldEnable) {
             if (slope_percent > 3) {
-                reason = `Teren înclinat (${slope_percent.toFixed(1)}%) + sol ${infiltrationRate} mm/h`;
+                reason = t('cycleSoak.reasonSlope')
+                    .replace('{slope}', slope_percent.toFixed(1))
+                    .replace('{rate}', infiltrationRate.toFixed(1));
             } else {
-                reason = `Sol lent (${infiltrationRate} mm/h) - previne scurgerea`;
+                reason = t('cycleSoak.reasonSlow')
+                    .replace('{rate}', infiltrationRate.toFixed(1));
             }
-        } else {
-            reason = `Sol rapid (${infiltrationRate} mm/h) - nu e necesar`;
         }
 
         return {
@@ -91,7 +98,7 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
             infiltrationRate,
             reason,
         };
-    }, [soil, slope_percent]);
+    }, [soil, slope_percent, t]);
 
     // Auto-apply on mount or when soil changes
     useEffect(() => {
@@ -194,7 +201,7 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
                                         <IonIcon icon={timerOutline} className="mr-1 align-middle" />
                                         {t('cycleSoak.cycleWatering')}
                                     </span>
-                                    <IonBadge color="primary">{cycleMinutes} min</IonBadge>
+                                    <IonBadge color="primary">{cycleMinutes} {minutesShort}</IonBadge>
                                 </div>
                                 <IonRange
                                     min={2}
@@ -218,7 +225,7 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
                                         <IonIcon icon={timerOutline} className="mr-1 align-middle" />
                                         {t('cycleSoak.soakAbsorption')}
                                     </span>
-                                    <IonBadge color="secondary">{soakMinutes} min</IonBadge>
+                                    <IonBadge color="secondary">{soakMinutes} {minutesShort}</IonBadge>
                                 </div>
                                 <IonRange
                                     min={5}
@@ -268,16 +275,16 @@ export const CycleSoakAuto: React.FC<CycleSoakAutoProps> = ({
                     {/* Content */}
                     <div className="flex-1">
                         <div className="flex items-center gap-2">
-                            <span className="text-white font-medium">Cycle & Soak</span>
+                            <span className="text-white font-medium">{t('cycleSoak.title')}</span>
                             {autoEnabled && (
                                 <IonChip outline color="primary" className="h-5 text-xs m-0">
-                                    🤖 Auto
+                                    {t('cycleSoak.auto')}
                                 </IonChip>
                             )}
                         </div>
                         <p className="text-gray-400 text-sm m-0">
                             {enabled
-                                ? `${cycleMinutes} min ${t('cycleSoak.wateringPause').split(' • ')[0]} • ${soakMinutes} min ${t('cycleSoak.wateringPause').split(' • ')[1]}`
+                                ? `${cycleMinutes} ${minutesShort} ${wateringLabel}${separator}${soakMinutes} ${minutesShort} ${pauseLabel}`
                                 : autoConfig?.reason || t('cycleSoak.deactivated')
                             }
                         </p>

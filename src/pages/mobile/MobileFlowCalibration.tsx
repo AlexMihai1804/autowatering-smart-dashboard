@@ -3,11 +3,13 @@ import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { BleService } from '../../services/BleService';
 import { CalibrationData } from '../../types/firmware_structs';
+import { useI18n } from '../../i18n';
 
 const MobileFlowCalibration: React.FC = () => {
   const history = useHistory();
   const { zones, calibrationData } = useAppStore();
   const bleService = BleService.getInstance();
+  const { t } = useI18n();
 
   const [step, setStep] = useState<'intro' | 'running' | 'complete'>('intro');
   const [pulsesPerLiter, setPulsesPerLiter] = useState(450);
@@ -37,7 +39,7 @@ const MobileFlowCalibration: React.FC = () => {
 
   const handleStartCalibration = async () => {
     if (selectedZone === null) {
-      alert('Please select a zone first.');
+      alert(t('mobileFlowCalibration.selectZoneAlert'));
       return;
     }
     try {
@@ -71,7 +73,7 @@ const MobileFlowCalibration: React.FC = () => {
       setIsRunning(true);
     } catch (e) {
       console.error('Failed to start calibration:', e);
-      alert('Failed to start calibration.');
+      alert(t('mobileFlowCalibration.startFailed'));
     }
   };
 
@@ -94,7 +96,7 @@ const MobileFlowCalibration: React.FC = () => {
       // Firmware will update calibrationData with new pulses_per_liter
     } catch (e) {
       console.error('Failed to calculate:', e);
-      alert('Failed to calculate calibration.');
+      alert(t('mobileFlowCalibration.calculateFailed'));
     }
   };
 
@@ -112,7 +114,7 @@ const MobileFlowCalibration: React.FC = () => {
       history.goBack();
     } catch (e) {
       console.error('Failed to save flow calibration:', e);
-      alert('Failed to save configuration.');
+      alert(t('mobileFlowCalibration.saveFailed'));
     } finally {
       setSaveLoading(false);
     }
@@ -140,7 +142,7 @@ const MobileFlowCalibration: React.FC = () => {
       history.goBack();
     } catch (e) {
       console.error("Failed to save manual settings", e);
-      alert("Failed to save.");
+      alert(t('mobileFlowCalibration.saveManualFailed'));
     } finally {
       setSaveLoading(false);
     }
@@ -157,7 +159,7 @@ const MobileFlowCalibration: React.FC = () => {
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
         <h2 className="text-white text-lg font-bold leading-tight flex-1 text-center">
-          Flow Calibration
+          {t('mobileFlowCalibration.title')}
         </h2>
         <div className="size-12" />
       </div>
@@ -170,10 +172,10 @@ const MobileFlowCalibration: React.FC = () => {
               <span className="material-symbols-outlined text-mobile-primary text-3xl">water_drop</span>
             </div>
             <div className="flex-1">
-              <p className="text-mobile-text-muted text-sm">Current Calibration</p>
+              <p className="text-mobile-text-muted text-sm">{t('mobileFlowCalibration.currentCalibration')}</p>
               <p className="text-white text-3xl font-bold">
                 {calibrationData?.pulses_per_liter ?? useAppStore.getState().systemConfig?.flow_calibration ?? 450}
-                <span className="text-lg text-mobile-text-muted ml-1">pulses/L</span>
+                <span className="text-lg text-mobile-text-muted ml-1">{t('mobileFlowCalibration.pulsesPerLiter')}</span>
               </p>
             </div>
           </div>
@@ -183,14 +185,14 @@ const MobileFlowCalibration: React.FC = () => {
           <>
             {/* Wizard Steps */}
             <div className="space-y-4">
-              <h3 className="text-lg font-bold text-white px-1">Calibration Wizard</h3>
+              <h3 className="text-lg font-bold text-white px-1">{t('mobileFlowCalibration.wizardTitle')}</h3>
 
               <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark overflow-hidden">
                 {[
-                  { num: 1, title: 'Select a zone', desc: 'Choose a zone with known flow' },
-                  { num: 2, title: 'Prepare container', desc: 'Use a measured container (e.g., 10L bucket)' },
-                  { num: 3, title: 'Run calibration', desc: 'System will count pulses while running' },
-                  { num: 4, title: 'Enter volume', desc: 'Enter the exact amount collected' },
+                  { num: 1, title: t('mobileFlowCalibration.steps.selectZone.title'), desc: t('mobileFlowCalibration.steps.selectZone.desc') },
+                  { num: 2, title: t('mobileFlowCalibration.steps.prepareContainer.title'), desc: t('mobileFlowCalibration.steps.prepareContainer.desc') },
+                  { num: 3, title: t('mobileFlowCalibration.steps.runCalibration.title'), desc: t('mobileFlowCalibration.steps.runCalibration.desc') },
+                  { num: 4, title: t('mobileFlowCalibration.steps.enterVolume.title'), desc: t('mobileFlowCalibration.steps.enterVolume.desc') },
                 ].map((s, idx, arr) => (
                   <div key={s.num} className={`flex items-start gap-4 p-4 ${idx < arr.length - 1 ? 'border-b border-mobile-border-dark' : ''}`}>
                     <div className="size-8 rounded-full bg-mobile-primary/10 flex items-center justify-center text-mobile-primary font-bold text-sm shrink-0">
@@ -208,7 +210,7 @@ const MobileFlowCalibration: React.FC = () => {
             {/* Zone Selection */}
             <div className="space-y-3">
               <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
-                Select Zone
+                {t('mobileFlowCalibration.selectZone')}
               </label>
               <div className="grid grid-cols-2 gap-3">
                 {zones.slice(0, 4).map((zone, idx) => (
@@ -241,12 +243,12 @@ const MobileFlowCalibration: React.FC = () => {
                 }`}
             >
               <span className="material-symbols-outlined">play_arrow</span>
-              Start Calibration
+              {t('mobileFlowCalibration.startCalibration')}
             </button>
 
             {/* Manual Entry */}
             <div className="pt-4 border-t border-mobile-border-dark space-y-3">
-              <p className="text-mobile-text-muted text-sm text-center">Or enter value manually</p>
+              <p className="text-mobile-text-muted text-sm text-center">{t('mobileFlowCalibration.manualEntry')}</p>
               <div className="flex items-center gap-3">
                 <input
                   type="number"
@@ -254,14 +256,14 @@ const MobileFlowCalibration: React.FC = () => {
                   onChange={(e) => setPulsesPerLiter(Number(e.target.value))}
                   className="flex-1 h-12 bg-mobile-surface-dark border border-mobile-border-dark rounded-xl px-4 text-white text-center font-bold focus:outline-none focus:border-mobile-primary"
                 />
-                <span className="text-mobile-text-muted font-medium">pulses/L</span>
+                <span className="text-mobile-text-muted font-medium">{t('mobileFlowCalibration.pulsesPerLiter')}</span>
               </div>
               <button
                 onClick={handleManualSave}
                 disabled={saveLoading}
                 className="w-full h-12 bg-white/10 text-white font-bold rounded-xl active:scale-[0.98] transition-transform disabled:opacity-50"
               >
-                {saveLoading ? 'Saving...' : 'Save Manual Value'}
+                {saveLoading ? t('mobileFlowCalibration.saving') : t('mobileFlowCalibration.saveManual')}
               </button>
             </div>
           </>
@@ -278,13 +280,13 @@ const MobileFlowCalibration: React.FC = () => {
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-mobile-primary text-4xl font-bold">{calibrationData?.pulses ?? 0}</span>
-                <span className="text-mobile-text-muted text-sm">pulses</span>
+                <span className="text-mobile-text-muted text-sm">{t('mobileFlowCalibration.pulsesLabel')}</span>
               </div>
             </div>
 
             {/* Pulse Counter */}
             <div className="text-center mb-8">
-              <p className="text-mobile-text-muted text-sm mb-1">Pulses Detected</p>
+              <p className="text-mobile-text-muted text-sm mb-1">{t('mobileFlowCalibration.pulsesDetected')}</p>
               <p className="text-white text-5xl font-bold tracking-tight">{calibrationData?.pulses ?? 0}</p>
             </div>
 
@@ -295,7 +297,7 @@ const MobileFlowCalibration: React.FC = () => {
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-mobile-primary" />
               </span>
               <span className="text-mobile-primary font-semibold">
-                Running zone {(selectedZone !== null ? selectedZone + 1 : '?')}...
+                {t('mobileFlowCalibration.runningZone').replace('{zone}', selectedZone !== null ? (selectedZone + 1).toString() : '?')}
               </span>
             </div>
 
@@ -304,7 +306,7 @@ const MobileFlowCalibration: React.FC = () => {
               className="w-full h-14 bg-red-500/20 text-red-400 font-bold text-lg rounded-xl flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined">stop</span>
-              Stop & Measure Volume
+              {t('mobileFlowCalibration.stopAndMeasure')}
             </button>
           </div>
         )}
@@ -316,16 +318,16 @@ const MobileFlowCalibration: React.FC = () => {
               <div className="size-20 rounded-full bg-mobile-primary/20 flex items-center justify-center mb-4">
                 <span className="material-symbols-outlined text-mobile-primary text-4xl">check_circle</span>
               </div>
-              <h3 className="text-white text-xl font-bold">Calibration Complete</h3>
+              <h3 className="text-white text-xl font-bold">{t('mobileFlowCalibration.completeTitle')}</h3>
               <p className="text-mobile-text-muted text-center mt-2">
-                Collected {calibrationData?.pulses ?? 0} pulses
+                {t('mobileFlowCalibration.collectedPulses').replace('{count}', (calibrationData?.pulses ?? 0).toString())}
               </p>
             </div>
 
             {/* Volume Input */}
             <div className="space-y-3">
               <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
-                Enter Collected Volume
+                {t('mobileFlowCalibration.enterCollectedVolume')}
               </label>
               <div className="flex items-center gap-3">
                 <input
@@ -334,22 +336,22 @@ const MobileFlowCalibration: React.FC = () => {
                   onChange={(e) => setTestVolume(Number(e.target.value))}
                   className="flex-1 h-14 bg-mobile-surface-dark border border-mobile-border-dark rounded-xl px-4 text-white text-center text-2xl font-bold focus:outline-none focus:border-mobile-primary"
                 />
-                <span className="text-mobile-text-muted font-medium text-lg">Liters</span>
+                <span className="text-mobile-text-muted font-medium text-lg">{t('mobileFlowCalibration.litersLabel')}</span>
               </div>
             </div>
 
             <div className="flex justify-center">
               <button onClick={handleCalculate} className="text-mobile-primary font-bold text-sm">
-                Recalculate Ratio
+                {t('mobileFlowCalibration.recalculate')}
               </button>
             </div>
 
             {/* Result */}
             <div className="rounded-2xl bg-mobile-primary/10 border border-mobile-primary/30 p-5">
-              <p className="text-mobile-text-muted text-sm mb-1">Calculated Calibration Value</p>
+              <p className="text-mobile-text-muted text-sm mb-1">{t('mobileFlowCalibration.calculatedValue')}</p>
               <p className="text-mobile-primary text-4xl font-bold">
                 {calibrationData?.pulses_per_liter ?? 0}
-                <span className="text-lg ml-2">pulses/L</span>
+                <span className="text-lg ml-2">{t('mobileFlowCalibration.pulsesPerLiter')}</span>
               </p>
             </div>
 
@@ -360,7 +362,7 @@ const MobileFlowCalibration: React.FC = () => {
               className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined">save</span>
-              {saveLoading ? 'Saving...' : 'Save Calibration'}
+              {saveLoading ? t('mobileFlowCalibration.saving') : t('mobileFlowCalibration.saveCalibration')}
             </button>
 
             <button
@@ -368,7 +370,7 @@ const MobileFlowCalibration: React.FC = () => {
               disabled={saveLoading}
               className="w-full h-12 bg-white/10 text-white font-bold rounded-xl active:scale-[0.98] transition-transform"
             >
-              Recalibrate
+              {t('mobileFlowCalibration.recalibrate')}
             </button>
           </div>
         )}

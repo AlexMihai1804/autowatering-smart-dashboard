@@ -11,6 +11,7 @@ import {
 import { useAppStore } from '../store/useAppStore';
 import { BleService } from '../services/BleService';
 import { StatisticsData } from '../types/firmware_structs';
+import { useI18n } from '../i18n';
 
 interface StatisticsCardProps {
     onToast?: (message: string, color?: string) => void;
@@ -19,6 +20,8 @@ interface StatisticsCardProps {
 const StatisticsCard: React.FC<StatisticsCardProps> = ({ onToast }) => {
     const { statistics, zones, connectionState } = useAppStore();
     const bleService = BleService.getInstance();
+    const { t, language } = useI18n();
+    const locale = language === 'ro' ? 'ro-RO' : 'en-US';
     
     const [loading, setLoading] = useState(false);
     
@@ -56,10 +59,10 @@ const StatisticsCard: React.FC<StatisticsCardProps> = ({ onToast }) => {
         setLoading(true);
         try {
             await bleService.readAllStatistics();
-            onToast?.('Statistics refreshed', 'success');
+            onToast?.(t('statistics.refreshed'), 'success');
         } catch (error: any) {
             console.error('Failed to refresh statistics:', error);
-            onToast?.(`Failed: ${error.message}`, 'danger');
+            onToast?.(t('errors.failedWithReason').replace('{error}', error.message), 'danger');
         } finally {
             setLoading(false);
         }
@@ -67,16 +70,16 @@ const StatisticsCard: React.FC<StatisticsCardProps> = ({ onToast }) => {
 
     const handleResetAll = async () => {
         if (!isConnected) return;
-        if (!window.confirm('Reset ALL channel statistics? This cannot be undone.')) return;
+        if (!window.confirm(t('statistics.resetAllConfirm'))) return;
         
         setLoading(true);
         try {
             await bleService.resetAllStatistics();
             // Refresh after reset
             await bleService.readAllStatistics();
-            onToast?.('Statistics reset', 'warning');
+            onToast?.(t('statistics.resetSuccess'), 'warning');
         } catch (error: any) {
-            onToast?.(`Failed: ${error.message}`, 'danger');
+            onToast?.(t('errors.failedWithReason').replace('{error}', error.message), 'danger');
         } finally {
             setLoading(false);
         }
@@ -89,9 +92,9 @@ const StatisticsCard: React.FC<StatisticsCardProps> = ({ onToast }) => {
         try {
             await bleService.resetChannelStatistics(channelId);
             await bleService.readStatistics(channelId);
-            onToast?.(`Channel ${channelId} reset`, 'warning');
+            onToast?.(t('statistics.channelReset').replace('{channel}', String(channelId)), 'warning');
         } catch (error: any) {
-            onToast?.(`Failed: ${error.message}`, 'danger');
+            onToast?.(t('errors.failedWithReason').replace('{error}', error.message), 'danger');
         } finally {
             setLoading(false);
         }
@@ -99,31 +102,31 @@ const StatisticsCard: React.FC<StatisticsCardProps> = ({ onToast }) => {
 
     const formatVolume = (ml: number): string => {
         if (ml >= 1000) {
-            return `${(ml / 1000).toFixed(1)}L`;
+            return `${(ml / 1000).toFixed(1)}${t('common.litersShort')}`;
         }
-        return `${ml}ml`;
+        return `${ml}${t('common.mlShort')}`;
     };
 
     const formatTimestamp = (ts: number): string => {
-        if (ts === 0) return 'Never';
+        if (ts === 0) return t('statistics.never');
         const date = new Date(ts * 1000);
         const now = new Date();
         const diffMs = now.getTime() - date.getTime();
         const diffHours = diffMs / (1000 * 60 * 60);
         
         if (diffHours < 1) {
-            return `${Math.round(diffMs / 60000)}m ago`;
+            return t('statistics.timeAgoMinutes').replace('{minutes}', String(Math.round(diffMs / 60000)));
         } else if (diffHours < 24) {
-            return `${Math.round(diffHours)}h ago`;
+            return t('statistics.timeAgoHours').replace('{hours}', String(Math.round(diffHours)));
         } else if (diffHours < 168) { // 7 days
-            return `${Math.round(diffHours / 24)}d ago`;
+            return t('statistics.timeAgoDays').replace('{days}', String(Math.round(diffHours / 24)));
         }
-        return date.toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' });
+        return date.toLocaleDateString(locale, { day: '2-digit', month: 'short' });
     };
 
     const getZoneName = (channelId: number): string => {
         const zone = zones.find(z => z.channel_id === channelId);
-        return zone?.name || `Zone ${channelId}`;
+        return zone?.name || `${t('zones.zone')} ${channelId}`;
     };
 
     const getZoneColor = (channelId: number): string => {
@@ -150,7 +153,7 @@ const StatisticsCard: React.FC<StatisticsCardProps> = ({ onToast }) => {
                 <div className="flex justify-between items-center">
                     <IonCardTitle className="text-white flex items-center gap-2">
                         <IonIcon icon={statsChart} className="text-green-400" />
-                        Channel Statistics
+                        {t('statistics.title')}
                     </IonCardTitle>
                     <div className="flex gap-2">
                         <IonButton 
@@ -159,7 +162,7 @@ const StatisticsCard: React.FC<StatisticsCardProps> = ({ onToast }) => {
                             color="danger"
                             onClick={handleResetAll}
                             disabled={loading}
-                            title="Reset all statistics"
+                            title={t('statistics.resetAllTitle')}
                         >
                             <IonIcon icon={trashOutline} />
                         </IonButton>
@@ -184,21 +187,21 @@ const StatisticsCard: React.FC<StatisticsCardProps> = ({ onToast }) => {
                         <div className="text-xl font-bold text-white">
                             {formatVolume(totals.totalVolume)}
                         </div>
-                        <div className="text-xs text-gray-400">Total Volume</div>
+                        <div className="text-xs text-gray-400">{t('labels.totalVolume')}</div>
                     </div>
                     <div className="bg-green-900/30 p-3 rounded-xl">
                         <IonIcon icon={checkmarkCircle} className="text-2xl text-green-400 mb-1" />
                         <div className="text-xl font-bold text-white">
                             {totals.totalSessions}
                         </div>
-                        <div className="text-xs text-gray-400">Sessions</div>
+                        <div className="text-xs text-gray-400">{t('labels.sessions')}</div>
                     </div>
                     <div className="bg-purple-900/30 p-3 rounded-xl">
                         <IonIcon icon={time} className="text-2xl text-purple-400 mb-1" />
                         <div className="text-sm font-bold text-white">
                             {formatTimestamp(totals.lastWatering)}
                         </div>
-                        <div className="text-xs text-gray-400">Last Active</div>
+                        <div className="text-xs text-gray-400">{t('labels.lastActive')}</div>
                     </div>
                 </div>
 
@@ -206,8 +209,8 @@ const StatisticsCard: React.FC<StatisticsCardProps> = ({ onToast }) => {
                 {statsArray.length === 0 ? (
                     <div className="text-center py-6 text-gray-500">
                         <IonIcon icon={statsChart} className="text-4xl mb-2 opacity-30" />
-                        <p>No statistics data</p>
-                        <p className="text-sm">Tap refresh to load</p>
+                        <p>{t('statistics.noData')}</p>
+                        <p className="text-sm">{t('statistics.tapRefresh')}</p>
                     </div>
                 ) : (
                     <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -227,7 +230,9 @@ const StatisticsCard: React.FC<StatisticsCardProps> = ({ onToast }) => {
                                         {getZoneName(stats.channel_id)}
                                     </div>
                                     <div className="text-xs text-gray-400">
-                                        {stats.count} sessions • Last: {formatTimestamp(stats.last_watering)}
+                                        {t('statistics.sessionsWithLast')
+                                            .replace('{count}', String(stats.count))
+                                            .replace('{last}', formatTimestamp(stats.last_watering))}
                                     </div>
                                 </div>
                                 
@@ -238,7 +243,7 @@ const StatisticsCard: React.FC<StatisticsCardProps> = ({ onToast }) => {
                                     </div>
                                     {stats.last_volume > 0 && (
                                         <div className="text-xs text-gray-500">
-                                            Last: {formatVolume(stats.last_volume)}
+                                            {t('statistics.lastLabel').replace('{value}', formatVolume(stats.last_volume))}
                                         </div>
                                     )}
                                 </div>
@@ -261,7 +266,7 @@ const StatisticsCard: React.FC<StatisticsCardProps> = ({ onToast }) => {
                 {/* Volume Distribution Bar */}
                 {statsArray.length > 0 && totals.totalVolume > 0 && (
                     <div className="mt-4 pt-4 border-t border-gray-700">
-                        <div className="text-xs text-gray-400 mb-2">Volume Distribution</div>
+                        <div className="text-xs text-gray-400 mb-2">{t('statistics.volumeDistribution')}</div>
                         <div className="flex h-4 rounded-full overflow-hidden bg-gray-800">
                             {statsArray.map((stats) => {
                                 const pct = (stats.total_volume / totals.totalVolume) * 100;
@@ -281,7 +286,7 @@ const StatisticsCard: React.FC<StatisticsCardProps> = ({ onToast }) => {
                                         key={stats.channel_id}
                                         className={`${colors[stats.channel_id % colors.length]} h-full transition-all`}
                                         style={{ width: `${pct}%` }}
-                                        title={`${getZoneName(stats.channel_id)}: ${pct.toFixed(1)}%`}
+                                        title={`${getZoneName(stats.channel_id)}: ${pct.toFixed(1)}${t('common.percent')}`}
                                     />
                                 );
                             })}
@@ -289,7 +294,7 @@ const StatisticsCard: React.FC<StatisticsCardProps> = ({ onToast }) => {
                         <div className="flex justify-between text-xs text-gray-500 mt-1">
                             {statsArray.filter(s => s.total_volume > 0).slice(0, 4).map(s => (
                                 <span key={s.channel_id}>
-                                    Z{s.channel_id}: {Math.round((s.total_volume / totals.totalVolume) * 100)}%
+                                    Z{s.channel_id}: {Math.round((s.total_volume / totals.totalVolume) * 100)}{t('common.percent')}
                                 </span>
                             ))}
                         </div>

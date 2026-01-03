@@ -3,25 +3,28 @@ import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { BleService } from '../../services/BleService';
 import { GrowingEnvData, TimezoneConfigData } from '../../types/firmware_structs';
+import { useI18n } from '../../i18n';
 
 const MobileTimeLocation: React.FC = () => {
   const history = useHistory();
   const { timezoneConfig, growingEnv } = useAppStore();
   const bleService = BleService.getInstance();
+  const { t, language } = useI18n();
 
   const [autoSync, setAutoSync] = useState(true);
   const [timezone, setTimezone] = useState('Europe/London');
   const [lat, setLat] = useState(44.4268);
   const [lng, setLng] = useState(26.1025);
   const [loading, setLoading] = useState(false);
+  const locale = language === 'ro' ? 'ro-RO' : 'en-US';
 
   // Timezone presets mapping to offset minutes
   const timezones = [
-    { value: 'Europe/Bucharest', label: 'Bucharest (EET)', offsetNum: 120, offsetDisplay: '+2:00' },
-    { value: 'Europe/London', label: 'London (GMT)', offsetNum: 0, offsetDisplay: '+0:00' },
-    { value: 'Europe/Berlin', label: 'Berlin (CET)', offsetNum: 60, offsetDisplay: '+1:00' },
-    { value: 'America/New_York', label: 'New York (EST)', offsetNum: -300, offsetDisplay: '-5:00' },
-    { value: 'America/Los_Angeles', label: 'Los Angeles (PST)', offsetNum: -480, offsetDisplay: '-8:00' },
+    { value: 'Europe/Bucharest', label: t('mobileTimeLocation.timezones.bucharest'), offsetNum: 120, offsetDisplay: '+2:00' },
+    { value: 'Europe/London', label: t('mobileTimeLocation.timezones.london'), offsetNum: 0, offsetDisplay: '+0:00' },
+    { value: 'Europe/Berlin', label: t('mobileTimeLocation.timezones.berlin'), offsetNum: 60, offsetDisplay: '+1:00' },
+    { value: 'America/New_York', label: t('mobileTimeLocation.timezones.newYork'), offsetNum: -300, offsetDisplay: '-5:00' },
+    { value: 'America/Los_Angeles', label: t('mobileTimeLocation.timezones.losAngeles'), offsetNum: -480, offsetDisplay: '-8:00' },
   ];
 
   useEffect(() => {
@@ -45,7 +48,7 @@ const MobileTimeLocation: React.FC = () => {
       await bleService.syncDeviceTime();
     } catch (e) {
       console.error('Sync failed:', e);
-      alert('Failed to sync time');
+      alert(t('mobileTimeLocation.syncFailed'));
     } finally {
       setLoading(false);
     }
@@ -63,7 +66,7 @@ const MobileTimeLocation: React.FC = () => {
       setLng(position.coords.longitude);
     } catch (e) {
       console.error('Location failed:', e);
-      alert('Failed to get location. Please enable GPS.');
+      alert(t('mobileTimeLocation.locationFailed'));
     }
   };
 
@@ -100,7 +103,7 @@ const MobileTimeLocation: React.FC = () => {
       history.goBack();
     } catch (e) {
       console.error('Save failed:', e);
-      alert('Failed to save settings');
+      alert(t('mobileTimeLocation.saveFailed'));
     } finally {
       setLoading(false);
     }
@@ -117,7 +120,7 @@ const MobileTimeLocation: React.FC = () => {
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
         <h2 className="text-white text-lg font-bold leading-tight flex-1 text-center">
-          Time & Location
+          {t('mobileTimeLocation.title')}
         </h2>
         <div className="size-12" />
       </div>
@@ -129,12 +132,12 @@ const MobileTimeLocation: React.FC = () => {
             <div className="size-20 rounded-full bg-mobile-primary/10 flex items-center justify-center mb-4">
               <span className="material-symbols-outlined text-mobile-primary text-4xl">schedule</span>
             </div>
-            <p className="text-mobile-text-muted text-sm mb-1">Device Time</p>
+            <p className="text-mobile-text-muted text-sm mb-1">{t('mobileTimeLocation.deviceTime')}</p>
             <p className="text-white text-4xl font-bold tracking-tight">
-              {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+              {new Date().toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false })}
             </p>
             <p className="text-mobile-text-muted text-sm mt-1">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+              {new Date().toLocaleDateString(locale, { weekday: 'long', month: 'short', day: 'numeric' })}
             </p>
           </div>
         </div>
@@ -146,13 +149,13 @@ const MobileTimeLocation: React.FC = () => {
           className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
         >
           <span className="material-symbols-outlined">sync</span>
-          {loading ? 'Syncing...' : 'Sync Now'}
+          {loading ? t('mobileTimeLocation.syncing') : t('mobileTimeLocation.syncNow')}
         </button>
 
         {/* Timezone Selection */}
         <div className="space-y-3">
           <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
-            Timezone
+            {t('mobileTimeLocation.timezone')}
           </label>
           <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark divide-y divide-mobile-border-dark overflow-hidden">
             {timezones.map(tz => (
@@ -164,7 +167,9 @@ const MobileTimeLocation: React.FC = () => {
               >
                 <div>
                   <p className="text-white font-semibold text-left">{tz.label}</p>
-                  <p className="text-mobile-text-muted text-sm">UTC {tz.offsetDisplay}</p>
+                  <p className="text-mobile-text-muted text-sm">
+                    {t('mobileTimeLocation.utcOffset').replace('{offset}', tz.offsetDisplay)}
+                  </p>
                 </div>
                 {timezone === tz.value && (
                   <span className="material-symbols-outlined text-mobile-primary">check_circle</span>
@@ -177,17 +182,17 @@ const MobileTimeLocation: React.FC = () => {
         {/* Location */}
         <div className="space-y-3">
           <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
-            Location Coordinates
+            {t('mobileTimeLocation.locationCoordinates')}
           </label>
           <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark p-4">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-mobile-text-muted text-sm">Latitude</p>
-                <p className="text-white font-semibold">{lat.toFixed(4)}°</p>
+                <p className="text-mobile-text-muted text-sm">{t('mobileTimeLocation.latitude')}</p>
+                <p className="text-white font-semibold">{lat.toFixed(4)} {t('mobileTimeLocation.degrees')}</p>
               </div>
               <div className="text-right">
-                <p className="text-mobile-text-muted text-sm">Longitude</p>
-                <p className="text-white font-semibold">{lng.toFixed(4)}°</p>
+                <p className="text-mobile-text-muted text-sm">{t('mobileTimeLocation.longitude')}</p>
+                <p className="text-white font-semibold">{lng.toFixed(4)} {t('mobileTimeLocation.degrees')}</p>
               </div>
             </div>
             <button
@@ -195,11 +200,11 @@ const MobileTimeLocation: React.FC = () => {
               className="w-full h-12 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined">my_location</span>
-              Get Current Location
+              {t('mobileTimeLocation.getLocation')}
             </button>
           </div>
           <p className="text-mobile-text-muted text-sm px-1">
-            Location is used for accurate sunrise/sunset times. Only latitude is stored on device.
+            {t('mobileTimeLocation.locationHint')}
           </p>
         </div>
 
@@ -211,7 +216,7 @@ const MobileTimeLocation: React.FC = () => {
             className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined">save</span>
-            {loading ? 'Saving...' : 'Save Settings'}
+            {loading ? t('mobileTimeLocation.saving') : t('mobileTimeLocation.saveSettings')}
           </button>
         </div>
       </div>
@@ -220,3 +225,4 @@ const MobileTimeLocation: React.FC = () => {
 };
 
 export default MobileTimeLocation;
+

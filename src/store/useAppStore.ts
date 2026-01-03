@@ -38,6 +38,7 @@ import {
     CustomSoilConfigData
 } from '../types/firmware_structs';
 import { PlantDBEntry, SoilDBEntry, IrrigationMethodEntry } from '../services/DatabaseService';
+import { Language, DEFAULT_LANGUAGE } from '../i18n/translations';
 import {
     ChannelWizardState,
     UnifiedZoneConfig,
@@ -49,6 +50,23 @@ import {
     getPrevStep,
     isFao56Mode
 } from '../types/wizard';
+
+const LANGUAGE_STORAGE_KEY = 'app_language';
+
+const getStoredLanguage = (): Language => {
+    if (typeof localStorage === 'undefined') {
+        return DEFAULT_LANGUAGE;
+    }
+    try {
+        const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+        if (saved === 'en' || saved === 'ro') {
+            return saved;
+        }
+    } catch (e) {
+        console.warn('[Store] Failed to read stored language:', e);
+    }
+    return DEFAULT_LANGUAGE;
+};
 
 // Define types for our store
 interface BleDevice {
@@ -509,7 +527,7 @@ export const useAppStore = create<AppState>((set) => ({
         channelWizard: {
             ...DEFAULT_WIZARD_STATE,
             isOpen: true,
-            zones: createInitialZones(numChannels)
+            zones: createInitialZones(numChannels, getStoredLanguage())
         }
     }),
 

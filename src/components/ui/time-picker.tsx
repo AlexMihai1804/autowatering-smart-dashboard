@@ -3,6 +3,7 @@ import * as React from 'react';
 import { cn } from '../../lib/utils';
 import { Button } from './button';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
+import { useI18n } from '../../i18n';
 
 type MinuteStep = 1 | 2 | 5 | 10 | 15 | 20 | 30;
 
@@ -25,6 +26,7 @@ export function TimePicker({
   minuteStep = 15,
   className,
 }: ShadcnTimePickerProps) {
+  const { t } = useI18n();
   const safeHour = clampHour(hour);
   const minutes = React.useMemo(() => {
     const step = Math.max(1, minuteStep);
@@ -57,11 +59,11 @@ export function TimePicker({
       </PopoverTrigger>
 
       <PopoverContent className="w-[300px]">
-        <div className="text-center text-sm font-bold text-mobile-text-muted mb-3">Select time</div>
+        <div className="text-center text-sm font-bold text-mobile-text-muted mb-3">{t('timePicker.selectTime')}</div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <div className="text-xs font-bold text-mobile-text-muted mb-2">Hour</div>
+            <div className="text-xs font-bold text-mobile-text-muted mb-2">{t('timePicker.hour')}</div>
             <div className="max-h-56 overflow-y-auto rounded-xl border border-mobile-border-dark bg-white/5 p-1">
               {Array.from({ length: 24 }, (_, h) => {
                 const selected = h === safeHour;
@@ -85,7 +87,7 @@ export function TimePicker({
           </div>
 
           <div>
-            <div className="text-xs font-bold text-mobile-text-muted mb-2">Minute</div>
+            <div className="text-xs font-bold text-mobile-text-muted mb-2">{t('timePicker.minute')}</div>
             <div className="max-h-56 overflow-y-auto rounded-xl border border-mobile-border-dark bg-white/5 p-1">
               {minutes.map((m) => {
                 const selected = m === safeMinute;

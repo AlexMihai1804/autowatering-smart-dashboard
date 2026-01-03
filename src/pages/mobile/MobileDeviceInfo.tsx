@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import MobileConfirmModal from '../../components/mobile/MobileConfirmModal';
+import { useI18n } from '../../i18n';
 
 const MobileDeviceInfo: React.FC = () => {
   const history = useHistory();
   const { connectionState } = useAppStore();
   const [showRebootModal, setShowRebootModal] = useState(false);
+  const { t } = useI18n();
 
   const isConnected = connectionState === 'connected';
   
@@ -21,10 +23,10 @@ const MobileDeviceInfo: React.FC = () => {
   };
 
   const getSignalLabel = (dbm: number) => {
-    if (dbm >= -50) return { label: 'Excellent', color: 'text-mobile-primary' };
-    if (dbm >= -60) return { label: 'Good', color: 'text-mobile-primary' };
-    if (dbm >= -70) return { label: 'Fair', color: 'text-amber-400' };
-    return { label: 'Weak', color: 'text-red-400' };
+    if (dbm >= -50) return { label: t('mobileDeviceInfo.signalExcellent'), color: 'text-mobile-primary' };
+    if (dbm >= -60) return { label: t('mobileDeviceInfo.signalGood'), color: 'text-mobile-primary' };
+    if (dbm >= -70) return { label: t('mobileDeviceInfo.signalFair'), color: 'text-amber-400' };
+    return { label: t('mobileDeviceInfo.signalWeak'), color: 'text-red-400' };
   };
 
   const signal = getSignalLabel(deviceData.signalStrength);
@@ -51,7 +53,7 @@ const MobileDeviceInfo: React.FC = () => {
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
         <h2 className="text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-12">
-          Device Info
+          {t('mobileDeviceInfo.title')}
         </h2>
       </div>
 
@@ -82,7 +84,7 @@ const MobileDeviceInfo: React.FC = () => {
             <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${isConnected ? 'bg-mobile-primary/10 border border-mobile-primary/20' : 'bg-red-500/10 border border-red-500/20'}`}>
               <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-mobile-primary animate-pulse' : 'bg-red-500'}`} />
               <span className={`text-sm font-semibold ${isConnected ? 'text-mobile-primary' : 'text-red-400'}`}>
-                {isConnected ? 'Online' : 'Offline'}
+                {isConnected ? t('deviceSelector.online') : t('deviceSelector.offline')}
               </span>
             </div>
           </div>
@@ -91,7 +93,7 @@ const MobileDeviceInfo: React.FC = () => {
         {/* Section: System Status */}
         <div className="flex flex-col gap-2">
           <h3 className="px-2 text-sm font-medium text-mobile-text-muted uppercase tracking-wider">
-            System Status
+            {t('mobileDeviceInfo.systemStatus')}
           </h3>
           <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
             {/* Signal Strength */}
@@ -100,7 +102,7 @@ const MobileDeviceInfo: React.FC = () => {
                 <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
                   <span className="material-symbols-outlined text-xl">wifi</span>
                 </div>
-                <span className="text-base font-medium text-white">Signal Strength</span>
+                <span className="text-base font-medium text-white">{t('mobileDeviceInfo.signalStrength')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className={`text-sm font-semibold ${signal.color}`}>{signal.label}</span>
@@ -114,7 +116,7 @@ const MobileDeviceInfo: React.FC = () => {
                 <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-400">
                   <span className="material-symbols-outlined text-xl">timer</span>
                 </div>
-                <span className="text-base font-medium text-white">Uptime</span>
+                <span className="text-base font-medium text-white">{t('mobileDeviceInfo.uptime')}</span>
               </div>
               <span className="text-sm font-medium text-gray-300">{deviceData.uptime}</span>
             </div>
@@ -125,7 +127,7 @@ const MobileDeviceInfo: React.FC = () => {
                 <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center text-green-400">
                   <span className="material-symbols-outlined text-xl">router</span>
                 </div>
-                <span className="text-base font-medium text-white">Model</span>
+                <span className="text-base font-medium text-white">{t('mobileDeviceInfo.model')}</span>
               </div>
               <span className="text-sm font-medium text-gray-300">{deviceData.model}</span>
             </div>
@@ -135,7 +137,7 @@ const MobileDeviceInfo: React.FC = () => {
         {/* Section: Software & Hardware */}
         <div className="flex flex-col gap-2">
           <h3 className="px-2 text-sm font-medium text-mobile-text-muted uppercase tracking-wider">
-            Software & Hardware
+            {t('mobileDeviceInfo.softwareHardware')}
           </h3>
           <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
             {/* Firmware */}
@@ -144,7 +146,7 @@ const MobileDeviceInfo: React.FC = () => {
                 <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-400">
                   <span className="material-symbols-outlined text-xl">memory</span>
                 </div>
-                <span className="text-base font-medium text-white">Firmware Version</span>
+                <span className="text-base font-medium text-white">{t('mobileDeviceInfo.firmwareVersion')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-300">v{deviceData.firmware}</span>
@@ -161,7 +163,7 @@ const MobileDeviceInfo: React.FC = () => {
                 <div className="w-8 h-8 rounded-full bg-gray-500/10 flex items-center justify-center text-gray-400">
                   <span className="material-symbols-outlined text-xl">fingerprint</span>
                 </div>
-                <span className="text-base font-medium text-white">Serial Number</span>
+                <span className="text-base font-medium text-white">{t('mobileDeviceInfo.serialNumber')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-mono text-mobile-text-muted">{deviceData.serial}</span>
@@ -182,7 +184,7 @@ const MobileDeviceInfo: React.FC = () => {
                      text-mobile-bg-dark text-base font-bold shadow-lg shadow-mobile-primary/20"
           >
             <span className="material-symbols-outlined mr-2">system_update</span>
-            <span>Check for Updates</span>
+            <span>{t('mobileDeviceInfo.checkUpdates')}</span>
           </button>
           
           <button 
@@ -192,7 +194,7 @@ const MobileDeviceInfo: React.FC = () => {
                      text-red-400 text-base font-semibold active:scale-[0.98] transition-all"
           >
             <span className="material-symbols-outlined mr-2">restart_alt</span>
-            <span>Reboot Device</span>
+            <span>{t('mobileDeviceInfo.rebootDevice')}</span>
           </button>
         </div>
       </main>
@@ -202,10 +204,10 @@ const MobileDeviceInfo: React.FC = () => {
         isOpen={showRebootModal}
         onClose={() => setShowRebootModal(false)}
         onConfirm={handleReboot}
-        title="Reboot Device?"
-        message="The device will restart and be temporarily unavailable. This usually takes about 30 seconds."
-        confirmText="Reboot"
-        cancelText="Cancel"
+        title={t('mobileDeviceInfo.rebootTitle')}
+        message={t('mobileDeviceInfo.rebootMessage')}
+        confirmText={t('mobileDeviceInfo.rebootConfirm')}
+        cancelText={t('common.cancel')}
         icon="restart_alt"
         variant="warning"
       />

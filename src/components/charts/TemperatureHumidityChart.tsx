@@ -18,6 +18,7 @@ import {
     Legend
 } from 'recharts';
 import { CHART_COLORS } from './index';
+import { useI18n } from '../../i18n';
 
 interface DataPoint {
     timestamp: number;
@@ -37,6 +38,7 @@ interface TemperatureHumidityChartProps {
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
+    const { t } = useI18n();
     if (active && payload && payload.length) {
         return (
             <div className="bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
@@ -50,9 +52,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                             />
                             <span className="text-gray-300">{entry.name}:</span>
                             <span className="text-white font-medium">
-                                {entry.name.includes('Temp') 
-                                    ? `${entry.value.toFixed(1)}°C`
-                                    : `${entry.value.toFixed(0)}%`
+                                {entry.dataKey.startsWith('temp') 
+                                    ? `${entry.value.toFixed(1)}${t('common.degreesC')}`
+                                    : `${entry.value.toFixed(0)}${t('common.percent')}`
                                 }
                             </span>
                         </div>
@@ -71,6 +73,8 @@ const TemperatureHumidityChart: React.FC<TemperatureHumidityChartProps> = ({
     showGrid = true,
     animate = true
 }) => {
+    const { t, language } = useI18n();
+    const locale = language === 'ro' ? 'ro-RO' : 'en-US';
     if (!data || data.length === 0) {
         return (
             <div 
@@ -78,8 +82,8 @@ const TemperatureHumidityChart: React.FC<TemperatureHumidityChartProps> = ({
                 style={{ height }}
             >
                 <div className="text-center">
-                    <p className="text-lg">📊</p>
-                    <p className="text-sm mt-2">No environmental data</p>
+                    <p className="text-lg">{t('common.notAvailable')}</p>
+                    <p className="text-sm mt-2">{t('charts.noEnvironmentalData')}</p>
                 </div>
             </div>
         );
@@ -88,7 +92,7 @@ const TemperatureHumidityChart: React.FC<TemperatureHumidityChartProps> = ({
     // Format data for chart
     const chartData = data.map(d => ({
         ...d,
-        label: d.label || new Date(d.timestamp * 1000).toLocaleTimeString('ro-RO', {
+        label: d.label || new Date(d.timestamp * 1000).toLocaleTimeString(locale, {
             hour: '2-digit',
             minute: '2-digit'
         }),
@@ -124,7 +128,7 @@ const TemperatureHumidityChart: React.FC<TemperatureHumidityChartProps> = ({
                         fontSize={11}
                         tickLine={false}
                         axisLine={{ stroke: CHART_COLORS.grid }}
-                        tickFormatter={(value) => `${value}°`}
+                        tickFormatter={(value) => `${value}${t('common.degreesC')}`}
                         domain={['dataMin - 2', 'dataMax + 2']}
                     />
                     
@@ -135,7 +139,7 @@ const TemperatureHumidityChart: React.FC<TemperatureHumidityChartProps> = ({
                         fontSize={11}
                         tickLine={false}
                         axisLine={{ stroke: CHART_COLORS.grid }}
-                        tickFormatter={(value) => `${value}%`}
+                        tickFormatter={(value) => `${value}${t('common.percent')}`}
                         domain={[0, 100]}
                     />
                     
@@ -158,7 +162,7 @@ const TemperatureHumidityChart: React.FC<TemperatureHumidityChartProps> = ({
                         stroke="transparent"
                         fill={CHART_COLORS.temperature}
                         fillOpacity={0.15}
-                        name="Temp Max"
+                        name={t('charts.tempMax')}
                         isAnimationActive={animate}
                         animationDuration={800}
                     />
@@ -170,7 +174,7 @@ const TemperatureHumidityChart: React.FC<TemperatureHumidityChartProps> = ({
                         stroke="transparent"
                         fill="#020617"
                         fillOpacity={1}
-                        name="Temp Min"
+                        name={t('charts.tempMin')}
                         isAnimationActive={animate}
                         animationDuration={800}
                     />
@@ -183,7 +187,7 @@ const TemperatureHumidityChart: React.FC<TemperatureHumidityChartProps> = ({
                         stroke={CHART_COLORS.temperature}
                         strokeWidth={2}
                         dot={false}
-                        name="Temp Avg"
+                        name={t('charts.tempAvg')}
                         isAnimationActive={animate}
                         animationDuration={800}
                     />
@@ -197,7 +201,7 @@ const TemperatureHumidityChart: React.FC<TemperatureHumidityChartProps> = ({
                         strokeWidth={2}
                         strokeDasharray="5 5"
                         dot={false}
-                        name="Humidity"
+                        name={t('labels.humidity')}
                         isAnimationActive={animate}
                         animationDuration={800}
                     />

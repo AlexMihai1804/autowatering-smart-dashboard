@@ -15,7 +15,7 @@ const MobileAppSettings: React.FC = () => {
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
-  const { language, setLanguage, availableLanguages } = useI18n();
+  const { t, language, setLanguage, availableLanguages } = useI18n();
 
   const appearanceRef = useRef<HTMLDivElement | null>(null);
   const languageRef = useRef<HTMLDivElement | null>(null);
@@ -74,7 +74,7 @@ const MobileAppSettings: React.FC = () => {
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
         <h2 className="text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-12">
-          App Settings
+          {t('appSettings.title')}
         </h2>
       </div>
 
@@ -83,7 +83,7 @@ const MobileAppSettings: React.FC = () => {
         {/* Notifications Section */}
         <div className="flex flex-col gap-2">
           <h3 className="px-2 text-sm font-medium text-mobile-text-muted uppercase tracking-wider">
-            Notifications
+            {t('appSettings.notifications')}
           </h3>
           <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
             <div className="flex items-center justify-between p-4">
@@ -92,8 +92,8 @@ const MobileAppSettings: React.FC = () => {
                   <span className="material-symbols-outlined">notifications</span>
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="text-base font-medium text-white">Push Notifications</span>
-                  <span className="text-xs text-mobile-text-muted">Alerts and updates</span>
+                  <span className="text-base font-medium text-white">{t('appSettings.pushNotifications')}</span>
+                  <span className="text-xs text-mobile-text-muted">{t('appSettings.alertsUpdates')}</span>
                 </div>
               </div>
               <Toggle enabled={notificationsEnabled} onChange={setNotificationsEnabled} />
@@ -104,7 +104,7 @@ const MobileAppSettings: React.FC = () => {
         {/* Appearance Section */}
         <div ref={appearanceRef} className="flex flex-col gap-2">
           <h3 className="px-2 text-sm font-medium text-mobile-text-muted uppercase tracking-wider">
-            Appearance
+            {t('appSettings.appearance')}
           </h3>
           <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
             <div className="flex items-center justify-between p-4">
@@ -113,8 +113,8 @@ const MobileAppSettings: React.FC = () => {
                   <span className="material-symbols-outlined">dark_mode</span>
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="text-base font-medium text-white">Dark Mode</span>
-                  <span className="text-xs text-mobile-text-muted">Use dark theme</span>
+                  <span className="text-base font-medium text-white">{t('appSettings.darkMode')}</span>
+                  <span className="text-xs text-mobile-text-muted">{t('appSettings.useDarkTheme')}</span>
                 </div>
               </div>
               <Toggle enabled={isDark} onChange={(enabled) => setTheme(enabled ? 'dark' : 'light')} />
@@ -125,7 +125,7 @@ const MobileAppSettings: React.FC = () => {
         {/* Language Section */}
         <div ref={languageRef} className="flex flex-col gap-2">
           <h3 className="px-2 text-sm font-medium text-mobile-text-muted uppercase tracking-wider">
-            Language
+            {t('appSettings.language')}
           </h3>
           <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
             <div className="flex items-center justify-between p-4">
@@ -134,7 +134,7 @@ const MobileAppSettings: React.FC = () => {
                   <span className="material-symbols-outlined">translate</span>
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="text-base font-medium text-white">Language</span>
+                  <span className="text-base font-medium text-white">{t('appSettings.language')}</span>
                   <span className="text-xs text-mobile-text-muted">
                     {availableLanguages.find(l => l.code === language)?.nativeName ?? language.toUpperCase()}
                   </span>
@@ -144,11 +144,11 @@ const MobileAppSettings: React.FC = () => {
               <Popover>
                 <PopoverTrigger asChild>
                   <Button type="button" variant="outline" size="sm" className="h-9 rounded-xl">
-                    Change
+                    {t('common.change')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[220px]">
-                  <div className="text-xs font-bold text-mobile-text-muted mb-2">Select language</div>
+                  <div className="text-xs font-bold text-mobile-text-muted mb-2">{t('appSettings.selectLanguage')}</div>
                   <div className="flex flex-col gap-1">
                     {availableLanguages.map((lang) => {
                       const selected = lang.code === language;
@@ -177,7 +177,7 @@ const MobileAppSettings: React.FC = () => {
         {/* Units Section */}
         <div ref={unitsRef} className="flex flex-col gap-2">
           <h3 className="px-2 text-sm font-medium text-mobile-text-muted uppercase tracking-wider">
-            Units
+            {t('appSettings.units')}
           </h3>
           <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 p-4">
             <div className="flex gap-3">
@@ -189,7 +189,10 @@ const MobileAppSettings: React.FC = () => {
                     : 'bg-white/5 text-white border border-white/10 hover:border-mobile-primary/50'
                 }`}
               >
-                Metric (°C, L, mm)
+                {t('appSettings.metricLabel')
+                  .replace('{temp}', t('common.degreesC'))
+                  .replace('{volume}', t('common.litersShort'))
+                  .replace('{length}', t('common.mm'))}
               </button>
               <button
                 onClick={() => handleUnitChange(false)}
@@ -199,11 +202,14 @@ const MobileAppSettings: React.FC = () => {
                     : 'bg-white/5 text-white border border-white/10 hover:border-mobile-primary/50'
                 }`}
               >
-                Imperial (°F, gal, in)
+                {t('appSettings.imperialLabel')
+                  .replace('{temp}', t('common.degreesF'))
+                  .replace('{volume}', t('common.gallonsShort'))
+                  .replace('{length}', t('common.inchesShort'))}
               </button>
             </div>
             <p className="text-xs text-mobile-text-muted mt-3 text-center">
-              Auto-detected from your region: {settings.locale}
+              {t('appSettings.autoDetectedRegion').replace('{locale}', settings.locale)}
             </p>
           </div>
         </div>
@@ -211,7 +217,7 @@ const MobileAppSettings: React.FC = () => {
         {/* Data & Privacy Section */}
         <div className="flex flex-col gap-2">
           <h3 className="px-2 text-sm font-medium text-mobile-text-muted uppercase tracking-wider">
-            Data & Privacy
+            {t('appSettings.dataPrivacy')}
           </h3>
           <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
             <button className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group">
@@ -220,8 +226,8 @@ const MobileAppSettings: React.FC = () => {
                   <span className="material-symbols-outlined">download</span>
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="text-base font-medium text-white">Export Data</span>
-                  <span className="text-xs text-mobile-text-muted">Download your watering history</span>
+                  <span className="text-base font-medium text-white">{t('appSettings.exportData')}</span>
+                  <span className="text-xs text-mobile-text-muted">{t('appSettings.exportDesc')}</span>
                 </div>
               </div>
               <span className="material-symbols-outlined text-mobile-text-muted group-hover:text-white transition-colors">
@@ -235,8 +241,8 @@ const MobileAppSettings: React.FC = () => {
                   <span className="material-symbols-outlined">delete_forever</span>
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="text-base font-medium text-white">Clear App Data</span>
-                  <span className="text-xs text-mobile-text-muted">Remove local cache and settings</span>
+                  <span className="text-base font-medium text-white">{t('appSettings.clearAppData')}</span>
+                  <span className="text-xs text-mobile-text-muted">{t('appSettings.clearAppDesc')}</span>
                 </div>
               </div>
               <span className="material-symbols-outlined text-mobile-text-muted group-hover:text-white transition-colors">

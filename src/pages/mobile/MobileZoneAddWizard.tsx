@@ -341,7 +341,7 @@ const MobileZoneAddWizard: React.FC = () => {
       await bleService.writeChannelConfigObject({
         channel_id: zoneConfig.channelId,
         name_len: zoneConfig.name.length,
-        name: zoneConfig.name || `Zone ${zoneConfig.channelId + 1}`,
+        name: zoneConfig.name || `${t('zones.zone')} ${zoneConfig.channelId + 1}`,
         auto_enabled: zoneConfig.wateringMode === 'quality' || zoneConfig.wateringMode === 'eco',
         plant_type: firmwarePlantType,
         soil_type: firmwareSoilType,
@@ -1031,7 +1031,9 @@ const MobileZoneAddWizard: React.FC = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="text-white font-bold">{zoneConfig.customSoilFromDetection.name}</h3>
-                      <span className="rounded-full bg-mobile-primary px-2 py-0.5 text-[10px] font-bold text-black">CUSTOM</span>
+                      <span className="rounded-full bg-mobile-primary px-2 py-0.5 text-[10px] font-bold text-black">
+                        {t('zoneWizard.soilType.customBadge')}
+                      </span>
                     </div>
                     <p className="text-mobile-text-muted text-xs">
                       {t('zoneWizard.soilType.detectedAt')} {zoneConfig.latitude?.toFixed(4)}°, {zoneConfig.longitude?.toFixed(4)}°
@@ -1040,30 +1042,30 @@ const MobileZoneAddWizard: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="p-2 rounded-lg bg-white/5">
-                    <p className="text-orange-400 text-lg font-bold">{zoneConfig.customSoilFromDetection.clay.toFixed(0)}%</p>
+                    <p className="text-orange-400 text-lg font-bold">{zoneConfig.customSoilFromDetection.clay.toFixed(0)}{t('common.percent')}</p>
                     <p className="text-mobile-text-muted text-xs">{t('zoneWizard.soilType.clay')}</p>
                   </div>
                   <div className="p-2 rounded-lg bg-white/5">
-                    <p className="text-yellow-400 text-lg font-bold">{zoneConfig.customSoilFromDetection.sand.toFixed(0)}%</p>
+                    <p className="text-yellow-400 text-lg font-bold">{zoneConfig.customSoilFromDetection.sand.toFixed(0)}{t('common.percent')}</p>
                     <p className="text-mobile-text-muted text-xs">{t('zoneWizard.soilType.sand')}</p>
                   </div>
                   <div className="p-2 rounded-lg bg-white/5">
-                    <p className="text-blue-400 text-lg font-bold">{zoneConfig.customSoilFromDetection.silt.toFixed(0)}%</p>
+                    <p className="text-blue-400 text-lg font-bold">{zoneConfig.customSoilFromDetection.silt.toFixed(0)}{t('common.percent')}</p>
                     <p className="text-mobile-text-muted text-xs">{t('zoneWizard.soilType.silt')}</p>
                   </div>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-mobile-text-muted">{t('zoneWizard.soilType.fieldCapacity')}:</span>
-                    <span className="text-white font-medium">{zoneConfig.customSoilFromDetection.field_capacity.toFixed(1)}%</span>
+                    <span className="text-white font-medium">{zoneConfig.customSoilFromDetection.field_capacity.toFixed(1)}{t('common.percent')}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-mobile-text-muted">{t('zoneWizard.soilType.wiltingPoint')}:</span>
-                    <span className="text-white font-medium">{zoneConfig.customSoilFromDetection.wilting_point.toFixed(1)}%</span>
+                    <span className="text-white font-medium">{zoneConfig.customSoilFromDetection.wilting_point.toFixed(1)}{t('common.percent')}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-mobile-text-muted">{t('zoneWizard.soilType.infiltration')}:</span>
-                    <span className="text-white font-medium">{zoneConfig.customSoilFromDetection.infiltration_rate.toFixed(1)} mm/h</span>
+                    <span className="text-white font-medium">{zoneConfig.customSoilFromDetection.infiltration_rate.toFixed(1)} {t('common.mmPerHour')}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-mobile-text-muted">{t('zoneWizard.soilType.bulkDensity')}:</span>
@@ -1396,10 +1398,13 @@ const MobileZoneAddWizard: React.FC = () => {
                       <p className="text-white font-semibold">{method.name}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         {method.efficiency_pct && (
-                          <span className="text-mobile-text-muted text-xs">{method.efficiency_pct}% {t('zoneWizard.irrigation.efficiency')}</span>
+                          <span className="text-mobile-text-muted text-xs">{method.efficiency_pct}{t('common.percent')} {t('zoneWizard.irrigation.efficiency')}</span>
                         )}
                         {method.application_rate_mm_h && (
-                          <span className="text-mobile-text-muted text-xs">• {method.application_rate_mm_h} mm/h</span>
+                          <span className="text-mobile-text-muted text-xs">
+                            {t('zoneWizard.irrigation.applicationRate')
+                              .replace('{value}', String(method.application_rate_mm_h))}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -1419,7 +1424,7 @@ const MobileZoneAddWizard: React.FC = () => {
           {
             value: 'quality' as const,
             label: t('zoneWizard.wateringMode.modes.quality.label'),
-            badge: 'FAO-56 • 100%',
+            badge: t('zoneWizard.wateringMode.badges.faoQuality'),
             badgeColor: 'bg-mobile-primary/20 text-mobile-primary',
             icon: 'psychology',
             desc: t('zoneWizard.wateringMode.modes.quality.desc'),
@@ -1428,7 +1433,7 @@ const MobileZoneAddWizard: React.FC = () => {
           {
             value: 'eco' as const,
             label: t('zoneWizard.wateringMode.modes.eco.label'),
-            badge: 'FAO-56 • 70%',
+            badge: t('zoneWizard.wateringMode.badges.faoEco'),
             badgeColor: 'bg-blue-400/20 text-blue-400',
             icon: 'eco',
             desc: t('zoneWizard.wateringMode.modes.eco.desc'),
@@ -1437,7 +1442,7 @@ const MobileZoneAddWizard: React.FC = () => {
           {
             value: 'duration' as const,
             label: t('zoneWizard.wateringMode.modes.duration.label'),
-            badge: 'Manual',
+            badge: t('zoneWizard.wateringMode.badges.manual'),
             badgeColor: 'bg-orange-400/20 text-orange-400',
             icon: 'timer',
             desc: t('zoneWizard.wateringMode.modes.duration.desc'),
@@ -1446,7 +1451,7 @@ const MobileZoneAddWizard: React.FC = () => {
           {
             value: 'volume' as const,
             label: t('zoneWizard.wateringMode.modes.volume.label'),
-            badge: 'Manual',
+            badge: t('zoneWizard.wateringMode.badges.manual'),
             badgeColor: 'bg-purple-400/20 text-purple-400',
             icon: 'water_drop',
             desc: t('zoneWizard.wateringMode.modes.volume.desc'),
@@ -1617,7 +1622,7 @@ const MobileZoneAddWizard: React.FC = () => {
                   </button>
                   <div className="flex-1 text-center">
                     <span className="text-3xl font-bold text-white">{zoneConfig.scheduleValue}</span>
-                    <span className="text-mobile-text-muted ml-1">{isDurationMode ? 'min' : 'L'}</span>
+                    <span className="text-mobile-text-muted ml-1">{isDurationMode ? t('common.minutesShort') : t('common.litersShort')}</span>
                   </div>
                   <button
                     onClick={() => updateZoneConfig({ scheduleValue: zoneConfig.scheduleValue + (isDurationMode ? 5 : 1) })}
@@ -1636,7 +1641,7 @@ const MobileZoneAddWizard: React.FC = () => {
                         : 'bg-white/10 text-mobile-text-muted'
                         }`}
                     >
-                      {val}{isDurationMode ? 'm' : 'L'}
+                      {val}{isDurationMode ? t('common.minutesShort') : t('common.litersShort')}
                     </button>
                   ))}
                 </div>
@@ -1943,7 +1948,7 @@ const MobileZoneAddWizard: React.FC = () => {
                       min="1"
                       max="1000"
                     />
-                    <span className="text-mobile-text-muted text-lg">L</span>
+                    <span className="text-mobile-text-muted text-lg">{t('common.litersShort')}</span>
                   </div>
                 </div>
               </div>
@@ -2012,7 +2017,7 @@ const MobileZoneAddWizard: React.FC = () => {
             { label: t('zoneWizard.summary.items.plantType'), value: zoneConfig.plantType?.common_name_en || t('zoneWizard.summary.notSet'), icon: 'eco' },
             { label: t('zoneWizard.summary.items.soilType'), value: soilDisplay, icon: 'landscape' },
             { label: t('zoneWizard.summary.items.sunExposure'), value: zoneConfig.sunExposure === 'full' ? t('zoneWizard.summary.sunExposure.full') : zoneConfig.sunExposure === 'partial' ? t('zoneWizard.summary.sunExposure.partial') : t('zoneWizard.summary.sunExposure.shade'), icon: 'wb_sunny' },
-            { label: t('zoneWizard.summary.items.maxVolume'), value: `${zoneConfig.maxVolumeLimitL} L`, icon: 'water' },
+            { label: t('zoneWizard.summary.items.maxVolume'), value: `${zoneConfig.maxVolumeLimitL} ${t('common.litersShort')}`, icon: 'water' },
             { label: t('zoneWizard.summary.items.cycleSoak'), value: zoneConfig.enableCycleSoak ? t('zoneWizard.summary.enabled') : t('zoneWizard.summary.disabled'), icon: 'autorenew' },
           );
         }
@@ -2034,8 +2039,8 @@ const MobileZoneAddWizard: React.FC = () => {
           summaryItems.push({
             label: zoneConfig.wateringMode === 'duration' ? t('zoneWizard.schedule.duration') : t('zoneWizard.schedule.volume'),
             value: zoneConfig.wateringMode === 'duration'
-              ? `${zoneConfig.scheduleValue} min`
-              : `${zoneConfig.scheduleValue} L`,
+              ? `${zoneConfig.scheduleValue} ${t('common.minutesShort')}`
+              : `${zoneConfig.scheduleValue} ${t('common.litersShort')}`,
             icon: zoneConfig.wateringMode === 'duration' ? 'timer' : 'water_drop'
           });
         }
@@ -2053,7 +2058,7 @@ const MobileZoneAddWizard: React.FC = () => {
                 <span className="material-symbols-outlined text-mobile-primary text-2xl">check_circle</span>
               </div>
               <h2 className="text-white text-xl font-bold">{zoneConfig.name}</h2>
-              <p className="text-mobile-text-muted text-xs">Review your zone configuration</p>
+              <p className="text-mobile-text-muted text-xs">{t('zoneWizard.summary.subtitle')}</p>
             </div>
 
             {/* Custom soil details card */}
@@ -2061,20 +2066,22 @@ const MobileZoneAddWizard: React.FC = () => {
               <div className="rounded-2xl bg-mobile-primary/5 border border-mobile-primary/30 p-3">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="material-symbols-outlined text-mobile-primary text-sm">science</span>
-                  <span className="text-mobile-primary text-[10px] font-bold uppercase tracking-wider">Custom Soil Profile</span>
+                  <span className="text-mobile-primary text-[10px] font-bold uppercase tracking-wider">
+                    {t('zoneWizard.soilType.customProfile')}
+                  </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center text-xs">
                   <div className="p-1.5 rounded-lg bg-white/5">
-                    <p className="text-orange-400 font-bold">{zoneConfig.customSoilFromDetection.clay.toFixed(0)}%</p>
-                    <p className="text-mobile-text-muted text-[10px]">Clay</p>
+                    <p className="text-orange-400 font-bold">{zoneConfig.customSoilFromDetection.clay.toFixed(0)}{t('common.percent')}</p>
+                    <p className="text-mobile-text-muted text-[10px]">{t('zoneWizard.soilType.clay')}</p>
                   </div>
                   <div className="p-1.5 rounded-lg bg-white/5">
-                    <p className="text-yellow-400 font-bold">{zoneConfig.customSoilFromDetection.sand.toFixed(0)}%</p>
-                    <p className="text-mobile-text-muted text-[10px]">Sand</p>
+                    <p className="text-yellow-400 font-bold">{zoneConfig.customSoilFromDetection.sand.toFixed(0)}{t('common.percent')}</p>
+                    <p className="text-mobile-text-muted text-[10px]">{t('zoneWizard.soilType.sand')}</p>
                   </div>
                   <div className="p-1.5 rounded-lg bg-white/5">
-                    <p className="text-blue-400 font-bold">{zoneConfig.customSoilFromDetection.silt.toFixed(0)}%</p>
-                    <p className="text-mobile-text-muted text-[10px]">Silt</p>
+                    <p className="text-blue-400 font-bold">{zoneConfig.customSoilFromDetection.silt.toFixed(0)}{t('common.percent')}</p>
+                    <p className="text-mobile-text-muted text-[10px]">{t('zoneWizard.soilType.silt')}</p>
                   </div>
                 </div>
               </div>
@@ -2306,7 +2313,7 @@ const MobileZoneAddWizard: React.FC = () => {
               <div className="flex-1 text-left">
                 <span className="text-white font-semibold">{method.name}</span>
                 {method.efficiency_pct && (
-                  <p className="text-mobile-text-muted text-xs">{t('zoneWizard.irrigation.efficiency')}: {method.efficiency_pct}%</p>
+                  <p className="text-mobile-text-muted text-xs">{t('zoneWizard.irrigation.efficiency')}: {method.efficiency_pct}{t('common.percent')}</p>
                 )}
               </div>
             </button>

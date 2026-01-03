@@ -4,27 +4,14 @@ import MobileConfirmModal from '../../components/mobile/MobileConfirmModal';
 import { BleService } from '../../services/BleService';
 import { useAppStore } from '../../store/useAppStore';
 import { ResetStatus, FactoryWipeStep } from '../../types/firmware_structs';
+import { useI18n } from '../../i18n';
 
 type ResetType = 'settings' | 'schedule' | 'stats' | 'full';
-
-/**
- * Human-readable step names for factory wipe progress
- */
-const WIPE_STEP_NAMES: Record<FactoryWipeStep, string> = {
-  [FactoryWipeStep.PREPARE]: 'Preparing...',
-  [FactoryWipeStep.RESET_CHANNELS]: 'Resetting channels...',
-  [FactoryWipeStep.RESET_SYSTEM]: 'Resetting system...',
-  [FactoryWipeStep.RESET_CALIBRATION]: 'Clearing calibration...',
-  [FactoryWipeStep.CLEAR_RAIN_HIST]: 'Clearing rain history...',
-  [FactoryWipeStep.CLEAR_ENV_HIST]: 'Clearing environment history...',
-  [FactoryWipeStep.CLEAR_ONBOARDING]: 'Clearing onboarding...',
-  [FactoryWipeStep.VERIFY]: 'Verifying...',
-  [FactoryWipeStep.DONE]: 'Finalizing...',
-};
 
 const MobileDeviceReset: React.FC = () => {
   const history = useHistory();
   const bleService = BleService.getInstance();
+  const { t } = useI18n();
 
   // Subscribe to reset state for progress updates
   const resetState = useAppStore(state => state.resetState);
@@ -38,47 +25,58 @@ const MobileDeviceReset: React.FC = () => {
   const progressPct = resetState?.progress_pct ?? 0;
   const currentStep = resetState?.wipe_step ?? 0;
   const retryCount = resetState?.retry_count ?? 0;
-  const stepName = WIPE_STEP_NAMES[currentStep as FactoryWipeStep] ?? 'Processing...';
+  const wipeStepNames: Record<FactoryWipeStep, string> = {
+    [FactoryWipeStep.PREPARE]: t('mobileDeviceReset.wipeSteps.prepare'),
+    [FactoryWipeStep.RESET_CHANNELS]: t('mobileDeviceReset.wipeSteps.resetChannels'),
+    [FactoryWipeStep.RESET_SYSTEM]: t('mobileDeviceReset.wipeSteps.resetSystem'),
+    [FactoryWipeStep.RESET_CALIBRATION]: t('mobileDeviceReset.wipeSteps.resetCalibration'),
+    [FactoryWipeStep.CLEAR_RAIN_HIST]: t('mobileDeviceReset.wipeSteps.clearRainHistory'),
+    [FactoryWipeStep.CLEAR_ENV_HIST]: t('mobileDeviceReset.wipeSteps.clearEnvHistory'),
+    [FactoryWipeStep.CLEAR_ONBOARDING]: t('mobileDeviceReset.wipeSteps.clearOnboarding'),
+    [FactoryWipeStep.VERIFY]: t('mobileDeviceReset.wipeSteps.verify'),
+    [FactoryWipeStep.DONE]: t('mobileDeviceReset.wipeSteps.done'),
+  };
+  const stepName = wipeStepNames[currentStep as FactoryWipeStep] ?? t('mobileDeviceReset.processing');
 
   const resetOptions = [
     {
       id: 'settings' as ResetType,
-      name: 'Reset Settings',
+      name: t('mobileDeviceReset.options.settings.name'),
       icon: 'settings_backup_restore',
       iconBg: 'bg-blue-500/20',
       iconColor: 'text-blue-400',
-      description: 'Reset all device settings to defaults',
-      details: 'This will reset timezone, power mode, and other preferences. Zone configurations will be kept.',
+      description: t('mobileDeviceReset.options.settings.description'),
+      details: t('mobileDeviceReset.options.settings.details'),
       severity: 'low',
     },
     {
       id: 'schedule' as ResetType,
-      name: 'Clear Schedules',
+      name: t('mobileDeviceReset.options.schedule.name'),
       icon: 'event_busy',
       iconBg: 'bg-orange-500/20',
       iconColor: 'text-orange-400',
-      description: 'Remove all watering schedules',
-      details: 'All scheduled watering times and smart rules will be deleted. Zone configurations will be kept.',
+      description: t('mobileDeviceReset.options.schedule.description'),
+      details: t('mobileDeviceReset.options.schedule.details'),
       severity: 'medium',
     },
     {
       id: 'stats' as ResetType,
-      name: 'Clear Statistics',
+      name: t('mobileDeviceReset.options.stats.name'),
       icon: 'delete_sweep',
       iconBg: 'bg-yellow-500/20',
       iconColor: 'text-yellow-400',
-      description: 'Delete all usage history and statistics',
-      details: 'Watering history, water usage data, and all analytics will be permanently deleted.',
+      description: t('mobileDeviceReset.options.stats.description'),
+      details: t('mobileDeviceReset.options.stats.details'),
       severity: 'medium',
     },
     {
       id: 'full' as ResetType,
-      name: 'Factory Reset',
+      name: t('mobileDeviceReset.options.full.name'),
       icon: 'restart_alt',
       iconBg: 'bg-red-500/20',
       iconColor: 'text-red-400',
-      description: 'Erase everything and reset to factory state',
-      details: 'WARNING: This will erase ALL data including zones, schedules, history, and settings. The device will need to be set up again from scratch.',
+      description: t('mobileDeviceReset.options.full.description'),
+      details: t('mobileDeviceReset.options.full.details'),
       severity: 'critical',
     },
   ];
@@ -121,12 +119,13 @@ const MobileDeviceReset: React.FC = () => {
         // Navigate to welcome after factory reset
         history.replace('/welcome');
       } else {
-        alert('Reset successful.');
+        alert(t('mobileDeviceReset.resetSuccess'));
         history.goBack();
       }
     } catch (e) {
       console.error('Reset failed:', e);
-      alert('Reset failed: ' + (e instanceof Error ? e.message : String(e)));
+      const reason = e instanceof Error ? e.message : String(e);
+      alert(t('mobileDeviceReset.resetFailed').replace('{reason}', reason));
     } finally {
       setLoading(false);
     }
@@ -145,7 +144,7 @@ const MobileDeviceReset: React.FC = () => {
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
         <h2 className="text-white text-lg font-bold leading-tight flex-1 text-center">
-          Reset Options
+          {t('mobileDeviceReset.title')}
         </h2>
         <div className="size-12" />
       </div>
@@ -155,9 +154,9 @@ const MobileDeviceReset: React.FC = () => {
         <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4 flex items-start gap-3">
           <span className="material-symbols-outlined text-red-400 shrink-0">warning</span>
           <div>
-            <p className="text-red-300 font-semibold mb-1">Proceed with caution</p>
+            <p className="text-red-300 font-semibold mb-1">{t('mobileDeviceReset.warningTitle')}</p>
             <p className="text-red-200/80 text-sm leading-relaxed">
-              Reset operations cannot be undone. Make sure to backup important data before proceeding.
+              {t('mobileDeviceReset.warningBody')}
             </p>
           </div>
         </div>
@@ -165,7 +164,7 @@ const MobileDeviceReset: React.FC = () => {
         {/* Reset Options */}
         <div className="space-y-3">
           <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
-            Reset Options
+            {t('mobileDeviceReset.sectionLabel')}
           </label>
 
           <div className="space-y-3">
@@ -202,13 +201,13 @@ const MobileDeviceReset: React.FC = () => {
         <div className="rounded-xl bg-mobile-surface-dark border border-mobile-border-dark p-4">
           <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
             <span className="material-symbols-outlined text-mobile-primary">help_outline</span>
-            Need Help?
+            {t('mobileDeviceReset.helpTitle')}
           </h4>
           <p className="text-mobile-text-muted text-sm leading-relaxed mb-3">
-            If you're experiencing issues, try resetting settings first before doing a full factory reset.
+            {t('mobileDeviceReset.helpBody')}
           </p>
           <button className="text-mobile-primary text-sm font-semibold flex items-center gap-1">
-            View troubleshooting guide
+            {t('mobileDeviceReset.helpAction')}
             <span className="material-symbols-outlined text-sm">arrow_forward</span>
           </button>
         </div>
@@ -219,13 +218,13 @@ const MobileDeviceReset: React.FC = () => {
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
         onConfirm={handleConfirmReset}
-        title={selectedOption?.name || 'Confirm Reset'}
+        title={selectedOption?.name || t('mobileDeviceReset.confirmTitle')}
         message={selectedOption?.details || ''}
-        confirmText={selectedReset === 'full' ? 'Factory Reset' : 'Reset'}
-        cancelText="Cancel"
+        confirmText={selectedReset === 'full' ? t('mobileDeviceReset.confirmFactory') : t('mobileDeviceReset.confirmReset')}
+        cancelText={t('common.cancel')}
         icon={selectedOption?.icon || 'warning'}
         variant={selectedReset === 'full' ? 'danger' : 'warning'}
-        requireConfirmation={selectedReset === 'full' ? 'RESET' : undefined}
+        requireConfirmation={selectedReset === 'full' ? t('mobileDeviceReset.confirmWord') : undefined}
       />
 
       {/* Loading Overlay with Factory Wipe Progress */}
@@ -240,7 +239,7 @@ const MobileDeviceReset: React.FC = () => {
             {isFactoryWipeInProgress ? (
               <>
                 {/* Factory Wipe Progress UI */}
-                <p className="text-white font-bold text-lg mb-2">Factory Reset</p>
+                <p className="text-white font-bold text-lg mb-2">{t('mobileDeviceReset.factoryResetTitle')}</p>
                 <p className="text-mobile-text-muted text-sm mb-4 text-center">{stepName}</p>
 
                 {/* Progress Bar */}
@@ -252,13 +251,15 @@ const MobileDeviceReset: React.FC = () => {
                 </div>
 
                 {/* Progress Percentage */}
-                <p className="text-mobile-text-muted text-sm mb-2">{progressPct}% complete</p>
+                <p className="text-mobile-text-muted text-sm mb-2">
+                  {t('mobileDeviceReset.progressComplete').replace('{percent}', progressPct.toString())}
+                </p>
 
                 {/* Retry indicator */}
                 {retryCount > 0 && (
                   <p className="text-yellow-400 text-xs flex items-center gap-1">
                     <span className="material-symbols-outlined text-sm">refresh</span>
-                    Retry attempt {retryCount}
+                    {t('mobileDeviceReset.retryAttempt').replace('{count}', retryCount.toString())}
                   </p>
                 )}
               </>
@@ -266,7 +267,7 @@ const MobileDeviceReset: React.FC = () => {
               <>
                 {/* Simple spinner for non-factory resets */}
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-mobile-primary mb-4"></div>
-                <p className="text-white font-bold">Resetting...</p>
+                <p className="text-white font-bold">{t('mobileDeviceReset.resetting')}</p>
               </>
             )}
           </div>

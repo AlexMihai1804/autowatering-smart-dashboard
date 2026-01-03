@@ -4,6 +4,7 @@ import { warning, checkmarkCircle, close, alertCircle, water, thermometer } from
 import { useAppStore } from '../store/useAppStore';
 import { BleService } from '../services/BleService';
 import { AlarmCode } from '../types/firmware_structs';
+import { useI18n } from '../i18n';
 
 interface AlarmCardProps {
     onToast?: (message: string, color?: string) => void;
@@ -12,6 +13,7 @@ interface AlarmCardProps {
 const AlarmCard: React.FC<AlarmCardProps> = ({ onToast }) => {
     const { alarmStatus, connectionState } = useAppStore();
     const bleService = BleService.getInstance();
+    const { t } = useI18n();
     
     const [loading, setLoading] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
@@ -23,71 +25,71 @@ const AlarmCard: React.FC<AlarmCardProps> = ({ onToast }) => {
         switch (code) {
             case AlarmCode.NONE:
                 return { 
-                    name: 'No Alarm', 
-                    description: 'System operating normally',
+                    name: t('alarmCard.names.noAlarm'), 
+                    description: t('alarmCard.descriptions.noAlarm'),
                     icon: checkmarkCircle,
                     color: 'text-cyber-emerald'
                 };
             case AlarmCode.NO_FLOW:
                 return { 
-                    name: 'No Flow', 
-                    description: 'No water flow detected during watering. Check supply, valve, filter, and sensor.',
+                    name: t('alarmCard.names.noFlow'), 
+                    description: t('alarmCard.descriptions.noFlow'),
                     icon: water,
                     color: 'text-red-500'
                 };
             case AlarmCode.UNEXPECTED_FLOW:
                 return { 
-                    name: 'Unexpected Flow', 
-                    description: 'Flow detected when all valves are closed. Check for leaks.',
+                    name: t('alarmCard.names.unexpectedFlow'), 
+                    description: t('alarmCard.descriptions.unexpectedFlow'),
                     icon: water,
                     color: 'text-red-500'
                 };
             case AlarmCode.FREEZE_LOCKOUT:
                 return { 
-                    name: 'Freeze Protection', 
-                    description: 'Freeze protection is active. Watering is temporarily paused.',
+                    name: t('alarmCard.names.freezeProtection'), 
+                    description: t('alarmCard.descriptions.freezeProtection'),
                     icon: thermometer,
                     color: 'text-orange-500'
                 };
             case AlarmCode.HIGH_FLOW:
                 return { 
-                    name: 'High Flow', 
-                    description: 'Flow exceeded the learned limit. Possible burst/leak.',
+                    name: t('alarmCard.names.highFlow'), 
+                    description: t('alarmCard.descriptions.highFlow'),
                     icon: water,
                     color: 'text-red-500'
                 };
             case AlarmCode.LOW_FLOW:
                 return { 
-                    name: 'Low Flow', 
-                    description: 'Flow is below the learned limit. Check pressure and filters.',
+                    name: t('alarmCard.names.lowFlow'), 
+                    description: t('alarmCard.descriptions.lowFlow'),
                     icon: water,
                     color: 'text-yellow-500'
                 };
             case AlarmCode.MAINLINE_LEAK:
                 return { 
-                    name: 'Mainline Leak', 
-                    description: 'Static test detected flow with zones off. Check for leaks.',
+                    name: t('alarmCard.names.mainlineLeak'), 
+                    description: t('alarmCard.descriptions.mainlineLeak'),
                     icon: water,
                     color: 'text-red-500'
                 };
             case AlarmCode.CHANNEL_LOCK:
                 return { 
-                    name: 'Zone Locked', 
-                    description: 'Zone locked after repeated anomalies. Manual intervention required.',
+                    name: t('alarmCard.names.zoneLocked'), 
+                    description: t('alarmCard.descriptions.zoneLocked'),
                     icon: alertCircle,
                     color: 'text-red-500'
                 };
             case AlarmCode.GLOBAL_LOCK:
                 return { 
-                    name: 'System Locked', 
-                    description: 'System locked due to a critical water anomaly. Check for leaks.',
+                    name: t('alarmCard.names.systemLocked'), 
+                    description: t('alarmCard.descriptions.systemLocked'),
                     icon: alertCircle,
                     color: 'text-red-500'
                 };
             default:
                 return { 
-                    name: `Unknown Alarm (${code})`, 
-                    description: 'Unrecognized alarm code. Contact support.',
+                    name: t('alarmCard.names.unknown').replace('{code}', String(code)), 
+                    description: t('alarmCard.descriptions.unknown'),
                     icon: warning,
                     color: 'text-gray-500'
                 };
@@ -95,24 +97,24 @@ const AlarmCard: React.FC<AlarmCardProps> = ({ onToast }) => {
     };
 
     const formatTimestamp = (ts: number): string => {
-        if (!ts || ts === 0) return 'Unknown';
+        if (!ts || ts === 0) return t('labels.unknown');
         const date = new Date(ts * 1000);
         return date.toLocaleString();
     };
 
     const handleClearAlarm = async () => {
         if (!isConnected) {
-            onToast?.('Not connected', 'danger');
+            onToast?.(t('errors.notConnected'), 'danger');
             return;
         }
         
         setLoading(true);
         try {
             await bleService.clearAllAlarms();
-            onToast?.('Alarm cleared', 'success');
+            onToast?.(t('alarmCard.cleared'), 'success');
         } catch (error: any) {
             console.error('Failed to clear alarm:', error);
-            onToast?.(`Failed: ${error.message}`, 'danger');
+            onToast?.(t('errors.failedWithReason').replace('{error}', error.message), 'danger');
         } finally {
             setLoading(false);
             setShowConfirm(false);
@@ -152,8 +154,8 @@ const AlarmCard: React.FC<AlarmCardProps> = ({ onToast }) => {
                                 {alarmInfo.name}
                             </h2>
                             <p className="text-gray-400 text-sm">
-                                Code: 0x{(alarmStatus?.alarm_code || 0).toString(16).toUpperCase().padStart(2, '0')}
-                                {alarmStatus?.alarm_data ? ` | Data: ${alarmStatus.alarm_data}` : ''}
+                                {t('alarmCard.codeLabel')}: 0x{(alarmStatus?.alarm_code || 0).toString(16).toUpperCase().padStart(2, '0')}
+                                {alarmStatus?.alarm_data ? ` | ${t('alarmCard.dataLabel')}: ${alarmStatus.alarm_data}` : ''}
                             </p>
                         </div>
                     </div>
@@ -169,7 +171,7 @@ const AlarmCard: React.FC<AlarmCardProps> = ({ onToast }) => {
                             {loading ? <IonSpinner name="crescent" /> : (
                                 <>
                                     <IonIcon icon={close} slot="start" />
-                                    Clear
+                                    {t('labels.clear')}
                                 </>
                             )}
                         </IonButton>
@@ -180,7 +182,7 @@ const AlarmCard: React.FC<AlarmCardProps> = ({ onToast }) => {
 
                 {alarmStatus?.timestamp && alarmStatus.timestamp > 0 && (
                     <div className="text-xs text-gray-500">
-                        Occurred: {formatTimestamp(alarmStatus.timestamp)}
+                        {t('alarmCard.occurredLabel')}: {formatTimestamp(alarmStatus.timestamp)}
                     </div>
                 )}
             </div>
@@ -188,15 +190,15 @@ const AlarmCard: React.FC<AlarmCardProps> = ({ onToast }) => {
             <IonAlert
                 isOpen={showConfirm}
                 onDidDismiss={() => setShowConfirm(false)}
-                header="Clear Alarm"
-                message={`Are you sure you want to clear the "${alarmInfo.name}" alarm? Make sure the underlying issue has been resolved.`}
+                header={t('alarmCard.clearTitle')}
+                message={t('alarmCard.clearConfirmMessage').replace('{alarm}', alarmInfo.name)}
                 buttons={[
                     {
-                        text: 'Cancel',
+                        text: t('common.cancel'),
                         role: 'cancel',
                     },
                     {
-                        text: 'Clear Alarm',
+                        text: t('alarmCard.clearTitle'),
                         role: 'confirm',
                         handler: handleClearAlarm,
                     },

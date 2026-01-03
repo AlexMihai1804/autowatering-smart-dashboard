@@ -23,6 +23,7 @@ import {
 } from '@ionic/react';
 import { closeOutline, qrCodeOutline, scanOutline, shareOutline, copyOutline, checkmarkOutline } from 'ionicons/icons';
 import type { UnifiedZoneConfig as ZoneConfig } from '../types/wizard';
+import { useI18n } from '../i18n';
 
 // Simple QR code generator using canvas
 // For production, consider using a library like qrcode or qrcode.react
@@ -74,6 +75,7 @@ export const QRCodeSharing: React.FC<QRCodeSharingProps> = ({
     const [copied, setCopied] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const { t, language } = useI18n();
     
     // Generate QR code when modal opens
     useEffect(() => {
@@ -132,7 +134,7 @@ export const QRCodeSharing: React.FC<QRCodeSharingProps> = ({
             }
         } catch (e) {
             console.error('[QRSharing] Failed to generate QR:', e);
-            setError('Failed to generate QR code');
+            setError(t('qrSharing.generateFailed'));
         } finally {
             setIsGenerating(false);
         }
@@ -167,7 +169,7 @@ export const QRCodeSharing: React.FC<QRCodeSharingProps> = ({
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         } catch (e) {
-            setError('Failed to copy to clipboard');
+            setError(t('qrSharing.copyFailed'));
         }
     };
     
@@ -181,7 +183,7 @@ export const QRCodeSharing: React.FC<QRCodeSharingProps> = ({
             
             if (navigator.share) {
                 await navigator.share({
-                    title: 'Irrigation Configuration',
+                    title: t('qrSharing.shareTitle'),
                     text: data,
                 });
             } else {
@@ -189,18 +191,21 @@ export const QRCodeSharing: React.FC<QRCodeSharingProps> = ({
             }
         } catch (e) {
             if ((e as Error).name !== 'AbortError') {
-                setError('Failed to share');
+                setError(t('qrSharing.shareFailed'));
             }
         }
     };
     
     const enabledZones = zones.filter(z => z.enabled);
+    const zonePluralSuffix = language === 'ro'
+        ? (enabledZones.length === 1 ? 'a' : 'e')
+        : (enabledZones.length !== 1 ? 's' : '');
     
     return (
         <IonModal isOpen={isOpen} onDidDismiss={onClose}>
             <IonHeader>
                 <IonToolbar>
-                    <IonTitle>Share Configuration</IonTitle>
+                    <IonTitle>{t('qrSharing.title')}</IonTitle>
                     <IonButtons slot="end">
                         <IonButton onClick={onClose}>
                             <IonIcon icon={closeOutline} />
@@ -213,11 +218,11 @@ export const QRCodeSharing: React.FC<QRCodeSharingProps> = ({
                 <IonSegment value={mode} onIonChange={e => setMode(e.detail.value as 'share' | 'scan')}>
                     <IonSegmentButton value="share">
                         <IonIcon icon={qrCodeOutline} />
-                        <IonLabel>Share</IonLabel>
+                        <IonLabel>{t('qrSharing.share')}</IonLabel>
                     </IonSegmentButton>
                     <IonSegmentButton value="scan">
                         <IonIcon icon={scanOutline} />
-                        <IonLabel>Scan</IonLabel>
+                        <IonLabel>{t('qrSharing.scan')}</IonLabel>
                     </IonSegmentButton>
                 </IonSegment>
                 
@@ -225,7 +230,9 @@ export const QRCodeSharing: React.FC<QRCodeSharingProps> = ({
                     <div className="mt-6">
                         <div className="text-center mb-4">
                             <p className="text-gray-400">
-                                {enabledZones.length} zone{enabledZones.length !== 1 ? 's' : ''} to share
+                                {t('qrSharing.zonesToShare')
+                                    .replace('{count}', String(enabledZones.length))
+                                    .replace('{plural}', zonePluralSuffix)}
                             </p>
                         </div>
                         
@@ -243,7 +250,7 @@ export const QRCodeSharing: React.FC<QRCodeSharingProps> = ({
                                             style={{ width: 200, height: 200 }}
                                         />
                                         <p className="text-xs text-gray-500 mt-2">
-                                            Scan with another device
+                                            {t('qrSharing.scanWithDevice')}
                                         </p>
                                     </>
                                 )}
@@ -257,19 +264,23 @@ export const QRCodeSharing: React.FC<QRCodeSharingProps> = ({
                         <div className="flex gap-2 mt-4">
                             <IonButton expand="block" fill="outline" className="flex-1" onClick={copyShareData}>
                                 <IonIcon icon={copied ? checkmarkOutline : copyOutline} slot="start" />
-                                {copied ? 'Copied!' : 'Copy Data'}
+                                {copied ? t('qrSharing.copied') : t('qrSharing.copyData')}
                             </IonButton>
                             <IonButton expand="block" className="flex-1" onClick={shareNative}>
                                 <IonIcon icon={shareOutline} slot="start" />
-                                Share
+                                {t('qrSharing.share')}
                             </IonButton>
                         </div>
                         
                         <div className="mt-6 p-4 bg-white/5 rounded-lg">
-                            <h4 className="text-sm font-medium text-gray-300 mb-2">Included in share:</h4>
-                            <ul className="text-xs text-gray-400 space-y-1">
+                            <h4 className="text-sm font-medium text-gray-300 mb-2">{t('qrSharing.includedTitle')}</h4>
+                            <ul className="text-xs text-gray-400 space-y-1 list-disc list-inside">
                                 {enabledZones.map((zone, i) => (
-                                    <li key={i}>• {zone.name} ({zone.wateringMode})</li>
+                                    <li key={i}>
+                                        {t('qrSharing.includedItem')
+                                            .replace('{name}', zone.name)
+                                            .replace('{mode}', zone.wateringMode)}
+                                    </li>
                                 ))}
                             </ul>
                         </div>
@@ -282,10 +293,10 @@ export const QRCodeSharing: React.FC<QRCodeSharingProps> = ({
                             <IonCardContent className="py-8 text-center">
                                 <IonIcon icon={scanOutline} className="text-6xl text-gray-400 mb-4" />
                                 <p className="text-gray-400">
-                                    Camera scanning requires native app capabilities.
+                                    {t('qrSharing.scanUnavailable')}
                                 </p>
                                 <p className="text-gray-500 text-sm mt-2">
-                                    You can paste configuration data from clipboard instead.
+                                    {t('qrSharing.scanPasteHint')}
                                 </p>
                                 <IonButton className="mt-4" onClick={async () => {
                                     try {
@@ -298,10 +309,10 @@ export const QRCodeSharing: React.FC<QRCodeSharingProps> = ({
                                             onClose();
                                         }
                                     } catch (e) {
-                                        setError('Invalid configuration data');
+                                        setError(t('qrSharing.invalidData'));
                                     }
                                 }}>
-                                    Paste from Clipboard
+                                    {t('qrSharing.pasteFromClipboard')}
                                 </IonButton>
                             </IonCardContent>
                         </IonCard>

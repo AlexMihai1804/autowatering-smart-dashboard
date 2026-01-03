@@ -18,12 +18,16 @@ import {
   Legend,
 } from 'recharts';
 import { ChartSkeleton } from '../../components/mobile/LoadingSkeleton';
+import { useI18n } from '../../i18n';
 
 type TimeFrame = 'day' | 'week' | 'month';
 type HistoryTab = 'watering' | 'rain' | 'environment';
 
 const MobileHistory: React.FC = () => {
   const history = useHistory();
+  const { t, language } = useI18n();
+  const percentUnit = t('common.percent');
+  const locale = language === 'ro' ? 'ro-RO' : 'en-US';
   const {
     zones,
     wateringHistory,
@@ -189,7 +193,7 @@ const MobileHistory: React.FC = () => {
   // Get zone name by channel ID
   const getZoneName = (channelId: number): string => {
     const zone = zones.find(z => z.channel_id === channelId);
-    return zone?.name || `Zone ${channelId + 1}`;
+    return zone?.name || `${t('zones.zone')} ${channelId + 1}`;
   };
 
   // Calculate date range based on timeFrame and selectedDate
@@ -313,19 +317,19 @@ const MobileHistory: React.FC = () => {
       case 'day':
         const isToday = selectedDate.toDateString() === new Date().toDateString();
         const isYesterday = new Date(Date.now() - 86400000).toDateString() === selectedDate.toDateString();
-        if (isToday) return 'Today';
-        if (isYesterday) return 'Yesterday';
-        return selectedDate.toLocaleDateString('en-US', optsWithYear);
+        if (isToday) return t('zones.today');
+        if (isYesterday) return t('zones.yesterday');
+        return selectedDate.toLocaleDateString(locale, optsWithYear);
       case 'week':
         const weekStart = new Date(selectedDate);
         weekStart.setDate(weekStart.getDate() - 6);
-        return `${weekStart.toLocaleDateString('en-US', opts)} - ${selectedDate.toLocaleDateString('en-US', opts)}`;
+        return `${weekStart.toLocaleDateString(locale, opts)} - ${selectedDate.toLocaleDateString(locale, opts)}`;
       case 'month':
-        return selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        return selectedDate.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
       default:
         return '';
     }
-  }, [selectedDate, timeFrame]);
+  }, [selectedDate, timeFrame, locale, t]);
 
   // Filter history by date range and zone
   const filteredHistory = useMemo(() => {
@@ -400,7 +404,15 @@ const MobileHistory: React.FC = () => {
       if (timeFrame === 'day') {
         label = `${i}:00`;
       } else if (timeFrame === 'week') {
-        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const days = [
+          t('mobileHistory.days.sun'),
+          t('mobileHistory.days.mon'),
+          t('mobileHistory.days.tue'),
+          t('mobileHistory.days.wed'),
+          t('mobileHistory.days.thu'),
+          t('mobileHistory.days.fri'),
+          t('mobileHistory.days.sat'),
+        ];
         const dayDate = new Date(baseDate);
         dayDate.setDate(dayDate.getDate() + i);
         label = days[dayDate.getDay()];
@@ -412,7 +424,7 @@ const MobileHistory: React.FC = () => {
     }
 
     return data;
-  }, [wateringHistory, timeFrame, selectedZone, selectedDate]);
+  }, [wateringHistory, timeFrame, selectedZone, selectedDate, t]);
 
   // Dedupe zones by channel_id to prevent duplicate keys
   const configuredZones = useMemo(() => {
@@ -526,7 +538,15 @@ const MobileHistory: React.FC = () => {
       if (timeFrame === 'day') {
         label = `${i}:00`;
       } else if (timeFrame === 'week') {
-        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const days = [
+          t('mobileHistory.days.sun'),
+          t('mobileHistory.days.mon'),
+          t('mobileHistory.days.tue'),
+          t('mobileHistory.days.wed'),
+          t('mobileHistory.days.thu'),
+          t('mobileHistory.days.fri'),
+          t('mobileHistory.days.sat'),
+        ];
         const dayDate = new Date(baseDate);
         dayDate.setDate(dayDate.getDate() + i);
         label = days[dayDate.getDay()];
@@ -538,7 +558,7 @@ const MobileHistory: React.FC = () => {
     }
 
     return data;
-  }, [combinedRainHistory, timeFrame, selectedDate]);
+  }, [combinedRainHistory, timeFrame, selectedDate, t]);
 
   // Generate Recharts-compatible environment chart data
   const envChartData = useMemo(() => {
@@ -554,8 +574,8 @@ const MobileHistory: React.FC = () => {
       .map((entry: any) => {
         const d = new Date(entry.timestamp * 1000);
         const label = isDay
-          ? d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-          : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          ? d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
+          : d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 
         const temperature = isDay
           ? Math.round((entry.temperature_c_x100 / 100) * 10) / 10
@@ -596,7 +616,7 @@ const MobileHistory: React.FC = () => {
       {/* Top App Bar */}
       <header className="sticky top-0 z-50 bg-mobile-bg-dark/90 backdrop-blur-md transition-colors safe-area-top shrink-0">
         <div className="flex items-center justify-between px-4 py-4">
-          <h1 className="text-2xl font-extrabold tracking-tight">History</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight">{t('mobileHistory.title')}</h1>
           <button
             onClick={() => bleService.queryWateringHistory()}
             className="flex items-center justify-center w-10 h-10 rounded-full bg-mobile-surface-dark text-gray-300 hover:bg-white/10 transition-colors"
@@ -610,9 +630,9 @@ const MobileHistory: React.FC = () => {
         {/* Tab Navigation */}
         <div className="flex px-4 gap-2 pb-3">
           {([
-            { id: 'watering' as HistoryTab, label: 'Watering', icon: 'water_drop' },
-            { id: 'rain' as HistoryTab, label: 'Rain', icon: 'rainy' },
-            { id: 'environment' as HistoryTab, label: 'Environment', icon: 'thermostat' },
+            { id: 'watering' as HistoryTab, label: t('mobileHistory.tabs.watering'), icon: 'water_drop' },
+            { id: 'rain' as HistoryTab, label: t('mobileHistory.tabs.rain'), icon: 'rainy' },
+            { id: 'environment' as HistoryTab, label: t('mobileHistory.tabs.environment'), icon: 'thermostat' },
           ]).map(tab => (
             <button
               key={tab.id}
@@ -645,7 +665,7 @@ const MobileHistory: React.FC = () => {
                     : 'text-gray-500'
                   }`}
               >
-                {tf}
+                {t(`mobileHistory.timeFrames.${tf}`)}
               </button>
             ))}
           </div>
@@ -662,7 +682,11 @@ const MobileHistory: React.FC = () => {
             <div className="text-center">
               <p className="text-white font-bold text-lg">{dateRangeLabel}</p>
               <p className="text-mobile-text-muted text-xs">
-                {timeFrame === 'day' ? '24 hours' : timeFrame === 'week' ? '7 days' : 'Full month'}
+                {timeFrame === 'day'
+                  ? t('mobileHistory.timeFrameRanges.day')
+                  : timeFrame === 'week'
+                    ? t('mobileHistory.timeFrameRanges.week')
+                    : t('mobileHistory.timeFrameRanges.month')}
               </p>
             </div>
 
@@ -688,7 +712,7 @@ const MobileHistory: React.FC = () => {
                     : 'bg-mobile-surface-dark border border-mobile-border-dark text-gray-400 font-medium'
                   }`}
               >
-                <span>All Zones</span>
+                <span>{t('mobileHistory.allZones')}</span>
               </button>
               {configuredZones.map((zone) => (
                 <button
@@ -699,7 +723,7 @@ const MobileHistory: React.FC = () => {
                       : 'bg-mobile-surface-dark border border-mobile-border-dark text-gray-400 font-medium hover:bg-white/5'
                     }`}
                 >
-                  {zone.name || `Zone ${zone.channel_id + 1}`}
+                  {zone.name || `${t('zones.zone')} ${zone.channel_id + 1}`}
                 </button>
               ))}
             </div>
@@ -717,16 +741,20 @@ const MobileHistory: React.FC = () => {
                     <span className="material-symbols-outlined text-mobile-primary text-2xl">water_drop</span>
                   </div>
                   <div>
-                    <p className="text-gray-400 text-sm font-medium">Total Consumption</p>
+                    <p className="text-gray-400 text-sm font-medium">{t('mobileHistory.totalConsumption')}</p>
                     <h2 className="text-3xl font-extrabold tracking-tight text-white">
-                      {(totalConsumption / 1000).toFixed(1)} <span className="text-lg text-gray-500 font-semibold">L</span>
+                      {(totalConsumption / 1000).toFixed(1)} <span className="text-lg text-gray-500 font-semibold">{t('common.litersShort')}</span>
                     </h2>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-mobile-primary text-sm font-bold">{successfulSessions} sessions</p>
+                  <p className="text-mobile-primary text-sm font-bold">
+                    {t('mobileHistory.sessions').replace('{count}', successfulSessions.toString())}
+                  </p>
                   {skippedSessions > 0 && (
-                    <p className="text-orange-400 text-xs">{skippedSessions} skipped</p>
+                    <p className="text-orange-400 text-xs">
+                      {t('mobileHistory.skipped').replace('{count}', skippedSessions.toString())}
+                    </p>
                   )}
                 </div>
               </div>
@@ -754,7 +782,7 @@ const MobileHistory: React.FC = () => {
                         axisLine={false}
                         tickLine={false}
                         tick={{ fill: '#888', fontSize: 11 }}
-                        tickFormatter={(v) => `${v}L`}
+                        tickFormatter={(v) => `${v}${t('common.degreesC')}`}
                       />
                       <Tooltip
                         contentStyle={{
@@ -764,7 +792,7 @@ const MobileHistory: React.FC = () => {
                           color: '#fff',
                         }}
                         labelStyle={{ color: '#888' }}
-                        formatter={(value: number) => [`${value.toFixed(2)} L`, 'Volume']}
+                        formatter={(value: number) => [`${value.toFixed(2)} ${t('common.litersShort')}`, t('labels.volume')]}
                       />
                       <Area
                         type="monotone"
@@ -780,7 +808,7 @@ const MobileHistory: React.FC = () => {
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full">
                     <span className="material-symbols-outlined text-5xl text-gray-600 mb-3">water_drop</span>
-                    <p className="text-mobile-text-muted">No watering data for this period</p>
+                    <p className="text-mobile-text-muted">{t('mobileHistory.noWateringData')}</p>
                   </div>
                 )}
               </div>
@@ -799,14 +827,16 @@ const MobileHistory: React.FC = () => {
                     <span className="material-symbols-outlined text-blue-400 text-2xl">rainy</span>
                   </div>
                   <div>
-                    <p className="text-gray-400 text-sm font-medium">Total Rainfall</p>
+                    <p className="text-gray-400 text-sm font-medium">{t('mobileHistory.totalRainfall')}</p>
                     <h2 className="text-3xl font-extrabold tracking-tight text-white">
-                      {totalRain.toFixed(1)} <span className="text-lg text-gray-500 font-semibold">mm</span>
+                      {totalRain.toFixed(1)} <span className="text-lg text-gray-500 font-semibold">{t('mobileHistory.units.mm')}</span>
                     </h2>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-blue-400 text-sm font-bold">{filteredRainHistory.length} events</p>
+                  <p className="text-blue-400 text-sm font-bold">
+                    {t('mobileHistory.events').replace('{count}', filteredRainHistory.length.toString())}
+                  </p>
                 </div>
               </div>
 
@@ -833,7 +863,7 @@ const MobileHistory: React.FC = () => {
                         axisLine={false}
                         tickLine={false}
                         tick={{ fill: '#888', fontSize: 11 }}
-                        tickFormatter={(v) => `${v}mm`}
+                        tickFormatter={(v) => `${v}${t('common.percent')}`}
                       />
                       <Tooltip
                         contentStyle={{
@@ -843,7 +873,7 @@ const MobileHistory: React.FC = () => {
                           color: '#fff',
                         }}
                         labelStyle={{ color: '#888' }}
-                        formatter={(value: number) => [`${value.toFixed(1)} mm`, 'Rainfall']}
+                        formatter={(value: number) => [`${value.toFixed(1)} ${t('mobileHistory.units.mm')}`, t('labels.rainfall')]}
                       />
                       <Bar
                         dataKey="rainfall"
@@ -855,7 +885,7 @@ const MobileHistory: React.FC = () => {
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full">
                     <span className="material-symbols-outlined text-5xl text-gray-600 mb-3">cloud_off</span>
-                    <p className="text-mobile-text-muted">No rain data for this period</p>
+                    <p className="text-mobile-text-muted">{t('mobileHistory.noRainData')}</p>
                   </div>
                 )}
               </div>
@@ -871,13 +901,13 @@ const MobileHistory: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-mobile-surface-dark rounded-2xl p-4 border border-mobile-border-dark text-center">
                   <span className="material-symbols-outlined text-orange-400 text-2xl mb-1 block">thermostat</span>
-                  <p className="text-white text-2xl font-bold">{envData.temperature.toFixed(1)}°C</p>
-                  <p className="text-mobile-text-muted text-xs">Current Temp</p>
+                  <p className="text-white text-2xl font-bold">{envData.temperature.toFixed(1)}{t('common.degreesC')}</p>
+                  <p className="text-mobile-text-muted text-xs">{t('mobileHistory.currentTemp')}</p>
                 </div>
                 <div className="bg-mobile-surface-dark rounded-2xl p-4 border border-mobile-border-dark text-center">
                   <span className="material-symbols-outlined text-blue-400 text-2xl mb-1 block">humidity_percentage</span>
-                  <p className="text-white text-2xl font-bold">{envData.humidity.toFixed(0)}%</p>
-                  <p className="text-mobile-text-muted text-xs">Current Humidity</p>
+                  <p className="text-white text-2xl font-bold">{envData.humidity.toFixed(0)}{percentUnit}</p>
+                  <p className="text-mobile-text-muted text-xs">{t('mobileHistory.currentHumidity')}</p>
                 </div>
               </div>
             )}
@@ -890,15 +920,15 @@ const MobileHistory: React.FC = () => {
                     <span className="material-symbols-outlined text-orange-400 text-2xl">thermostat</span>
                   </div>
                   <div>
-                    <p className="text-gray-400 text-sm font-medium">Average Values</p>
+                    <p className="text-gray-400 text-sm font-medium">{t('mobileHistory.averageValues')}</p>
                     <div className="flex items-center gap-4">
-                      <span className="text-orange-400 font-bold">{envAverages.temp.toFixed(1)}°C</span>
-                      <span className="text-blue-400 font-bold">{envAverages.humidity.toFixed(0)}%</span>
+                      <span className="text-orange-400 font-bold">{envAverages.temp.toFixed(1)}{t('common.degreesC')}</span>
+                      <span className="text-blue-400 font-bold">{envAverages.humidity.toFixed(0)}{percentUnit}</span>
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-gray-400 text-sm">{envAverages.count} readings</p>
+                  <p className="text-gray-400 text-sm">{t('mobileHistory.readings').replace('{count}', envAverages.count.toString())}</p>
                 </div>
               </div>
 
@@ -921,7 +951,7 @@ const MobileHistory: React.FC = () => {
                         axisLine={false}
                         tickLine={false}
                         tick={{ fill: '#f97316', fontSize: 11 }}
-                        tickFormatter={(v) => `${v}°`}
+                        tickFormatter={(v) => `${v}${t('common.degreesC')}`}
                         domain={['dataMin - 2', 'dataMax + 2']}
                       />
                       <YAxis
@@ -930,7 +960,7 @@ const MobileHistory: React.FC = () => {
                         axisLine={false}
                         tickLine={false}
                         tick={{ fill: '#3b82f6', fontSize: 11 }}
-                        tickFormatter={(v) => `${v}%`}
+                        tickFormatter={(v) => `${v}${t('common.percent')}`}
                         domain={[0, 100]}
                       />
                       <Tooltip
@@ -950,7 +980,7 @@ const MobileHistory: React.FC = () => {
                         yAxisId="temp"
                         type="monotone"
                         dataKey="temperature"
-                        name="Temperature (°C)"
+                        name={t('mobileHistory.temperatureLabel').replace('{unit}', t('common.degreesC'))}
                         stroke="#f97316"
                         strokeWidth={2}
                         dot={false}
@@ -960,7 +990,7 @@ const MobileHistory: React.FC = () => {
                         yAxisId="humidity"
                         type="monotone"
                         dataKey="humidity"
-                        name="Humidity (%)"
+                        name={t('mobileHistory.humidityLabel').replace('{unit}', t('common.percent'))}
                         stroke="#3b82f6"
                         strokeWidth={2}
                         dot={false}
@@ -971,7 +1001,7 @@ const MobileHistory: React.FC = () => {
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full">
                     <span className="material-symbols-outlined text-5xl text-gray-600 mb-3">show_chart</span>
-                    <p className="text-mobile-text-muted">No environment data for this period</p>
+                    <p className="text-mobile-text-muted">{t('mobileHistory.noEnvironmentData')}</p>
                   </div>
                 )}
               </div>
@@ -987,3 +1017,5 @@ const MobileHistory: React.FC = () => {
 };
 
 export default MobileHistory;
+
+

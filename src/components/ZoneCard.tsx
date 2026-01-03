@@ -3,8 +3,40 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { IonIcon, IonRange, IonToggle, IonButton, IonChip } from '@ionic/react';
 import { water, settings, chevronDown, chevronUp, play, stop, flash, alertCircle } from 'ionicons/icons';
 import { ChannelConfigData } from '../types/firmware_structs';
-import { getPlantIcon, PLANT_TYPES, SOIL_TYPES } from '../utils/mappings';
+import { getPlantIcon } from '../utils/mappings';
 import { BleService } from '../services/BleService';
+import { useI18n } from '../i18n';
+
+const PLANT_TYPE_KEYS = [
+    'types.plant.vegetables',
+    'types.plant.herbs',
+    'types.plant.flowers',
+    'types.plant.shrubs',
+    'types.plant.trees',
+    'types.plant.lawn',
+    'types.plant.succulents',
+    'types.plant.custom'
+];
+
+const SOIL_TYPE_KEYS = [
+    'types.soil.clay',
+    'types.soil.sandy',
+    'types.soil.loamy',
+    'types.soil.silty',
+    'types.soil.rocky',
+    'types.soil.peaty',
+    'types.soil.pottingMix',
+    'types.soil.hydroponic'
+];
+
+const IRRIGATION_TYPE_KEYS = [
+    'types.irrigation.drip',
+    'types.irrigation.sprinkler',
+    'types.irrigation.soakerHose',
+    'types.irrigation.microSpray',
+    'types.irrigation.handWatering',
+    'types.irrigation.flood'
+];
 
 interface ZoneCardProps {
     zone: ChannelConfigData;
@@ -17,9 +49,13 @@ interface ZoneCardProps {
 }
 
 const ZoneCard: React.FC<ZoneCardProps> = ({ zone, currentDeficit = 0, isWatering = false, isConfigured = true, onboardingFlagsHex, onEdit, onStartJob }) => {
+    const { t } = useI18n();
     const [expanded, setExpanded] = useState(false);
     const [manualDuration, setManualDuration] = useState(10); // minutes
     const [manualMode, setManualMode] = useState<'duration' | 'volume'>('duration');
+    const plantLabel = t(PLANT_TYPE_KEYS[zone.plant_type] || 'labels.unknown');
+    const soilLabel = t(SOIL_TYPE_KEYS[zone.soil_type] || 'labels.unknown');
+    const irrigationLabel = t(IRRIGATION_TYPE_KEYS[zone.irrigation_method] || 'labels.unknown');
 
     const handleStartWatering = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -69,17 +105,17 @@ const ZoneCard: React.FC<ZoneCardProps> = ({ zone, currentDeficit = 0, isWaterin
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                                <h3 className="text-lg font-bold text-white">{zone.name || `Zone ${zone.channel_id + 1}`}</h3>
+                                <h3 className="text-lg font-bold text-white">{zone.name || `${t('zoneDetails.zone')} ${zone.channel_id + 1}`}</h3>
                                 {!isConfigured && (
                                     <IonChip color="warning" style={{ height: '20px', fontSize: '0.65rem', margin: 0 }}>
-                                        Not Configured
+                                        {t('zoneDetails.notConfigured')}
                                     </IonChip>
                                 )}
                             </div>
                             <p className="text-xs text-gray-400">
                                 {isConfigured 
-                                    ? `${PLANT_TYPES[zone.plant_type]} • ${SOIL_TYPES[zone.soil_type]}`
-                                    : 'Tap to configure this zone'
+                                    ? `${plantLabel} - ${soilLabel}`
+                                    : t('zoneDetails.tapToConfigure')
                                 }
                             </p>
                             {onboardingFlagsHex && (
@@ -94,7 +130,7 @@ const ZoneCard: React.FC<ZoneCardProps> = ({ zone, currentDeficit = 0, isWaterin
                         {isWatering && (
                             <div className="flex items-center gap-1 text-cyber-cyan animate-pulse">
                                 <IonIcon icon={water} />
-                                <span className="text-xs font-bold">ACTIVE</span>
+                                <span className="text-xs font-bold">{t('labels.active')}</span>
                             </div>
                         )}
                         <IonIcon icon={expanded ? chevronUp : chevronDown} className="text-gray-500" />
@@ -111,8 +147,8 @@ const ZoneCard: React.FC<ZoneCardProps> = ({ zone, currentDeficit = 0, isWaterin
                             />
                         </div>
                         <div className="flex justify-between text-[10px] text-gray-500 mt-1 font-mono">
-                            <span>DRY</span>
-                            <span>WET</span>
+                            <span>{t('zoneDetails.dry')}</span>
+                            <span>{t('zoneDetails.wet')}</span>
                         </div>
                     </>
                 )}
@@ -133,9 +169,9 @@ const ZoneCard: React.FC<ZoneCardProps> = ({ zone, currentDeficit = 0, isWaterin
                             {!isConfigured ? (
                                 <div className="text-center py-6">
                                     <IonIcon icon={alertCircle} className="text-4xl text-amber-500 mb-3" />
-                                    <h4 className="text-white font-bold mb-2">Zone Not Configured</h4>
+                                    <h4 className="text-white font-bold mb-2">{t('zoneDetails.zoneNotConfiguredTitle')}</h4>
                                     <p className="text-gray-400 text-sm mb-6">
-                                        Set up plant type, soil, and irrigation settings to enable smart watering.
+                                        {t('zoneDetails.zoneNotConfiguredDesc')}
                                     </p>
                                     <IonButton 
                                         expand="block"
@@ -143,7 +179,7 @@ const ZoneCard: React.FC<ZoneCardProps> = ({ zone, currentDeficit = 0, isWaterin
                                         onClick={(e) => { e.stopPropagation(); onEdit(); }}
                                     >
                                         <IonIcon slot="start" icon={settings} />
-                                        Configure Zone
+                                        {t('zoneDetails.configureZone')}
                                     </IonButton>
                                 </div>
                             ) : (
@@ -151,12 +187,12 @@ const ZoneCard: React.FC<ZoneCardProps> = ({ zone, currentDeficit = 0, isWaterin
                                     {/* Info Grid - only if configured */}
                                     <div className="grid grid-cols-2 gap-4 text-sm">
                                         <div className="bg-white/5 p-2 rounded">
-                                            <span className="text-gray-500 block text-xs">Irrigation</span>
-                                            <span className="text-white">Drip Line</span>
+                                            <span className="text-gray-500 block text-xs">{t('wizard.steps.irrigation')}</span>
+                                            <span className="text-white">{irrigationLabel}</span>
                                         </div>
                                         <div className="bg-white/5 p-2 rounded">
-                                            <span className="text-gray-500 block text-xs">Root Depth</span>
-                                            <span className="text-white">0.8m</span>
+                                            <span className="text-gray-500 block text-xs">{t('zoneDetails.rootDepth')}</span>
+                                            <span className="text-white">0.8{t('common.metersShort')}</span>
                                         </div>
                                     </div>
 
@@ -166,33 +202,33 @@ const ZoneCard: React.FC<ZoneCardProps> = ({ zone, currentDeficit = 0, isWaterin
                                         className="w-full bg-gradient-to-r from-cyber-cyan/20 to-blue-500/20 hover:from-cyber-cyan/30 hover:to-blue-500/30 border border-cyber-cyan/50 py-4 rounded-xl font-bold flex items-center justify-center gap-3 transition-all active:scale-95"
                                     >
                                         <IonIcon icon={flash} className="text-2xl text-cyber-cyan" />
-                                        <span className="text-cyber-cyan text-lg">Quick Water</span>
+                                        <span className="text-cyber-cyan text-lg">{t('zoneDetails.quickWater')}</span>
                                     </button>
 
                                     {/* Manual Override Controls */}
                                     <div className="space-y-3">
                                         <div className="flex justify-between items-center">
-                                            <h4 className="text-cyber-cyan font-bold text-sm uppercase tracking-wider">Manual Override</h4>
+                                            <h4 className="text-cyber-cyan font-bold text-sm uppercase tracking-wider">{t('zoneDetails.manualOverride')}</h4>
                                             <div className="flex bg-black/40 rounded-lg p-1">
                                                 <button 
                                                     className={`px-3 py-1 text-xs rounded ${manualMode === 'duration' ? 'bg-cyber-cyan text-black font-bold' : 'text-gray-400'}`}
                                                     onClick={() => setManualMode('duration')}
                                                 >
-                                                    Time
+                                                    {t('zoneDetails.duration')}
                                                 </button>
                                                 <button 
                                                     className={`px-3 py-1 text-xs rounded ${manualMode === 'volume' ? 'bg-cyber-cyan text-black font-bold' : 'text-gray-400'}`}
                                                     onClick={() => setManualMode('volume')}
                                                 >
-                                                    Vol
+                                                    {t('zoneDetails.volume')}
                                                 </button>
                                             </div>
                                         </div>
 
                                         <div className="px-2">
                                             <div className="flex justify-between text-xs text-gray-400 mb-2">
-                                                <span>Duration</span>
-                                                <span className="text-white font-mono text-lg">{manualDuration} min</span>
+                                                <span>{t('zoneDetails.duration')}</span>
+                                                <span className="text-white font-mono text-lg">{manualDuration} {t('common.minutes')}</span>
                                             </div>
                                             <IonRange 
                                                 min={1} 
@@ -209,13 +245,13 @@ const ZoneCard: React.FC<ZoneCardProps> = ({ zone, currentDeficit = 0, isWaterin
                                                 onClick={handleStartWatering}
                                                 className="flex-1 bg-cyber-cyan/20 hover:bg-cyber-cyan/30 text-cyber-cyan border border-cyber-cyan/50 py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
                                             >
-                                                <IonIcon icon={play} /> START
+                                                <IonIcon icon={play} /> {t('common.start')}
                                             </button>
                                             <button 
                                                 onClick={handleStopWatering}
                                                 className="flex-1 bg-cyber-rose/20 hover:bg-cyber-rose/30 text-cyber-rose border border-cyber-rose/50 py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
                                             >
-                                                <IonIcon icon={stop} /> STOP
+                                                <IonIcon icon={stop} /> {t('common.stop')}
                                             </button>
                                         </div>
                                     </div>
@@ -229,7 +265,7 @@ const ZoneCard: React.FC<ZoneCardProps> = ({ zone, currentDeficit = 0, isWaterin
                                             onClick={(e) => { e.stopPropagation(); onEdit(); }}
                                         >
                                             <IonIcon slot="start" icon={settings} />
-                                            Edit Settings
+                                            {t('zoneDetails.editSettings')}
                                         </IonButton>
                                     </div>
                                 </>

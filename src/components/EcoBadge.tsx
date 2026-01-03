@@ -1,11 +1,13 @@
 import React, { useEffect } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { BleService } from '../services/BleService';
+import { useI18n } from '../i18n';
 
 export const EcoBadge: React.FC = () => {
     const rainIntegration = useAppStore((state) => state.rainIntegration);
     const bleService = BleService.getInstance();
     const connectionState = useAppStore((state) => state.connectionState);
+    const { t, language } = useI18n();
 
     useEffect(() => {
         if (connectionState === 'connected') {
@@ -26,6 +28,9 @@ export const EcoBadge: React.FC = () => {
 
     const skippedCount = channel_skip_irrigation.filter(s => s).length;
     const isRaining = rainfall_last_24h > 0 || sensor_active;
+    const zonePluralSuffix = language === 'ro'
+        ? (skippedCount === 1 ? 'a' : 'e')
+        : (skippedCount === 1 ? '' : 's');
 
     return (
         <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-5 min-h-[72px] flex items-center justify-between mb-4 relative overflow-hidden">
@@ -40,15 +45,17 @@ export const EcoBadge: React.FC = () => {
                 </div>
                 <div>
                     <h3 className="text-white font-semibold text-sm">
-                        {isRaining ? 'Rain Detected' : 'Eco Monitor'}
+                        {isRaining ? t('ecoBadge.rainDetected') : t('ecoBadge.monitor')}
                     </h3>
                     <div className="flex items-center gap-2">
                         <span className="text-emerald-200 text-xs">
-                            {rainfall_last_24h.toFixed(1)}mm last 24h
+                            {t('ecoBadge.last24h').replace('{amount}', rainfall_last_24h.toFixed(1))}
                         </span>
                         {skippedCount > 0 && (
                             <span className="text-emerald-400 text-xs bg-emerald-500/20 px-1.5 py-0.5 rounded">
-                                {skippedCount} zones paused
+                                {t('ecoBadge.zonesPaused')
+                                    .replace('{count}', String(skippedCount))
+                                    .replace('{plural}', zonePluralSuffix)}
                             </span>
                         )}
                     </div>

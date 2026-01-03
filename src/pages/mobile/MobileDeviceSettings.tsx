@@ -1,69 +1,71 @@
 import React from 'react';
 import { useHistory } from 'react-router-dom';
+import { useI18n } from '../../i18n';
 
 const MobileDeviceSettings: React.FC = () => {
   const history = useHistory();
+  const { t } = useI18n();
 
   const settingsGroups = [
     {
-      title: 'Device Configuration',
+      title: t('mobileDeviceSettings.groups.deviceConfiguration'),
       items: [
         {
           icon: 'info',
           iconBg: 'bg-blue-500/10',
           iconColor: 'text-blue-400',
-          label: 'Device Info',
-          subtitle: 'Model, firmware, serial number',
+          label: t('mobileDeviceSettings.items.deviceInfo.label'),
+          subtitle: t('mobileDeviceSettings.items.deviceInfo.subtitle'),
           route: '/device/info',
         },
         {
           icon: 'schedule',
           iconBg: 'bg-purple-500/10',
           iconColor: 'text-purple-400',
-          label: 'Time & Location',
-          subtitle: 'Timezone, coordinates, sync',
+          label: t('mobileDeviceSettings.items.timeLocation.label'),
+          subtitle: t('mobileDeviceSettings.items.timeLocation.subtitle'),
           route: '/device/time',
         },
         {
           icon: 'valve',
           iconBg: 'bg-green-500/10',
           iconColor: 'text-green-400',
-          label: 'Master Valve',
-          subtitle: 'Configure main water supply valve',
+          label: t('mobileDeviceSettings.items.masterValve.label'),
+          subtitle: t('mobileDeviceSettings.items.masterValve.subtitle'),
           route: '/device/master-valve',
         },
         {
           icon: 'water_drop',
           iconBg: 'bg-cyan-500/10',
           iconColor: 'text-cyan-400',
-          label: 'Flow Sensor Calibration',
-          subtitle: 'Pulses per liter, accuracy test',
+          label: t('mobileDeviceSettings.items.flowCalibration.label'),
+          subtitle: t('mobileDeviceSettings.items.flowCalibration.subtitle'),
           route: '/device/flow-calibration',
         },
       ],
     },
     {
-      title: 'Power & Performance',
+      title: t('mobileDeviceSettings.groups.powerPerformance'),
       items: [
         {
           icon: 'battery_charging_full',
           iconBg: 'bg-amber-500/10',
           iconColor: 'text-amber-400',
-          label: 'Power Mode',
-          subtitle: 'Normal, Energy-Saving, Ultra-Low',
+          label: t('mobileDeviceSettings.items.powerMode.label'),
+          subtitle: t('mobileDeviceSettings.items.powerMode.subtitle'),
           route: '/device/power-mode',
         },
       ],
     },
     {
-      title: 'Maintenance',
+      title: t('mobileDeviceSettings.groups.maintenance'),
       items: [
         {
           icon: 'restart_alt',
           iconBg: 'bg-red-500/10',
           iconColor: 'text-red-400',
-          label: 'Reset Options',
-          subtitle: 'Factory reset, clear schedules',
+          label: t('mobileDeviceSettings.items.resetOptions.label'),
+          subtitle: t('mobileDeviceSettings.items.resetOptions.subtitle'),
           route: '/device/reset',
         },
       ],
@@ -81,7 +83,7 @@ const MobileDeviceSettings: React.FC = () => {
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
         <h2 className="text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-12">
-          Device Settings
+          {t('mobileDeviceSettings.title')}
         </h2>
       </div>
 

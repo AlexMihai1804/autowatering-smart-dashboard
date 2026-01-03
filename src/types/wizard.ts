@@ -3,6 +3,26 @@
 // ============================================================================
 
 import { PlantDBEntry, SoilDBEntry, IrrigationMethodEntry } from '../services/DatabaseService';
+import { translations, Language, DEFAULT_LANGUAGE } from '../i18n/translations';
+
+type Translator = (key: string) => string;
+
+const resolveTranslation = (key: string, language: Language = DEFAULT_LANGUAGE): string => {
+    const keys = key.split('.');
+    let result: unknown = translations[language];
+
+    for (const k of keys) {
+        if (result && typeof result === 'object' && k in result) {
+            result = (result as Record<string, unknown>)[k];
+        } else {
+            return key;
+        }
+    }
+
+    return typeof result === 'string' ? result : key;
+};
+
+const getTranslator = (t?: Translator): Translator => t ?? ((key) => resolveTranslation(key));
 
 // ============================================================================
 // Watering Mode - 4 options
@@ -10,17 +30,17 @@ import { PlantDBEntry, SoilDBEntry, IrrigationMethodEntry } from '../services/Da
 export type WateringMode = 'fao56_auto' | 'fao56_eco' | 'duration' | 'volume';
 
 export const WATERING_MODE_LABELS: Record<WateringMode, string> = {
-    fao56_auto: 'FAO-56 Auto',
-    fao56_eco: 'FAO-56 Eco',
-    duration: 'Duration',
-    volume: 'Volume'
+    fao56_auto: 'wizard.modes.fao56Auto',
+    fao56_eco: 'wizard.modes.fao56Eco',
+    duration: 'wizard.modes.duration',
+    volume: 'wizard.modes.volume'
 };
 
 export const WATERING_MODE_DESCRIPTIONS: Record<WateringMode, string> = {
-    fao56_auto: 'Smart calculation - 100% water needs based on plant, soil & weather',
-    fao56_eco: 'Eco mode - 70% water needs for water saving',
-    duration: 'Manual - fixed duration in minutes',
-    volume: 'Manual - fixed volume in liters'
+    fao56_auto: 'wizard.modes.fao56AutoDesc',
+    fao56_eco: 'wizard.modes.fao56EcoDesc',
+    duration: 'wizard.modes.durationDesc',
+    volume: 'wizard.modes.volumeDesc'
 };
 
 export const WATERING_MODE_ICONS: Record<WateringMode, string> = {
@@ -247,53 +267,58 @@ export function getPrevStep(currentStep: WizardStep, mode: WateringMode): Wizard
     return steps[currentIndex - 1];
 }
 
-export function createInitialZones(numChannels: number = 8): UnifiedZoneConfig[] {
+export function createInitialZones(numChannels: number = 8, language: Language = DEFAULT_LANGUAGE): UnifiedZoneConfig[] {
+    const zoneLabel = translations[language]?.zones?.zone || translations.en.zones.zone;
     return Array.from({ length: numChannels }, (_, i) => ({
         ...DEFAULT_ZONE_CONFIG,
         channelId: i,
-        name: `Zone ${i + 1}`
+        name: `${zoneLabel} ${i + 1}`
     }));
 }
 
-export function canProceedFromStep(step: WizardStep, zone: UnifiedZoneConfig): { canProceed: boolean; error?: string } {
+export function canProceedFromStep(step: WizardStep, zone: UnifiedZoneConfig, t?: Translator): { canProceed: boolean; error?: string } {
+    const translate = getTranslator(t);
     switch (step) {
         case 'mode':
             if (!zone.name.trim()) {
-                return { canProceed: false, error: 'Please enter a zone name' };
+                return { canProceed: false, error: translate('wizard.validation.zoneNameRequired') };
             }
             return { canProceed: true };
             
         case 'plant':
             if (isFao56Mode(zone.wateringMode) && !zone.plant) {
-                return { canProceed: false, error: 'Please select a plant' };
+                return { canProceed: false, error: translate('wizard.validation.plantRequired') };
             }
             return { canProceed: true };
             
         case 'soil':
             if (isFao56Mode(zone.wateringMode) && !zone.soil) {
-                return { canProceed: false, error: 'Please select a soil type' };
+                return { canProceed: false, error: translate('wizard.validation.soilRequired') };
             }
             return { canProceed: true };
             
         case 'irrigation':
             if (isFao56Mode(zone.wateringMode) && !zone.irrigationMethod) {
-                return { canProceed: false, error: 'Please select an irrigation method' };
+                return { canProceed: false, error: translate('wizard.validation.irrigationRequired') };
             }
             return { canProceed: true };
             
         case 'environment':
             if (isFao56Mode(zone.wateringMode) && !zone.location) {
-                return { canProceed: false, error: 'Please set your location' };
+                return { canProceed: false, error: translate('wizard.validation.locationRequired') };
             }
             if (zone.coverageValue <= 0) {
-                return { canProceed: false, error: 'Please enter a valid coverage value' };
+                return { canProceed: false, error: translate('wizard.validation.coverageInvalid') };
             }
             return { canProceed: true };
             
         case 'schedule':
             if (zone.schedule.enabled) {
                 if (!isFao56Mode(zone.wateringMode) && zone.schedule.value <= 0) {
-                    return { canProceed: false, error: 'Please enter a valid duration/volume' };
+                    const key = zone.wateringMode === 'duration'
+                        ? 'wizard.validation.durationRequired'
+                        : 'wizard.validation.volumeRequired';
+                    return { canProceed: false, error: translate(key) };
                 }
             }
             return { canProceed: true };

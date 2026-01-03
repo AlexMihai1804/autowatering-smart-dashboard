@@ -3,14 +3,17 @@ import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { useKnownDevices } from '../../hooks/useKnownDevices';
 import { BleService } from '../../services/BleService';
+import { useI18n } from '../../i18n';
 
 const MobileWelcome: React.FC = () => {
   const history = useHistory();
   const { connectionState, onboardingState } = useAppStore();
   const { devices, lastDevice, isLoaded, clearLastDevice } = useKnownDevices();
   const bleService = BleService.getInstance();
+  const { t, language } = useI18n();
   const [isAutoConnecting, setIsAutoConnecting] = useState(false);
   const [autoConnectFailed, setAutoConnectFailed] = useState(false);
+  const locale = language === 'ro' ? 'ro-RO' : 'en-US';
 
   // Auto-redirect if connected.
   // IMPORTANT: BLE sets connectionState='connected' before Phase 2 reads onboarding status.
@@ -99,10 +102,10 @@ const MobileWelcome: React.FC = () => {
           {/* Text Content */}
           <div className="text-center space-y-4 max-w-xs mx-auto z-10">
             <h1 className="text-4xl font-bold tracking-tight text-white">
-              AutoWatering
+              {t('mobileWelcome.appName')}
             </h1>
             <p className="text-gray-400 text-lg font-normal leading-relaxed">
-              Smart irrigation for a greener, healthier tomorrow.
+              {t('mobileWelcome.tagline')}
             </p>
           </div>
         </div>
@@ -113,14 +116,16 @@ const MobileWelcome: React.FC = () => {
           {isAutoConnecting && lastDevice && (
             <div className="flex flex-col items-center gap-3 py-4">
               <div className="w-8 h-8 rounded-full border-2 border-mobile-primary border-t-transparent animate-spin"></div>
-              <p className="text-sm text-gray-400">Connecting to {lastDevice.name}...</p>
+              <p className="text-sm text-gray-400">
+                {t('mobileWelcome.connectingTo').replace('{name}', lastDevice.name)}
+              </p>
             </div>
           )}
 
           {/* Saved devices list */}
           {!isAutoConnecting && devices.length > 0 && (
             <div className="space-y-3">
-              <p className="text-xs text-gray-500 uppercase tracking-wider text-center font-semibold">Saved Devices</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wider text-center font-semibold">{t('mobileWelcome.savedDevices')}</p>
               {devices.map((device) => (
                 <button
                   key={device.id}
@@ -132,7 +137,9 @@ const MobileWelcome: React.FC = () => {
                   </div>
                   <div className="flex-1 text-left">
                     <p className="text-base font-semibold text-white">{device.name}</p>
-                    <p className="text-xs text-gray-500">Last connected {new Date(device.lastConnected).toLocaleDateString()}</p>
+                    <p className="text-xs text-gray-500">
+                      {t('mobileWelcome.lastConnected').replace('{date}', new Date(device.lastConnected).toLocaleDateString(locale))}
+                    </p>
                   </div>
                   <span className="material-symbols-outlined text-gray-400 group-hover:text-mobile-primary transition-colors">chevron_right</span>
                 </button>
@@ -152,13 +159,13 @@ const MobileWelcome: React.FC = () => {
           >
             <span className="relative flex items-center gap-2">
               <span className="material-symbols-outlined text-[20px]">add</span>
-              {devices.length > 0 ? 'Add New Device' : 'Set Up New Device'}
+              {devices.length > 0 ? t('mobileWelcome.addNewDevice') : t('mobileWelcome.setupNewDevice')}
             </span>
           </button>
 
           {/* Terms / Legal */}
           <p className="text-center text-xs text-gray-600 mt-4 px-8">
-            By continuing, you agree to our Terms of Service and Privacy Policy.
+            {t('mobileWelcome.terms')}
           </p>
         </div>
       </div>

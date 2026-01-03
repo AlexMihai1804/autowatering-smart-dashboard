@@ -1,16 +1,20 @@
-import React from 'react';
+﻿import React from 'react';
+import { IonIcon } from '@ionic/react';
 import { useLocation, useHistory } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { home, water, statsChart, settings } from 'ionicons/icons';
+import { useI18n } from '../../i18n';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
   const history = useHistory();
+  const { t } = useI18n();
 
   const navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: '📊' },
-    { path: '/zones', label: 'Zones', icon: '🌱' },
-    { path: '/history', label: 'History', icon: '📈' },
-    { path: '/settings', label: 'Settings', icon: '⚙️' },
+    { path: '/dashboard', label: t('navigation.home'), icon: home },
+    { path: '/zones', label: t('navigation.zones'), icon: water },
+    { path: '/history', label: t('navigation.history'), icon: statsChart },
+    { path: '/settings', label: t('navigation.settings'), icon: settings },
   ];
 
   return (
@@ -33,7 +37,7 @@ const Sidebar: React.FC = () => {
                 ${isActive ? 'bg-cyber-cyan/20 text-cyber-cyan border border-cyber-cyan/30' : 'text-gray-400 hover:bg-white/5'}
               `}
             >
-              <span className="mr-3 text-xl">{item.icon}</span>
+              <IonIcon icon={item.icon} className="mr-3 text-xl" />
               <span className="font-medium">{item.label}</span>
               {isActive && (
                 <motion.div
@@ -48,7 +52,7 @@ const Sidebar: React.FC = () => {
 
       <div className="mt-auto pt-4 border-t border-white/10">
         <div className="text-xs text-gray-500">
-          System Status: <span className="text-cyber-emerald">ONLINE</span>
+          {t('labels.status')}: <span className="text-cyber-emerald">{t('dashboard.online')}</span>
         </div>
       </div>
     </div>

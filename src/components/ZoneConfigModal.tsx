@@ -73,6 +73,7 @@ import {
 import { LocationPicker } from './LocationPicker';
 import { TimePicker } from './TimePicker';
 import { LocationData } from '../types/wizard';
+import { useI18n } from '../i18n';
 
 // ============================================================================
 // Types
@@ -131,14 +132,14 @@ interface ZoneConfigModalProps {
 // Constants
 // ============================================================================
 
-const WATERING_MODES: { mode: WateringModeType; label: string; description: string; icon: string; color: string }[] = [
-    { mode: 'fao56_auto', label: 'FAO-56 Auto', description: 'Full automated calculation with weather compensation', icon: leafOutline, color: 'success' },
-    { mode: 'fao56_eco', label: 'FAO-56 Eco', description: 'Water-saving mode (70% of standard)', icon: waterOutline, color: 'tertiary' },
-    { mode: 'duration', label: 'Duration', description: 'Simple time-based watering', icon: timerOutline, color: 'primary' },
-    { mode: 'volume', label: 'Volume', description: 'Flow-based watering with target volume', icon: speedometerOutline, color: 'secondary' }
-];
+const getWateringModes = (t: (key: string) => string): { mode: WateringModeType; label: string; description: string; icon: string; color: string }[] => ([
+    { mode: 'fao56_auto', label: t('wizard.modes.fao56Auto'), description: t('wizard.modes.fao56AutoDesc'), icon: leafOutline, color: 'success' },
+    { mode: 'fao56_eco', label: t('wizard.modes.fao56Eco'), description: t('wizard.modes.fao56EcoDesc'), icon: waterOutline, color: 'tertiary' },
+    { mode: 'duration', label: t('wizard.modes.duration'), description: t('wizard.modes.durationDesc'), icon: timerOutline, color: 'primary' },
+    { mode: 'volume', label: t('wizard.modes.volume'), description: t('wizard.modes.volumeDesc'), icon: speedometerOutline, color: 'secondary' }
+]);
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
 // ============================================================================
 // Main Component
@@ -147,6 +148,21 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, channelId, mode }) => {
     const { zones, onboardingState, plantDb, soilDb, irrigationMethodDb } = useAppStore();
     const bleService = BleService.getInstance();
+    const { t, language } = useI18n();
+    const percentUnit = t('common.percent');
+    const wateringModes = useMemo(() => getWateringModes(t), [t]);
+    const plantCategoryLabels = useMemo(() => ({
+        Agriculture: t('plantCategories.agriculture'),
+        Gardening: t('plantCategories.gardening'),
+        Landscaping: t('plantCategories.landscaping'),
+        Indoor: t('plantCategories.indoor'),
+        Succulent: t('plantCategories.succulent'),
+        Fruit: t('plantCategories.fruit'),
+        Vegetable: t('plantCategories.vegetable'),
+        Herb: t('plantCategories.herb'),
+        Lawn: t('plantCategories.lawn'),
+        Shrub: t('plantCategories.shrub'),
+    }), [t]);
     
     const existingZone = zones.find(z => z.channel_id === channelId);
 
@@ -166,7 +182,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
     // Zone config state
     const [zoneConfig, setZoneConfig] = useState<ZoneConfig>(() => ({
         channel_id: channelId,
-        name: existingZone?.name || `Zone ${channelId + 1}`,
+        name: existingZone?.name || `${t('zoneDetails.zone')} ${channelId + 1}`,
         enabled: true,
         wateringMode: 'fao56_auto',
         plant: null,
@@ -228,7 +244,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
             setZoneConfig(prev => ({
                 ...prev,
                 channel_id: channelId,
-                name: zone?.name || `Zone ${channelId + 1}`,
+                name: zone?.name || `${t('zoneDetails.zone')} ${channelId + 1}`,
                 plant: existingPlant,
                 soil: existingSoil,
                 irrigationMethod: existingIrrigation,
@@ -239,7 +255,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                     : (zone?.coverage as any)?.area_m2 ?? 10
             }));
         }
-    }, [isOpen, channelId, zones, plantDb, soilDb, irrigationMethodDb]);
+    }, [isOpen, channelId, zones, plantDb, soilDb, irrigationMethodDb, t]);
 
     useEffect(() => {
         const isFao = zoneConfig.wateringMode === 'fao56_auto' || zoneConfig.wateringMode === 'fao56_eco';
@@ -330,6 +346,13 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
     // Helpers
     // ========================================================================
     
+    const getPlantName = (plant: PlantDBEntry) => {
+        if (language === 'ro' && plant.common_name_ro) {
+            return plant.common_name_ro;
+        }
+        return plant.common_name_en;
+    };
+
     const updateZoneConfig = (updates: Partial<ZoneConfig>) => {
         setZoneConfig(prev => ({ ...prev, ...updates }));
     };
@@ -497,8 +520,8 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                 <div className="w-20 h-20 bg-cyber-cyan/20 rounded-full flex items-center justify-center mx-auto mb-4">
                     <IonIcon icon={waterOutline} className="text-4xl text-cyber-cyan" />
                 </div>
-                <h2 className="text-2xl font-bold text-white">{existingZone?.name || `Zone ${channelId + 1}`}</h2>
-                <p className="text-gray-400">Start manual watering</p>
+                <h2 className="text-2xl font-bold text-white">{existingZone?.name || `${t('zoneDetails.zone')} ${channelId + 1}`}</h2>
+                <p className="text-gray-400">{t('zoneDetails.startManualWatering')}</p>
             </div>
 
             {/* Mode Toggle */}
@@ -509,11 +532,11 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
             >
                 <IonSegmentButton value="duration">
                     <IonIcon icon={timerOutline} />
-                    <IonLabel>Duration</IonLabel>
+                    <IonLabel>{t('zoneDetails.duration')}</IonLabel>
                 </IonSegmentButton>
                 <IonSegmentButton value="volume">
                     <IonIcon icon={speedometerOutline} />
-                    <IonLabel>Volume</IonLabel>
+                    <IonLabel>{t('zoneDetails.volume')}</IonLabel>
                 </IonSegmentButton>
             </IonSegment>
 
@@ -522,7 +545,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                 <IonCardContent>
                     <div className="text-center mb-4">
                         <span className="text-5xl font-bold text-cyber-cyan">{jobValue}</span>
-                        <span className="text-xl text-gray-400 ml-2">{jobMode === 'duration' ? 'min' : 'L'}</span>
+                        <span className="text-xl text-gray-400 ml-2">{jobMode === 'duration' ? t('common.minutes') : t('common.liters')}</span>
                     </div>
                     <IonRange
                         min={1}
@@ -548,7 +571,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                     {saving ? <IonSpinner name="crescent" /> : (
                         <>
                             <IonIcon slot="start" icon={playOutline} />
-                            START
+                            {t('common.start')}
                         </>
                     )}
                 </IonButton>
@@ -560,7 +583,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                     disabled={saving}
                 >
                     <IonIcon slot="start" icon={stopOutline} />
-                    STOP
+                    {t('common.stop')}
                 </IonButton>
             </div>
         </div>
@@ -572,12 +595,12 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
     
     const renderEditMode = () => {
         const sections = [
-            { id: 'general', label: 'General', icon: settingsOutline },
-            { id: 'watering', label: 'Watering Mode', icon: waterOutline },
-            { id: 'plant', label: 'Plant & Soil', icon: leafOutline },
-            { id: 'coverage', label: 'Coverage & Sun', icon: sunnyOutline },
-            { id: 'advanced', label: 'Advanced', icon: timerOutline },
-            { id: 'schedule', label: 'Schedule', icon: calendarOutline }
+            { id: 'general', label: t('zoneDetails.sectionGeneral'), icon: settingsOutline },
+            { id: 'watering', label: t('zoneDetails.sectionWateringMode'), icon: waterOutline },
+            { id: 'plant', label: t('zoneDetails.sectionPlantSoil'), icon: leafOutline },
+            { id: 'coverage', label: t('zoneDetails.sectionCoverageSun'), icon: sunnyOutline },
+            { id: 'advanced', label: t('zoneDetails.sectionAdvanced'), icon: timerOutline },
+            { id: 'schedule', label: t('zoneDetails.sectionSchedule'), icon: calendarOutline }
         ];
 
         return (
@@ -589,8 +612,8 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                             <div className="flex items-center gap-3">
                                 <IonIcon icon={checkmarkCircle} color="success" className="text-2xl" />
                                 <div>
-                                    <p className="text-cyber-emerald font-bold">FAO-56 Ready</p>
-                                    <p className="text-gray-400 text-sm">Auto calculation active</p>
+                                    <p className="text-cyber-emerald font-bold">{t('wizard.status.faoReadyTitle')}</p>
+                                    <p className="text-gray-400 text-sm">{t('wizard.status.faoReadyDesc')}</p>
                                 </div>
                             </div>
                         </IonCardContent>
@@ -609,18 +632,18 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                         <IonCardContent>
                             {section.id === 'general' && (
                                 <IonItem lines="none" className="bg-transparent">
-                                    <IonLabel position="stacked">Zone Name</IonLabel>
+                                    <IonLabel position="stacked">{t('wizard.zone.namePrompt')}</IonLabel>
                                     <IonInput
                                         value={zoneConfig.name}
                                         onIonInput={e => updateZoneConfig({ name: e.detail.value || '' })}
-                                        placeholder="Enter zone name"
+                                        placeholder={t('wizard.zone.namePlaceholder')}
                                     />
                                 </IonItem>
                             )}
                             
                             {section.id === 'watering' && (
                                 <div className="space-y-2">
-                                    {WATERING_MODES.map(({ mode, label, icon, color }) => (
+                                    {wateringModes.map(({ mode, label, icon, color }) => (
                                         <IonItem 
                                             key={mode} 
                                             button 
@@ -641,19 +664,19 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                             {section.id === 'plant' && (
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-gray-400">Plant</span>
-                                        <span className="text-white">{zoneConfig.plant?.common_name_en || 'Not set'}</span>
+                                        <span className="text-gray-400">{t('wizard.summary.plant')}</span>
+                                        <span className="text-white">{zoneConfig.plant ? getPlantName(zoneConfig.plant) : t('common.notAvailable')}</span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-gray-400">Soil</span>
-                                        <span className="text-white">{zoneConfig.soil?.texture || 'Not set'}</span>
+                                        <span className="text-gray-400">{t('wizard.summary.soil')}</span>
+                                        <span className="text-white">{zoneConfig.soil?.texture || t('common.notAvailable')}</span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-gray-400">Irrigation</span>
-                                        <span className="text-white">{zoneConfig.irrigationMethod?.name || 'Not set'}</span>
+                                        <span className="text-gray-400">{t('wizard.summary.irrigation')}</span>
+                                        <span className="text-white">{zoneConfig.irrigationMethod?.name || t('common.notAvailable')}</span>
                                     </div>
                                     <IonButton expand="block" fill="outline" size="small" onClick={() => setStep(1)}>
-                                        Change Plant/Soil
+                                        {t('zoneDetails.changePlantSoil')}
                                     </IonButton>
                                 </div>
                             )}
@@ -661,19 +684,19 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                             {section.id === 'coverage' && (
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-3">
-                                        <span className="text-gray-400">Coverage:</span>
+                                        <span className="text-gray-400">{t('wizard.summary.coverage')}:</span>
                                         <IonInput
                                             type="number"
                                             value={zoneConfig.coverageValue}
                                             onIonInput={e => updateZoneConfig({ coverageValue: parseFloat(e.detail.value || '10') })}
                                             style={{ maxWidth: '80px' }}
                                         />
-                                        <span className="text-gray-400">{zoneConfig.coverageType === 'area' ? 'm²' : 'plants'}</span>
+                                        <span className="text-gray-400">{zoneConfig.coverageType === 'area' ? t('zoneWizard.coverage.areaUnit') : t('zoneWizard.coverage.plantsUnit')}</span>
                                     </div>
                                     <div>
                                         <div className="flex justify-between mb-1">
-                                            <span className="text-gray-400">Sun Exposure</span>
-                                            <span className="text-white">{zoneConfig.sunExposure}%</span>
+                                            <span className="text-gray-400">{t('wizard.summary.sunExposure')}</span>
+                                            <span className="text-white">{zoneConfig.sunExposure}{percentUnit}</span>
                                         </div>
                                         <IonRange
                                             min={0}
@@ -689,21 +712,21 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                             {section.id === 'advanced' && (
                                 <div className="space-y-4">
                                     <IonItem lines="none" className="bg-transparent">
-                                        <IonLabel>Cycle & Soak</IonLabel>
+                                        <IonLabel>{t('cycleSoak.title')}</IonLabel>
                                         <IonToggle
                                             checked={zoneConfig.enableCycleSoak}
                                             onIonChange={e => updateZoneConfig({ enableCycleSoak: e.detail.checked })}
                                         />
                                     </IonItem>
                                     <div className="flex items-center gap-3">
-                                        <span className="text-gray-400">Max Volume:</span>
+                                        <span className="text-gray-400">{t('maxVolume.title')}:</span>
                                         <IonInput
                                             type="number"
                                             value={zoneConfig.maxVolumeLimit}
                                             onIonInput={e => updateZoneConfig({ maxVolumeLimit: parseInt(e.detail.value || '50') })}
                                             style={{ maxWidth: '80px' }}
                                         />
-                                        <span className="text-gray-400">L</span>
+                                        <span className="text-gray-400">{t('common.liters')}</span>
                                     </div>
                                 </div>
                             )}
@@ -711,7 +734,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                             {section.id === 'schedule' && (
                                 <div className="space-y-4">
                                     <IonItem lines="none" className="bg-transparent">
-                                        <IonLabel>Schedule Enabled</IonLabel>
+                                        <IonLabel>{t('zoneDetails.scheduleEnabled')}</IonLabel>
                                         <IonToggle
                                             checked={scheduleConfig.enabled}
                                             onIonChange={e => setScheduleConfig(prev => ({ ...prev, enabled: e.detail.checked }))}
@@ -723,22 +746,22 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                                 value={scheduleConfig.scheduleType}
                                                 onIonChange={e => setScheduleConfig(prev => ({ ...prev, scheduleType: e.detail.value as 'daily' | 'periodic' | 'auto' }))}
                                             >
-                                                <IonSegmentButton value="daily"><IonLabel>Daily</IonLabel></IonSegmentButton>
-                                                <IonSegmentButton value="periodic"><IonLabel>Interval</IonLabel></IonSegmentButton>
+                                                <IonSegmentButton value="daily"><IonLabel>{t('wizard.schedule.daily')}</IonLabel></IonSegmentButton>
+                                                <IonSegmentButton value="periodic"><IonLabel>{t('wizard.schedule.periodic')}</IonLabel></IonSegmentButton>
                                                 {(zoneConfig.wateringMode === 'fao56_auto' || zoneConfig.wateringMode === 'fao56_eco') && (
-                                                    <IonSegmentButton value="auto"><IonLabel>FAO-56</IonLabel></IonSegmentButton>
+                                                    <IonSegmentButton value="auto"><IonLabel>{t('zoneDetails.scheduleFao56')}</IonLabel></IonSegmentButton>
                                                 )}
                                             </IonSegment>
 
                                             {scheduleConfig.scheduleType === 'daily' && (
                                                 <div className="flex flex-wrap gap-1 justify-center">
-                                                    {DAYS.map((day, i) => (
+                                                    {DAY_KEYS.map((dayKey, i) => (
                                                         <IonChip
-                                                            key={day}
+                                                            key={dayKey}
                                                             color={(scheduleConfig.daysMask & (1 << i)) ? 'primary' : 'medium'}
                                                             onClick={() => setScheduleConfig(prev => ({ ...prev, daysMask: prev.daysMask ^ (1 << i) }))}
                                                         >
-                                                            {day}
+                                                            {t(`wizard.summary.days.${dayKey}`)}
                                                         </IonChip>
                                                     ))}
                                                 </div>
@@ -746,7 +769,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
 
                                             {scheduleConfig.scheduleType === 'periodic' && (
                                                 <div className="flex items-center justify-center gap-2">
-                                                    <span className="text-gray-400">Every</span>
+                                                    <span className="text-gray-400">{t('zoneDetails.scheduleEvery')}</span>
                                                     <IonInput
                                                         type="number"
                                                         min={1}
@@ -755,12 +778,12 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                                         onIonInput={e => setScheduleConfig(prev => ({ ...prev, daysMask: parseInt(e.detail.value || '2') }))}
                                                         style={{ maxWidth: '70px' }}
                                                     />
-                                                    <span className="text-gray-400">days</span>
+                                                    <span className="text-gray-400">{t('zoneDetails.scheduleDays')}</span>
                                                 </div>
                                             )}
 
                                             {scheduleConfig.scheduleType === 'auto' && (
-                                                <p className="text-center text-gray-400 text-sm">FAO-56 Smart ruleaza zilnic la ora setata.</p>
+                                                <p className="text-center text-gray-400 text-sm">{t('zoneDetails.scheduleAutoNote')}</p>
                                             )}
 
                                             <div className="flex items-center justify-center gap-3">
@@ -784,7 +807,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                             </div>
 
                                             <IonItem lines="none" className="bg-transparent">
-                                                <IonLabel>Solar timing</IonLabel>
+                                                <IonLabel>{t('wizard.schedule.solarTime')}</IonLabel>
                                                 <IonToggle
                                                     checked={scheduleConfig.useSolarTiming}
                                                     onIonChange={e => setScheduleConfig(prev => ({ ...prev, useSolarTiming: e.detail.checked }))}
@@ -796,8 +819,8 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                                         value={scheduleConfig.solarEvent}
                                                         onIonChange={e => setScheduleConfig(prev => ({ ...prev, solarEvent: e.detail.value as 'sunrise' | 'sunset' }))}
                                                     >
-                                                        <IonSelectOption value="sunrise">Rasarit</IonSelectOption>
-                                                        <IonSelectOption value="sunset">Apus</IonSelectOption>
+                                                        <IonSelectOption value="sunrise">{t('wizard.schedule.sunrise')}</IonSelectOption>
+                                                        <IonSelectOption value="sunset">{t('wizard.schedule.sunset')}</IonSelectOption>
                                                     </IonSelect>
                                                     <IonInput
                                                         type="number"
@@ -805,7 +828,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                                         max={120}
                                                         value={scheduleConfig.solarOffsetMinutes}
                                                         onIonInput={e => setScheduleConfig(prev => ({ ...prev, solarOffsetMinutes: parseInt(e.detail.value || '0') }))}
-                                                        placeholder="Offset minutes"
+                                                        placeholder={t('wizard.schedule.offsetMinutes')}
                                                     />
                                                 </div>
                                             )}
@@ -819,7 +842,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
 
                 {/* Save Button */}
                 <IonButton expand="block" color="success" onClick={handleSaveConfig} disabled={saving}>
-                    {saving ? <IonSpinner name="crescent" /> : 'Save Changes'}
+                    {saving ? <IonSpinner name="crescent" /> : t('common.save')}
                 </IonButton>
             </div>
         );
@@ -830,18 +853,32 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
     // ========================================================================
     
     const setupSteps = isFao56Mode 
-        ? ['Mode', 'Plant', 'Soil', 'Coverage', 'Location', 'Schedule']
-        : ['Mode', 'Settings', 'Schedule'];
+        ? [
+            t('wizard.steps.mode'),
+            t('wizard.steps.plant'),
+            t('wizard.steps.soil'),
+            t('wizard.steps.environment'),
+            t('wizard.steps.location'),
+            t('wizard.steps.schedule')
+        ]
+        : [
+            t('wizard.steps.mode'),
+            t('wizard.steps.settings'),
+            t('wizard.steps.schedule')
+        ];
     
     const renderSetupMode = () => {
         const progress = (step + 1) / setupSteps.length;
+        const stepProgress = t('zoneDetails.stepProgress')
+            .replace('{current}', String(step + 1))
+            .replace('{total}', String(setupSteps.length));
 
         return (
             <div className="p-4 space-y-4">
                 {/* Progress */}
                 <div className="mb-4">
                     <div className="flex justify-between text-xs text-gray-400 mb-1">
-                        <span>Step {step + 1} of {setupSteps.length}</span>
+                        <span>{stepProgress}</span>
                         <span>{setupSteps[step]}</span>
                     </div>
                     <IonProgressBar value={progress} color="secondary" />
@@ -853,18 +890,18 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                         <IonCard className="glass-panel">
                             <IonCardContent>
                                 <IonItem lines="none" className="bg-transparent">
-                                    <IonLabel position="stacked">Zone Name</IonLabel>
+                                    <IonLabel position="stacked">{t('wizard.zone.namePrompt')}</IonLabel>
                                     <IonInput
                                         value={zoneConfig.name}
                                         onIonInput={e => updateZoneConfig({ name: e.detail.value || '' })}
-                                        placeholder="e.g., Front Garden"
+                                        placeholder={t('wizard.zone.namePlaceholder')}
                                     />
                                 </IonItem>
                             </IonCardContent>
                         </IonCard>
                         
-                        <p className="text-gray-400 px-2">Select watering mode:</p>
-                        {WATERING_MODES.map(({ mode, label, description, icon, color }) => (
+                        <p className="text-gray-400 px-2">{t('wizard.steps.modeDesc')}</p>
+                        {wateringModes.map(({ mode, label, description, icon, color }) => (
                             <IonCard
                                 key={mode}
                                 button
@@ -892,49 +929,49 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                 {step === 1 && isFao56Mode && (
                     <IonCard className="glass-panel">
                         <IonCardHeader>
-                            <div className="flex items-center gap-3">
-                                <IonIcon icon={leafOutline} className="text-2xl text-green-400" />
-                                <IonLabel className="text-lg font-bold text-white">Plant Type</IonLabel>
-                            </div>
-                        </IonCardHeader>
-                        <IonCardContent>
-                            {zoneConfig.plant ? (
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-white font-medium">{zoneConfig.plant.common_name_en}</p>
-                                        <p className="text-gray-400 text-sm">{zoneConfig.plant.scientific_name}</p>
-                                    </div>
-                                    <IonButton fill="clear" size="small" onClick={() => updateZoneConfig({ plant: null })}>
-                                        Change
-                                    </IonButton>
+                                <div className="flex items-center gap-3">
+                                    <IonIcon icon={leafOutline} className="text-2xl text-green-400" />
+                                    <IonLabel className="text-lg font-bold text-white">{t('wizard.steps.plant')}</IonLabel>
                                 </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    <div className="flex flex-wrap gap-2">
-                                        <IonChip
-                                            color={selectedCategory === 'all' ? 'primary' : 'medium'}
-                                            onClick={() => setSelectedCategory('all')}
-                                        >
-                                            All
-                                        </IonChip>
-                                        {PLANT_CATEGORIES.map(cat => (
-                                            <IonChip
-                                                key={cat}
-                                                color={selectedCategory === cat ? 'primary' : 'medium'}
-                                                onClick={() => setSelectedCategory(cat)}
-                                            >
-                                                {cat}
-                                            </IonChip>
-                                        ))}
+                            </IonCardHeader>
+                            <IonCardContent>
+                                {zoneConfig.plant ? (
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-white font-medium">{getPlantName(zoneConfig.plant)}</p>
+                                            <p className="text-gray-400 text-sm">{zoneConfig.plant.scientific_name}</p>
+                                        </div>
+                                        <IonButton fill="clear" size="small" onClick={() => updateZoneConfig({ plant: null })}>
+                                            {t('common.change')}
+                                        </IonButton>
                                     </div>
-                                    <IonSearchbar
-                                        value={searchText}
-                                        onIonInput={e => setSearchText(e.detail.value || '')}
-                                        placeholder="Search plants..."
-                                    />
-                                    <div className="max-h-64 overflow-y-auto">
-                                        <IonList className="bg-transparent">
-                                            {filteredPlants.map(plant => (
+                                ) : (
+                                    <div className="space-y-3">
+                                        <div className="flex flex-wrap gap-2">
+                                            <IonChip
+                                                color={selectedCategory === 'all' ? 'primary' : 'medium'}
+                                                onClick={() => setSelectedCategory('all')}
+                                            >
+                                                {t('wizard.plant.allCategories')}
+                                            </IonChip>
+                                            {PLANT_CATEGORIES.map(cat => (
+                                                <IonChip
+                                                    key={cat}
+                                                    color={selectedCategory === cat ? 'primary' : 'medium'}
+                                                    onClick={() => setSelectedCategory(cat)}
+                                                >
+                                                    {plantCategoryLabels[cat] || cat}
+                                                </IonChip>
+                                            ))}
+                                        </div>
+                                        <IonSearchbar
+                                            value={searchText}
+                                            onIonInput={e => setSearchText(e.detail.value || '')}
+                                            placeholder={t('wizard.plant.searchPlaceholder')}
+                                        />
+                                        <div className="max-h-64 overflow-y-auto">
+                                            <IonList className="bg-transparent">
+                                                {filteredPlants.map(plant => (
                                                 <IonItem
                                                     key={plant.id}
                                                     button
@@ -942,8 +979,8 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                                     lines="inset"
                                                 >
                                                     <IonLabel>
-                                                        <h2 className="text-white">{plant.common_name_en}</h2>
-                                                        <p className="text-gray-400 text-sm">{plant.category}</p>
+                                                        <h2 className="text-white">{getPlantName(plant)}</h2>
+                                                        <p className="text-gray-400 text-sm">{plantCategoryLabels[plant.category] || plant.category}</p>
                                                     </IonLabel>
                                                 </IonItem>
                                             ))}
@@ -959,7 +996,9 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                     <IonCard className="glass-panel">
                         <IonCardHeader>
                             <IonLabel className="text-lg font-bold text-white">
-                                {zoneConfig.wateringMode === 'duration' ? 'Duration' : 'Volume'} Setting
+                                {zoneConfig.wateringMode === 'duration'
+                                    ? t('wizard.manual.durationTitle')
+                                    : t('wizard.manual.volumeTitle')}
                             </IonLabel>
                         </IonCardHeader>
                         <IonCardContent>
@@ -968,7 +1007,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                     {zoneConfig.wateringMode === 'duration' ? zoneConfig.durationMinutes : zoneConfig.volumeLiters}
                                 </span>
                                 <span className="text-xl text-gray-400 ml-2">
-                                    {zoneConfig.wateringMode === 'duration' ? 'min' : 'L'}
+                                    {zoneConfig.wateringMode === 'duration' ? t('common.minutes') : t('common.liters')}
                                 </span>
                             </div>
                             <IonRange
@@ -993,7 +1032,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                     <div className="space-y-4">
                         <IonCard className="glass-panel">
                             <IonCardHeader>
-                                <IonLabel className="font-bold text-white">Soil Type</IonLabel>
+                                <IonLabel className="font-bold text-white">{t('wizard.soil.title')}</IonLabel>
                             </IonCardHeader>
                             <IonCardContent>
                                 <IonList className="bg-transparent">
@@ -1007,7 +1046,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                         >
                                             <IonLabel>
                                                 <h2 className="text-white">{soil.texture}</h2>
-                                                <p className="text-gray-400 text-sm">{soil.infiltration_rate_mm_h} mm/h</p>
+                                                <p className="text-gray-400 text-sm">{soil.infiltration_rate_mm_h} {t('common.mmPerHour')}</p>
                                             </IonLabel>
                                             {zoneConfig.soil?.id === soil.id && (
                                                 <IonIcon icon={checkmarkCircle} color="success" slot="end" />
@@ -1020,7 +1059,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                         
                         <IonCard className="glass-panel">
                             <IonCardHeader>
-                                <IonLabel className="font-bold text-white">Irrigation Method</IonLabel>
+                                <IonLabel className="font-bold text-white">{t('wizard.irrigationMethod.title')}</IonLabel>
                             </IonCardHeader>
                             <IonCardContent>
                                 <IonList className="bg-transparent">
@@ -1034,7 +1073,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                         >
                                             <IonLabel>
                                                 <h2 className="text-white">{method.name}</h2>
-                                                <p className="text-gray-400 text-sm">{method.efficiency_pct}% efficiency</p>
+                                                <p className="text-gray-400 text-sm">{method.efficiency_pct}{t('common.percent')} {t('wizard.irrigationMethod.efficiencyLabel')}</p>
                                             </IonLabel>
                                             {zoneConfig.irrigationMethod?.id === method.id && (
                                                 <IonIcon icon={checkmarkCircle} color="success" slot="end" />
@@ -1054,15 +1093,15 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                     <div className="space-y-4">
                         <IonCard className="glass-panel">
                             <IonCardHeader>
-                                <IonLabel className="font-bold text-white">Coverage Area</IonLabel>
+                            <IonLabel className="font-bold text-white">{t('zoneDetails.coverageArea')}</IonLabel>
                             </IonCardHeader>
                             <IonCardContent>
                                 <IonSegment
                                     value={zoneConfig.coverageType}
                                     onIonChange={e => updateZoneConfig({ coverageType: e.detail.value as 'area' | 'plants' })}
                                 >
-                                    <IonSegmentButton value="area">Area (m²)</IonSegmentButton>
-                                    <IonSegmentButton value="plants">Plant Count</IonSegmentButton>
+                                    <IonSegmentButton value="area">{t('zoneDetails.coverageByArea')}</IonSegmentButton>
+                                    <IonSegmentButton value="plants">{t('zoneDetails.coverageByPlants')}</IonSegmentButton>
                                 </IonSegment>
                                 <div className="flex items-center gap-3 mt-4">
                                     <IonInput
@@ -1071,14 +1110,14 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                         onIonInput={e => updateZoneConfig({ coverageValue: parseFloat(e.detail.value || '10') })}
                                         style={{ maxWidth: '100px' }}
                                     />
-                                    <span className="text-gray-400">{zoneConfig.coverageType === 'area' ? 'm²' : 'plants'}</span>
+                                    <span className="text-gray-400">{zoneConfig.coverageType === 'area' ? t('zoneWizard.coverage.areaUnit') : t('zoneWizard.coverage.plantsUnit')}</span>
                                 </div>
                             </IonCardContent>
                         </IonCard>
 
                         <IonCard className="glass-panel">
                             <IonCardHeader>
-                                <IonLabel className="font-bold text-white">Sun Exposure</IonLabel>
+                            <IonLabel className="font-bold text-white">{t('wizard.summary.sunExposure')}</IonLabel>
                             </IonCardHeader>
                             <IonCardContent>
                                 <IonRange
@@ -1088,12 +1127,12 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                     value={zoneConfig.sunExposure}
                                     onIonInput={e => updateZoneConfig({ sunExposure: e.detail.value as number })}
                                     pin
-                                    pinFormatter={(v: number) => `${v}%`}
+                                    pinFormatter={(v: number) => `${v}${percentUnit}`}
                                 >
                                     <IonIcon slot="start" icon={cloudOutline} className="text-gray-400" />
                                     <IonIcon slot="end" icon={sunnyOutline} className="text-yellow-400" />
                                 </IonRange>
-                                <p className="text-center text-gray-400 mt-2">{zoneConfig.sunExposure}% direct sunlight</p>
+                                <p className="text-center text-gray-400 mt-2">{t('zoneDetails.directSunlight').replace('{percent}', String(zoneConfig.sunExposure))}</p>
                             </IonCardContent>
                         </IonCard>
 
@@ -1103,7 +1142,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <IonIcon icon={pauseCircleOutline} className="text-xl text-purple-400" />
-                                        <IonLabel className="font-bold text-white">Cycle & Soak</IonLabel>
+                                        <IonLabel className="font-bold text-white">{t('cycleSoak.title')}</IonLabel>
                                     </div>
                                     <IonToggle
                                         checked={zoneConfig.enableCycleSoak}
@@ -1111,13 +1150,13 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                     />
                                 </div>
                                 <IonNote className="text-xs text-gray-400">
-                                    Prevent runoff by watering in cycles with pauses
+                                    {t('cycleSoak.preventsRunoff')}
                                 </IonNote>
                             </IonCardHeader>
                             {zoneConfig.enableCycleSoak && (
                                 <IonCardContent className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-gray-400 text-sm">Water for</span>
+                                        <span className="text-gray-400 text-sm">{t('zoneDetails.waterFor')}</span>
                                         <div className="flex items-center gap-2">
                                             <IonInput
                                                 type="number"
@@ -1127,11 +1166,11 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                                 onIonInput={e => updateZoneConfig({ cycleSoakWateringMin: parseInt(e.detail.value || '5') })}
                                                 style={{ maxWidth: '60px', textAlign: 'center' }}
                                             />
-                                            <span className="text-white">min</span>
+                                            <span className="text-white">{t('common.minutes')}</span>
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-gray-400 text-sm">Then pause for</span>
+                                        <span className="text-gray-400 text-sm">{t('zoneDetails.pauseFor')}</span>
                                         <div className="flex items-center gap-2">
                                             <IonInput
                                                 type="number"
@@ -1141,7 +1180,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                                 onIonInput={e => updateZoneConfig({ cycleSoakPauseMin: parseInt(e.detail.value || '10') })}
                                                 style={{ maxWidth: '60px', textAlign: 'center' }}
                                             />
-                                            <span className="text-white">min</span>
+                                            <span className="text-white">{t('common.minutes')}</span>
                                         </div>
                                     </div>
                                 </IonCardContent>
@@ -1156,10 +1195,10 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                         <IonCardHeader>
                             <div className="flex items-center gap-3">
                                 <IonIcon icon={locationOutline} className="text-2xl text-blue-400" />
-                                <IonLabel className="text-lg font-bold text-white">Location</IonLabel>
+                                <IonLabel className="text-lg font-bold text-white">{t('wizard.location.title')}</IonLabel>
                             </div>
                             <IonNote className="text-sm text-gray-400">
-                                Your location is needed to calculate accurate solar radiation and evapotranspiration.
+                                {t('zoneDetails.locationNote')}
                             </IonNote>
                         </IonCardHeader>
                         <IonCardContent>
@@ -1168,7 +1207,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                 onChange={(loc) => updateZoneConfig({ location: loc })}
                             />
                             <div className="mt-4">
-                                <IonLabel className="text-sm text-gray-300">Planting Date</IonLabel>
+                                <IonLabel className="text-sm text-gray-300">{t('wizard.plantingDate.label')}</IonLabel>
                                 <IonButton
                                     id="planting-date-trigger"
                                     expand="block"
@@ -1179,7 +1218,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                 >
                                     {zoneConfig.plantingDate
                                         ? zoneConfig.plantingDate.toLocaleDateString()
-                                        : 'Select planting date'}
+                                        : t('zoneDetails.selectPlantingDate')}
                                 </IonButton>
                                 <IonPopover
                                     trigger="planting-date-trigger"
@@ -1207,7 +1246,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                         className="mt-1"
                                         onClick={() => updateZoneConfig({ plantingDate: null })}
                                     >
-                                        Clear date
+                                        {t('labels.clear')}
                                     </IonButton>
                                 )}
                             </div>
@@ -1225,7 +1264,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
         <IonCard className="glass-panel">
             <IonCardHeader>
                 <div className="flex items-center justify-between">
-                    <IonLabel className="font-bold text-white">Schedule</IonLabel>
+                    <IonLabel className="font-bold text-white">{t('wizard.schedule.configureTitle')}</IonLabel>
                     <IonToggle
                         checked={scheduleConfig.enabled}
                         onIonChange={e => setScheduleConfig(prev => ({ ...prev, enabled: e.detail.checked }))}
@@ -1238,29 +1277,29 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                         value={scheduleConfig.scheduleType}
                         onIonChange={e => setScheduleConfig(prev => ({ ...prev, scheduleType: e.detail.value as 'daily' | 'periodic' | 'auto' }))}
                     >
-                        <IonSegmentButton value="daily">Daily</IonSegmentButton>
-                        <IonSegmentButton value="periodic">Every X Days</IonSegmentButton>
+                        <IonSegmentButton value="daily">{t('wizard.schedule.daily')}</IonSegmentButton>
+                        <IonSegmentButton value="periodic">{t('wizard.schedule.periodic')}</IonSegmentButton>
                         {(zoneConfig.wateringMode === 'fao56_auto' || zoneConfig.wateringMode === 'fao56_eco') && (
-                            <IonSegmentButton value="auto">FAO-56</IonSegmentButton>
+                            <IonSegmentButton value="auto">{t('zoneDetails.scheduleFao56')}</IonSegmentButton>
                         )}
                     </IonSegment>
 
                     {scheduleConfig.scheduleType === 'daily' && (
                         <div className="flex flex-wrap gap-1 justify-center">
-                            {DAYS.map((day, i) => (
+                            {DAY_KEYS.map((dayKey, i) => (
                                 <IonChip
-                                    key={day}
+                                    key={dayKey}
                                     color={(scheduleConfig.daysMask & (1 << i)) ? 'primary' : 'medium'}
                                     onClick={() => setScheduleConfig(prev => ({ ...prev, daysMask: prev.daysMask ^ (1 << i) }))}
                                 >
-                                    {day}
+                                    {t(`wizard.summary.days.${dayKey}`)}
                                 </IonChip>
                             ))}
                         </div>
                     )}
                     {scheduleConfig.scheduleType === 'periodic' && (
                         <div className="flex items-center justify-center gap-2">
-                            <span className="text-white">Every</span>
+                            <span className="text-white">{t('zoneDetails.scheduleEvery')}</span>
                             <IonInput
                                 type="number"
                                 min={1}
@@ -1269,11 +1308,11 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                 onIonInput={e => setScheduleConfig(prev => ({ ...prev, daysMask: parseInt(e.detail.value || '2') }))}
                                 style={{ maxWidth: '60px' }}
                             />
-                            <span className="text-white">days</span>
+                            <span className="text-white">{t('zoneDetails.scheduleDays')}</span>
                         </div>
                     )}
                     {scheduleConfig.scheduleType === 'auto' && (
-                        <p className="text-center text-gray-300 text-sm">FAO-56 Smart schedule runs daily at the set time.</p>
+                        <p className="text-center text-gray-300 text-sm">{t('zoneDetails.scheduleAutoNote')}</p>
                     )}
 
                     <div className="flex justify-center mt-4">
@@ -1328,9 +1367,9 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
     // ========================================================================
     
     const getTitle = () => {
-        if (actualMode === 'job') return 'Quick Watering';
-        if (actualMode === 'setup') return 'Configure Zone';
-        return 'Zone Settings';
+        if (actualMode === 'job') return t('zoneDetails.quickWateringTitle');
+        if (actualMode === 'setup') return t('zoneDetails.configureZoneTitle');
+        return t('zoneDetails.zoneSettingsTitle');
     };
 
     return (
@@ -1358,7 +1397,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                     {step > 0 ? (
                         <IonButton fill="clear" color="medium" onClick={handleBack}>
                             <IonIcon icon={chevronBack} slot="start" />
-                            Back
+                            {t('common.back')}
                         </IonButton>
                     ) : (
                         <div />
@@ -1370,7 +1409,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                     >
                         {saving ? <IonSpinner name="crescent" /> : (
                             <>
-                                {step === setupSteps.length - 1 ? 'Save' : 'Next'}
+                                {step === setupSteps.length - 1 ? t('common.save') : t('common.next')}
                                 <IonIcon icon={chevronForward} slot="end" />
                             </>
                         )}

@@ -76,10 +76,6 @@ import {
 } from '../types/wizard';
 import {
     validateZoneConfig,
-    getModeDisplayText,
-    getDaysFromMask,
-    formatDuration,
-    formatVolume,
     formatTime,
     generateZoneSummary,
     parseDaysMask,
@@ -94,6 +90,7 @@ import {
     ScheduleType as FirmwareScheduleType,
     WateringMode as FirmwareWateringMode
 } from '../types/firmware_structs';
+import { useI18n } from '../i18n';
 
 // ============================================================================
 // Mode Card Component
@@ -106,6 +103,7 @@ interface ModeCardProps {
 }
 
 const ModeCard: React.FC<ModeCardProps> = ({ mode, selected, onSelect }) => {
+    const { t } = useI18n();
     const icons: Record<WateringMode, string> = {
         'fao56_auto': leafOutline,
         'fao56_eco': waterOutline,
@@ -138,10 +136,10 @@ const ModeCard: React.FC<ModeCardProps> = ({ mode, selected, onSelect }) => {
                     />
                     <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 'bold', fontSize: '16px' }}>
-                            {WATERING_MODE_LABELS[mode]}
+                            {t(WATERING_MODE_LABELS[mode])}
                         </div>
                         <div style={{ fontSize: '13px', color: 'var(--ion-color-medium)' }}>
-                            {WATERING_MODE_DESCRIPTIONS[mode]}
+                            {t(WATERING_MODE_DESCRIPTIONS[mode])}
                         </div>
                     </div>
                     {selected && (
@@ -164,6 +162,7 @@ interface ScheduleEditorProps {
 }
 
 const ScheduleEditor: React.FC<ScheduleEditorProps> = ({ schedule, onChange, wateringMode }) => {
+    const { t } = useI18n();
     const days = parseDaysMask(schedule.daysMask);
     const canUseAuto = wateringMode === 'fao56_auto' || wateringMode === 'fao56_eco';
 
@@ -178,13 +177,13 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({ schedule, onChange, wat
     };
 
     const dayButtons: Array<{ key: keyof typeof days; label: string }> = [
-        { key: 'monday', label: 'Lu' },
-        { key: 'tuesday', label: 'Ma' },
-        { key: 'wednesday', label: 'Mi' },
-        { key: 'thursday', label: 'Jo' },
-        { key: 'friday', label: 'Vi' },
-        { key: 'saturday', label: 'SA>' },
-        { key: 'sunday', label: 'Du' }
+        { key: 'monday', label: t('wizard.schedule.days.mon') },
+        { key: 'tuesday', label: t('wizard.schedule.days.tue') },
+        { key: 'wednesday', label: t('wizard.schedule.days.wed') },
+        { key: 'thursday', label: t('wizard.schedule.days.thu') },
+        { key: 'friday', label: t('wizard.schedule.days.fri') },
+        { key: 'saturday', label: t('wizard.schedule.days.sat') },
+        { key: 'sunday', label: t('wizard.schedule.days.sun') }
     ];
 
     const isManualMode = wateringMode === 'duration' || wateringMode === 'volume';
@@ -195,7 +194,7 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({ schedule, onChange, wat
         <div>
             {/* Enable toggle */}
             <IonItem>
-                <IonLabel>Program activat</IonLabel>
+                <IonLabel>{t('wizard.schedule.enable')}</IonLabel>
                 <IonToggle
                     checked={schedule.enabled}
                     onIonChange={(e) => onChange({ ...schedule, enabled: e.detail.checked })}
@@ -206,14 +205,14 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({ schedule, onChange, wat
                 <>
                     {/* Schedule Type */}
                     <IonItem style={{ marginTop: '12px' }}>
-                        <IonLabel>Tip program</IonLabel>
+                        <IonLabel>{t('wizard.schedule.scheduleType')}</IonLabel>
                         <IonSelect
                             value={scheduleTypeValue}
                             onIonChange={(e) => onChange({ ...schedule, type: e.detail.value as ScheduleType })}
                         >
-                            <IonSelectOption value="daily">Zile specifice</IonSelectOption>
-                            <IonSelectOption value="periodic">Interval (ex: la 2 zile)</IonSelectOption>
-                            {canUseAuto && <IonSelectOption value="auto">FAO-56 Smart</IonSelectOption>}
+                            <IonSelectOption value="daily">{t('wizard.schedule.daily')}</IonSelectOption>
+                            <IonSelectOption value="periodic">{t('wizard.schedule.periodic')}</IonSelectOption>
+                            {canUseAuto && <IonSelectOption value="auto">{t('wizard.schedule.auto')}</IonSelectOption>}
                         </IonSelect>
                     </IonItem>
 
@@ -221,10 +220,10 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({ schedule, onChange, wat
                     {schedule.type === 'daily' && (
                         <div style={{ marginTop: '12px', padding: '0 16px' }}>
                             <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <IonLabel>Zile</IonLabel>
+                                <IonLabel>{t('wizard.schedule.selectDays')}</IonLabel>
                                 <div>
-                                    <IonButton fill="clear" size="small" onClick={() => setAllDays(true)}>Toate</IonButton>
-                                    <IonButton fill="clear" size="small" onClick={() => setAllDays(false)}>Niciuna</IonButton>
+                                    <IonButton fill="clear" size="small" onClick={() => setAllDays(true)}>{t('common.all')}</IonButton>
+                                    <IonButton fill="clear" size="small" onClick={() => setAllDays(false)}>{t('wizard.schedule.none')}</IonButton>
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
@@ -244,7 +243,7 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({ schedule, onChange, wat
                     {/* Interval days (for periodic type) */}
                     {schedule.type === 'periodic' && (
                         <IonItem>
-                            <IonLabel position="stacked">Interval (zile)</IonLabel>
+                            <IonLabel position="stacked">{t('wizard.schedule.intervalDays')}</IonLabel>
                             <IonInput
                                 type="number"
                                 value={schedule.daysMask || 2}
@@ -260,7 +259,7 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({ schedule, onChange, wat
                         <IonRow>
                             <IonCol size="6">
                                 <IonItem>
-                                    <IonLabel position="stacked">Ora fixă (fallback / mod manual)</IonLabel>
+                                    <IonLabel position="stacked">{t('wizard.schedule.startTimeDesc')}</IonLabel>
                                     <IonInput
                                         type="number"
                                         value={schedule.hour}
@@ -272,7 +271,7 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({ schedule, onChange, wat
                             </IonCol>
                             <IonCol size="6">
                                 <IonItem>
-                                    <IonLabel position="stacked">Minut</IonLabel>
+                                    <IonLabel position="stacked">{t('timePicker.minute')}</IonLabel>
                                     <IonInput
                                         type="number"
                                         value={schedule.minute}
@@ -287,7 +286,7 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({ schedule, onChange, wat
 
                     {/* Solar timing */}
                     <IonItem lines="inset">
-                        <IonLabel>Orar solar (rasarit/apus)</IonLabel>
+                        <IonLabel>{t('wizard.schedule.solarTime')}</IonLabel>
                         <IonToggle
                             checked={schedule.useSolarTiming}
                             onIonChange={(e) => onChange({ ...schedule, useSolarTiming: e.detail.checked })}
@@ -296,23 +295,23 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({ schedule, onChange, wat
                     {schedule.useSolarTiming && (
                         <>
                             <IonItem>
-                                <IonLabel position="stacked">Eveniment</IonLabel>
+                                <IonLabel position="stacked">{t('wizard.schedule.solarEvent')}</IonLabel>
                                 <IonSelect
                                     value={schedule.solarEvent}
                                     onIonChange={(e) => onChange({ ...schedule, solarEvent: e.detail.value as 'sunrise' | 'sunset' })}
                                 >
-                                    <IonSelectOption value="sunrise">Rasarit</IonSelectOption>
-                                    <IonSelectOption value="sunset">Apus</IonSelectOption>
+                                    <IonSelectOption value="sunrise">{t('wizard.schedule.sunrise')}</IonSelectOption>
+                                    <IonSelectOption value="sunset">{t('wizard.schedule.sunset')}</IonSelectOption>
                                 </IonSelect>
                             </IonItem>
                             <IonItem>
-                                <IonLabel position="stacked">Offset față de răsărit/apus (minute)</IonLabel>
+                                <IonLabel position="stacked">{t('wizard.schedule.offsetMinutes')}</IonLabel>
                                 <IonInput
                                     type="number"
                                     value={schedule.solarOffsetMinutes}
                                     min={-120}
                                     max={120}
-                                    placeholder="-120 .. 120"
+                                    placeholder={t('wizard.schedule.offsetPlaceholder')}
                                     onIonChange={(e) => onChange({ ...schedule, solarOffsetMinutes: parseInt(e.detail.value || '0') })}
                                 />
                             </IonItem>
@@ -323,7 +322,7 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({ schedule, onChange, wat
                     {showValueInput && (
                         <IonItem style={{ marginTop: '12px' }}>
                             <IonLabel position="stacked">
-                                {wateringMode === 'duration' ? 'Durata (minute)' : 'Volum (litri)'}
+                                {wateringMode === 'duration' ? t('wizard.schedule.durationMinutes') : t('wizard.schedule.volumeLiters')}
                             </IonLabel>
                             <IonInput
                                 type="number"
@@ -350,8 +349,9 @@ interface ZoneSummaryCardProps {
 }
 
 const ZoneSummaryCard: React.FC<ZoneSummaryCardProps> = ({ config, index, isCurrentZone, onClick }) => {
-    const validation = validateZoneConfig(config);
-    const summaryLines = generateZoneSummary(config);
+    const { t, language } = useI18n();
+    const validation = validateZoneConfig(config, t);
+    const summaryLines = generateZoneSummary(config, { t, language });
 
     return (
         <IonCard
@@ -366,11 +366,11 @@ const ZoneSummaryCard: React.FC<ZoneSummaryCardProps> = ({ config, index, isCurr
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                         <div style={{ fontWeight: 'bold', fontSize: '16px', marginBottom: '4px' }}>
-                            {config.name || `Zonă ${index + 1}`}
+                            {config.name || `${t('zones.zone')} ${index + 1}`}
                         </div>
                         {config.skipped ? (
                             <IonText color="medium">
-                                <small>Sărit</small>
+                                <small>{t('common.skipped')}</small>
                             </IonText>
                         ) : (
                             <div style={{ fontSize: '13px', color: 'var(--ion-color-medium)' }}>
@@ -402,6 +402,8 @@ const ZoneSummaryCard: React.FC<ZoneSummaryCardProps> = ({ config, index, isCurr
 const ConfigWizard: React.FC = () => {
     // BLE Service
     const ble = BleService.getInstance();
+    const { t, language } = useI18n();
+    const locale = language === 'ro' ? 'ro-RO' : 'en-US';
     
     // Store
     const {
@@ -690,7 +692,7 @@ const ConfigWizard: React.FC = () => {
                     saveAndNextZone();
                 } catch (error: any) {
                     console.error('[Wizard] Save error:', error);
-                    setSaveError(error.message || 'Eroare la salvare');
+                    setSaveError(error.message || t('errors.saveFailed'));
                 } finally {
                     setIsSaving(false);
                 }
@@ -736,7 +738,7 @@ const ConfigWizard: React.FC = () => {
             finishChannelWizard();
         } catch (error: any) {
             console.error('[Wizard] Finish error:', error);
-            setSaveError(error.message || 'Eroare la finalizare');
+            setSaveError(error.message || t('errors.saveFailed'));
         } finally {
             setIsSaving(false);
         }
@@ -755,15 +757,15 @@ const ConfigWizard: React.FC = () => {
                     <div>
                         {/* Zone name */}
                         <IonItem style={{ marginBottom: '16px' }}>
-                            <IonLabel position="stacked">Nume zonă</IonLabel>
+                            <IonLabel position="stacked">{t('wizard.zone.nameLabel')}</IonLabel>
                             <IonInput
                                 value={currentConfig.name}
                                 onIonChange={(e) => updateCurrentZoneConfig({ name: e.detail.value || '' })}
-                                placeholder={`Zonă ${channelWizard.currentZoneIndex + 1}`}
+                                placeholder={`${t('zones.zone')} ${channelWizard.currentZoneIndex + 1}`}
                             />
                         </IonItem>
 
-                        <h2 style={{ marginBottom: '16px' }}>Alege modul de udare</h2>
+                        <h2 style={{ marginBottom: '16px' }}>{t('wizard.zone.selectMode')}</h2>
                         <div>
                             {(['fao56_auto', 'fao56_eco', 'duration', 'volume'] as WateringMode[]).map(mode => (
                                 <ModeCard
@@ -780,11 +782,11 @@ const ConfigWizard: React.FC = () => {
             case 'plant':
                 return (
                     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                        <h2 style={{ marginBottom: '8px' }}>Selectează planta</h2>
+                        <h2 style={{ marginBottom: '8px' }}>{t('wizard.plant.title')}</h2>
                         <IonSearchbar
                             value={plantSearch}
                             onIonInput={(e) => setPlantSearch(e.detail.value || '')}
-                            placeholder="Caută plante..."
+                            placeholder={t('wizard.plant.searchPlaceholder')}
                             style={{ marginBottom: '8px' }}
                         />
                         <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -798,7 +800,7 @@ const ConfigWizard: React.FC = () => {
                                     >
                                         <IonLabel>
                                             <h2>{plant.common_name_en}</h2>
-                                            <p>{plant.common_name_ro} • {plant.category}</p>
+                                            <p>{plant.common_name_ro || plant.common_name_en} - {plant.category}</p>
                                         </IonLabel>
                                         {currentConfig.plant?.id === plant.id && (
                                             <IonIcon icon={checkmark} slot="end" />
@@ -809,15 +811,14 @@ const ConfigWizard: React.FC = () => {
                         </div>
                     </div>
                 );
-
             case 'soil':
                 return (
                     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                        <h2 style={{ marginBottom: '8px' }}>Selectează tipul de sol</h2>
+                        <h2 style={{ marginBottom: '8px' }}>{t('wizard.soil.title')}</h2>
                         <IonSearchbar
                             value={soilSearch}
                             onIonInput={(e) => setSoilSearch(e.detail.value || '')}
-                            placeholder="Caută sol..."
+                            placeholder={t('wizard.soil.searchPlaceholder')}
                             style={{ marginBottom: '8px' }}
                         />
                         <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -831,7 +832,7 @@ const ConfigWizard: React.FC = () => {
                                     >
                                         <IonLabel>
                                             <h2>{soil.texture}</h2>
-                                            <p>Infiltrație: {soil.infiltration_rate_mm_h} mm/h</p>
+                                            <p>{t('wizard.soil.infiltration')}: {soil.infiltration_rate_mm_h} {t('common.mmPerHour')}</p>
                                         </IonLabel>
                                         {currentConfig.soil?.id === soil.id && (
                                             <IonIcon icon={checkmark} slot="end" />
@@ -842,11 +843,10 @@ const ConfigWizard: React.FC = () => {
                         </div>
                     </div>
                 );
-
             case 'irrigation':
                 return (
                     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                        <h2 style={{ marginBottom: '16px' }}>Metoda de irigare</h2>
+                        <h2 style={{ marginBottom: '16px' }}>{t('wizard.irrigationMethod.title')}</h2>
                         <div style={{ flex: 1, overflowY: 'auto' }}>
                             <IonList>
                                 {irrigationMethodDb.map(method => (
@@ -858,7 +858,7 @@ const ConfigWizard: React.FC = () => {
                                     >
                                         <IonLabel>
                                             <h2>{method.name}</h2>
-                                            <p>{method.efficiency_pct}% eficiență • {method.infiltration_style}</p>
+                                            <p>{t('wizard.irrigationMethod.efficiencyLabel')}: {method.efficiency_pct}{t('common.percent')} - {method.infiltration_style}</p>
                                         </IonLabel>
                                         {currentConfig.irrigationMethod?.id === method.id && (
                                             <IonIcon icon={checkmark} slot="end" />
@@ -869,15 +869,14 @@ const ConfigWizard: React.FC = () => {
                         </div>
                     </div>
                 );
-
             case 'environment':
                 return (
                     <div>
-                        <h2 style={{ marginBottom: '16px' }}>Locație și mediu</h2>
+                        <h2 style={{ marginBottom: '16px' }}>{t('wizard.steps.environment')}</h2>
                         
                         {/* Location Picker */}
                         <div style={{ marginBottom: '16px' }}>
-                            <IonLabel>Locație GPS</IonLabel>
+                            <IonLabel>{t('wizard.location.title')}</IonLabel>
                             <LocationPicker
                                 value={currentConfig.location || channelWizard.sharedLocation}
                                 onChange={handleLocationChange}
@@ -888,7 +887,7 @@ const ConfigWizard: React.FC = () => {
                         <IonItem style={{ marginTop: '16px' }}>
                             <IonIcon icon={sunnyOutline} slot="start" />
                             <IonLabel>
-                                <div>Expunere la soare: {currentConfig.sunExposure}%</div>
+                                <div>{t('wizard.summary.sunExposure')}: {currentConfig.sunExposure}{t('common.percent')}</div>
                             </IonLabel>
                         </IonItem>
                         <IonRange
@@ -898,8 +897,8 @@ const ConfigWizard: React.FC = () => {
                             onIonChange={(e) => updateCurrentZoneConfig({ sunExposure: e.detail.value as number })}
                             style={{ padding: '0 16px' }}
                         >
-                            <IonLabel slot="start">0%</IonLabel>
-                            <IonLabel slot="end">100%</IonLabel>
+                            <IonLabel slot="start">0{t('common.percent')}</IonLabel>
+                            <IonLabel slot="end">100{t('common.percent')}</IonLabel>
                         </IonRange>
 
                         {/* Coverage Type */}
@@ -909,16 +908,16 @@ const ConfigWizard: React.FC = () => {
                             style={{ marginTop: '16px' }}
                         >
                             <IonSegmentButton value="area">
-                                <IonLabel>Suprafață (m²)</IonLabel>
+                                <IonLabel>{t('zoneDetails.coverageByArea')}</IonLabel>
                             </IonSegmentButton>
                             <IonSegmentButton value="plants">
-                                <IonLabel>Nr. plante</IonLabel>
+                                <IonLabel>{t('zoneDetails.coverageByPlants')}</IonLabel>
                             </IonSegmentButton>
                         </IonSegment>
 
                         <IonItem>
                             <IonLabel position="stacked">
-                                {currentConfig.coverageType === 'area' ? 'Suprafață (m²)' : 'Număr plante'}
+                                {currentConfig.coverageType === 'area' ? t('zoneDetails.coverageByArea') : t('zoneDetails.coverageByPlants')}
                             </IonLabel>
                             <IonInput
                                 type="number"
@@ -929,7 +928,7 @@ const ConfigWizard: React.FC = () => {
 
                         {/* Max Volume Limit */}
                         <IonItem>
-                            <IonLabel position="stacked">Limită maximă volum (litri)</IonLabel>
+                            <IonLabel position="stacked">{t('wizard.summary.maxVolume')} ({t('common.litersShort')})</IonLabel>
                             <IonInput
                                 type="number"
                                 value={currentConfig.maxVolumeLimit}
@@ -941,11 +940,11 @@ const ConfigWizard: React.FC = () => {
                         <IonItem button onClick={() => setShowDatePicker(true)}>
                             <IonIcon icon={calendarOutline} slot="start" />
                             <IonLabel>
-                                <div>Data plantării (opțional)</div>
+                                <div>{t('wizard.plantingDate.label')} ({t('common.optional')})</div>
                                 <div style={{ fontSize: '14px', color: 'var(--ion-color-medium)' }}>
-                                    {currentConfig.plantingDate 
-                                        ? new Date(currentConfig.plantingDate).toLocaleDateString('ro-RO')
-                                        : 'Nu este setată'}
+                                    {currentConfig.plantingDate
+                                        ? new Date(currentConfig.plantingDate).toLocaleDateString(locale)
+                                        : t('common.notSet')}
                                 </div>
                             </IonLabel>
                         </IonItem>
@@ -966,11 +965,10 @@ const ConfigWizard: React.FC = () => {
                         </IonPopover>
                     </div>
                 );
-
             case 'schedule':
                 return (
                     <div>
-                        <h2 style={{ marginBottom: '16px' }}>Programare</h2>
+                        <h2 style={{ marginBottom: '16px' }}>{t('wizard.steps.schedule')}</h2>
                         <ScheduleEditor
                             schedule={currentConfig.schedule}
                             onChange={handleScheduleChange}
@@ -982,15 +980,15 @@ const ConfigWizard: React.FC = () => {
             case 'summary':
                 return (
                     <div>
-                        <h2 style={{ marginBottom: '16px' }}>Rezumat zonă</h2>
+                        <h2 style={{ marginBottom: '16px' }}>{t('wizard.summary.title')}</h2>
                         
                         {/* Summary Card */}
                         <IonCard>
                             <IonCardContent>
                                 <div style={{ fontWeight: 'bold', fontSize: '18px', marginBottom: '12px' }}>
-                                    {currentConfig.name || `Zonă ${channelWizard.currentZoneIndex + 1}`}
+                                    {currentConfig.name || `${t('zones.zone')} ${channelWizard.currentZoneIndex + 1}`}
                                 </div>
-                                {generateZoneSummary(currentConfig).map((line: string, i: number) => (
+                                {generateZoneSummary(currentConfig, { t, language }).map((line: string, i: number) => (
                                     <div key={i} style={{ marginBottom: '4px' }}>{line}</div>
                                 ))}
                             </IonCardContent>
@@ -998,16 +996,16 @@ const ConfigWizard: React.FC = () => {
 
                         {/* Validation Errors */}
                         {(() => {
-                            const validation = validateZoneConfig(currentConfig);
+                            const validation = validateZoneConfig(currentConfig, t);
                             if (!validation.valid) {
                                 return (
                                     <IonCard color="warning">
                                         <IonCardContent>
                                             <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
-                                                <IonIcon icon={alertCircleOutline} /> Atenție
+                                                <IonIcon icon={alertCircleOutline} /> {t('common.warning')}
                                             </div>
                                             {validation.errors.map((err: string, i: number) => (
-                                                <div key={i}>• {err}</div>
+                                                <div key={i}>- {err}</div>
                                             ))}
                                         </IonCardContent>
                                     </IonCard>
@@ -1017,7 +1015,6 @@ const ConfigWizard: React.FC = () => {
                         })()}
                     </div>
                 );
-
             default:
                 return null;
         }
@@ -1029,11 +1026,13 @@ const ConfigWizard: React.FC = () => {
 
         return (
             <div>
-                <h2 style={{ marginBottom: '16px' }}>Configurație finală</h2>
+                <h2 style={{ marginBottom: '16px' }}>{t('wizard.summary.finalTitle')}</h2>
                 
                 <div style={{ marginBottom: '16px' }}>
                     <IonText color="medium">
-                        <p>{configuredZones.length} zone configurate, {skippedZones.length} sărite</p>
+                        <p>{t('wizard.summary.finalCounts')
+                            .replace('{configured}', String(configuredZones.length))
+                            .replace('{skipped}', String(skippedZones.length))}</p>
                     </IonText>
                 </div>
 
@@ -1048,7 +1047,6 @@ const ConfigWizard: React.FC = () => {
             </div>
         );
     };
-
     // ========================================================================
     // Main Render
     // ========================================================================
@@ -1060,9 +1058,9 @@ const ConfigWizard: React.FC = () => {
             <IonHeader>
                 <IonToolbar>
                     <IonTitle>
-                        {isOnFinalSummary 
-                            ? 'Rezumat final' 
-                            : `${currentConfig?.name || `Zonă ${channelWizard.currentZoneIndex + 1}`}`}
+                        {isOnFinalSummary
+                            ? t('wizard.summary.finalTitle')
+                            : `${currentConfig?.name || `${t('zones.zone')} ${channelWizard.currentZoneIndex + 1}`}`}
                     </IonTitle>
                     <IonButtons slot="end">
                         <IonButton onClick={closeChannelWizard}>
@@ -1084,7 +1082,9 @@ const ConfigWizard: React.FC = () => {
                         borderRadius: '8px'
                     }}>
                         <IonText color="medium">
-                            Zonă {channelWizard.currentZoneIndex + 1} din {totalZones}
+                            {t('wizard.zoneProgress')
+                                .replace('{current}', String(channelWizard.currentZoneIndex + 1))
+                                .replace('{total}', String(totalZones))}
                         </IonText>
                     </div>
                 )}
@@ -1108,7 +1108,7 @@ const ConfigWizard: React.FC = () => {
                     <>
                         <IonButton fill="clear" onClick={() => setWizardStep('mode')} disabled={isSaving}>
                             <IonIcon slot="start" icon={chevronBack} />
-                            Înapoi
+                            {t('common.back')}
                         </IonButton>
                         <IonButton color="success" onClick={handleFinish} disabled={isSaving}>
                             {isSaving ? (
@@ -1116,7 +1116,7 @@ const ConfigWizard: React.FC = () => {
                             ) : (
                                 <>
                                     <IonIcon slot="start" icon={checkmarkCircleOutline} />
-                                    Finalizează
+                                    {t('common.finish')}
                                 </>
                             )}
                         </IonButton>
@@ -1125,7 +1125,7 @@ const ConfigWizard: React.FC = () => {
                     <>
                         <IonButton fill="clear" onClick={handleBack} disabled={isSaving}>
                             <IonIcon slot="start" icon={chevronBack} />
-                            {currentStepIndex === 0 && channelWizard.currentZoneIndex === 0 ? 'Anulează' : 'Înapoi'}
+                            {currentStepIndex === 0 && channelWizard.currentZoneIndex === 0 ? t('common.cancel') : t('common.back')}
                         </IonButton>
 
                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -1134,12 +1134,12 @@ const ConfigWizard: React.FC = () => {
                                 <>
                                     <IonButton fill="clear" color="medium" onClick={handleSkip}>
                                         <IonIcon slot="start" icon={playSkipForwardOutline} />
-                                        Sari
+                                        {t('common.skip')}
                                     </IonButton>
                                     {channelWizard.currentZoneIndex < totalZones - 1 && (
                                         <IonButton fill="clear" color="medium" onClick={handleSkipAll}>
                                             <IonIcon slot="start" icon={playSkipForwardCircleOutline} />
-                                            Sari tot
+                                            {t('common.skipAll')}
                                         </IonButton>
                                     )}
                                 </>
@@ -1155,9 +1155,9 @@ const ConfigWizard: React.FC = () => {
                                     <IonSpinner name="dots" />
                                 ) : (
                                     <>
-                                        {currentStepIndex === steps.length - 1 
-                                            ? (channelWizard.currentZoneIndex === totalZones - 1 ? 'Finalizează' : 'Salvează')
-                                            : 'Următorul'}
+                                        {currentStepIndex === steps.length - 1
+                                            ? (channelWizard.currentZoneIndex === totalZones - 1 ? t('common.finish') : t('common.save'))
+                                            : t('common.next')}
                                         <IonIcon slot="end" icon={chevronForward} />
                                     </>
                                 )}
@@ -1166,16 +1166,16 @@ const ConfigWizard: React.FC = () => {
                     </>
                 )}
             </div>
-
             {/* Skip All Alert */}
             <IonAlert
                 isOpen={showSkipAllAlert}
                 onDidDismiss={() => setShowSkipAllAlert(false)}
-                header="Sari toate zonele rămase?"
-                message={`Vor fi sărite ${totalZones - channelWizard.currentZoneIndex} zone. Poți configura mai târziu.`}
+                header={t('wizard.zone.skipAllTitle')}
+                message={t('wizard.zone.skipAllMessage')
+                    .replace('{count}', String(totalZones - channelWizard.currentZoneIndex))}
                 buttons={[
-                    { text: 'Anulează', role: 'cancel' },
-                    { text: 'Sari toate', handler: confirmSkipAll }
+                    { text: t('common.cancel'), role: 'cancel' },
+                    { text: t('common.skipAll'), handler: confirmSkipAll }
                 ]}
             />
 

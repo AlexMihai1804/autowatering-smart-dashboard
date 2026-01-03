@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { BleService } from '../../services/BleService';
 import { TaskStatus } from '../../types/firmware_structs';
 import { calcSoilMoisturePercentPreferred } from '../../utils/soilMoisture';
+import { useI18n } from '../../i18n';
 
 interface RouteParams {
   channelId: string;
@@ -13,6 +14,8 @@ const MobileZoneDetails: React.FC = () => {
   const history = useHistory();
   const { channelId } = useParams<RouteParams>();
   const channelIdNum = parseInt(channelId, 10);
+  const { t, language } = useI18n();
+  const locale = language === 'ro' ? 'ro-RO' : 'en-US';
 
   const {
     zones,
@@ -65,7 +68,7 @@ const MobileZoneDetails: React.FC = () => {
   const nextScheduleDisplay = useMemo(() => {
     const nextEpoch = autoCalc?.next_irrigation_time ?? 0;
     if (!nextEpoch) {
-      return 'Not scheduled';
+      return t('zoneDetails.notScheduled');
     }
     const d = new Date(nextEpoch * 1000);
     const now = new Date();
@@ -74,11 +77,13 @@ const MobileZoneDetails: React.FC = () => {
     tomorrow.setDate(tomorrow.getDate() + 1);
     const isTomorrow = d.toDateString() === tomorrow.toDateString();
     
-    const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-    if (isToday) return `Today at ${time}`;
-    if (isTomorrow) return `Tomorrow at ${time}`;
-    return d.toLocaleDateString(undefined, { weekday: 'long' }) + ' at ' + time;
-  }, [autoCalc?.next_irrigation_time]);
+    const time = d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+    if (isToday) return t('zoneDetails.todayAt').replace('{time}', time);
+    if (isTomorrow) return t('zoneDetails.tomorrowAt').replace('{time}', time);
+    return t('zoneDetails.dayAt')
+      .replace('{day}', d.toLocaleDateString(locale, { weekday: 'long' }))
+      .replace('{time}', time);
+  }, [autoCalc?.next_irrigation_time, locale, t]);
 
   const handleBack = () => {
     history.goBack();
@@ -118,7 +123,7 @@ const MobileZoneDetails: React.FC = () => {
   if (!zone) {
     return (
       <div className="min-h-screen bg-mobile-bg-dark text-white flex items-center justify-center">
-        <p>Zone not found</p>
+        <p>{t('mobileZoneDetails.zoneNotFound')}</p>
       </div>
     );
   }
@@ -137,7 +142,7 @@ const MobileZoneDetails: React.FC = () => {
         >
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
-        <h2 className="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-12">Zone Details</h2>
+        <h2 className="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-12">{t('mobileZoneDetails.title')}</h2>
         <div className="absolute right-4 flex w-12 items-center justify-end">
           <button 
             onClick={handleOpenSettings}
@@ -151,15 +156,21 @@ const MobileZoneDetails: React.FC = () => {
       {/* Headline & Meta */}
       <div className="flex flex-col items-center pt-2 pb-6 px-4">
         <h1 className="text-[32px] font-extrabold leading-tight text-center">
-          {zone.name || `Zone ${channelIdNum + 1}`}
+          {zone.name || `${t('zones.zone')} ${channelIdNum + 1}`}
         </h1>
         <div className="flex items-center gap-2 mt-2">
           <span className="inline-flex items-center justify-center rounded-full bg-mobile-surface-dark px-2.5 py-0.5 text-xs font-medium text-mobile-text-muted border border-mobile-border-dark">
-            {zone.plant_type ? 'Vegetables' : 'General'}
+            {zone.plant_type ? t('categories.vegetables') : t('mobileZoneDetails.general')}
           </span>
           {soilMoisture !== null && (
             <p className="text-mobile-text-muted text-sm font-medium">
-              {soilMoisture < 30 ? 'Low Water' : soilMoisture < 60 ? 'Normal Water' : 'High Water'} Need
+              {soilMoisture < 30
+                ? t('mobileZoneDetails.waterNeedLow')
+                : soilMoisture < 60
+                  ? t('mobileZoneDetails.waterNeedNormal')
+                  : t('mobileZoneDetails.waterNeedHigh')}
+              {' '}
+              {t('mobileZoneDetails.waterNeedSuffix')}
             </p>
           )}
         </div>
@@ -185,7 +196,7 @@ const MobileZoneDetails: React.FC = () => {
                 </span>
               )}
               <span className={`text-sm font-bold tracking-wide uppercase ${isWatering ? 'text-mobile-primary' : 'text-gray-400'}`}>
-                {isWatering ? 'Watering Active' : 'Idle'}
+                {isWatering ? t('zoneDetails.wateringActive') : t('zoneDetails.idle')}
               </span>
             </div>
 
@@ -215,14 +226,14 @@ const MobileZoneDetails: React.FC = () => {
                     {remainingTime}
                   </span>
                   <span className="text-mobile-text-muted text-sm font-medium mt-1">
-                    {isWatering ? 'remaining' : 'idle'}
+                    {isWatering ? t('mobileZoneDetails.remainingLabel') : t('mobileZoneDetails.idleLabel')}
                   </span>
                 </div>
               </div>
             </div>
 
             <p className="text-center text-white/70 text-sm max-w-[200px]">
-              Next schedule: {nextScheduleDisplay}
+              {t('mobileZoneDetails.nextSchedule').replace('{time}', nextScheduleDisplay)}
             </p>
           </div>
         </div>
@@ -230,7 +241,7 @@ const MobileZoneDetails: React.FC = () => {
 
       {/* Quick Actions Row */}
       <div className="px-4 mb-8">
-        <h3 className="text-white text-base font-bold mb-4 px-1">Quick Actions</h3>
+        <h3 className="text-white text-base font-bold mb-4 px-1">{t('mobileZoneDetails.quickActions')}</h3>
         <div className="grid grid-cols-3 gap-3">
           {/* Stop Button */}
           <button 
@@ -247,7 +258,7 @@ const MobileZoneDetails: React.FC = () => {
             }`}>
               <span className="material-symbols-outlined text-[28px]">stop_circle</span>
             </div>
-            <span className="text-mobile-text-muted text-xs font-bold group-hover:text-white">Stop</span>
+            <span className="text-mobile-text-muted text-xs font-bold group-hover:text-white">{t('common.stop')}</span>
           </button>
 
           {/* Skip Button */}
@@ -258,7 +269,7 @@ const MobileZoneDetails: React.FC = () => {
             <div className="flex w-12 h-12 items-center justify-center rounded-full bg-mobile-primary/10 text-mobile-primary group-hover:bg-mobile-primary group-hover:text-mobile-bg-dark transition-colors">
               <span className="material-symbols-outlined text-[28px]">skip_next</span>
             </div>
-            <span className="text-mobile-text-muted text-xs font-bold group-hover:text-white">Skip Next</span>
+            <span className="text-mobile-text-muted text-xs font-bold group-hover:text-white">{t('mobileZoneDetails.skipNext')}</span>
           </button>
 
           {/* Schedule Button */}
@@ -269,14 +280,14 @@ const MobileZoneDetails: React.FC = () => {
             <div className="flex w-12 h-12 items-center justify-center rounded-full bg-white/5 text-white group-hover:bg-white group-hover:text-mobile-bg-dark transition-colors">
               <span className="material-symbols-outlined text-[28px]">calendar_clock</span>
             </div>
-            <span className="text-mobile-text-muted text-xs font-bold group-hover:text-white">Schedule</span>
+            <span className="text-mobile-text-muted text-xs font-bold group-hover:text-white">{t('zoneDetails.schedule')}</span>
           </button>
         </div>
       </div>
 
       {/* Metrics Grid */}
       <div className="px-4 mb-6">
-        <h3 className="text-white text-base font-bold mb-4 px-1">Health & Stats</h3>
+        <h3 className="text-white text-base font-bold mb-4 px-1">{t('mobileZoneDetails.healthStats')}</h3>
         <div className="grid grid-cols-2 gap-4">
           {/* Moisture Card */}
           {soilMoisture !== null && (
@@ -286,12 +297,14 @@ const MobileZoneDetails: React.FC = () => {
                   <span className="material-symbols-outlined">humidity_percentage</span>
                 </div>
                 <span className="text-xs font-medium text-mobile-primary bg-mobile-primary/10 px-2 py-1 rounded-full">
-                  {autoCalc?.current_deficit_mm ? `-${autoCalc.current_deficit_mm.toFixed(1)}mm` : '+0%'}
+                  {autoCalc?.current_deficit_mm
+                    ? `-${autoCalc.current_deficit_mm.toFixed(1)}${t('common.mm')}`
+                    : `+0${t('common.percent')}`}
                 </span>
               </div>
               <div className="flex flex-col">
-                <span className="text-3xl font-bold text-white">{soilMoisture}%</span>
-                <span className="text-sm text-mobile-text-muted">Soil Moisture</span>
+                <span className="text-3xl font-bold text-white">{soilMoisture}{t('common.percent')}</span>
+                <span className="text-sm text-mobile-text-muted">{t('mobileZoneDetails.soilMoisture')}</span>
               </div>
             </div>
           )}
@@ -305,9 +318,9 @@ const MobileZoneDetails: React.FC = () => {
             </div>
             <div className="flex flex-col">
               <span className="text-3xl font-bold text-white">
-                {lastRunUsage}<span className="text-lg font-medium text-mobile-text-muted ml-1">L</span>
+                {lastRunUsage}<span className="text-lg font-medium text-mobile-text-muted ml-1">{t('common.litersShort')}</span>
               </span>
-              <span className="text-sm text-mobile-text-muted">Last Run Usage</span>
+              <span className="text-sm text-mobile-text-muted">{t('mobileZoneDetails.lastRunUsage')}</span>
             </div>
           </div>
         </div>
@@ -321,7 +334,7 @@ const MobileZoneDetails: React.FC = () => {
           className="w-full flex cursor-pointer items-center justify-center overflow-hidden rounded-full h-14 bg-mobile-primary hover:bg-green-400 text-mobile-bg-dark gap-3 text-lg font-bold leading-normal tracking-wide transition-all active:scale-95 shadow-lg shadow-mobile-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span className="material-symbols-outlined">play_circle</span>
-          <span>{isWatering ? 'Watering...' : 'Start Manual Cycle'}</span>
+          <span>{isWatering ? t('mobileZoneDetails.watering') : t('mobileZoneDetails.startManualCycle')}</span>
         </button>
       </div>
 

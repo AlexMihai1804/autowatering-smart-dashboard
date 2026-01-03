@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
+import { useI18n } from '../../i18n';
 import { BleService } from '../../services/BleService';
 import { isChannelConfigComplete } from '../../types/firmware_structs';
 import { navigationStack } from '../../lib/navigationStack';
@@ -24,6 +25,8 @@ const MobileOnboardingWizard: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
   const { zones, systemConfig, onboardingState, wizardState, rtcConfig } = useAppStore();
+  const { t, language } = useI18n();
+  const locale = language === 'ro' ? 'ro-RO' : 'en-US';
   const bleService = BleService.getInstance();
 
   // Parse URL params to detect returning from zone-add
@@ -37,7 +40,7 @@ const MobileOnboardingWizard: React.FC = () => {
   const [saving, setSaving] = useState(false);
 
   // Device config
-  const [deviceName, setDeviceName] = useState('My AutoWatering');
+  const [deviceName, setDeviceName] = useState(() => t('mobileOnboardingWizard.deviceName.defaultName'));
   const [hasMasterValve, setHasMasterValve] = useState(false);
   const [masterValvePreDelay, setMasterValvePreDelay] = useState(0);
   const [masterValvePostDelay, setMasterValvePostDelay] = useState(0);
@@ -62,7 +65,7 @@ const MobileOnboardingWizard: React.FC = () => {
         
         selections.push({
           id: i,
-          name: zone?.name || `Zone ${i + 1}`,
+          name: zone?.name || t('mobileOnboardingWizard.zoneNumber').replace('{number}', String(i + 1)),
           enabled: i < 2, // Default: enable first 2 zones
           configured: isConfigured,
         });
@@ -71,7 +74,7 @@ const MobileOnboardingWizard: React.FC = () => {
       setZoneSelections(selections);
       zonesInitializedRef.current = true;
     }
-  }, [zones, systemConfig, onboardingState, wizardState, zoneSelections.length]);
+  }, [zones, systemConfig, onboardingState, wizardState, zoneSelections.length, t]);
 
   // Handle returning from zone-add wizard
   useEffect(() => {
@@ -247,14 +250,14 @@ const MobileOnboardingWizard: React.FC = () => {
               <div className="size-24 rounded-full bg-mobile-primary/10 flex items-center justify-center mx-auto mb-4">
                 <span className="material-symbols-outlined text-mobile-primary text-5xl">devices</span>
               </div>
-              <h2 className="text-white text-2xl font-bold mb-2">Name Your Device</h2>
-              <p className="text-mobile-text-muted">Give your device a memorable name</p>
+              <h2 className="text-white text-2xl font-bold mb-2">{t('mobileOnboardingWizard.deviceName.title')}</h2>
+              <p className="text-mobile-text-muted">{t('mobileOnboardingWizard.deviceName.subtitle')}</p>
             </div>
             <input
               type="text"
               value={deviceName}
               onChange={(e) => setDeviceName(e.target.value)}
-              placeholder="My AutoWatering"
+              placeholder={t('mobileOnboardingWizard.deviceName.placeholder')}
               className="w-full h-16 bg-mobile-surface-dark border border-mobile-border-dark rounded-2xl px-5 text-white text-xl font-semibold placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary transition-colors text-center"
             />
           </div>
@@ -267,13 +270,13 @@ const MobileOnboardingWizard: React.FC = () => {
               <div className="size-24 rounded-full bg-mobile-primary/10 flex items-center justify-center mx-auto mb-4">
                 <span className="material-symbols-outlined text-mobile-primary text-5xl">schedule</span>
               </div>
-              <h2 className="text-white text-2xl font-bold mb-2">Sync Time</h2>
-              <p className="text-mobile-text-muted">We'll sync the device with your phone's time</p>
+              <h2 className="text-white text-2xl font-bold mb-2">{t('mobileOnboardingWizard.timeSync.title')}</h2>
+              <p className="text-mobile-text-muted">{t('mobileOnboardingWizard.timeSync.subtitle')}</p>
             </div>
             <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark p-6 text-center">
-              <p className="text-mobile-text-muted text-sm mb-2">Current Time</p>
+              <p className="text-mobile-text-muted text-sm mb-2">{t('mobileOnboardingWizard.timeSync.currentTime')}</p>
               <p className="text-white text-4xl font-bold tracking-tight">
-                {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                {new Date().toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false })}
               </p>
               <p className="text-mobile-text-muted text-sm mt-2">
                 {Intl.DateTimeFormat().resolvedOptions().timeZone}
@@ -281,7 +284,7 @@ const MobileOnboardingWizard: React.FC = () => {
             </div>
             <div className="flex items-center justify-center gap-2 text-mobile-primary">
               <span className="material-symbols-outlined">check_circle</span>
-              <span className="font-semibold">Time will sync automatically</span>
+              <span className="font-semibold">{t('mobileOnboardingWizard.timeSync.autoSync')}</span>
             </div>
           </div>
         );
@@ -293,8 +296,8 @@ const MobileOnboardingWizard: React.FC = () => {
               <div className="size-24 rounded-full bg-mobile-primary/10 flex items-center justify-center mx-auto mb-4">
                 <span className="material-symbols-outlined text-mobile-primary text-5xl">valve</span>
               </div>
-              <h2 className="text-white text-2xl font-bold mb-2">Master Valve</h2>
-              <p className="text-mobile-text-muted">Do you have a master valve installed?</p>
+              <h2 className="text-white text-2xl font-bold mb-2">{t('mobileOnboardingWizard.masterValve.title')}</h2>
+              <p className="text-mobile-text-muted">{t('mobileOnboardingWizard.masterValve.subtitle')}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -309,7 +312,7 @@ const MobileOnboardingWizard: React.FC = () => {
                 <span className={`material-symbols-outlined text-4xl ${hasMasterValve ? 'text-mobile-primary' : 'text-mobile-text-muted'}`}>
                   check_circle
                 </span>
-                <span className={`font-bold text-lg ${hasMasterValve ? 'text-white' : 'text-mobile-text-muted'}`}>Yes</span>
+                <span className={`font-bold text-lg ${hasMasterValve ? 'text-white' : 'text-mobile-text-muted'}`}>{t('common.yes')}</span>
               </button>
               <button
                 onClick={() => setHasMasterValve(false)}
@@ -322,7 +325,7 @@ const MobileOnboardingWizard: React.FC = () => {
                 <span className={`material-symbols-outlined text-4xl ${!hasMasterValve ? 'text-mobile-primary' : 'text-mobile-text-muted'}`}>
                   cancel
                 </span>
-                <span className={`font-bold text-lg ${!hasMasterValve ? 'text-white' : 'text-mobile-text-muted'}`}>No</span>
+                <span className={`font-bold text-lg ${!hasMasterValve ? 'text-white' : 'text-mobile-text-muted'}`}>{t('common.no')}</span>
               </button>
             </div>
 
@@ -332,9 +335,9 @@ const MobileOnboardingWizard: React.FC = () => {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between px-1">
                     <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted">
-                      Delay Before Start
+                      {t('mobileOnboardingWizard.masterValve.delayBefore')}
                     </label>
-                    <span className="text-mobile-primary font-bold text-xl">{masterValvePreDelay}s</span>
+                    <span className="text-mobile-primary font-bold text-xl">{masterValvePreDelay}{t('common.secondsShort')}</span>
                   </div>
                   <input
                     type="range"
@@ -349,7 +352,8 @@ const MobileOnboardingWizard: React.FC = () => {
                     }}
                   />
                   <p className="text-mobile-text-muted text-sm px-1">
-                    Master valve opens <strong>{masterValvePreDelay}s</strong> before zones start
+                    {t('mobileOnboardingWizard.masterValve.preDelayHint')
+                      .replace('{seconds}', `${masterValvePreDelay}${t('common.secondsShort')}`)}
                   </p>
                 </div>
 
@@ -357,9 +361,9 @@ const MobileOnboardingWizard: React.FC = () => {
                 <div className="space-y-3 pt-4 border-t border-white/5">
                   <div className="flex items-center justify-between px-1">
                     <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted">
-                      Delay After Stop
+                      {t('mobileOnboardingWizard.masterValve.delayAfter')}
                     </label>
-                    <span className="text-mobile-primary font-bold text-xl">{masterValvePostDelay}s</span>
+                    <span className="text-mobile-primary font-bold text-xl">{masterValvePostDelay}{t('common.secondsShort')}</span>
                   </div>
                   <input
                     type="range"
@@ -374,7 +378,8 @@ const MobileOnboardingWizard: React.FC = () => {
                     }}
                   />
                   <p className="text-mobile-text-muted text-sm px-1">
-                    Master valve stays open for <strong>{masterValvePostDelay}s</strong> after zones stop
+                    {t('mobileOnboardingWizard.masterValve.postDelayHint')
+                      .replace('{seconds}', `${masterValvePostDelay}${t('common.secondsShort')}`)}
                   </p>
                 </div>
               </div>
@@ -382,21 +387,28 @@ const MobileOnboardingWizard: React.FC = () => {
           </div>
         );
 
-      case 'select-zones':
+      case 'select-zones': {
+        const selectedZonesLabel = enabledZones.length === 1
+          ? t('mobileOnboardingWizard.selectZones.selectedSingle').replace('{count}', String(enabledZones.length))
+          : t('mobileOnboardingWizard.selectZones.selected').replace('{count}', String(enabledZones.length));
+        const toConfigureLabel = unconfiguredEnabledZones.length > 0
+          ? ` ${t('mobileOnboardingWizard.selectZones.toConfigure').replace('{count}', String(unconfiguredEnabledZones.length))}`
+          : '';
+
         return (
           <div className="space-y-6">
             <div className="text-center mb-6">
               <div className="size-20 rounded-full bg-mobile-primary/10 flex items-center justify-center mx-auto mb-4">
                 <span className="material-symbols-outlined text-mobile-primary text-4xl">water_drop</span>
               </div>
-              <h2 className="text-white text-2xl font-bold mb-2">Select Zones to Configure</h2>
-              <p className="text-mobile-text-muted">Choose which zones you want to set up</p>
+              <h2 className="text-white text-2xl font-bold mb-2">{t('mobileOnboardingWizard.selectZones.title')}</h2>
+              <p className="text-mobile-text-muted">{t('mobileOnboardingWizard.selectZones.subtitle')}</p>
             </div>
 
             {zoneSelections.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-4">
                 <div className="w-10 h-10 rounded-full border-2 border-mobile-primary border-t-transparent animate-spin" />
-                <p className="text-mobile-text-muted text-sm">Loading zones...</p>
+                <p className="text-mobile-text-muted text-sm">{t('mobileOnboardingWizard.selectZones.loading')}</p>
               </div>
             ) : (
               <>
@@ -426,11 +438,11 @@ const MobileOnboardingWizard: React.FC = () => {
                         </p>
                         <p className="text-mobile-text-muted text-sm">
                           {zone.configured ? (
-                            <span className="text-mobile-primary">✓ Already configured</span>
+                            <span className="text-mobile-primary">{t('mobileOnboardingWizard.selectZones.status.configured')}</span>
                           ) : zone.enabled ? (
-                            'Will be configured'
+                            t('mobileOnboardingWizard.selectZones.status.willConfigure')
                           ) : (
-                            'Tap to enable'
+                            t('mobileOnboardingWizard.selectZones.status.tapToEnable')
                           )}
                         </p>
                       </div>
@@ -439,46 +451,53 @@ const MobileOnboardingWizard: React.FC = () => {
                 </div>
 
                 <p className="text-center text-mobile-text-muted text-sm">
-                  {enabledZones.length} zone{enabledZones.length !== 1 ? 's' : ''} selected
-                  {unconfiguredEnabledZones.length > 0 && ` (${unconfiguredEnabledZones.length} to configure)`}
+                  {selectedZonesLabel}{toConfigureLabel}
                 </p>
               </>
             )}
           </div>
         );
+      }
 
-      case 'final-summary':
+      case 'final-summary': {
+        const configuredCount = enabledZones.filter(z => z.configured).length;
+        const configuredZonesLabel = configuredCount === 1
+          ? t('mobileOnboardingWizard.summary.zonesCountSingle').replace('{count}', String(configuredCount))
+          : t('mobileOnboardingWizard.summary.zonesCount').replace('{count}', String(configuredCount));
+
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
               <div className="size-24 rounded-full bg-mobile-primary/10 flex items-center justify-center mx-auto mb-4">
                 <span className="material-symbols-outlined text-mobile-primary text-5xl">check_circle</span>
               </div>
-              <h2 className="text-white text-2xl font-bold mb-2">Setup Complete!</h2>
-              <p className="text-mobile-text-muted">Your irrigation system is ready to go</p>
+              <h2 className="text-white text-2xl font-bold mb-2">{t('mobileOnboardingWizard.summary.title')}</h2>
+              <p className="text-mobile-text-muted">{t('mobileOnboardingWizard.summary.subtitle')}</p>
             </div>
 
             <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark divide-y divide-mobile-border-dark overflow-hidden">
               <div className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-3">
                   <span className="material-symbols-outlined text-mobile-primary">devices</span>
-                  <span className="text-mobile-text-muted">Device Name</span>
+                  <span className="text-mobile-text-muted">{t('mobileOnboardingWizard.summary.deviceNameLabel')}</span>
                 </div>
                 <span className="text-white font-semibold">{deviceName}</span>
               </div>
               <div className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-3">
                   <span className="material-symbols-outlined text-mobile-primary">valve</span>
-                  <span className="text-mobile-text-muted">Master Valve</span>
+                  <span className="text-mobile-text-muted">{t('mobileOnboardingWizard.summary.masterValveLabel')}</span>
                 </div>
-                <span className="text-white font-semibold">{hasMasterValve ? 'Enabled' : 'Disabled'}</span>
+                <span className="text-white font-semibold">
+                  {hasMasterValve ? t('mobileOnboardingWizard.summary.enabled') : t('mobileOnboardingWizard.summary.disabled')}
+                </span>
               </div>
               <div className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-3">
                   <span className="material-symbols-outlined text-mobile-primary">water_drop</span>
-                  <span className="text-mobile-text-muted">Zones Configured</span>
+                  <span className="text-mobile-text-muted">{t('mobileOnboardingWizard.summary.zonesConfiguredLabel')}</span>
                 </div>
-                <span className="text-white font-semibold">{enabledZones.filter(z => z.configured).length} zones</span>
+                <span className="text-white font-semibold">{configuredZonesLabel}</span>
               </div>
             </div>
 
@@ -486,15 +505,16 @@ const MobileOnboardingWizard: React.FC = () => {
               <div className="flex items-start gap-3">
                 <span className="material-symbols-outlined text-mobile-primary">tips_and_updates</span>
                 <div>
-                  <p className="text-white font-semibold mb-1">You're all set!</p>
+                  <p className="text-white font-semibold mb-1">{t('mobileOnboardingWizard.summary.allSetTitle')}</p>
                   <p className="text-mobile-text-muted text-sm">
-                    Your watering schedules are now active. You can always adjust settings from the dashboard.
+                    {t('mobileOnboardingWizard.summary.allSetBody')}
                   </p>
                 </div>
               </div>
             </div>
           </div>
         );
+      }
 
       default:
         return null;
@@ -565,20 +585,23 @@ const MobileOnboardingWizard: React.FC = () => {
           className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
         >
           {saving ? (
-            <span className="animate-spin">⟳</span>
+            <>
+              <span className="material-symbols-outlined animate-spin">progress_activity</span>
+              {t('common.loading')}
+            </>
           ) : currentStep === 'final-summary' ? (
             <>
               <span className="material-symbols-outlined">check</span>
-              Go to Dashboard
+              {t('mobileOnboardingWizard.actions.goToDashboard')}
             </>
           ) : currentStep === 'select-zones' ? (
             <>
               <span className="material-symbols-outlined">tune</span>
-              Configure Zones
+              {t('mobileOnboardingWizard.actions.configureZones')}
             </>
           ) : (
             <>
-              Continue
+              {t('mobileOnboardingWizard.actions.continue')}
               <span className="material-symbols-outlined">arrow_forward</span>
             </>
           )}

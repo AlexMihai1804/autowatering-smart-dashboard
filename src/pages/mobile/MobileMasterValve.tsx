@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { BleService } from '../../services/BleService';
+import { useI18n } from '../../i18n';
 
 const MobileMasterValve: React.FC = () => {
   const history = useHistory();
   const { systemConfig, connectionState } = useAppStore();
   const bleService = BleService.getInstance();
+  const { t } = useI18n();
 
   // Local state for form editing
   const [masterValveEnabled, setMasterValveEnabled] = useState(false);
@@ -77,7 +79,7 @@ const MobileMasterValve: React.FC = () => {
       history.goBack();
     } catch (e) {
       console.error('Failed to save master valve config:', e);
-      alert('Failed to save configuration.');
+      alert(t('mobileMasterValve.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -94,7 +96,7 @@ const MobileMasterValve: React.FC = () => {
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
         <h2 className="text-white text-lg font-bold leading-tight flex-1 text-center">
-          Master Valve
+          {t('mobileMasterValve.title')}
         </h2>
         <div className="size-12" />
       </div>
@@ -108,8 +110,8 @@ const MobileMasterValve: React.FC = () => {
               <span className="material-symbols-outlined text-3xl">valve</span>
             </div>
             <div>
-              <p className="text-white font-bold text-lg">Master Valve</p>
-              <p className="text-mobile-text-muted text-sm px-1">Main water supply control</p>
+              <p className="text-white font-bold text-lg">{t('mobileMasterValve.title')}</p>
+              <p className="text-mobile-text-muted text-sm px-1">{t('mobileMasterValve.subtitle')}</p>
             </div>
           </div>
           <button
@@ -130,9 +132,9 @@ const MobileMasterValve: React.FC = () => {
             <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between px-1">
                 <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted">
-                  Delay Before Start
+                  {t('mobileMasterValve.delayBefore')}
                 </label>
-                <span className="text-mobile-primary font-bold text-xl">{delayBefore}s</span>
+                <span className="text-mobile-primary font-bold text-xl">{delayBefore}{t('common.secondsShort')}</span>
               </div>
               <input
                 type="range"
@@ -169,7 +171,9 @@ const MobileMasterValve: React.FC = () => {
                 }
               `}</style>
               <p className="text-mobile-text-muted text-sm px-1">
-                Master valve opens <strong>{delayBefore}s</strong> before any zone starts.
+                {t('mobileMasterValve.delayBeforeHint')
+                  .replace('{seconds}', delayBefore.toString())
+                  .replace('{unit}', t('common.secondsShort'))}
               </p>
             </div>
 
@@ -177,9 +181,9 @@ const MobileMasterValve: React.FC = () => {
             <div className="space-y-4 border-t border-white/5 pt-6">
               <div className="flex items-center justify-between px-1">
                 <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted">
-                  Delay After Stop
+                  {t('mobileMasterValve.delayAfter')}
                 </label>
-                <span className="text-mobile-primary font-bold text-xl">{delayAfter}s</span>
+                <span className="text-mobile-primary font-bold text-xl">{delayAfter}{t('common.secondsShort')}</span>
               </div>
               <input
                 type="range"
@@ -197,7 +201,9 @@ const MobileMasterValve: React.FC = () => {
                 }}
               />
               <p className="text-mobile-text-muted text-sm px-1">
-                Master valve stays open for <strong>{delayAfter}s</strong> after zone stops.
+                {t('mobileMasterValve.delayAfterHint')
+                  .replace('{seconds}', delayAfter.toString())
+                  .replace('{unit}', t('common.secondsShort'))}
               </p>
             </div>
 
@@ -205,12 +211,12 @@ const MobileMasterValve: React.FC = () => {
             <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark p-6 mt-6">
               <h4 className="text-white font-bold mb-6 flex items-center gap-2">
                 <span className="material-symbols-outlined text-mobile-primary">schedule</span>
-                Timing Visualization
+                {t('mobileMasterValve.timingVisualization')}
               </h4>
               <div className="relative h-28 bg-black/40 rounded-xl p-4 overflow-hidden border border-white/5">
                 {/* Zones line */}
                 <div className="absolute top-6 left-4 right-4 flex items-center">
-                  <span className="text-xs text-mobile-text-muted w-16 shrink-0 font-bold uppercase tracking-wider">Zones</span>
+                  <span className="text-xs text-mobile-text-muted w-16 shrink-0 font-bold uppercase tracking-wider">{t('zones.zones')}</span>
                   <div className="flex-1 h-2 relative bg-white/5 rounded-full">
                     {/* Zone Active Block */}
                     <div className="absolute left-[25%] right-[25%] h-full bg-blue-500 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(59,130,246,0.5)]">
@@ -223,7 +229,7 @@ const MobileMasterValve: React.FC = () => {
 
                 {/* Master valve line */}
                 <div className="absolute bottom-6 left-4 right-4 flex items-center">
-                  <span className="text-xs text-mobile-text-muted w-16 shrink-0 font-bold uppercase tracking-wider">Master</span>
+                  <span className="text-xs text-mobile-text-muted w-16 shrink-0 font-bold uppercase tracking-wider">{t('mobileMasterValve.masterLabel')}</span>
                   <div className="flex-1 h-2 relative bg-white/5 rounded-full">
                     {/* Master Active Block */}
                     <div
@@ -238,13 +244,13 @@ const MobileMasterValve: React.FC = () => {
                 </div>
 
                 {/* Connecting lines/indicators could go here */}
-              </div>
-              <p className="text-center text-xs text-mobile-text-muted mt-3">
-                Prevents water hammer and ensures pressure stability.
-              </p>
             </div>
+            <p className="text-center text-xs text-mobile-text-muted mt-3">
+              {t('mobileMasterValve.timingHint')}
+            </p>
           </div>
-        )}
+        </div>
+      )}
 
       </div>
 
@@ -256,11 +262,14 @@ const MobileMasterValve: React.FC = () => {
           className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
         >
           {saving ? (
-            <span className="animate-spin text-2xl">⟳</span>
+            <>
+              <span className="material-symbols-outlined animate-spin">progress_activity</span>
+              {t('mobileMasterValve.saving')}
+            </>
           ) : (
             <>
               <span className="material-symbols-outlined">save</span>
-              Save Configuration
+              {t('mobileMasterValve.save')}
             </>
           )}
         </button>
@@ -270,3 +279,4 @@ const MobileMasterValve: React.FC = () => {
 };
 
 export default MobileMasterValve;
+

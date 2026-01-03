@@ -4,6 +4,7 @@ import { play, pause, stop, trash, flash, checkmarkCircle, alertCircle } from 'i
 import { useAppStore } from '../store/useAppStore';
 import { BleService } from '../services/BleService';
 import { TaskStatus, TaskQueueCommand } from '../types/firmware_structs';
+import { useI18n } from '../i18n';
 
 interface TaskControlCardProps {
     onToast?: (message: string, color?: string) => void;
@@ -12,6 +13,7 @@ interface TaskControlCardProps {
 const TaskControlCard: React.FC<TaskControlCardProps> = ({ onToast }) => {
     const { currentTask, taskQueue, zones, connectionState } = useAppStore();
     const bleService = BleService.getInstance();
+    const { t } = useI18n();
     
     const [loading, setLoading] = useState<string | null>(null);
     
@@ -27,6 +29,9 @@ const TaskControlCard: React.FC<TaskControlCardProps> = ({ onToast }) => {
     const progress = currentTask && currentTask.target_value > 0
         ? (currentTask.current_value / currentTask.target_value) * 100
         : 0;
+    const litersShort = t('common.litersShort');
+    const mlShort = t('common.mlShort');
+    const percentUnit = t('common.percent');
 
     const formatTime = (seconds: number): string => {
         const mins = Math.floor(seconds / 60);
@@ -36,34 +41,34 @@ const TaskControlCard: React.FC<TaskControlCardProps> = ({ onToast }) => {
 
     const formatVolume = (ml: number): string => {
         if (ml >= 1000) {
-            return `${(ml / 1000).toFixed(1)}L`;
+            return `${(ml / 1000).toFixed(1)}${litersShort}`;
         }
-        return `${ml}ml`;
+        return `${ml}${mlShort}`;
     };
 
-    const handleAction = async (action: string, fn: () => Promise<void>) => {
+    const handleAction = async (actionKey: string, actionLabel: string, fn: () => Promise<void>) => {
         if (!isConnected) {
-            onToast?.('Not connected', 'danger');
+            onToast?.(t('errors.notConnected'), 'danger');
             return;
         }
         
-        setLoading(action);
+        setLoading(actionKey);
         try {
             await fn();
-            onToast?.(`${action} command sent`, 'success');
+            onToast?.(t('taskControl.commandSent').replace('{action}', actionLabel), 'success');
         } catch (error: any) {
-            console.error(`Failed to ${action}:`, error);
-            onToast?.(`Failed: ${error.message}`, 'danger');
+            console.error(`Failed to ${actionKey}:`, error);
+            onToast?.(t('errors.failedWithReason').replace('{error}', error.message), 'danger');
         } finally {
             setLoading(null);
         }
     };
 
-    const handlePause = () => handleAction('Pause', () => bleService.pauseCurrentWatering());
-    const handleResume = () => handleAction('Resume', () => bleService.resumeCurrentWatering());
-    const handleStop = () => handleAction('Stop', () => bleService.stopCurrentWatering());
-    const handleStartNext = () => handleAction('Start', () => bleService.startNextTask());
-    const handleClearQueue = () => handleAction('Clear', () => bleService.clearTaskQueue());
+    const handlePause = () => handleAction('pause', t('taskControl.actions.pause'), () => bleService.pauseCurrentWatering());
+    const handleResume = () => handleAction('resume', t('taskControl.actions.resume'), () => bleService.resumeCurrentWatering());
+    const handleStop = () => handleAction('stop', t('taskControl.actions.stop'), () => bleService.stopCurrentWatering());
+    const handleStartNext = () => handleAction('start', t('taskControl.actions.startNext'), () => bleService.startNextTask());
+    const handleClearQueue = () => handleAction('clear', t('taskControl.actions.clearQueue'), () => bleService.clearTaskQueue());
 
     if (!isConnected) {
         return null;
@@ -74,11 +79,11 @@ const TaskControlCard: React.FC<TaskControlCardProps> = ({ onToast }) => {
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                     <IonIcon icon={flash} className="text-yellow-400" />
-                    Task Control
+                    {t('taskControl.title')}
                 </h2>
                 {taskQueue && (
                     <span className="text-sm text-gray-400 font-mono">
-                        Queue: {taskQueue.pending_count} pending
+                        {t('labels.queue')}: {t('taskControl.queueStatus').replace('{count}', String(taskQueue.pending_count))}
                     </span>
                 )}
             </div>
@@ -93,7 +98,7 @@ const TaskControlCard: React.FC<TaskControlCardProps> = ({ onToast }) => {
                                 isPaused ? 'bg-yellow-400' : 'bg-gray-500'
                             }`}></div>
                             <span className="text-white font-semibold">
-                                {activeZone?.name || `Zone ${currentTask.channel_id}`}
+                                {activeZone?.name || `${t('zones.zone')} ${currentTask.channel_id}`}
                             </span>
                         </div>
                         <span className={`text-sm px-2 py-1 rounded ${
@@ -101,7 +106,11 @@ const TaskControlCard: React.FC<TaskControlCardProps> = ({ onToast }) => {
                             isPaused ? 'bg-yellow-400/20 text-yellow-400' :
                             'bg-gray-600/50 text-gray-400'
                         }`}>
-                            {isWatering ? 'RUNNING' : isPaused ? 'PAUSED' : 'IDLE'}
+                            {isWatering
+                                ? t('taskControl.status.running')
+                                : isPaused
+                                    ? t('taskControl.status.paused')
+                                    : t('taskControl.status.idle')}
                         </span>
                     </div>
 
@@ -117,12 +126,12 @@ const TaskControlCard: React.FC<TaskControlCardProps> = ({ onToast }) => {
                     {/* Stats */}
                     <div className="grid grid-cols-3 gap-2 text-center text-sm">
                         <div>
-                            <div className="text-gray-400">Progress</div>
-                            <div className="text-white font-mono">{Math.round(progress)}%</div>
+                            <div className="text-gray-400">{t('labels.progress')}</div>
+                            <div className="text-white font-mono">{Math.round(progress)}{percentUnit}</div>
                         </div>
                         <div>
                             <div className="text-gray-400">
-                                {currentTask.mode === 0 ? 'Time' : 'Volume'}
+                                {currentTask.mode === 0 ? t('labels.time') : t('labels.volume')}
                             </div>
                             <div className="text-white font-mono">
                                 {currentTask.mode === 0 
@@ -132,7 +141,7 @@ const TaskControlCard: React.FC<TaskControlCardProps> = ({ onToast }) => {
                             </div>
                         </div>
                         <div>
-                            <div className="text-gray-400">Target</div>
+                            <div className="text-gray-400">{t('labels.target')}</div>
                             <div className="text-white font-mono">
                                 {currentTask.mode === 0 
                                     ? formatTime(currentTask.target_value)
@@ -145,17 +154,17 @@ const TaskControlCard: React.FC<TaskControlCardProps> = ({ onToast }) => {
                     {/* Total Volume (always shown) */}
                     {currentTask.total_volume > 0 && (
                         <div className="mt-2 text-center text-xs text-gray-500">
-                            Total dispensed: {formatVolume(currentTask.total_volume)}
+                            {t('taskControl.totalDispensed').replace('{volume}', formatVolume(currentTask.total_volume))}
                         </div>
                     )}
                 </div>
             ) : (
                 <div className="bg-gray-800/50 rounded-lg p-4 mb-4 text-center">
                     <IonIcon icon={checkmarkCircle} className="text-4xl text-gray-500 mb-2" />
-                    <p className="text-gray-400">No active task</p>
+                    <p className="text-gray-400">{t('taskControl.noActiveTask')}</p>
                     {taskQueue && taskQueue.pending_count > 0 && (
                         <p className="text-sm text-cyber-cyan mt-1">
-                            {taskQueue.pending_count} task(s) waiting in queue
+                            {t('taskControl.tasksWaiting').replace('{count}', String(taskQueue.pending_count))}
                         </p>
                     )}
                 </div>
@@ -171,10 +180,10 @@ const TaskControlCard: React.FC<TaskControlCardProps> = ({ onToast }) => {
                         onClick={handlePause}
                         disabled={!!loading}
                     >
-                        {loading === 'Pause' ? <IonSpinner name="crescent" /> : (
+                        {loading === 'pause' ? <IonSpinner name="crescent" /> : (
                             <>
                                 <IonIcon icon={pause} slot="start" />
-                                Pause
+                                {t('taskControl.actions.pause')}
                             </>
                         )}
                     </IonButton>
@@ -187,10 +196,10 @@ const TaskControlCard: React.FC<TaskControlCardProps> = ({ onToast }) => {
                         onClick={handleResume}
                         disabled={!!loading}
                     >
-                        {loading === 'Resume' ? <IonSpinner name="crescent" /> : (
+                        {loading === 'resume' ? <IonSpinner name="crescent" /> : (
                             <>
                                 <IonIcon icon={play} slot="start" />
-                                Resume
+                                {t('taskControl.actions.resume')}
                             </>
                         )}
                     </IonButton>
@@ -204,10 +213,10 @@ const TaskControlCard: React.FC<TaskControlCardProps> = ({ onToast }) => {
                         onClick={handleStop}
                         disabled={!!loading}
                     >
-                        {loading === 'Stop' ? <IonSpinner name="crescent" /> : (
+                        {loading === 'stop' ? <IonSpinner name="crescent" /> : (
                             <>
                                 <IonIcon icon={stop} slot="start" />
-                                Stop
+                                {t('taskControl.actions.stop')}
                             </>
                         )}
                     </IonButton>
@@ -221,10 +230,10 @@ const TaskControlCard: React.FC<TaskControlCardProps> = ({ onToast }) => {
                         onClick={handleStartNext}
                         disabled={!!loading}
                     >
-                        {loading === 'Start' ? <IonSpinner name="crescent" /> : (
+                        {loading === 'start' ? <IonSpinner name="crescent" /> : (
                             <>
                                 <IonIcon icon={play} slot="start" />
-                                Start Next
+                                {t('taskControl.actions.startNext')}
                             </>
                         )}
                     </IonButton>
@@ -238,10 +247,10 @@ const TaskControlCard: React.FC<TaskControlCardProps> = ({ onToast }) => {
                         onClick={handleClearQueue}
                         disabled={!!loading}
                     >
-                        {loading === 'Clear' ? <IonSpinner name="crescent" /> : (
+                        {loading === 'clear' ? <IonSpinner name="crescent" /> : (
                             <>
                                 <IonIcon icon={trash} slot="start" />
-                                Clear Queue
+                                {t('taskControl.actions.clearQueue')}
                             </>
                         )}
                     </IonButton>
@@ -251,8 +260,8 @@ const TaskControlCard: React.FC<TaskControlCardProps> = ({ onToast }) => {
             {/* Queue Stats */}
             {taskQueue && (
                 <div className="mt-4 pt-4 border-t border-gray-700 flex justify-between text-xs text-gray-500">
-                    <span>Completed today: {taskQueue.completed_tasks}</span>
-                    <span>Active ID: {taskQueue.active_task_id || 'None'}</span>
+                    <span>{t('taskControl.completedToday').replace('{count}', String(taskQueue.completed_tasks))}</span>
+                    <span>{t('taskControl.activeId').replace('{id}', String(taskQueue.active_task_id ?? t('labels.none')))}</span>
                 </div>
             )}
         </div>

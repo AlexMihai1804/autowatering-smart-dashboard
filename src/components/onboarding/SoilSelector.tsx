@@ -38,6 +38,7 @@ import { SoilGridsService, SoilGridsResult } from '../../services/SoilGridsServi
 import { LocationData } from '../../types/wizard';
 import { WhatsThisTooltip } from './WhatsThisTooltip';
 import { useAppStore } from '../../store/useAppStore';
+import { useI18n } from '../../i18n';
 
 interface SoilSelectorProps {
     /** Currently selected soil */
@@ -56,21 +57,21 @@ interface SoilSelectorProps {
 
 // Soil visual representations
 const SOIL_VISUALS: Record<string, { emoji: string; color: string }> = {
-    'Sand': { emoji: '🏖️', color: '#f4d03f' },
-    'LoamySand': { emoji: '🏜️', color: '#d4ac0d' },
-    'SandyLoam': { emoji: '🌾', color: '#b7950b' },
-    'Loam': { emoji: '🌱', color: '#6b8e23' },
-    'SiltLoam': { emoji: '🌿', color: '#556b2f' },
-    'SandyClayLoam': { emoji: '🏺', color: '#8b4513' },
-    'ClayLoam': { emoji: '🫖', color: '#a0522d' },
-    'SiltyClayLoam': { emoji: '🍂', color: '#8b7355' },
-    'SandyClay': { emoji: '🧱', color: '#cd853f' },
-    'SiltyClay': { emoji: '🪨', color: '#708090' },
-    'Clay': { emoji: '🏛️', color: '#696969' },
-    'PeatOrganic': { emoji: '🍃', color: '#2e8b57' },
-    'GravellyLoam': { emoji: '🪨', color: '#808080' },
-    'PottingMix': { emoji: '🪴', color: '#654321' },
-    'Hydroponic': { emoji: '💧', color: '#00bfff' },
+    'Sand': { emoji: '???', color: '#f4d03f' },
+    'LoamySand': { emoji: '???', color: '#d4ac0d' },
+    'SandyLoam': { emoji: '??', color: '#b7950b' },
+    'Loam': { emoji: '??', color: '#6b8e23' },
+    'SiltLoam': { emoji: '??', color: '#556b2f' },
+    'SandyClayLoam': { emoji: '??', color: '#8b4513' },
+    'ClayLoam': { emoji: '??', color: '#a0522d' },
+    'SiltyClayLoam': { emoji: '??', color: '#8b7355' },
+    'SandyClay': { emoji: '??', color: '#cd853f' },
+    'SiltyClay': { emoji: '??', color: '#708090' },
+    'Clay': { emoji: '??', color: '#696969' },
+    'PeatOrganic': { emoji: '??', color: '#2e8b57' },
+    'GravellyLoam': { emoji: '??', color: '#808080' },
+    'PottingMix': { emoji: '??', color: '#654321' },
+    'Hydroponic': { emoji: '??', color: '#00bfff' },
 };
 
 export const SoilSelector: React.FC<SoilSelectorProps> = ({
@@ -82,6 +83,7 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
     confidence = null,
 }) => {
     const soilDb = useAppStore(state => state.soilDb);
+    const { t } = useI18n();
     
     const [isDetecting, setIsDetecting] = useState(false);
     const [detectionResult, setDetectionResult] = useState<SoilGridsResult | null>(null);
@@ -100,7 +102,7 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
         if (!location || isDetecting) return;
 
         setIsDetecting(true);
-        setDetectionError(null);
+        setDetectionError(t('wizard.soil.detectionFailed'));
 
         try {
             const result = await SoilGridsService.getInstance().detectSoilFromLocation(
@@ -116,7 +118,7 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
             }
         } catch (error) {
             console.error('[SoilSelector] Detection error:', error);
-            setDetectionError('Nu am putut detecta solul. Alege manual din listă.');
+            setDetectionError(t('wizard.soil.detectionFailed'));
             setShowManualSelection(true);
         } finally {
             setIsDetecting(false);
@@ -130,11 +132,10 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
 
     const getConfidenceBadge = (conf: 'high' | 'medium' | 'low' | null) => {
         if (!conf) return null;
-
         const badges = {
-            high: { color: 'success', text: 'Încredere mare', icon: checkmarkCircle },
-            medium: { color: 'warning', text: 'Încredere medie', icon: alertCircle },
-            low: { color: 'danger', text: 'Încredere scăzută', icon: alertCircle },
+            high: { color: 'success', text: t('wizard.soil.confidenceHigh'), icon: checkmarkCircle },
+            medium: { color: 'warning', text: t('wizard.soil.confidenceMedium'), icon: alertCircle },
+            low: { color: 'danger', text: t('wizard.soil.confidenceLow'), icon: alertCircle },
         };
 
         const badge = badges[conf];
@@ -147,7 +148,7 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
     };
 
     const getSoilVisual = (soilType: string) => {
-        return SOIL_VISUALS[soilType] || { emoji: '🌍', color: '#8b4513' };
+        return SOIL_VISUALS[soilType] || { emoji: '?', color: '#8b4513' };
     };
 
     // Render loading state
@@ -156,10 +157,8 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
             <IonCard className="glass-panel">
                 <IonCardContent className="text-center py-8">
                     <IonSpinner name="crescent" color="primary" className="mb-4" />
-                    <p className="text-white">Analizăm solul din locația ta...</p>
-                    <p className="text-gray-400 text-sm">
-                        Folosim baza de date SoilGrids (ISRIC)
-                    </p>
+                    <p className="text-white">{t('wizard.soil.detecting')}</p>
+                    <p className="text-gray-400 text-sm">{t('wizard.soil.detectingSource')}</p>
                 </IonCardContent>
             </IonCard>
         );
@@ -171,9 +170,9 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
             <IonCard className="glass-panel">
                 <IonCardContent className="text-center py-6">
                     <IonIcon icon={searchOutline} className="text-4xl text-gray-400 mb-2" />
-                    <p className="text-white">Setează locația mai întâi</p>
+                    <p className="text-white">{t('wizard.soil.noLocation')}</p>
                     <p className="text-gray-400 text-sm">
-                        Vom detecta automat tipul de sol din coordonatele GPS
+                        {t('wizard.soil.noLocationHint')}
                     </p>
                 </IonCardContent>
             </IonCard>
@@ -190,7 +189,7 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
                             <div className="flex items-center gap-2">
                                 <IonIcon icon={searchOutline} className="text-cyber-emerald" />
                                 <IonLabel className="font-bold text-white">
-                                    {autoDetected ? 'Detectat automat' : 'Sol selectat'}
+                                    {autoDetected ? t('wizard.soil.autoDetectedLabel') : t('wizard.soil.selectedLabel')}
                                 </IonLabel>
                                 <WhatsThisTooltip tooltipKey="soil_auto_detect" size="small" />
                             </div>
@@ -219,27 +218,27 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
                         {/* Soil properties */}
                         <div className="grid grid-cols-2 gap-2 mb-4">
                             <div className="bg-white/5 rounded-lg p-2">
-                                <p className="text-xs text-gray-400 m-0">Capacitate câmp</p>
+                                <p className="text-xs text-gray-400 m-0">{t('wizard.soil.fieldCapacity')}</p>
                                 <p className="text-white font-medium m-0">
-                                    {value.field_capacity_pct != null ? `${value.field_capacity_pct}%` : 'N/A'}
+                                    {value.field_capacity_pct != null ? `${value.field_capacity_pct}${t('common.percent')}` : t('common.notAvailable')}
                                 </p>
                             </div>
                             <div className="bg-white/5 rounded-lg p-2">
-                                <p className="text-xs text-gray-400 m-0">Punct ofilire</p>
+                                <p className="text-xs text-gray-400 m-0">{t('wizard.soil.wiltingPoint')}</p>
                                 <p className="text-white font-medium m-0">
-                                    {value.wilting_point_pct != null ? `${value.wilting_point_pct}%` : 'N/A'}
+                                    {value.wilting_point_pct != null ? `${value.wilting_point_pct}${t('common.percent')}` : t('common.notAvailable')}
                                 </p>
                             </div>
                             <div className="bg-white/5 rounded-lg p-2">
-                                <p className="text-xs text-gray-400 m-0">Infiltrare</p>
+                                <p className="text-xs text-gray-400 m-0">{t('wizard.soil.infiltration')}</p>
                                 <p className="text-white font-medium m-0">
-                                    {value.infiltration_rate_mm_h != null ? `${value.infiltration_rate_mm_h} mm/h` : 'N/A'}
+                                    {value.infiltration_rate_mm_h != null ? `${value.infiltration_rate_mm_h} ${t('common.mmPerHour')}` : t('common.notAvailable')}
                                 </p>
                             </div>
                             <div className="bg-white/5 rounded-lg p-2">
-                                <p className="text-xs text-gray-400 m-0">Apă disponibilă</p>
+                                <p className="text-xs text-gray-400 m-0">{t('wizard.soil.availableWater')}</p>
                                 <p className="text-white font-medium m-0">
-                                    {value.available_water_mm_m != null ? `${value.available_water_mm_m} mm/m` : 'N/A'}
+                                    {value.available_water_mm_m != null ? `${value.available_water_mm_m} ${t('common.mm')}/${t('common.metersShort')}` : t('common.notAvailable')}
                                 </p>
                             </div>
                         </div>
@@ -247,16 +246,16 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
                         {/* API details (if auto-detected) */}
                         {autoDetected && detectionResult && (
                             <div className="bg-white/5 rounded-lg p-2 mb-4">
-                                <p className="text-xs text-gray-400 m-0 mb-1">Compoziție detectată:</p>
+                                <p className="text-xs text-gray-400 m-0 mb-1">{t('wizard.soil.detectedComposition')}</p>
                                 <div className="flex gap-2">
                                     <IonChip outline color="warning" className="text-xs">
-                                        Argilă: {detectionResult.clay.toFixed(0)}%
+                                        {t('wizard.soil.clay')}: {detectionResult.clay.toFixed(0)}{t('common.percent')}
                                     </IonChip>
                                     <IonChip outline color="medium" className="text-xs">
-                                        Nisip: {detectionResult.sand.toFixed(0)}%
+                                        {t('wizard.soil.sand')}: {detectionResult.sand.toFixed(0)}{t('common.percent')}
                                     </IonChip>
                                     <IonChip outline color="tertiary" className="text-xs">
-                                        Silt: {detectionResult.silt.toFixed(0)}%
+                                        {t('wizard.soil.silt')}: {detectionResult.silt.toFixed(0)}{t('common.percent')}
                                     </IonChip>
                                 </div>
                             </div>
@@ -271,7 +270,7 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
                                 disabled={disabled}
                             >
                                 <IonIcon icon={layersOutline} slot="start" />
-                                Alege alt sol
+                                {t('wizard.soil.selectAnother')}
                             </IonButton>
                             {autoDetected && (
                                 <IonButton
@@ -281,7 +280,7 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
                                     disabled={disabled || isDetecting}
                                 >
                                     <IonIcon icon={refreshOutline} slot="start" />
-                                    Redetectează
+                                    {t('wizard.soil.redetect')}
                                 </IonButton>
                             )}
                         </div>
@@ -313,7 +312,7 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
                     className="mb-4"
                 >
                     <IonIcon icon={layersOutline} slot="start" />
-                    Alege manual tipul de sol
+                    {t('wizard.soil.manualSelectButton')}
                 </IonButton>
             )}
 
@@ -322,7 +321,7 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
                 <IonCard className="glass-panel">
                     <IonCardHeader>
                         <div className="flex items-center justify-between">
-                            <IonLabel className="font-bold text-white">Alege tipul de sol</IonLabel>
+                            <IonLabel className="font-bold text-white">{t('wizard.soil.manualSelectTitle')}</IonLabel>
                             <IonButton
                                 fill="clear"
                                 size="small"
@@ -359,7 +358,7 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
                                             <IonLabel>
                                                 <h2 className="text-white font-medium">{soil.texture}</h2>
                                                 <p className="text-gray-400 text-sm">
-                                                    Infiltrare: {soil.infiltration_rate_mm_h != null ? `${soil.infiltration_rate_mm_h} mm/h` : 'N/A'}
+                                                    {t('wizard.soil.infiltration')}: {soil.infiltration_rate_mm_h != null ? `${soil.infiltration_rate_mm_h} ${t('common.mmPerHour')}` : t('common.notAvailable')}
                                                 </p>
                                             </IonLabel>
                                             {isSelected && (

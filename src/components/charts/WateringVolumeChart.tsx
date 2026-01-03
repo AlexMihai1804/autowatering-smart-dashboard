@@ -17,6 +17,7 @@ import {
     Cell
 } from 'recharts';
 import { CHART_COLORS } from './index';
+import { useI18n } from '../../i18n';
 
 interface WateringDataPoint {
     date: string;
@@ -37,53 +38,6 @@ interface WateringVolumeChartProps {
     animate?: boolean;
 }
 
-const CustomTooltip = ({ active, payload, label, channelNames }: any) => {
-    if (active && payload && payload.length) {
-        const totalVolume = payload.reduce((sum: number, entry: any) => sum + (entry.value || 0), 0);
-        
-        return (
-            <div className="bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl min-w-[160px]">
-                <p className="text-gray-400 text-xs mb-2 border-b border-gray-700 pb-2">{label}</p>
-                <div className="space-y-1.5">
-                    {payload.map((entry: any, index: number) => {
-                        if (entry.value === 0) return null;
-                        const channelId = parseInt(entry.dataKey.replace('ch', ''));
-                        const name = channelNames?.[channelId] || `Zone ${channelId}`;
-                        
-                        return (
-                            <div key={index} className="flex items-center justify-between gap-3 text-sm">
-                                <div className="flex items-center gap-2">
-                                    <div 
-                                        className="w-2.5 h-2.5 rounded-sm" 
-                                        style={{ backgroundColor: entry.fill || entry.color }}
-                                    />
-                                    <span className="text-gray-300">{name}</span>
-                                </div>
-                                <span className="text-white font-medium">
-                                    {entry.value >= 1000 
-                                        ? `${(entry.value / 1000).toFixed(1)}L`
-                                        : `${entry.value}ml`
-                                    }
-                                </span>
-                            </div>
-                        );
-                    })}
-                </div>
-                <div className="border-t border-gray-700 mt-2 pt-2 flex justify-between">
-                    <span className="text-gray-400 text-xs">Total</span>
-                    <span className="text-cyan-400 font-medium text-sm">
-                        {totalVolume >= 1000 
-                            ? `${(totalVolume / 1000).toFixed(1)}L`
-                            : `${totalVolume}ml`
-                        }
-                    </span>
-                </div>
-            </div>
-        );
-    }
-    return null;
-};
-
 const WateringVolumeChart: React.FC<WateringVolumeChartProps> = ({
     data,
     channelNames = {},
@@ -93,6 +47,55 @@ const WateringVolumeChart: React.FC<WateringVolumeChartProps> = ({
     stacked = true,
     animate = true
 }) => {
+    const { t, language } = useI18n();
+    const locale = language === 'ro' ? 'ro-RO' : 'en-US';
+    const renderTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            const totalVolume = payload.reduce((sum: number, entry: any) => sum + (entry.value || 0), 0);
+
+            return (
+                <div className="bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl min-w-[160px]">
+                    <p className="text-gray-400 text-xs mb-2 border-b border-gray-700 pb-2">{label}</p>
+                    <div className="space-y-1.5">
+                        {payload.map((entry: any, index: number) => {
+                            if (entry.value === 0) return null;
+                            const channelId = parseInt(entry.dataKey.replace('ch', ''));
+                            const name = channelNames?.[channelId] || `${t('zones.zone')} ${channelId}`;
+
+                            return (
+                                <div key={index} className="flex items-center justify-between gap-3 text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <div
+                                            className="w-2.5 h-2.5 rounded-sm"
+                                            style={{ backgroundColor: entry.fill || entry.color }}
+                                        />
+                                        <span className="text-gray-300">{name}</span>
+                                    </div>
+                                    <span className="text-white font-medium">
+                                        {entry.value >= 1000
+                                            ? `${(entry.value / 1000).toFixed(1)}${t('common.litersShort')}`
+                                            : `${entry.value}${t('common.mlShort')}`
+                                        }
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <div className="border-t border-gray-700 mt-2 pt-2 flex justify-between">
+                        <span className="text-gray-400 text-xs">{t('labels.total')}</span>
+                        <span className="text-cyber-cyan font-medium text-sm">
+                            {totalVolume >= 1000
+                                ? `${(totalVolume / 1000).toFixed(1)}${t('common.litersShort')}`
+                                : `${totalVolume}${t('common.mlShort')}`
+                            }
+                        </span>
+                    </div>
+                </div>
+            );
+        }
+        return null;
+    };
+
     if (!data || data.length === 0) {
         return (
             <div 
@@ -100,8 +103,8 @@ const WateringVolumeChart: React.FC<WateringVolumeChartProps> = ({
                 style={{ height }}
             >
                 <div className="text-center">
-                    <p className="text-lg">💧</p>
-                    <p className="text-sm mt-2">No watering data</p>
+                    <p className="text-lg">{t('common.notAvailable')}</p>
+                    <p className="text-sm mt-2">{t('charts.noWateringData')}</p>
                 </div>
             </div>
         );
@@ -139,7 +142,7 @@ const WateringVolumeChart: React.FC<WateringVolumeChartProps> = ({
         }
         // Daily format: 2025-12-05
         const date = new Date(dateStr);
-        return date.toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' });
+        return date.toLocaleDateString(locale, { day: '2-digit', month: 'short' });
     }
 
     return (
@@ -172,18 +175,20 @@ const WateringVolumeChart: React.FC<WateringVolumeChartProps> = ({
                         tickLine={false}
                         axisLine={{ stroke: CHART_COLORS.grid }}
                         tickFormatter={(value) => 
-                            value >= 1000 ? `${(value / 1000).toFixed(0)}L` : `${value}`
+                            value >= 1000
+                                ? `${(value / 1000).toFixed(0)}${t('common.litersShort')}`
+                                : `${value}${t('common.mlShort')}`
                         }
                     />
                     
-                    <Tooltip content={<CustomTooltip channelNames={channelNames} />} />
+                    <Tooltip content={renderTooltip} />
                     
                     {showLegend && channels.length > 1 && (
                         <Legend 
                             wrapperStyle={{ paddingTop: 10 }}
                             formatter={(value) => {
                                 const channelId = parseInt(value.replace('ch', ''));
-                                const name = channelNames[channelId] || `Zone ${channelId}`;
+                                const name = channelNames[channelId] || `${t('zones.zone')} ${channelId}`;
                                 return <span className="text-gray-400 text-xs">{name}</span>;
                             }}
                         />

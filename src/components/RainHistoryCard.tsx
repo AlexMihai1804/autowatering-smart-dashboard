@@ -10,6 +10,7 @@ import {
 } from 'ionicons/icons';
 import { useAppStore } from '../store/useAppStore';
 import { BleService } from '../services/BleService';
+import { useI18n } from '../i18n';
 
 interface RainHistoryCardProps {
     onToast?: (message: string, color?: string) => void;
@@ -18,6 +19,8 @@ interface RainHistoryCardProps {
 const RainHistoryCard: React.FC<RainHistoryCardProps> = ({ onToast }) => {
     const { rainHistoryHourly, rainHistoryDaily, connectionState } = useAppStore();
     const bleService = BleService.getInstance();
+    const { t, language } = useI18n();
+    const locale = language === 'ro' ? 'ro-RO' : 'en-US';
     
     const [loading, setLoading] = useState(false);
     const [viewType, setViewType] = useState<'hourly' | 'daily' | 'recent'>('recent');
@@ -41,10 +44,10 @@ const RainHistoryCard: React.FC<RainHistoryCardProps> = ({ onToast }) => {
                     await bleService.getRainRecentTotals();
                     break;
             }
-            onToast?.('Rain history loaded', 'success');
+            onToast?.(t('rainHistory.loaded'), 'success');
         } catch (error: any) {
             console.error('Failed to load rain history:', error);
-            onToast?.(`Failed: ${error.message}`, 'danger');
+            onToast?.(t('errors.failedWithReason').replace('{error}', error.message), 'danger');
         } finally {
             setLoading(false);
         }
@@ -52,14 +55,14 @@ const RainHistoryCard: React.FC<RainHistoryCardProps> = ({ onToast }) => {
 
     const handleClearHistory = async () => {
         if (!isConnected) return;
-        if (!window.confirm('Reset ALL rain history data? This cannot be undone.')) return;
+        if (!window.confirm(t('rainHistory.clearConfirm'))) return;
         
         setLoading(true);
         try {
             await bleService.resetRainHistory();
-            onToast?.('Rain history cleared', 'warning');
+            onToast?.(t('rainHistory.cleared'), 'warning');
         } catch (error: any) {
-            onToast?.(`Failed: ${error.message}`, 'danger');
+            onToast?.(t('errors.failedWithReason').replace('{error}', error.message), 'danger');
         } finally {
             setLoading(false);
         }
@@ -67,23 +70,23 @@ const RainHistoryCard: React.FC<RainHistoryCardProps> = ({ onToast }) => {
 
     const handleCalibrate = async () => {
         if (!isConnected) return;
-        if (!window.confirm('Start rain sensor calibration?')) return;
+        if (!window.confirm(t('rainHistory.calibrateConfirm'))) return;
         
         setLoading(true);
         try {
             await bleService.calibrateRainSensor();
-            onToast?.('Calibration started', 'success');
+            onToast?.(t('rainHistory.calibrateStarted'), 'success');
         } catch (error: any) {
-            onToast?.(`Failed: ${error.message}`, 'danger');
+            onToast?.(t('errors.failedWithReason').replace('{error}', error.message), 'danger');
         } finally {
             setLoading(false);
         }
     };
 
     const formatTimestamp = (ts: number): string => {
-        if (ts === 0) return '--';
+        if (ts === 0) return t('common.notAvailable');
         const date = new Date(ts * 1000);
-        return date.toLocaleString('ro-RO', {
+        return date.toLocaleString(locale, {
             day: '2-digit',
             month: 'short',
             hour: '2-digit'
@@ -113,7 +116,7 @@ const RainHistoryCard: React.FC<RainHistoryCardProps> = ({ onToast }) => {
                 <div className="flex justify-between items-center">
                     <IonCardTitle className="text-white flex items-center gap-2">
                         <IonIcon icon={rainy} className="text-blue-400" />
-                        Rain History
+                        {t('rainHistory.title')}
                     </IonCardTitle>
                     <div className="flex gap-2">
                         <IonButton 
@@ -122,7 +125,7 @@ const RainHistoryCard: React.FC<RainHistoryCardProps> = ({ onToast }) => {
                             color="warning"
                             onClick={handleCalibrate}
                             disabled={loading}
-                            title="Calibrate sensor"
+                            title={t('rainHistory.calibrateTitle')}
                         >
                             <IonIcon icon={analytics} />
                         </IonButton>
@@ -156,13 +159,13 @@ const RainHistoryCard: React.FC<RainHistoryCardProps> = ({ onToast }) => {
                     className="mb-4"
                 >
                     <IonSegmentButton value="recent">
-                        <IonLabel>Summary</IonLabel>
+                        <IonLabel>{t('labels.summary')}</IonLabel>
                     </IonSegmentButton>
                     <IonSegmentButton value="hourly">
-                        <IonLabel>Hourly</IonLabel>
+                        <IonLabel>{t('labels.hourly')}</IonLabel>
                     </IonSegmentButton>
                     <IonSegmentButton value="daily">
-                        <IonLabel>Daily</IonLabel>
+                        <IonLabel>{t('labels.daily')}</IonLabel>
                     </IonSegmentButton>
                 </IonSegment>
 
@@ -175,7 +178,7 @@ const RainHistoryCard: React.FC<RainHistoryCardProps> = ({ onToast }) => {
                                     ? formatRainfall(rainHistoryHourly[rainHistoryHourly.length - 1]?.rainfall_mm_x100 || 0)
                                     : '--'}
                             </div>
-                            <div className="text-xs text-gray-400">mm (Last Hour)</div>
+                            <div className="text-xs text-gray-400">{t('rainHistory.lastHour')}</div>
                         </div>
                         <div className="bg-blue-900/30 p-4 rounded-xl">
                             <IonIcon icon={water} className="text-3xl text-blue-400 mb-2" />
@@ -184,7 +187,7 @@ const RainHistoryCard: React.FC<RainHistoryCardProps> = ({ onToast }) => {
                                     ? formatRainfall(rainHistoryHourly.slice(-24).reduce((sum, e) => sum + e.rainfall_mm_x100, 0))
                                     : '--'}
                             </div>
-                            <div className="text-xs text-gray-400">mm (24 Hours)</div>
+                            <div className="text-xs text-gray-400">{t('rainHistory.last24Hours')}</div>
                         </div>
                         <div className="bg-blue-900/30 p-4 rounded-xl">
                             <IonIcon icon={water} className="text-3xl text-blue-500 mb-2" />
@@ -193,7 +196,7 @@ const RainHistoryCard: React.FC<RainHistoryCardProps> = ({ onToast }) => {
                                     ? formatRainfall(rainHistoryDaily.reduce((sum, e) => sum + e.total_rainfall_mm_x100, 0))
                                     : '--'}
                             </div>
-                            <div className="text-xs text-gray-400">mm (7 Days)</div>
+                            <div className="text-xs text-gray-400">{t('rainHistory.last7Days')}</div>
                         </div>
                     </div>
                 )}
@@ -203,7 +206,7 @@ const RainHistoryCard: React.FC<RainHistoryCardProps> = ({ onToast }) => {
                         {rainHistoryHourly.length === 0 ? (
                             <div className="text-center py-8 text-gray-500">
                                 <IonIcon icon={calendarOutline} className="text-4xl mb-2" />
-                                <p>No hourly data</p>
+                                <p>{t('rainHistory.noHourlyData')}</p>
                             </div>
                         ) : (
                             <>
@@ -214,13 +217,13 @@ const RainHistoryCard: React.FC<RainHistoryCardProps> = ({ onToast }) => {
                                             <div 
                                                 className="w-full bg-blue-500 rounded-t"
                                                 style={{ height: `${getBarHeight(entry.rainfall_mm_x100, maxHourlyRain)}%` }}
-                                                title={`${formatRainfall(entry.rainfall_mm_x100)} mm`}
+                                                title={`${formatRainfall(entry.rainfall_mm_x100)} ${t('common.mm')}`}
                                             />
                                         </div>
                                     ))}
                                 </div>
                                 <div className="text-xs text-gray-400 text-center">
-                                    Last 24 hours • Max: {formatRainfall(maxHourlyRain)} mm
+                                    {t('rainHistory.last24HoursMax').replace('{max}', formatRainfall(maxHourlyRain))}
                                 </div>
                             </>
                         )}
@@ -232,7 +235,7 @@ const RainHistoryCard: React.FC<RainHistoryCardProps> = ({ onToast }) => {
                         {rainHistoryDaily.length === 0 ? (
                             <div className="text-center py-8 text-gray-500">
                                 <IonIcon icon={calendarOutline} className="text-4xl mb-2" />
-                                <p>No daily data</p>
+                                <p>{t('rainHistory.noDailyData')}</p>
                             </div>
                         ) : (
                             <>
@@ -245,13 +248,13 @@ const RainHistoryCard: React.FC<RainHistoryCardProps> = ({ onToast }) => {
                                                 style={{ height: `${getBarHeight(entry.total_rainfall_mm_x100, maxDailyRain)}%` }}
                                             />
                                             <div className="text-xs text-gray-500 mt-1">
-                                                {new Date(entry.day_epoch * 1000).toLocaleDateString('ro-RO', { weekday: 'short' })}
+                                                {new Date(entry.day_epoch * 1000).toLocaleDateString(locale, { weekday: 'short' })}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                                 <div className="text-xs text-gray-400 text-center">
-                                    Last 7 days • Total: {formatRainfall(rainHistoryDaily.reduce((s, e) => s + e.total_rainfall_mm_x100, 0))} mm
+                                    {t('rainHistory.last7DaysTotal').replace('{total}', formatRainfall(rainHistoryDaily.reduce((s, e) => s + e.total_rainfall_mm_x100, 0)))}
                                 </div>
                             </>
                         )}

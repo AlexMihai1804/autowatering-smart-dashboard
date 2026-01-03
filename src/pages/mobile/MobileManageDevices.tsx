@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import { useHistory } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useI18n } from '../../i18n';
 
 interface Device {
   id: string;
@@ -15,9 +16,10 @@ interface Device {
 
 const MobileManageDevices: React.FC = () => {
   const history = useHistory();
+  const { t } = useI18n();
   
   // Mock devices - in real app would come from store
-  const [devices] = useState<Device[]>([
+  const devices = useMemo<Device[]>(() => ([
     {
       id: '1',
       name: 'Garden Master 3000',
@@ -25,7 +27,7 @@ const MobileManageDevices: React.FC = () => {
       status: 'online',
       connectionType: 'wifi',
       signalStrength: 'excellent',
-      lastSync: 'Just now',
+      lastSync: t('mobileManageDevices.lastSync.justNow'),
       isActive: true,
     },
     {
@@ -35,7 +37,7 @@ const MobileManageDevices: React.FC = () => {
       status: 'standby',
       connectionType: 'bluetooth',
       signalStrength: 'good',
-      lastSync: '5 min ago',
+      lastSync: t('mobileManageDevices.lastSync.minutesAgo').replace('{count}', '5'),
       isActive: false,
     },
     {
@@ -45,7 +47,7 @@ const MobileManageDevices: React.FC = () => {
       status: 'offline',
       connectionType: 'wifi',
       signalStrength: 'weak',
-      lastSync: '2 hours ago',
+      lastSync: t('mobileManageDevices.lastSync.hoursAgo').replace('{count}', '2'),
       isActive: false,
     },
     {
@@ -55,10 +57,10 @@ const MobileManageDevices: React.FC = () => {
       status: 'standby',
       connectionType: 'bluetooth',
       signalStrength: 'fair',
-      lastSync: '10 min ago',
+      lastSync: t('mobileManageDevices.lastSync.minutesAgo').replace('{count}', '10'),
       isActive: false,
     },
-  ]);
+  ]), [t]);
 
   const activeDevice = devices.find(d => d.isActive);
   const otherDevices = devices.filter(d => !d.isActive);
@@ -91,7 +93,7 @@ const MobileManageDevices: React.FC = () => {
         >
           <span className="material-symbols-outlined text-[24px]">arrow_back_ios_new</span>
         </button>
-        <h2 className="text-white text-lg font-bold leading-tight tracking-tight">Manage Devices</h2>
+        <h2 className="text-white text-lg font-bold leading-tight tracking-tight">{t('mobileManageDevices.title')}</h2>
         <button 
           onClick={handleAddDevice}
           className="flex size-10 items-center justify-center rounded-full bg-mobile-primary/10 hover:bg-mobile-primary/20 text-mobile-primary active:scale-95 transition-all"
@@ -105,7 +107,7 @@ const MobileManageDevices: React.FC = () => {
         {/* Section: Current Device */}
         {activeDevice && (
           <section>
-            <h3 className="text-white text-lg font-bold leading-tight tracking-tight mb-4 px-1">Current Device</h3>
+            <h3 className="text-white text-lg font-bold leading-tight tracking-tight mb-4 px-1">{t('mobileManageDevices.currentDevice')}</h3>
             
             {/* Active Device Card */}
             <motion.div 
@@ -119,7 +121,7 @@ const MobileManageDevices: React.FC = () => {
                     <span className="animate-ping absolute inline-flex size-full rounded-full bg-mobile-primary opacity-75"></span>
                     <span className="relative inline-flex rounded-full size-2 bg-mobile-primary"></span>
                   </span>
-                  <span className="text-mobile-primary text-xs font-bold uppercase tracking-wider">Active</span>
+                  <span className="text-mobile-primary text-xs font-bold uppercase tracking-wider">{t('mobileManageDevices.activeBadge')}</span>
                 </div>
               </div>
               
@@ -134,7 +136,10 @@ const MobileManageDevices: React.FC = () => {
                       <span className="material-symbols-outlined text-[16px]">
                         {activeDevice.connectionType === 'wifi' ? 'wifi' : 'bluetooth'}
                       </span>
-                      Connected via {activeDevice.connectionType === 'wifi' ? 'Wi-Fi' : 'Bluetooth'}
+                      {t('mobileManageDevices.connectedVia')
+                        .replace('{type}', activeDevice.connectionType === 'wifi'
+                          ? t('mobileManageDevices.connectionTypes.wifi')
+                          : t('mobileManageDevices.connectionTypes.bluetooth'))}
                     </p>
                   </div>
                 </div>
@@ -142,12 +147,14 @@ const MobileManageDevices: React.FC = () => {
                 {/* Quick Stats */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-white/5 rounded-lg p-3 flex flex-col">
-                    <span className="text-mobile-text-muted text-xs">Last Sync</span>
+                    <span className="text-mobile-text-muted text-xs">{t('mobileManageDevices.lastSync.label')}</span>
                     <span className="text-white font-semibold text-sm">{activeDevice.lastSync}</span>
                   </div>
                   <div className="bg-white/5 rounded-lg p-3 flex flex-col">
-                    <span className="text-mobile-text-muted text-xs">Signal Strength</span>
-                    <span className="text-mobile-primary font-semibold text-sm capitalize">{activeDevice.signalStrength}</span>
+                    <span className="text-mobile-text-muted text-xs">{t('mobileManageDevices.signalStrength.label')}</span>
+                    <span className="text-mobile-primary font-semibold text-sm">
+                      {t(`mobileManageDevices.signalStrength.${activeDevice.signalStrength}`)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -158,7 +165,7 @@ const MobileManageDevices: React.FC = () => {
         {/* Section: Other Devices */}
         {otherDevices.length > 0 && (
           <section className="flex flex-col gap-3">
-            <h3 className="text-white text-lg font-bold leading-tight tracking-tight mb-1 px-1">Other Devices</h3>
+            <h3 className="text-white text-lg font-bold leading-tight tracking-tight mb-1 px-1">{t('mobileManageDevices.otherDevices')}</h3>
             
             <AnimatePresence>
               {otherDevices.map((device) => (
@@ -179,7 +186,9 @@ const MobileManageDevices: React.FC = () => {
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className={`size-1.5 rounded-full ${getStatusColor(device.status)}`}></span>
                         <p className="text-mobile-text-muted text-sm font-normal leading-normal capitalize">
-                          {device.status} • {device.location}
+                          {t('mobileManageDevices.deviceLine')
+                            .replace('{status}', t(`mobileManageDevices.status.${device.status}`))
+                            .replace('{location}', device.location)}
                         </p>
                       </div>
                     </div>
@@ -200,7 +209,7 @@ const MobileManageDevices: React.FC = () => {
             className="w-full h-14 rounded-full border-2 border-mobile-primary text-mobile-primary font-bold text-base tracking-wide active:bg-mobile-primary active:text-black transition-all flex items-center justify-center gap-2 hover:bg-mobile-primary/10"
           >
             <span className="material-symbols-outlined">add_circle</span>
-            Add New Controller
+            {t('mobileManageDevices.addController')}
           </button>
         </div>
 
@@ -210,9 +219,9 @@ const MobileManageDevices: React.FC = () => {
             <div className="size-24 rounded-full bg-mobile-surface-dark flex items-center justify-center mb-6">
               <span className="material-symbols-outlined text-mobile-text-muted text-5xl">router</span>
             </div>
-            <h3 className="text-white text-xl font-bold mb-2">No Devices</h3>
+            <h3 className="text-white text-xl font-bold mb-2">{t('mobileManageDevices.emptyTitle')}</h3>
             <p className="text-mobile-text-muted text-sm text-center max-w-[250px]">
-              Add your first AutoWatering controller to get started.
+              {t('mobileManageDevices.emptyMessage')}
             </p>
           </div>
         )}
@@ -222,3 +231,4 @@ const MobileManageDevices: React.FC = () => {
 };
 
 export default MobileManageDevices;
+

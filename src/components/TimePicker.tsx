@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { IonIcon } from '@ionic/react';
 import { timeOutline } from 'ionicons/icons';
+import { useI18n } from '../i18n';
 
 interface TimePickerProps {
     hour: number;
@@ -20,6 +21,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
     onChange,
     minuteStep = 5 
 }) => {
+    const { t } = useI18n();
     const hourRef = useRef<HTMLDivElement>(null);
     const minuteRef = useRef<HTMLDivElement>(null);
     const hourTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -186,7 +188,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
             {/* Header */}
             <div className="flex items-center justify-center gap-2 mb-3 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                 <IonIcon icon={timeOutline} style={{ color: 'var(--ion-color-primary)', fontSize: '1.25rem' }} />
-                <span style={{ color: 'white', fontWeight: 500 }}>Select Time</span>
+                <span style={{ color: 'white', fontWeight: 500 }}>{t('timePicker.selectTime')}</span>
             </div>
 
             {/* Wheels */}

@@ -3,6 +3,7 @@ import { useHistory } from 'react-router-dom';
 import { BleService } from '../../services/BleService';
 import { useAppStore } from '../../store/useAppStore';
 import { useKnownDevices } from '../../hooks/useKnownDevices';
+import { useI18n } from '../../i18n';
 
 interface DiscoveredDevice {
   deviceId: string;
@@ -15,6 +16,7 @@ const MobileDeviceScan: React.FC = () => {
   const { connectionState, discoveredDevices, connectedDeviceId, onboardingState } = useAppStore();
   const bleService = BleService.getInstance();
   const { addDevice } = useKnownDevices();
+  const { t } = useI18n();
   const [isScanning, setIsScanning] = useState(false);
   const [connectingTo, setConnectingTo] = useState<string | null>(null);
   const [lastConnectedName, setLastConnectedName] = useState<string | null>(null);
@@ -32,7 +34,7 @@ const MobileDeviceScan: React.FC = () => {
   useEffect(() => {
     if (connectionState === 'connected' && connectedDeviceId) {
       if (!didSaveDeviceRef.current) {
-        addDevice(connectedDeviceId, lastConnectedName || 'AutoWater Device');
+        addDevice(connectedDeviceId, lastConnectedName || t('mobileDeviceScan.defaultDeviceName'));
         didSaveDeviceRef.current = true;
       }
     }
@@ -73,11 +75,11 @@ const MobileDeviceScan: React.FC = () => {
   };
 
   const getSignalStrength = (rssi?: number): { icon: string; label: string; color: string } => {
-    if (!rssi) return { icon: 'wifi', label: 'Unknown', color: 'text-gray-400' };
-    if (rssi >= -50) return { icon: 'wifi', label: 'Excellent', color: 'text-green-500' };
-    if (rssi >= -60) return { icon: 'wifi', label: 'Strong', color: 'text-green-400' };
-    if (rssi >= -70) return { icon: 'wifi_2_bar', label: 'Fair', color: 'text-yellow-500' };
-    return { icon: 'wifi_1_bar', label: 'Weak', color: 'text-red-400' };
+    if (!rssi) return { icon: 'wifi', label: t('mobileDeviceScan.signal.unknown'), color: 'text-gray-400' };
+    if (rssi >= -50) return { icon: 'wifi', label: t('mobileDeviceScan.signal.excellent'), color: 'text-green-500' };
+    if (rssi >= -60) return { icon: 'wifi', label: t('mobileDeviceScan.signal.strong'), color: 'text-green-400' };
+    if (rssi >= -70) return { icon: 'wifi_2_bar', label: t('mobileDeviceScan.signal.fair'), color: 'text-yellow-500' };
+    return { icon: 'wifi_1_bar', label: t('mobileDeviceScan.signal.weak'), color: 'text-red-400' };
   };
 
   return (
@@ -90,7 +92,7 @@ const MobileDeviceScan: React.FC = () => {
         >
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
-        <h2 className="text-lg font-bold leading-tight tracking-tight flex-1 text-center">Add New Device</h2>
+        <h2 className="text-lg font-bold leading-tight tracking-tight flex-1 text-center">{t('mobileDeviceScan.title')}</h2>
         <button 
           onClick={() => history.goBack()}
           className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors"
@@ -120,10 +122,10 @@ const MobileDeviceScan: React.FC = () => {
           
           <div className="relative z-10 text-center space-y-2">
             <h3 className="text-xl font-bold tracking-tight">
-              {isScanning ? 'Scanning for devices...' : 'Scan Complete'}
+              {isScanning ? t('mobileDeviceScan.scanning') : t('mobileDeviceScan.scanComplete')}
             </h3>
             <p className="text-sm text-gray-400 max-w-[280px] mx-auto leading-relaxed">
-              Ensure your AutoWatering controller is powered on and within 10m range.
+              {t('mobileDeviceScan.scanHint')}
             </p>
           </div>
         </div>
@@ -132,7 +134,7 @@ const MobileDeviceScan: React.FC = () => {
         <div className="mt-4 flex flex-col gap-4">
           <div className="flex items-center justify-between px-2">
             <h4 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
-              Available Devices ({discoveredDevices.length})
+              {t('mobileDeviceScan.availableDevices').replace('{count}', discoveredDevices.length.toString())}
             </h4>
             {isScanning && (
               <div className="w-4 h-4 rounded-full border-2 border-mobile-primary border-t-transparent animate-spin"></div>
@@ -142,7 +144,7 @@ const MobileDeviceScan: React.FC = () => {
           {discoveredDevices.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <span className="material-symbols-outlined text-5xl mb-4 block opacity-50">devices</span>
-              <p>{isScanning ? 'Looking for devices...' : 'No devices found'}</p>
+              <p>{isScanning ? t('mobileDeviceScan.looking') : t('mobileDeviceScan.noneFound')}</p>
             </div>
           ) : (
             discoveredDevices.map((device) => {
@@ -160,11 +162,13 @@ const MobileDeviceScan: React.FC = () => {
                   
                   <div className="flex flex-col flex-1 min-w-0">
                     <p className="text-base font-bold leading-tight truncate">
-                      {device.name || 'AutoWater Device'}
+                      {device.name || t('mobileDeviceScan.defaultDeviceName')}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className={`material-symbols-outlined text-[16px] ${signal.color}`}>{signal.icon}</span>
-                      <span className="text-gray-400 text-xs font-medium">Signal: {signal.label}</span>
+                      <span className="text-gray-400 text-xs font-medium">
+                        {t('mobileDeviceScan.signalLabel').replace('{label}', signal.label)}
+                      </span>
                     </div>
                   </div>
                   
@@ -180,10 +184,10 @@ const MobileDeviceScan: React.FC = () => {
                     {isConnecting ? (
                       <>
                         <span className="w-4 h-4 border-2 border-mobile-bg-dark/30 border-t-mobile-bg-dark rounded-full animate-spin mr-2"></span>
-                        Connecting...
+                        {t('mobileDeviceScan.connecting')}
                       </>
                     ) : (
-                      'Connect'
+                      t('mobileDeviceScan.connect')
                     )}
                   </button>
                 </div>
@@ -196,7 +200,7 @@ const MobileDeviceScan: React.FC = () => {
         <div className="mt-8 flex justify-center">
           <button className="text-sm font-medium text-mobile-primary hover:text-green-400 flex items-center gap-1 transition-colors">
             <span className="material-symbols-outlined text-[18px]">help</span>
-            Can't find your device?
+            {t('mobileDeviceScan.cantFind')}
           </button>
         </div>
       </main>
@@ -211,7 +215,7 @@ const MobileDeviceScan: React.FC = () => {
           <span className={`material-symbols-outlined text-[20px] ${isScanning ? 'animate-spin' : ''}`}>
             refresh
           </span>
-          {isScanning ? 'Scanning...' : 'Restart Scan'}
+          {isScanning ? t('mobileDeviceScan.scanningShort') : t('mobileDeviceScan.restartScan')}
         </button>
       </div>
     </div>

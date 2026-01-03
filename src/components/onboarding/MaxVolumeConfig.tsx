@@ -31,7 +31,6 @@ import {
     informationCircleOutline,
     leafOutline,
     layersOutline,
-    appsOutline,
 } from 'ionicons/icons';
 
 import { SoilDBEntry, PlantDBEntry } from '../../services/DatabaseService';
@@ -78,7 +77,6 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
             const volumeLiters = Math.max(1, Math.round(coverageValue * 2));
             return {
                 volumeLiters,
-                details: '2L per plant',
                 depthMm: 0
             };
         }
@@ -91,18 +89,17 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
             : 150; // Default mm per meter
 
         // Calculate using FAO-56 formula
-        // RAW = AWC × Root Depth × MAD (50%)
+        // RAW = AWC * Root Depth * MAD (50%)
         const depthM = rootDepth / 1000; // Convert mm to m
         const totalAvailableWater = awc * depthM; // mm
         const mad = 0.5; // 50% Management Allowable Depletion (default)
         const readilyAvailableWater = totalAvailableWater * mad;
 
-        // Volume (L) = Depth (mm) * Area (m²)
+        // Volume (L) = Depth (mm) * Area (m^2)
         const volumeLiters = Math.max(5, Math.round(readilyAvailableWater * coverageValue));
 
         return {
             volumeLiters,
-            details: `RAW (${readilyAvailableWater.toFixed(1)}mm) × Area (${coverageValue}m²)`,
             depthMm: readilyAvailableWater,
             awc,
             rootDepthMm: rootDepth,
@@ -155,7 +152,7 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
                         />
                     </div>
                     <IonBadge color={getDeviationSeverity()} className="text-lg px-3 py-1">
-                        {maxVolumeLimit} L
+                        {maxVolumeLimit} {t('common.litersShort')}
                     </IonBadge>
                 </div>
             </IonCardHeader>
@@ -167,9 +164,7 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
                         <IonIcon icon={calculatorOutline} className="text-cyan-400" />
                         <span className="text-white text-sm">{t('cycleSoak.auto')}</span>
                         {autoCalculated && (
-                            <IonChip outline color="primary" className="h-5 text-xs">
-                                🤖 {t('cycleSoak.active')}
-                            </IonChip>
+                            <IonChip outline color="primary" className="h-5 text-xs">{t('labels.active')}</IonChip>
                         )}
                     </div>
                     <IonToggle
@@ -197,7 +192,7 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
                                                 <span className="text-xs text-gray-400">{t('zoneDetails.availableWater')}</span>
                                             </div>
                                             <p className="text-white font-medium m-0">
-                                                {recommendation.awc} mm/m
+                                                {recommendation.awc} {t('common.mm')}/{t('common.metersShort')}
                                             </p>
                                         </div>
                                         <div className="bg-white/5 rounded p-2">
@@ -206,23 +201,28 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
                                                 <span className="text-xs text-gray-400">{t('zoneDetails.rootDepth')}</span>
                                             </div>
                                             <p className="text-white font-medium m-0">
-                                                {recommendation.rootDepthMm} mm
+                                                {recommendation.rootDepthMm} {t('common.mm')}
                                             </p>
                                         </div>
                                     </div>
                                     <div className="text-sm text-gray-300 space-y-1">
                                         <p className="m-0">
-                                            1. RAW (mm): {recommendation.depthMm?.toFixed(1)} mm
+                                            {t('maxVolume.calculationStepRaw').replace('{depth}', recommendation.depthMm?.toFixed(1) || '0')}
                                         </p>
                                         <p className="m-0">
-                                            2. Volum: {recommendation.depthMm?.toFixed(1)} mm × {coverageValue} m² = <strong>{recommendation.volumeLiters} L</strong>
+                                            {t('maxVolume.calculationStepVolume')
+                                            .replace('{depth}', recommendation.depthMm?.toFixed(1) || '0')
+                                            .replace('{area}', String(coverageValue))
+                                            .replace('{volume}', String(recommendation.volumeLiters))}
                                         </p>
                                     </div>
                                 </>
                             ) : (
                                 <div className="text-sm text-gray-300">
                                     <p className="m-0">
-                                        Calcul simplificat: 2 Litri × {coverageValue} plante = <strong>{recommendation.volumeLiters} L</strong>
+                                        {t('maxVolume.simpleCalculation')
+                                        .replace('{count}', String(coverageValue))
+                                        .replace('{volume}', String(recommendation.volumeLiters))}
                                     </p>
                                 </div>
                             )}
@@ -237,7 +237,7 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
                             <span className="text-gray-300 text-sm">{t('zoneDetails.adjustManually')}</span>
                             {recommendation && (
                                 <span className="text-xs text-gray-500">
-                                    {t('zoneDetails.recommendedValue')} {recommendation.volumeLiters} L
+                                    {t('zoneDetails.recommendedValue')} {recommendation.volumeLiters} {t('common.litersShort')}
                                 </span>
                             )}
                         </div>
@@ -249,11 +249,11 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
                             onIonChange={(e) => handleManualChange(e.detail.value as number)}
                             disabled={disabled}
                             pin
-                            pinFormatter={(value) => `${value} L`}
+                            pinFormatter={(value) => `${value} ${t('common.litersShort')}`}
                         />
                         <div className="flex justify-between text-xs text-gray-500">
-                            <span>5 L</span>
-                            <span>500 L</span>
+                            <span>{t('maxVolume.rangeMin').replace('{value}', '5')}</span>
+                            <span>{t('maxVolume.rangeMax').replace('{value}', '500')}</span>
                         </div>
 
                         {/* Deviation warning */}
@@ -266,7 +266,7 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
                                 }
                             `}>
                                 <p className={`text-xs m-0 ${getDeviationSeverity() === 'warning' ? 'text-amber-300' : 'text-red-300'}`}>
-                                    ⚠️ {t('zoneDetails.valueDiffers')} ({recommendation.volumeLiters} L)
+                                    {t('zoneDetails.valueDiffers')} ({recommendation.volumeLiters} {t('common.litersShort')})
                                 </p>
                             </div>
                         )}
@@ -301,10 +301,10 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
                                 }
                             }}
                             className="w-24 bg-white/5 rounded text-center"
-                            placeholder="L"
+                            placeholder={t('common.litersShort')}
                             disabled={disabled}
                         />
-                        <span className="text-gray-400 text-sm">L</span>
+                        <span className="text-gray-400 text-sm">{t('common.litersShort')}</span>
                     </div>
                 )}
 
@@ -319,14 +319,10 @@ export const MaxVolumeConfig: React.FC<MaxVolumeConfigProps> = ({
                         </IonItem>
                         <div slot="content" className="px-4 pb-4">
                             <div className="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 rounded-lg p-4">
-                                <p className="text-gray-300 text-sm m-0 mb-3">
-                                    <strong>Limita de volum</strong> este o măsură de siguranță pentru a preveni udarea excesivă în caz de erori de calcul sau senzori.
-                                </p>
+                                <p className="text-gray-300 text-sm m-0 mb-3">{t('maxVolume.educationIntro')}</p>
 
                                 <div className="p-2 bg-cyan-500/10 rounded border border-cyan-500/20">
-                                    <p className="text-cyan-300 text-xs m-0">
-                                        💡 <strong>Sfat:</strong> Setează această valoare cu 20-30% mai mare decât necesarul zilnic maxim estimat.
-                                    </p>
+                                    <p className="text-cyan-300 text-xs m-0">{t('maxVolume.educationTip')}</p>
                                 </div>
                             </div>
                         </div>

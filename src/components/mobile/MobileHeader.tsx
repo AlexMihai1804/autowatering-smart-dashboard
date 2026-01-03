@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAppStore } from '../../store/useAppStore';
+import { useI18n } from '../../i18n';
 
 interface MobileHeaderProps {
   title: string;
@@ -17,6 +18,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
   rightAction 
 }) => {
   const { connectionState } = useAppStore();
+  const { t } = useI18n();
   const isConnected = connectionState === 'connected';
 
   return (
@@ -48,7 +50,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-mobile-primary opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-mobile-primary"></span>
               </span>
-              <span className="text-xs font-bold text-mobile-primary uppercase tracking-wide">Online</span>
+              <span className="text-xs font-bold text-mobile-primary uppercase tracking-wide">{t('dashboard.online')}</span>
             </div>
           )}
           {rightAction}

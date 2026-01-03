@@ -95,20 +95,12 @@ import {
 } from './onboarding';
 import { SoilSelector } from './onboarding/SoilSelectorSimple';
 import { SoilGridsService, SoilGridsResult, shouldEnableCycleSoak, calculateCycleSoakTiming } from '../services/SoilGridsService';
-import { WIZARD_TOOLTIPS } from '../utils/onboardingHelpers';
 import { getRecommendedCoverageType, getCoverageModeExplanation } from '../utils/plantCoverageHelper';
 // i18n and enhancements
 import { useI18n } from '../i18n';
 import { LanguageSelector } from './LanguageSelector';
 import {
     useKeyboardNavigation,
-    ValidationFeedback,
-    zoneNameRules,
-    useValidation,
-    SkipStepButton,
-    SkeletonCard,
-    HelpTooltip,
-    HELP_CONTENT,
 } from './onboarding/WizardEnhancements';
 
 // ============================================================================
@@ -200,6 +192,15 @@ interface OnboardingWizardProps {
     onClose: () => void;
 }
 
+const getWateringModes = (t: (key: string) => string): { mode: WateringModeType; label: string; description: string; icon: string; color: string }[] => ([
+    { mode: 'fao56_auto', label: t('wizard.modes.fao56Auto'), description: t('wizard.modes.fao56AutoDesc'), icon: leafOutline, color: 'success' },
+    { mode: 'fao56_eco', label: t('wizard.modes.fao56Eco'), description: t('wizard.modes.fao56EcoDesc'), icon: waterOutline, color: 'tertiary' },
+    { mode: 'duration', label: t('wizard.modes.duration'), description: t('wizard.modes.durationDesc'), icon: timerOutline, color: 'primary' },
+    { mode: 'volume', label: t('wizard.modes.volume'), description: t('wizard.modes.volumeDesc'), icon: speedometerOutline, color: 'secondary' }
+]);
+
+const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+
 // ============================================================================
 // Main Component
 // ============================================================================
@@ -208,6 +209,11 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
     const { systemConfig, rainConfig, zones, onboardingState } = useAppStore();
     const { plantDb, soilDb, irrigationMethodDb } = useAppStore();
     const bleService = BleService.getInstance();
+    const { t, language } = useI18n();
+    const percentUnit = t('common.percent');
+    const wateringModes = useMemo(() => getWateringModes(t), [t]);
+    const getZoneDefaultName = (index: number) => `${t('zoneDetails.zone')} ${index + 1}`;
+    const getPlantName = (plant: PlantDBEntry) => (language === 'ro' && plant.common_name_ro ? plant.common_name_ro : plant.common_name_en);
 
     // ========================================================================
     // State
@@ -231,7 +237,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
     const [zoneConfigs, setZoneConfigs] = useState<ZoneConfig[]>(() =>
         Array.from({ length: 8 }, (_, i) => ({
             channel_id: i,
-            name: zones[i]?.name || `Zone ${i + 1}`,
+            name: zones[i]?.name || getZoneDefaultName(i),
             enabled: true, // Enable all 8 zones by default
             wateringMode: 'fao56_auto' as WateringModeType,
             plant: null,
@@ -251,11 +257,11 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
             cycleSoakAutoEnabled: false,  // NEW: auto-enabled based on soil
             cycleSoakWateringMin: 5,   // 5 min watering
             cycleSoakPauseMin: 10,     // 10 min pause/soak
-            maxVolumeLimit: 50,        // 50L max per session
+            maxVolumeLimit: 50,        // 50 L max per session
             // Per-channel Rain Compensation (for TIME/VOLUME modes)
             rainCompEnabled: false,
             rainCompSensitivity: 50,   // 50%
-            rainCompSkipThreshold: 5,  // 5mm
+            rainCompSkipThreshold: 5,  // 5 mm
             rainCompLookbackHours: 24, // 24 hours
             // Per-channel Temperature Compensation (for TIME/VOLUME modes)
             tempCompEnabled: false,
@@ -327,11 +333,6 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
     const [soilDetectionResult, setSoilDetectionResult] = useState<SoilGridsResult | null>(null);
     const [isDetectingSoil, setIsDetectingSoil] = useState(false);
 
-    // i18n - 4.1
-    const { t, language } = useI18n();
-
-    // Zone name validation - 3.1
-    const zoneNameValidation = useValidation(zoneNameRules);
 
     // ========================================================================
     // Initialize from device data
@@ -1191,7 +1192,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                     <div className="w-full max-w-xs mb-6">
                         <div className="flex justify-between text-sm mb-1">
                             <span className="text-gray-400">{t('wizard.welcome.overallProgress')}</span>
-                            <span className="text-cyber-emerald font-medium">{completionPct}%</span>
+                            <span className="text-cyber-emerald font-medium">{completionPct}{percentUnit}</span>
                         </div>
                         <IonProgressBar value={completionPct / 100} color="success" />
                     </div>
@@ -1339,7 +1340,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                             {systemSetup.rainSensorEnabled && (
                                 <>
                                     <IonItem lines="none" className="bg-transparent">
-                                        <IonLabel position="stacked">Calibration (mm per pulse)</IonLabel>
+                                        <IonLabel position="stacked">{t('wizard.system.rainCalibration')}</IonLabel>
                                         <IonInput
                                             type="number"
                                             step="0.01"
@@ -1351,8 +1352,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         />
                                     </IonItem>
                                     <IonNote className="text-xs text-gray-400 px-4">
-                                        Rain compensation settings are configured per-zone for TIME/VOLUME modes.
-                                        FAO-56 modes incorporate rain data automatically.
+                                        {t('wizard.system.rainCompNote')}
                                     </IonNote>
                                 </>
                             )}
@@ -1366,7 +1366,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                         <IonCardHeader>
                             <div className="flex items-center gap-3">
                                 <IonIcon icon={flashOutline} className="text-2xl text-cyber-blue" />
-                                <IonLabel className="text-lg font-bold text-white">Power Mode</IonLabel>
+                                <IonLabel className="text-lg font-bold text-white">{t('wizard.system.powerMode')}</IonLabel>
                             </div>
                         </IonCardHeader>
                         <IonCardContent>
@@ -1376,9 +1376,9 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                     onIonChange={e => setSystemSetup(prev => ({ ...prev, powerMode: e.detail.value }))}
                                     interface="popover"
                                 >
-                                    <IonSelectOption value={0}>Normal</IonSelectOption>
-                                    <IonSelectOption value={1}>Low Power</IonSelectOption>
-                                    <IonSelectOption value={2}>Always On</IonSelectOption>
+                                    <IonSelectOption value={0}>{t('wizard.system.powerModes.normal')}</IonSelectOption>
+                                    <IonSelectOption value={1}>{t('wizard.system.powerModes.lowPower')}</IonSelectOption>
+                                    <IonSelectOption value={2}>{t('wizard.system.powerModes.alwaysOn')}</IonSelectOption>
                                 </IonSelect>
                             </IonItem>
                         </IonCardContent>
@@ -1391,12 +1391,12 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                         <IonCardHeader>
                             <div className="flex items-center gap-3">
                                 <IonIcon icon={waterOutline} className="text-2xl text-cyber-blue" />
-                                <IonLabel className="text-lg font-bold text-white">Flow Calibration</IonLabel>
+                                <IonLabel className="text-lg font-bold text-white">{t('wizard.system.flowCalibration')}</IonLabel>
                             </div>
                         </IonCardHeader>
                         <IonCardContent>
                             <IonItem lines="none" className="bg-transparent">
-                                <IonLabel position="stacked">Pulses per Liter</IonLabel>
+                                <IonLabel position="stacked">{t('wizard.system.pulsesPerLiter')}</IonLabel>
                                 <IonInput
                                     type="number"
                                     value={systemSetup.flowCalibration}
@@ -1407,7 +1407,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                 />
                             </IonItem>
                             <IonNote className="text-xs text-gray-400 px-4">
-                                Default: 750 pulses/L. Use calibration wizard in Settings for precise value.
+                                {t('wizard.system.flowCalibrationNote')}
                             </IonNote>
                         </IonCardContent>
                     </IonCard>
@@ -1422,16 +1422,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
 
     const currentZone = zoneConfigs[currentZoneIndex];
 
-    const WATERING_MODES: { mode: WateringModeType; label: string; description: string; icon: string; color: string }[] = [
-        { mode: 'fao56_auto', label: 'FAO-56 Auto', description: 'Full automated calculation with weather compensation', icon: leafOutline, color: 'success' },
-        { mode: 'fao56_eco', label: 'FAO-56 Eco', description: 'Water-saving mode (70% of standard)', icon: waterOutline, color: 'tertiary' },
-        { mode: 'duration', label: 'Duration', description: 'Simple time-based watering', icon: timerOutline, color: 'primary' },
-        { mode: 'volume', label: 'Volume', description: 'Flow-based watering with target volume', icon: speedometerOutline, color: 'secondary' }
-    ];
-
     const isFao56Mode = currentZone.wateringMode === 'fao56_auto' || currentZone.wateringMode === 'fao56_eco';
-
-    const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     // NEW: Copy Zone Configuration
     const copyZoneConfig = (sourceIndex: number) => {
@@ -1487,8 +1478,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
         <div className="p-4">
             <div className="text-center mb-6">
                 <IonIcon icon={appsOutline} className="text-5xl text-cyber-emerald mb-2" />
-                <h2 className="text-2xl font-bold text-white">Select Zone</h2>
-                <p className="text-gray-400">Choose a zone to configure</p>
+                <h2 className="text-2xl font-bold text-white">{t('wizard.zone.selectTitle')}</h2>
+                <p className="text-gray-400">{t('wizard.zone.selectSubtitle')}</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
                 {zoneConfigs.map((zone, idx) => {
@@ -1534,20 +1525,6 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
         // Get channel configuration status from firmware flags
         const channelStatus = getChannelStatus(currentZoneIndex);
 
-        const getStepDescription = () => {
-            if (zoneSubStep === 0) return 'Select watering mode';
-            if (isFao56) {
-                if (zoneSubStep === 1) return 'Select plant type';
-                if (zoneSubStep === 2) return 'Location & planting date';
-                if (zoneSubStep === 3) return 'Soil & irrigation method';
-                if (zoneSubStep === 4) return 'Coverage & sun exposure';
-            } else {
-                if (zoneSubStep === 1) return 'Configure settings';
-            }
-            if (zoneSubStep === 5) return 'Set schedule';
-            return '';
-        };
-
         return (
             <div className="p-4 space-y-3">
 
@@ -1558,9 +1535,9 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                             <IonIcon icon={layersOutline} style={{ color: 'var(--ion-color-success)', fontSize: '1.5rem' }} />
                             <div className="flex-1 min-w-0">
                                 <IonInput
-                                    value={currentZone.name || `Zone ${currentZoneIndex + 1}`}
+                                    value={currentZone.name || getZoneDefaultName(currentZoneIndex)}
                                     onIonInput={e => updateCurrentZone({ name: e.detail.value || '' })}
-                                    placeholder={`Zone ${currentZoneIndex + 1}`}
+                                    placeholder={getZoneDefaultName(currentZoneIndex)}
                                     className="font-semibold"
                                     style={{ '--padding-start': '0', '--padding-end': '0', fontSize: '1.1rem' }}
                                 />
@@ -1583,12 +1560,12 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                 <IonContent class="ion-padding">
                                     <IonList>
                                         <IonItem lines="none">
-                                            <IonLabel><strong>Copy from...</strong></IonLabel>
+                                            <IonLabel><strong>{t('wizard.zone.copyFrom')}</strong></IonLabel>
                                         </IonItem>
                                         {zoneConfigs.map((z, i) => (
                                             i !== currentZoneIndex && (z.plant || z.soil) ? (
                                                 <IonItem button key={i} onClick={() => copyZoneConfig(i)}>
-                                                    <IonLabel>Zone {i + 1}: {z.name}</IonLabel>
+                                                    <IonLabel>{t('zoneDetails.zone')} {i + 1}: {z.name}</IonLabel>
                                                 </IonItem>
                                             ) : null
                                         ))}
@@ -1616,7 +1593,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                     color={currentZone.wateringMode?.includes('fao56') ? 'success' : 'primary'}
                                     style={{ margin: 0, height: '28px', fontSize: '0.75rem' }}
                                 >
-                                    {WATERING_MODES.find(m => m.mode === currentZone.wateringMode)?.label}
+                                    {wateringModes.find(m => m.mode === currentZone.wateringMode)?.label}
                                 </IonChip>
                             )}
                             <IonToggle
@@ -1628,7 +1605,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                         {!currentZone.enabled && (
                             <div className="text-center py-2 mt-2">
                                 <IonButton fill="outline" color="medium" size="small" onClick={handleNext}>
-                                    Skip Zone
+                                    {t('wizard.zone.skipZone')}
                                     <IonIcon icon={chevronForward} slot="end" />
                                 </IonButton>
                             </div>
@@ -1650,36 +1627,36 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                             <IonCardContent className="py-2">
                                 <div className="flex items-center gap-2 mb-2">
                                     <IonIcon icon={checkmarkCircleOutline} color="success" />
-                                    <span className="text-sm font-medium text-cyber-emerald">Previously Configured</span>
+                                    <span className="text-sm font-medium text-cyber-emerald">{t('wizard.zone.previouslyConfigured')}</span>
                                     {status.isFao56Ready && (
                                         <IonChip color="success" style={{ margin: 0, height: '22px', fontSize: '0.65rem', fontWeight: 600 }}>
-                                            FAO-56 Ready ✓
+                                            {t('wizard.status.faoReadyTitle')}
                                         </IonChip>
                                     )}
                                 </div>
                                 <div className="flex flex-wrap gap-1">
-                                    {status.hasPlant && <IonChip color="success" outline style={{ height: '24px', fontSize: '0.7rem' }}><IonIcon icon={leafOutline} /> Plant</IonChip>}
-                                    {status.hasSoil && <IonChip color="success" outline style={{ height: '24px', fontSize: '0.7rem' }}>Soil</IonChip>}
-                                    {status.hasIrrigation && <IonChip color="success" outline style={{ height: '24px', fontSize: '0.7rem' }}>Irrigation</IonChip>}
-                                    {status.hasCoverage && <IonChip color="success" outline style={{ height: '24px', fontSize: '0.7rem' }}>Coverage</IonChip>}
-                                    {status.hasSunExposure && <IonChip color="success" outline style={{ height: '24px', fontSize: '0.7rem' }}><IonIcon icon={sunnyOutline} /> Sun</IonChip>}
-                                    {status.hasLatitude && <IonChip color="success" outline style={{ height: '24px', fontSize: '0.7rem' }}><IonIcon icon={locationOutline} /> Location</IonChip>}
-                                    {status.hasWaterFactor && <IonChip color="success" outline style={{ height: '24px', fontSize: '0.7rem' }}><IonIcon icon={waterOutline} /> Water</IonChip>}
-                                    {status.hasSchedule && <IonChip color="success" outline style={{ height: '24px', fontSize: '0.7rem' }}><IonIcon icon={timeOutline} /> Schedule</IonChip>}
+                                    {status.hasPlant && <IonChip color="success" outline style={{ height: '24px', fontSize: '0.7rem' }}><IonIcon icon={leafOutline} /> {t('wizard.summary.plant')}</IonChip>}
+                                    {status.hasSoil && <IonChip color="success" outline style={{ height: '24px', fontSize: '0.7rem' }}>{t('wizard.summary.soil')}</IonChip>}
+                                    {status.hasIrrigation && <IonChip color="success" outline style={{ height: '24px', fontSize: '0.7rem' }}>{t('wizard.summary.irrigation')}</IonChip>}
+                                    {status.hasCoverage && <IonChip color="success" outline style={{ height: '24px', fontSize: '0.7rem' }}>{t('wizard.summary.coverage')}</IonChip>}
+                                    {status.hasSunExposure && <IonChip color="success" outline style={{ height: '24px', fontSize: '0.7rem' }}><IonIcon icon={sunnyOutline} /> {t('wizard.summary.sunExposure')}</IonChip>}
+                                    {status.hasLatitude && <IonChip color="success" outline style={{ height: '24px', fontSize: '0.7rem' }}><IonIcon icon={locationOutline} /> {t('wizard.summary.location')}</IonChip>}
+                                    {status.hasWaterFactor && <IonChip color="success" outline style={{ height: '24px', fontSize: '0.7rem' }}><IonIcon icon={waterOutline} /> {t('wizard.zone.featureWater')}</IonChip>}
+                                    {status.hasSchedule && <IonChip color="success" outline style={{ height: '24px', fontSize: '0.7rem' }}><IonIcon icon={timeOutline} /> {t('labels.schedule')}</IonChip>}
                                 </div>
                                 {/* Extended Features Row */}
                                 {(status.hasRainComp || status.hasTempComp || status.hasCycleSoak || status.hasPlantingDate || status.hasVolumeLimit) && (
                                     <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-white/10">
-                                        <span className="text-xs text-gray-500 w-full mb-1">Features:</span>
-                                        {status.hasRainComp && <IonChip color="tertiary" outline style={{ height: '22px', fontSize: '0.65rem' }}><IonIcon icon={rainyOutline} /> Rain Comp</IonChip>}
-                                        {status.hasTempComp && <IonChip color="warning" outline style={{ height: '22px', fontSize: '0.65rem' }}><IonIcon icon={thermometerOutline} /> Temp Comp</IonChip>}
-                                        {status.hasCycleSoak && <IonChip color="secondary" outline style={{ height: '22px', fontSize: '0.65rem' }}><IonIcon icon={timerOutline} /> Cycle/Soak</IonChip>}
-                                        {status.hasPlantingDate && <IonChip color="primary" outline style={{ height: '22px', fontSize: '0.65rem' }}><IonIcon icon={calendarOutline} /> Planted</IonChip>}
-                                        {status.hasVolumeLimit && <IonChip color="danger" outline style={{ height: '22px', fontSize: '0.65rem' }}><IonIcon icon={speedometerOutline} /> Vol Limit</IonChip>}
+                                        <span className="text-xs text-gray-500 w-full mb-1">{t('wizard.zone.features')}</span>
+                                        {status.hasRainComp && <IonChip color="tertiary" outline style={{ height: '22px', fontSize: '0.65rem' }}><IonIcon icon={rainyOutline} /> {t('wizard.zone.featureRainComp')}</IonChip>}
+                                        {status.hasTempComp && <IonChip color="warning" outline style={{ height: '22px', fontSize: '0.65rem' }}><IonIcon icon={thermometerOutline} /> {t('wizard.zone.featureTempComp')}</IonChip>}
+                                        {status.hasCycleSoak && <IonChip color="secondary" outline style={{ height: '22px', fontSize: '0.65rem' }}><IonIcon icon={timerOutline} /> {t('wizard.zone.featureCycleSoak')}</IonChip>}
+                                        {status.hasPlantingDate && <IonChip color="primary" outline style={{ height: '22px', fontSize: '0.65rem' }}><IonIcon icon={calendarOutline} /> {t('wizard.zone.featurePlanted')}</IonChip>}
+                                        {status.hasVolumeLimit && <IonChip color="danger" outline style={{ height: '22px', fontSize: '0.65rem' }}><IonIcon icon={speedometerOutline} /> {t('wizard.zone.featureVolumeLimit')}</IonChip>}
                                     </div>
                                 )}
                                 <IonNote className="text-xs text-gray-400 mt-2 block">
-                                    Configured settings will be skipped. You can still reconfigure by navigating manually.
+                                    {t('wizard.messages.skipConfiguredNote')}
                                 </IonNote>
                             </IonCardContent>
                         </IonCard>
@@ -1700,7 +1677,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                 disabled={isTestingValve}
                             >
                                 <IonIcon slot="start" icon={waterOutline} />
-                                {isTestingValve ? 'Testing...' : 'Test (5s)'}
+                                {isTestingValve ? t('wizard.zone.testing') : t('wizard.zone.testValve').replace('{seconds}', '5')}
                             </IonButton>
                             <IonButton
                                 expand="block"
@@ -1711,12 +1688,12 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                 id="copy-config-trigger"
                             >
                                 <IonIcon slot="start" icon={copyOutline} />
-                                Copy Config
+                                {t('wizard.zone.copyConfig')}
                             </IonButton>
                             <IonPopover trigger="copy-config-trigger" isOpen={showCopyPopover} onDidDismiss={() => setShowCopyPopover(false)}>
                                 <IonContent>
                                     <IonList>
-                                        <IonListHeader>Copy from:</IonListHeader>
+                                        <IonListHeader>{t('wizard.zone.copyFrom')}</IonListHeader>
                                         {zoneConfigs.map((z, i) => (
                                             i !== currentZoneIndex && z.enabled && (z.plant || z.wateringMode !== 'fao56_auto') ? (
                                                 <IonItem button key={i} onClick={() => handleCopyConfig(i)}>
@@ -1745,8 +1722,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                             <div className="flex items-center gap-3">
                                                 <IonIcon icon={copyOutline} className="text-xl text-cyber-emerald" />
                                                 <div>
-                                                    <p className="text-white font-medium text-sm">Configurare rapidă</p>
-                                                    <p className="text-gray-400 text-xs">Copiază setările din "{previousConfiguredZone.name}"</p>
+                                                    <p className="text-white font-medium text-sm">{t('wizard.zone.quickSetupTitle')}</p>
+                                                    <p className="text-gray-400 text-xs">{t('wizard.zone.quickSetupSubtitle').replace('{zone}', previousConfiguredZone.name)}</p>
                                                 </div>
                                             </div>
                                             <IonButton
@@ -1768,7 +1745,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                     });
                                                 }}
                                             >
-                                                Copiază
+                                                {t('wizard.zone.cloneButton')}
                                             </IonButton>
                                         </div>
                                     </IonCardContent>
@@ -1779,11 +1756,11 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                         {/* Zone Name Prompt */}
                         <IonCard className="glass-panel">
                             <IonCardContent>
-                                <p style={{ color: 'var(--ion-color-medium)', marginBottom: '8px', fontSize: '0.9rem' }}>What do you call this zone?</p>
+                                <p style={{ color: 'var(--ion-color-medium)', marginBottom: '8px', fontSize: '0.9rem' }}>{t('wizard.zone.namePrompt')}</p>
                                 <IonInput
                                     value={currentZone.name}
                                     onIonInput={e => updateCurrentZone({ name: e.detail.value || '' })}
-                                    placeholder="e.g., Front Garden, Tomatoes, Lawn..."
+                                    placeholder={t('wizard.zone.namePlaceholder')}
                                     style={{ '--background': 'rgba(255,255,255,0.05)', '--padding-start': '12px', '--padding-end': '12px', borderRadius: '8px' }}
                                 />
                             </IonCardContent>
@@ -1791,8 +1768,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
 
                         {/* Mode Selection */}
                         <div className="space-y-3">
-                            <p style={{ color: 'var(--ion-color-medium)', paddingLeft: '8px', fontSize: '0.9rem' }}>Select watering mode:</p>
-                            {WATERING_MODES.map(({ mode, label, description, icon, color }) => (
+                            <p style={{ color: 'var(--ion-color-medium)', paddingLeft: '8px', fontSize: '0.9rem' }}>{t('wizard.zone.selectMode')}</p>
+                            {wateringModes.map(({ mode, label, description, icon, color }) => (
                                 <IonCard
                                     key={mode}
                                     button
@@ -1830,8 +1807,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                             <div className="flex items-center gap-3">
                                                 <IonIcon icon={checkmarkCircleOutline} color="success" className="text-2xl" />
                                                 <div>
-                                                    <p className="text-cyber-emerald font-medium">Plant Already Configured</p>
-                                                    <p className="text-gray-400 text-sm">This zone already has a plant set on the device. Select a new one to change it, or press Next to keep current.</p>
+                                                    <p className="text-cyber-emerald font-medium">{t('wizard.plant.alreadyConfigured')}</p>
+                                                    <p className="text-gray-400 text-sm">{t('wizard.plant.alreadyConfiguredDesc')}</p>
                                                 </div>
                                             </div>
                                         </IonCardContent>
@@ -1844,10 +1821,11 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                     value={currentZone.plant}
                                     onChange={(plant: PlantDBEntry) => {
                                         // 2.3: Smart zone name - only if using default name
-                                        const isDefaultName = currentZone.name.match(/^Zone \d+$/) ||
-                                            currentZone.name === `Zona ${currentZoneIndex + 1}`;
+                                        const isDefaultName = /^Zone \d+$/.test(currentZone.name) ||
+                                            /^Zona \d+$/.test(currentZone.name) ||
+                                            currentZone.name === getZoneDefaultName(currentZoneIndex);
                                         const smartName = isDefaultName
-                                            ? `${plant.common_name_ro}`
+                                            ? getPlantName(plant)
                                             : currentZone.name;
 
                                         updateCurrentZone({
@@ -1887,12 +1865,12 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                 <IonCardHeader>
                                     <div className="flex items-center gap-3">
                                         <IonIcon icon={timerOutline} className="text-2xl text-blue-400" />
-                                        <IonLabel className="text-lg font-bold text-white">Watering Duration</IonLabel>
+                                        <IonLabel className="text-lg font-bold text-white">{t('wizard.manual.durationTitle')}</IonLabel>
                                     </div>
                                 </IonCardHeader>
                                 <IonCardContent>
                                     <IonItem lines="none" className="bg-transparent">
-                                        <IonLabel position="stacked">Duration (minutes)</IonLabel>
+                                        <IonLabel position="stacked">{t('wizard.manual.durationLabel')}</IonLabel>
                                         <IonInput
                                             type="number"
                                             min={1}
@@ -1910,7 +1888,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         value={currentZone.durationMinutes}
                                         onIonInput={e => updateCurrentZone({ durationMinutes: e.detail.value as number })}
                                         pin
-                                        pinFormatter={(value: number) => `${value}min`}
+                                        pinFormatter={(value: number) => `${value}${t('common.minutesShort')}`}
                                     />
                                 </IonCardContent>
                             </IonCard>
@@ -1922,12 +1900,12 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                 <IonCardHeader>
                                     <div className="flex items-center gap-3">
                                         <IonIcon icon={speedometerOutline} className="text-2xl text-cyan-400" />
-                                        <IonLabel className="text-lg font-bold text-white">Target Volume</IonLabel>
+                                        <IonLabel className="text-lg font-bold text-white">{t('wizard.manual.volumeTitle')}</IonLabel>
                                     </div>
                                 </IonCardHeader>
                                 <IonCardContent>
                                     <IonItem lines="none" className="bg-transparent">
-                                        <IonLabel position="stacked">Volume (liters)</IonLabel>
+                                        <IonLabel position="stacked">{t('wizard.manual.volumeLabel')}</IonLabel>
                                         <IonInput
                                             type="number"
                                             min={1}
@@ -1945,7 +1923,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         value={currentZone.volumeLiters}
                                         onIonInput={e => updateCurrentZone({ volumeLiters: e.detail.value as number })}
                                         pin
-                                        pinFormatter={(value: number) => `${value}L`}
+                                        pinFormatter={(value: number) => `${value}${t('common.litersShort')}`}
                                     />
                                 </IonCardContent>
                             </IonCard>
@@ -1959,15 +1937,15 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                     <IonCardHeader className="pb-1">
                                         <div className="flex items-center gap-3">
                                             <IonIcon icon={rainyOutline} className="text-2xl text-blue-400" />
-                                            <IonLabel className="text-lg font-bold text-white">Rain Compensation</IonLabel>
+                                            <IonLabel className="text-lg font-bold text-white">{t('wizard.compensation.rainTitle')}</IonLabel>
                                         </div>
                                     </IonCardHeader>
                                     <IonCardContent className="space-y-3">
                                         <IonItem lines="none" className="bg-transparent">
                                             <IonLabel>
-                                                <h2>Enable Rain Compensation</h2>
+                                                <h2>{t('wizard.compensation.rainEnable')}</h2>
                                                 <p className="text-gray-400 text-sm">
-                                                    Adjust watering based on recent rainfall
+                                                    {t('wizard.compensation.rainDesc')}
                                                 </p>
                                             </IonLabel>
                                             <IonToggle
@@ -1980,8 +1958,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                             <div className="mt-3 pt-3 border-t border-gray-600/30 space-y-4">
                                                 <div>
                                                     <div className="flex justify-between mb-1">
-                                                        <span className="text-sm text-white">Sensitivity</span>
-                                                        <span className="text-sm text-cyan-400">{currentZone.rainCompSensitivity}%</span>
+                                                        <span className="text-sm text-white">{t('wizard.compensation.sensitivity')}</span>
+                                                        <span className="text-sm text-cyan-400">{currentZone.rainCompSensitivity}{percentUnit}</span>
                                                     </div>
                                                     <IonRange
                                                         min={10}
@@ -1993,7 +1971,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                     />
                                                 </div>
                                                 <div className="flex items-center gap-3">
-                                                    <span className="text-sm text-white flex-1">Skip if rain exceeds:</span>
+                                                    <span className="text-sm text-white flex-1">{t('wizard.compensation.skipThreshold')}</span>
                                                     <IonInput
                                                         type="number"
                                                         min={1}
@@ -2005,10 +1983,10 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                         style={{ '--color': 'white', maxWidth: '70px' }}
                                                         className="ion-text-center"
                                                     />
-                                                    <span className="text-gray-400 text-sm">mm</span>
+                                                    <span className="text-gray-400 text-sm">{t('common.mm')}</span>
                                                 </div>
                                                 <div className="flex items-center gap-3">
-                                                    <span className="text-sm text-white flex-1">Lookback period:</span>
+                                                    <span className="text-sm text-white flex-1">{t('wizard.compensation.lookbackPeriod')}</span>
                                                     <IonInput
                                                         type="number"
                                                         min={1}
@@ -2020,7 +1998,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                         style={{ '--color': 'white', maxWidth: '70px' }}
                                                         className="ion-text-center"
                                                     />
-                                                    <span className="text-gray-400 text-sm">hours</span>
+                                                    <span className="text-gray-400 text-sm">{t('wizard.compensation.lookbackHours')}</span>
                                                 </div>
                                             </div>
                                         )}
@@ -2032,15 +2010,15 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                     <IonCardHeader className="pb-1">
                                         <div className="flex items-center gap-3">
                                             <IonIcon icon={thermometerOutline} className="text-2xl text-orange-400" />
-                                            <IonLabel className="text-lg font-bold text-white">Temperature Compensation</IonLabel>
+                                            <IonLabel className="text-lg font-bold text-white">{t('wizard.compensation.tempTitle')}</IonLabel>
                                         </div>
                                     </IonCardHeader>
                                     <IonCardContent className="space-y-3">
                                         <IonItem lines="none" className="bg-transparent">
                                             <IonLabel>
-                                                <h2>Enable Temperature Compensation</h2>
+                                                <h2>{t('wizard.compensation.tempEnable')}</h2>
                                                 <p className="text-gray-400 text-sm">
-                                                    Increase watering on hot days, reduce on cool days
+                                                    {t('wizard.compensation.tempDesc')}
                                                 </p>
                                             </IonLabel>
                                             <IonToggle
@@ -2052,7 +2030,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         {currentZone.tempCompEnabled && (
                                             <div className="mt-3 pt-3 border-t border-gray-600/30 space-y-4">
                                                 <div className="flex items-center gap-3">
-                                                    <span className="text-sm text-white flex-1">Base temperature:</span>
+                                                    <span className="text-sm text-white flex-1">{t('wizard.compensation.baseTemp')}</span>
                                                     <IonInput
                                                         type="number"
                                                         min={10}
@@ -2064,12 +2042,12 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                         style={{ '--color': 'white', maxWidth: '70px' }}
                                                         className="ion-text-center"
                                                     />
-                                                    <span className="text-gray-400 text-sm">°C</span>
+                                                    <span className="text-gray-400 text-sm">{t('common.degreesC')}</span>
                                                 </div>
                                                 <div>
                                                     <div className="flex justify-between mb-1">
-                                                        <span className="text-sm text-white">Sensitivity</span>
-                                                        <span className="text-sm text-orange-400">{currentZone.tempCompSensitivity}%</span>
+                                                        <span className="text-sm text-white">{t('wizard.compensation.tempSensitivity')}</span>
+                                                        <span className="text-sm text-orange-400">{currentZone.tempCompSensitivity}{percentUnit}</span>
                                                     </div>
                                                     <IonRange
                                                         min={10}
@@ -2081,7 +2059,9 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                     />
                                                 </div>
                                                 <IonNote className="text-xs text-gray-400 block">
-                                                    At {currentZone.tempCompBaseTemp}°C no adjustment. Higher temps = more water (up to 30% extra), lower = less.
+                                                    {t('wizard.compensation.tempNote')
+                                                        .replace('{temp}', String(currentZone.tempCompBaseTemp))
+                                                        .replace('{unit}', t('common.degreesC'))}
                                                 </IonNote>
                                             </div>
                                         )}
@@ -2103,10 +2083,10 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         <IonIcon icon={checkmarkCircleOutline} color="success" className="text-2xl" />
                                         <div>
                                             <p className="text-cyber-emerald font-medium">
-                                                {channelStatus.hasSoil && channelStatus.hasIrrigation ? 'Soil & Irrigation Already Configured' :
-                                                    channelStatus.hasSoil ? 'Soil Already Configured' : 'Irrigation Already Configured'}
+                                                {channelStatus.hasSoil && channelStatus.hasIrrigation ? t('wizard.messages.soilIrrigationConfigured') :
+                                                    channelStatus.hasSoil ? t('wizard.messages.soilConfigured') : t('wizard.messages.irrigationConfigured')}
                                             </p>
-                                            <p className="text-gray-400 text-sm">Select new values to change, or press Next to keep current settings.</p>
+                                            <p className="text-gray-400 text-sm">{t('wizard.messages.keepCurrentSettings')}</p>
                                         </div>
                                     </div>
                                 </IonCardContent>
@@ -2183,10 +2163,10 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         <IonIcon icon={checkmarkCircleOutline} color="success" className="text-2xl" />
                                         <div>
                                             <p className="text-cyber-emerald font-medium">
-                                                {channelStatus.hasCoverage && channelStatus.hasSunExposure ? 'Coverage & Sun Already Configured' :
-                                                    channelStatus.hasCoverage ? 'Coverage Already Configured' : 'Sun Exposure Already Configured'}
+                                                {channelStatus.hasCoverage && channelStatus.hasSunExposure ? t('wizard.messages.coverageSunConfigured') :
+                                                    channelStatus.hasCoverage ? t('wizard.messages.coverageConfigured') : t('wizard.messages.sunConfigured')}
                                             </p>
-                                            <p className="text-gray-400 text-sm">Adjust values if needed, or press Next to keep current settings.</p>
+                                            <p className="text-gray-400 text-sm">{t('wizard.messages.adjustValuesHint')}</p>
                                         </div>
                                     </div>
                                 </IonCardContent>
@@ -2197,14 +2177,17 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                             <IonCardHeader>
                                 <div className="flex items-center gap-3">
                                     <IonIcon icon={appsOutline} className="text-2xl text-purple-400" />
-                                    <IonLabel className="text-lg font-bold text-white">Coverage Area</IonLabel>
+                                    <IonLabel className="text-lg font-bold text-white">{t('zoneDetails.coverageArea')}</IonLabel>
                                     {channelStatus.hasCoverage && <IonIcon icon={checkmarkCircleOutline} color="success" />}
                                 </div>
                             </IonCardHeader>
                             <IonCardContent className="space-y-4">
                                 {(() => {
                                     const coverageMode = getRecommendedCoverageType(currentZone.plant);
-                                    const explanation = getCoverageModeExplanation(currentZone.plant, coverageMode);
+                                    const explanation = getCoverageModeExplanation(currentZone.plant, coverageMode, {
+                                        coverageDenseExplanation: t('wizard.plant.coverageDenseExplanation'),
+                                        coverageSparseExplanation: t('wizard.plant.coverageSparseExplanation')
+                                    });
 
                                     // Show toggle only if both options are available
                                     if (coverageMode === 'both') {
@@ -2215,10 +2198,10 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                 color="primary"
                                             >
                                                 <IonSegmentButton value="area">
-                                                    <IonLabel style={{ color: currentZone.coverageType === 'area' ? 'var(--ion-color-primary)' : 'white' }}>Area (m²)</IonLabel>
+                                                    <IonLabel style={{ color: currentZone.coverageType === 'area' ? 'var(--ion-color-primary)' : 'white' }}>{t('zoneDetails.coverageByArea')}</IonLabel>
                                                 </IonSegmentButton>
                                                 <IonSegmentButton value="plants">
-                                                    <IonLabel style={{ color: currentZone.coverageType === 'plants' ? 'var(--ion-color-primary)' : 'white' }}>Plant Count</IonLabel>
+                                                    <IonLabel style={{ color: currentZone.coverageType === 'plants' ? 'var(--ion-color-primary)' : 'white' }}>{t('zoneDetails.coverageByPlants')}</IonLabel>
                                                 </IonSegmentButton>
                                             </IonSegment>
                                         );
@@ -2229,7 +2212,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5">
                                             <IonIcon icon={coverageMode === 'area' ? appsOutline : leafOutline} className="text-cyber-emerald" />
                                             <span className="text-white font-medium">
-                                                {coverageMode === 'area' ? 'Suprafață (m²)' : 'Număr plante'}
+                                                {coverageMode === 'area' ? t('zoneDetails.coverageByArea') : t('zoneDetails.coverageByPlants')}
                                             </span>
                                             {explanation && (
                                                 <span className="text-gray-400 text-sm ml-auto">{explanation}</span>
@@ -2240,7 +2223,9 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
 
                                 <div className="flex items-center gap-3 mt-2">
                                     <span style={{ color: 'white' }}>
-                                        {currentZone.coverageType === 'area' ? 'Area:' : 'Plants:'}
+                                        {currentZone.coverageType === 'area'
+                                            ? `${t('zoneDetails.coverageByArea')}:`
+                                            : `${t('zoneDetails.coverageByPlants')}:`}
                                     </span>
                                     <IonInput
                                         type="number"
@@ -2253,7 +2238,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         className="ion-text-center"
                                     />
                                     <span style={{ color: 'var(--ion-color-medium)' }}>
-                                        {currentZone.coverageType === 'area' ? 'm²' : 'plants'}
+                                        {currentZone.coverageType === 'area' ? t('zoneWizard.coverage.areaUnit') : t('zoneWizard.coverage.plantsUnit')}
                                     </span>
                                 </div>
                             </IonCardContent>
@@ -2263,7 +2248,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                             <IonCardHeader>
                                 <div className="flex items-center gap-3">
                                     <IonIcon icon={sunnyOutline} className="text-2xl text-yellow-400" />
-                                    <IonLabel className="text-lg font-bold text-white">Sun Exposure</IonLabel>
+                                    <IonLabel className="text-lg font-bold text-white">{t('wizard.summary.sunExposure')}</IonLabel>
                                     {channelStatus.hasSunExposure && <IonIcon icon={checkmarkCircleOutline} color="success" />}
                                 </div>
                             </IonCardHeader>
@@ -2275,13 +2260,13 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                     value={currentZone.sunExposure}
                                     onIonInput={e => updateCurrentZone({ sunExposure: e.detail.value as number })}
                                     pin
-                                    pinFormatter={(value: number) => `${value}%`}
+                                    pinFormatter={(value: number) => `${value}${t('common.percent')}`}
                                 >
                                     <IonIcon slot="start" icon={cloudOutline} className="text-gray-400" />
                                     <IonIcon slot="end" icon={sunnyOutline} className="text-yellow-400" />
                                 </IonRange>
                                 <p className="text-center text-gray-400 text-sm mt-2">
-                                    {currentZone.sunExposure}% direct sunlight
+                                    {t('zoneDetails.directSunlight').replace('{percent}', String(currentZone.sunExposure))}
                                 </p>
                             </IonCardContent>
                         </IonCard>
@@ -2313,13 +2298,13 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-white font-medium">Data plantării</span>
-                                            <IonBadge color="warning" className="text-xs">Opțional</IonBadge>
+                                            <span className="text-white font-medium">{t('wizard.plantingDate.label')}</span>
+                                            <IonBadge color="warning" className="text-xs">{t('common.optional')}</IonBadge>
                                         </div>
                                         <p className="text-gray-400 text-sm m-0">
                                             {currentZone.plantingDate
-                                                ? `Plantat: ${currentZone.plantingDate.toLocaleDateString('ro-RO')}`
-                                                : 'Ajută la calculul Kc pentru plante tinere'
+                                                ? `${t('wizard.summary.planted')}: ${currentZone.plantingDate.toLocaleDateString(language === 'ro' ? 'ro-RO' : 'en-US')}`
+                                                : t('wizard.plantingDate.helper')
                                             }
                                         </p>
                                     </div>
@@ -2330,7 +2315,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         color={currentZone.plantingDate ? 'success' : 'warning'}
                                     >
                                         <IonIcon slot="start" icon={calendarOutline} />
-                                        {currentZone.plantingDate ? 'Schimbă' : 'Setează'}
+                                        {currentZone.plantingDate ? t('common.change') : t('common.set')}
                                     </IonButton>
                                     <IonPopover trigger="planting-date-env-trigger" showBackdrop={true}>
                                         <IonDatetime
@@ -2351,7 +2336,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                 color="danger"
                                                 onClick={() => updateCurrentZone({ plantingDate: null })}
                                             >
-                                                Șterge data
+                                                {t('labels.clear')}
                                             </IonButton>
                                         )}
                                     </IonPopover>
@@ -2379,8 +2364,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                             <IonCardHeader>
                                 <div className="flex items-center gap-3">
                                     <IonIcon icon={locationOutline} className="text-2xl text-red-400" />
-                                    <IonLabel className="text-lg font-bold text-white">Locație</IonLabel>
-                                    <IonNote className="text-xs">(Pentru date meteo)</IonNote>
+                                    <IonLabel className="text-lg font-bold text-white">{t('wizard.location.title')}</IonLabel>
+                                    <IonNote className="text-xs">{t('wizard.steps.locationDesc')}</IonNote>
                                 </div>
                             </IonCardHeader>
                             <IonCardContent>
@@ -2401,7 +2386,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                 className="mb-4"
                                             >
                                                 <IonIcon icon={locationOutline} slot="start" />
-                                                Folosește locația din {firstLocationZone.name}
+                                                {t('wizard.zone.useLocationFrom')} {firstLocationZone.name}
                                             </IonButton>
                                         );
                                     }
@@ -2428,8 +2413,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                     <div className="flex items-center gap-3">
                                         <IonIcon icon={checkmarkCircle} color="success" className="text-3xl" />
                                         <div>
-                                            <p className="text-cyber-emerald font-bold text-lg">FAO-56 Ready ✓</p>
-                                            <p className="text-gray-300 text-sm">All requirements met for automatic ET₀ calculation</p>
+                                            <p className="text-cyber-emerald font-bold text-lg">{t('wizard.status.faoReadyTitle')}</p>
+                                            <p className="text-gray-300 text-sm">{t('wizard.status.faoReadyDesc')}</p>
                                         </div>
                                     </div>
                                 </IonCardContent>
@@ -2440,19 +2425,19 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                             <IonCardHeader className="pb-1">
                                 <div className="flex items-center gap-3">
                                     <IonIcon icon={checkmarkCircleOutline} className="text-2xl text-cyber-emerald" />
-                                    <IonLabel className="text-lg font-bold text-white">Zone Summary</IonLabel>
+                                    <IonLabel className="text-lg font-bold text-white">{t('wizard.summary.title')}</IonLabel>
                                 </div>
                             </IonCardHeader>
                             <IonCardContent className="space-y-3">
                                 {/* Mode */}
                                 <div className="flex items-center justify-between py-2 border-b border-white/10">
-                                    <span className="text-gray-400">Mode</span>
+                                    <span className="text-gray-400">{t('wizard.summary.mode')}</span>
                                     <div className="flex items-center gap-2">
                                         <IonChip
                                             color={currentZone.wateringMode?.includes('fao56') ? 'success' : 'primary'}
                                             style={{ margin: 0 }}
                                         >
-                                            {WATERING_MODES.find(m => m.mode === currentZone.wateringMode)?.label}
+                                            {wateringModes.find(m => m.mode === currentZone.wateringMode)?.label}
                                         </IonChip>
                                         {channelStatus.isFao56Ready && (
                                             <IonIcon icon={checkmarkCircle} color="success" />
@@ -2465,9 +2450,9 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                     <>
                                         {/* Plant */}
                                         <div className="flex items-center justify-between py-2 border-b border-white/10">
-                                            <span className="text-gray-400">Plant</span>
+                                            <span className="text-gray-400">{t('wizard.summary.plant')}</span>
                                             <div className="text-right">
-                                                <span className="text-white">{currentZone.plant?.common_name_en}</span>
+                                                <span className="text-white">{currentZone.plant ? getPlantName(currentZone.plant) : ''}</span>
                                                 <p className="text-xs text-cyber-emerald">
                                                     Kc: {currentZone.plant?.kc_ini} → {currentZone.plant?.kc_mid} → {currentZone.plant?.kc_end}
                                                 </p>
@@ -2476,44 +2461,44 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
 
                                         {/* Soil */}
                                         <div className="flex items-center justify-between py-2 border-b border-white/10">
-                                            <span className="text-gray-400">Soil</span>
+                                            <span className="text-gray-400">{t('wizard.summary.soil')}</span>
                                             <div className="text-right">
                                                 <span className="text-white">{currentZone.soil?.texture}</span>
                                                 <p className="text-xs text-gray-400">
-                                                    {currentZone.soil?.infiltration_rate_mm_h} mm/h infiltration
+                                                    {t('wizard.soil.infiltration')}: {currentZone.soil?.infiltration_rate_mm_h} {t('common.mmPerHour')}
                                                 </p>
                                             </div>
                                         </div>
 
                                         {/* Irrigation Method */}
                                         <div className="flex items-center justify-between py-2 border-b border-white/10">
-                                            <span className="text-gray-400">Irrigation</span>
+                                            <span className="text-gray-400">{t('wizard.summary.irrigation')}</span>
                                             <div className="text-right">
                                                 <span className="text-white">{currentZone.irrigationMethod?.name}</span>
                                                 <p className="text-xs text-gray-400">
-                                                    {currentZone.irrigationMethod?.efficiency_pct}% efficiency
+                                                    {currentZone.irrigationMethod?.efficiency_pct}{percentUnit} {t('wizard.irrigationMethod.efficiencyLabel')}
                                                 </p>
                                             </div>
                                         </div>
 
                                         {/* Coverage */}
                                         <div className="flex items-center justify-between py-2 border-b border-white/10">
-                                            <span className="text-gray-400">Coverage</span>
+                                            <span className="text-gray-400">{t('wizard.summary.coverage')}</span>
                                             <span className="text-white">
-                                                {currentZone.coverageValue} {currentZone.coverageType === 'area' ? 'm²' : 'plants'}
+                                                {currentZone.coverageValue} {currentZone.coverageType === 'area' ? t('zoneWizard.coverage.areaUnit') : t('zoneWizard.coverage.plantsUnit')}
                                             </span>
                                         </div>
 
                                         {/* Sun Exposure */}
                                         <div className="flex items-center justify-between py-2 border-b border-white/10">
-                                            <span className="text-gray-400">Sun Exposure</span>
-                                            <span className="text-white">{currentZone.sunExposure}%</span>
+                                            <span className="text-gray-400">{t('wizard.summary.sunExposure')}</span>
+                                            <span className="text-white">{currentZone.sunExposure}{percentUnit}</span>
                                         </div>
 
                                         {/* Cycle & Soak */}
                                         {currentZone.enableCycleSoak && (
                                             <div className="flex items-center justify-between py-2 border-b border-white/10">
-                                                <span className="text-gray-400">Cycle & Soak</span>
+                                                <span className="text-gray-400">{t('wizard.summary.cycleSoak')}</span>
                                                 <div className="flex items-center gap-2">
                                                     <IonChip color="tertiary" style={{ margin: 0, height: '24px', fontSize: '0.7rem' }}>
                                                         {currentZone.cycleSoakWateringMin}m / {currentZone.cycleSoakPauseMin}m
@@ -2525,9 +2510,9 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
 
                                         {/* Max Volume */}
                                         <div className="flex items-center justify-between py-2 border-b border-white/10">
-                                            <span className="text-gray-400">Max Volume</span>
+                                            <span className="text-gray-400">{t('wizard.summary.maxVolume')}</span>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-white">{currentZone.maxVolumeLimit} L</span>
+                                                <span className="text-white">{currentZone.maxVolumeLimit} {t('common.litersShort')}</span>
                                                 {channelStatus.hasVolumeLimit && <IonIcon icon={checkmarkCircle} color="success" />}
                                             </div>
                                         </div>
@@ -2535,10 +2520,10 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         {/* Location */}
                                         {currentZone.location && (
                                             <div className="flex items-center justify-between py-2 border-b border-white/10">
-                                                <span className="text-gray-400">Location</span>
+                                                <span className="text-gray-400">{t('wizard.summary.location')}</span>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-white text-sm">
-                                                        {currentZone.location.latitude.toFixed(2)}°, {currentZone.location.longitude.toFixed(2)}°
+                                                        {currentZone.location.latitude.toFixed(2)}, {currentZone.location.longitude.toFixed(2)}
                                                     </span>
                                                     {channelStatus.hasLatitude && <IonIcon icon={checkmarkCircle} color="success" />}
                                                 </div>
@@ -2548,9 +2533,9 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         {/* Planting Date */}
                                         {currentZone.plantingDate && (
                                             <div className="flex items-center justify-between py-2 border-b border-white/10">
-                                                <span className="text-gray-400">Planted</span>
+                                                <span className="text-gray-400">{t('wizard.summary.planted')}</span>
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-white">{currentZone.plantingDate.toLocaleDateString()}</span>
+                                                    <span className="text-white">{currentZone.plantingDate.toLocaleDateString(language === 'ro' ? 'ro-RO' : 'en-US')}</span>
                                                     {channelStatus.hasPlantingDate && <IonIcon icon={checkmarkCircle} color="success" />}
                                                 </div>
                                             </div>
@@ -2560,20 +2545,19 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         <div className="mt-3 pt-3 border-t border-white/20">
                                             <div className="flex items-center gap-2 mb-2">
                                                 <IonIcon icon={timeOutline} className="text-cyber-emerald" />
-                                                <span className="text-sm font-medium text-cyber-emerald">Previzualizare program</span>
+                                                <span className="text-sm font-medium text-cyber-emerald">{t('wizard.summary.schedulePreview')}</span>
                                             </div>
                                             <div className="bg-black/30 rounded-lg p-3">
                                                 <div className="flex items-center justify-between text-sm">
-                                                    <span className="text-gray-400">Evaluare</span>
-                                                    <span className="text-white">Zilnic la răsărit 🌅</span>
+                                                    <span className="text-gray-400">{t('wizard.schedule.evaluationLabel')}</span>
+                                                    <span className="text-white">{t('wizard.schedule.evaluationDaily')}</span>
                                                 </div>
                                                 <div className="flex items-center justify-between text-sm mt-2">
-                                                    <span className="text-gray-400">Durată estimată</span>
-                                                    <span className="text-white">~15-45 min / zonă</span>
+                                                    <span className="text-gray-400">{t('wizard.schedule.estimatedDurationLabel')}</span>
+                                                    <span className="text-white">{t('wizard.schedule.estimatedDuration')}</span>
                                                 </div>
                                                 <p className="text-xs text-gray-500 mt-2 m-0">
-                                                    FAO-56 calculează automat necesarul de apă bazat pe vremea locală,
-                                                    tip de plantă și caracteristicile solului.
+                                                    {t('wizard.schedule.summaryDesc')}
                                                 </p>
                                             </div>
                                         </div>
@@ -2585,12 +2569,12 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                     <>
                                         <div className="flex items-center justify-between py-2 border-b border-white/10">
                                             <span className="text-gray-400">
-                                                {currentZone.wateringMode === 'duration' ? 'Duration' : 'Volume'}
+                                                {currentZone.wateringMode === 'duration' ? t('wizard.modes.duration') : t('wizard.modes.volume')}
                                             </span>
                                             <span className="text-white text-xl font-bold">
                                                 {currentZone.wateringMode === 'duration'
-                                                    ? `${currentZone.durationMinutes} min`
-                                                    : `${currentZone.volumeLiters} L`}
+                                                    ? `${currentZone.durationMinutes} ${t('common.minutesShort')}`
+                                                    : `${currentZone.volumeLiters} ${t('common.litersShort')}`}
                                             </span>
                                         </div>
 
@@ -2598,15 +2582,17 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         <div className="flex items-center justify-between py-2 border-b border-white/10">
                                             <span className="text-gray-400 flex items-center gap-2">
                                                 <IonIcon icon={rainyOutline} className="text-blue-400" />
-                                                Rain Compensation
+                                                {t('wizard.compensation.rainTitle')}
                                             </span>
                                             <div className="flex items-center gap-2">
                                                 {currentZone.rainCompEnabled ? (
                                                     <span className="text-cyan-400 text-sm">
-                                                        {currentZone.rainCompSensitivity}% • Skip &gt;{currentZone.rainCompSkipThreshold}mm
+                                                        {t('wizard.compensation.rainSummary')
+                                                            .replace('{sensitivity}', String(currentZone.rainCompSensitivity))
+                                                            .replace('{threshold}', String(currentZone.rainCompSkipThreshold))}
                                                     </span>
                                                 ) : (
-                                                    <span className="text-gray-500">Off</span>
+                                                    <span className="text-gray-500">{t('common.off')}</span>
                                                 )}
                                                 {channelStatus.hasRainComp && <IonIcon icon={checkmarkCircle} color="success" />}
                                             </div>
@@ -2616,15 +2602,18 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         <div className="flex items-center justify-between py-2">
                                             <span className="text-gray-400 flex items-center gap-2">
                                                 <IonIcon icon={thermometerOutline} className="text-orange-400" />
-                                                Temp Compensation
+                                                {t('wizard.compensation.tempTitle')}
                                             </span>
                                             <div className="flex items-center gap-2">
                                                 {currentZone.tempCompEnabled ? (
                                                     <span className="text-orange-400 text-sm">
-                                                        Base {currentZone.tempCompBaseTemp}°C • {currentZone.tempCompSensitivity}%
+                                                        {t('wizard.compensation.tempSummary')
+                                                            .replace('{temp}', String(currentZone.tempCompBaseTemp))
+                                                            .replace('{unit}', t('common.degreesC'))
+                                                            .replace('{sensitivity}', String(currentZone.tempCompSensitivity))}
                                                     </span>
                                                 ) : (
-                                                    <span className="text-gray-500">Off</span>
+                                                    <span className="text-gray-500">{t('common.off')}</span>
                                                 )}
                                                 {channelStatus.hasTempComp && <IonIcon icon={checkmarkCircle} color="success" />}
                                             </div>
@@ -2638,7 +2627,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                         <div className="flex items-center gap-2 px-4 py-2">
                             <IonIcon icon={checkmarkCircleOutline} style={{ color: 'var(--ion-color-success)' }} />
                             <span className="text-sm text-gray-400">
-                                Configuration will be saved when you proceed to schedule
+                                {t('wizard.messages.saveOnSchedule')}
                             </span>
                         </div>
                     </>
@@ -2652,7 +2641,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                             <IonCardContent className="py-2">
                                 <div className="flex items-center gap-3">
                                     <IonIcon icon={calendarOutline} style={{ color: 'var(--ion-color-primary)', fontSize: '1.5rem' }} />
-                                    <span className="flex-1 font-semibold text-white">Activează programare</span>
+                                    <span className="flex-1 font-semibold text-white">{t('wizard.schedule.enable')}</span>
                                     <IonToggle
                                         checked={scheduleConfigs[currentZoneIndex].enabled}
                                         onIonChange={e => updateCurrentSchedule({ enabled: e.detail.checked })}
@@ -2673,14 +2662,17 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                 </div>
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-white font-bold">FAO-56 Smart Schedule</span>
-                                                        <IonBadge color="success" className="text-xs">Auto</IonBadge>
+                                                        <span className="text-white font-bold">{t('wizard.schedule.fao56Smart')}</span>
+                                                        <IonBadge color="success" className="text-xs">{t('wizard.schedule.autoBadge')}</IonBadge>
                                                     </div>
                                                     <p className="text-gray-400 text-sm m-0 mt-1">
-                                                        Irigare la {scheduleConfigs[currentZoneIndex].solarEvent === 'sunrise' ? 'răsărit' : 'apus'} • Solar Time ON
+                                                        {t('wizard.schedule.autoSummary')
+                                                            .replace('{event}', scheduleConfigs[currentZoneIndex].solarEvent === 'sunrise'
+                                                                ? t('wizard.schedule.sunrise')
+                                                                : t('wizard.schedule.sunset'))}
                                                     </p>
                                                     <p className="text-gray-500 text-xs m-0">
-                                                        Evaluează zilnic necesarul de apă bazat pe evapotranspirație
+                                                        {t('wizard.schedule.fao56SmartDesc')}
                                                     </p>
                                                 </div>
                                                 <IonButton
@@ -2688,7 +2680,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                     size="small"
                                                     onClick={() => setShowScheduleOptions(true)}
                                                 >
-                                                    Modifică
+                                                    {t('wizard.schedule.modify')}
                                                 </IonButton>
                                             </div>
                                         </IonCardContent>
@@ -2705,35 +2697,35 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                     color="primary"
                                                 >
                                                     <IonSegmentButton value="daily">
-                                                        <IonLabel style={{ color: scheduleConfigs[currentZoneIndex].scheduleType === 'daily' ? 'var(--ion-color-primary)' : 'white' }}>Zilnic</IonLabel>
+                                                        <IonLabel style={{ color: scheduleConfigs[currentZoneIndex].scheduleType === 'daily' ? 'var(--ion-color-primary)' : 'white' }}>{t('wizard.schedule.daily')}</IonLabel>
                                                     </IonSegmentButton>
                                                     <IonSegmentButton value="periodic">
-                                                        <IonLabel style={{ color: scheduleConfigs[currentZoneIndex].scheduleType === 'periodic' ? 'var(--ion-color-primary)' : 'white' }}>La X zile</IonLabel>
+                                                        <IonLabel style={{ color: scheduleConfigs[currentZoneIndex].scheduleType === 'periodic' ? 'var(--ion-color-primary)' : 'white' }}>{t('wizard.schedule.periodic')}</IonLabel>
                                                     </IonSegmentButton>
                                                     {isFao56Mode && (
                                                         <IonSegmentButton value="auto">
-                                                            <IonLabel style={{ color: scheduleConfigs[currentZoneIndex].scheduleType === 'auto' ? 'var(--ion-color-primary)' : 'white' }}>FAO-56</IonLabel>
+                                                            <IonLabel style={{ color: scheduleConfigs[currentZoneIndex].scheduleType === 'auto' ? 'var(--ion-color-primary)' : 'white' }}>{t('wizard.schedule.auto')}</IonLabel>
                                                         </IonSegmentButton>
                                                     )}
                                                 </IonSegment>
 
                                                 {scheduleConfigs[currentZoneIndex].scheduleType === 'daily' && (
                                                     <div className="mt-3 flex flex-wrap gap-1 justify-center">
-                                                        {DAYS.map((day, i) => (
+                                                        {DAY_KEYS.map((dayKey, i) => (
                                                             <IonChip
-                                                                key={day}
+                                                                key={dayKey}
                                                                 color={(scheduleConfigs[currentZoneIndex].daysMask & (1 << i)) ? 'primary' : 'medium'}
                                                                 onClick={() => toggleDay(i)}
                                                                 className="m-0"
                                                             >
-                                                                {day}
+                                                                {t(`wizard.schedule.days.${dayKey}`)}
                                                             </IonChip>
                                                         ))}
                                                     </div>
                                                 )}
                                                 {scheduleConfigs[currentZoneIndex].scheduleType === 'periodic' && (
                                                     <div className="mt-3 flex items-center justify-center gap-2">
-                                                        <span style={{ color: 'white' }}>La fiecare</span>
+                                                        <span style={{ color: 'white' }}>{t('zoneDetails.scheduleEvery')}</span>
                                                         <IonInput
                                                             type="number"
                                                             min={1}
@@ -2745,12 +2737,12 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                             className="ion-text-center"
                                                             style={{ maxWidth: '60px', '--color': 'white' }}
                                                         />
-                                                        <span style={{ color: 'white' }}>zile</span>
+                                                        <span style={{ color: 'white' }}>{t('zoneDetails.scheduleDays')}</span>
                                                     </div>
                                                 )}
                                                 {scheduleConfigs[currentZoneIndex].scheduleType === 'auto' && (
                                                     <p className="mt-3 text-center text-gray-300 text-sm">
-                                                        FAO-56 evaluează zilnic deficitul de apă la ora setată.
+                                                        {t('wizard.schedule.fao56SmartDesc')}
                                                     </p>
                                                 )}
                                             </IonCardContent>
@@ -2760,7 +2752,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         <IonCard className="glass-panel">
                                             <IonCardContent>
                                                 <div className="flex flex-col items-center gap-2">
-                                                    <p className="text-gray-400 text-sm">Ora de start (fixă / fallback)</p>
+                                                    <p className="text-gray-400 text-sm">{t('wizard.schedule.startTimeDesc')}</p>
                                                     <IonButton
                                                         fill="outline"
                                                         size="large"
@@ -2784,8 +2776,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                 <div className="w-full mt-4">
                                                     <IonItem lines="none" className="bg-transparent">
                                                         <IonLabel>
-                                                            <h3 className="text-white font-semibold">Solar Time</h3>
-                                                            <p className="text-gray-400 text-sm">Pornește la răsărit/apus în loc de oră fixă</p>
+                                                            <h3 className="text-white font-semibold">{t('wizard.schedule.solarTime')}</h3>
+                                                            <p className="text-gray-400 text-sm">{t('wizard.schedule.solarTimeDesc')}</p>
                                                         </IonLabel>
                                                         <IonToggle
                                                             checked={scheduleConfigs[currentZoneIndex].useSolarTiming}
@@ -2798,11 +2790,11 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                                 value={scheduleConfigs[currentZoneIndex].solarEvent}
                                                                 onIonChange={e => updateCurrentSchedule({ solarEvent: e.detail.value as 'sunrise' | 'sunset' })}
                                                             >
-                                                                <IonSelectOption value="sunrise">Răsărit 🌅</IonSelectOption>
-                                                                <IonSelectOption value="sunset">Apus 🌇</IonSelectOption>
+                                                                <IonSelectOption value="sunrise">{t('wizard.schedule.sunrise')}</IonSelectOption>
+                                                                <IonSelectOption value="sunset">{t('wizard.schedule.sunset')}</IonSelectOption>
                                                             </IonSelect>
                                                             <IonItem lines="none" className="bg-transparent">
-                                                                <IonLabel position="stacked">Offset (minute)</IonLabel>
+                                                                <IonLabel position="stacked">{t('wizard.schedule.offsetMinutes')}</IonLabel>
                                                                 <IonInput
                                                                     type="number"
                                                                     min={-120}
@@ -2811,7 +2803,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                                     onIonInput={e => updateCurrentSchedule({
                                                                         solarOffsetMinutes: parseInt(e.detail.value || '0')
                                                                     })}
-                                                                    placeholder="-120 .. 120"
+                                                                    placeholder={t('wizard.schedule.offsetPlaceholder')}
                                                                 />
                                                             </IonItem>
                                                         </div>
@@ -2828,7 +2820,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                     size="small"
                                                     onClick={() => setShowScheduleOptions(false)}
                                                 >
-                                                    ← Înapoi la Auto simplificat
+                                                    {t('wizard.schedule.backToAuto')}
                                                 </IonButton>
                                             </div>
                                         )}
@@ -2855,10 +2847,10 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                 <div className="flex items-center justify-center gap-2 mb-2">
                     <IonIcon icon={timeOutline} className="text-3xl text-cyber-emerald" />
                     <h2 className="text-2xl font-bold text-white">
-                        Schedule: {zoneConfigs[currentZoneIndex].name}
+                        {t('wizard.steps.schedule')}: {zoneConfigs[currentZoneIndex].name}
                     </h2>
                 </div>
-                <p className="text-gray-400">Configure watering schedule</p>
+                <p className="text-gray-400">{t('wizard.schedule.configureTitle')}</p>
             </div>
 
             {/* Enable Schedule */}
@@ -2866,8 +2858,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                 <IonCardContent>
                     <IonItem lines="none" className="bg-transparent">
                         <IonLabel>
-                            <h2>Enable Schedule</h2>
-                            <p className="text-gray-400 text-sm">Automatic watering for this zone</p>
+                            <h2>{t('wizard.schedule.enableTitle')}</h2>
+                            <p className="text-gray-400 text-sm">{t('wizard.schedule.enableDesc')}</p>
                         </IonLabel>
                         <IonToggle
                             checked={currentSchedule.enabled}
@@ -2882,7 +2874,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                     {/* Schedule Type */}
                     <IonCard className="glass-panel">
                         <IonCardHeader>
-                            <IonLabel className="text-lg font-bold text-white">Schedule Type</IonLabel>
+                            <IonLabel className="text-lg font-bold text-white">{t('wizard.schedule.scheduleType')}</IonLabel>
                         </IonCardHeader>
                         <IonCardContent>
                             <IonSegment
@@ -2890,29 +2882,29 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                 onIonChange={e => updateCurrentSchedule({ scheduleType: e.detail.value as 'daily' | 'periodic' | 'auto' })}
                             >
                                 <IonSegmentButton value="daily">
-                                    <IonLabel>Daily</IonLabel>
+                                    <IonLabel>{t('wizard.schedule.daily')}</IonLabel>
                                 </IonSegmentButton>
                                 <IonSegmentButton value="periodic">
-                                    <IonLabel>Every X Days</IonLabel>
+                                    <IonLabel>{t('wizard.schedule.periodic')}</IonLabel>
                                 </IonSegmentButton>
                                 {(zoneConfigs[currentZoneIndex].wateringMode === 'fao56_auto' || zoneConfigs[currentZoneIndex].wateringMode === 'fao56_eco') && (
                                     <IonSegmentButton value="auto">
-                                        <IonLabel>FAO-56 Smart</IonLabel>
+                                        <IonLabel>{t('wizard.schedule.auto')}</IonLabel>
                                     </IonSegmentButton>
                                 )}
                             </IonSegment>
 
                             {currentSchedule.scheduleType === 'daily' && (
                                 <div className="mt-4">
-                                    <p className="text-gray-400 text-sm mb-2">Select days:</p>
+                                    <p className="text-gray-400 text-sm mb-2">{t('wizard.schedule.selectDays')}</p>
                                     <div className="flex flex-wrap gap-2 justify-center">
-                                        {DAYS.map((day, i) => (
+                                        {DAY_KEYS.map((dayKey, i) => (
                                             <IonChip
-                                                key={day}
+                                                key={dayKey}
                                                 color={(currentSchedule.daysMask & (1 << i)) ? 'primary' : 'medium'}
                                                 onClick={() => toggleDay(i)}
                                             >
-                                                {day}
+                                                {t(`wizard.schedule.days.${dayKey}`)}
                                             </IonChip>
                                         ))}
                                     </div>
@@ -2920,7 +2912,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                             )}
                             {currentSchedule.scheduleType === 'periodic' && (
                                 <IonItem lines="none" className="bg-transparent mt-4">
-                                    <IonLabel position="stacked">Interval (days)</IonLabel>
+                                    <IonLabel position="stacked">{t('wizard.schedule.intervalDays')}</IonLabel>
                                     <IonInput
                                         type="number"
                                         min={1}
@@ -2934,7 +2926,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                             )}
                             {currentSchedule.scheduleType === 'auto' && (
                                 <p className="text-gray-300 text-sm mt-4">
-                                    FAO-56 Auto ruleaza zilnic la ora setata.
+                                    {t('wizard.schedule.fao56SmartDesc')}
                                 </p>
                             )}
                         </IonCardContent>
@@ -2945,7 +2937,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                         <IonCardHeader>
                             <div className="flex items-center gap-3">
                                 <IonIcon icon={timeOutline} className="text-2xl text-cyber-blue" />
-                                <IonLabel className="text-lg font-bold text-white">Start Time</IonLabel>
+                                <IonLabel className="text-lg font-bold text-white">{t('wizard.schedule.startTime')}</IonLabel>
                             </div>
                         </IonCardHeader>
                         <IonCardContent>
@@ -2984,8 +2976,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                         <IonCardContent>
                             <IonItem lines="none" className="bg-transparent">
                                 <IonLabel>
-                                    <h2>Orar solar</h2>
-                                    <p className="text-gray-400 text-sm">Ruleaza fata de rasarit/apus</p>
+                                    <h2>{t('wizard.schedule.solarTime')}</h2>
+                                    <p className="text-gray-400 text-sm">{t('wizard.schedule.solarTimeDesc')}</p>
                                 </IonLabel>
                                 <IonToggle
                                     checked={currentSchedule.useSolarTiming}
@@ -2998,8 +2990,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         value={currentSchedule.solarEvent}
                                         onIonChange={e => updateCurrentSchedule({ solarEvent: e.detail.value as 'sunrise' | 'sunset' })}
                                     >
-                                        <IonSelectOption value="sunrise">Rasarit</IonSelectOption>
-                                        <IonSelectOption value="sunset">Apus</IonSelectOption>
+                                        <IonSelectOption value="sunrise">{t('wizard.schedule.sunrise')}</IonSelectOption>
+                                        <IonSelectOption value="sunset">{t('wizard.schedule.sunset')}</IonSelectOption>
                                     </IonSelect>
                                     <IonInput
                                         type="number"
@@ -3009,7 +3001,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         onIonInput={e => updateCurrentSchedule({
                                             solarOffsetMinutes: parseInt(e.detail.value || '0')
                                         })}
-                                        placeholder="Offset minute (-120..120)"
+                                        placeholder={t('wizard.schedule.offsetPlaceholder')}
                                     />
                                 </div>
                             )}
@@ -3021,8 +3013,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                         <IonCardContent>
                             <IonItem lines="none" className="bg-transparent">
                                 <IonLabel>
-                                    <h2>Solar Time</h2>
-                                    <p className="text-gray-400 text-sm">Ruleaz? relativ la r?s?rit/apus</p>
+                                    <h2>{t('wizard.schedule.solarTime')}</h2>
+                                    <p className="text-gray-400 text-sm">{t('wizard.schedule.solarTimeDesc')}</p>
                                 </IonLabel>
                                 <IonToggle
                                     checked={currentSchedule.useSolarTiming}
@@ -3035,8 +3027,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         value={currentSchedule.solarEvent}
                                         onIonChange={e => updateCurrentSchedule({ solarEvent: e.detail.value as 'sunrise' | 'sunset' })}
                                     >
-                                        <IonSelectOption value="sunrise">R?s?rit</IonSelectOption>
-                                        <IonSelectOption value="sunset">Apus</IonSelectOption>
+                                        <IonSelectOption value="sunrise">{t('wizard.schedule.sunrise')}</IonSelectOption>
+                                        <IonSelectOption value="sunset">{t('wizard.schedule.sunset')}</IonSelectOption>
                                     </IonSelect>
                                     <IonInput
                                         type="number"
@@ -3046,7 +3038,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         onIonInput={e => updateCurrentSchedule({
                                             solarOffsetMinutes: parseInt(e.detail.value || '0')
                                         })}
-                                        placeholder="Offset minute (-120..120)"
+                                        placeholder={t('wizard.schedule.offsetPlaceholder')}
                                     />
                                 </div>
                             )}
@@ -3059,7 +3051,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                             <IonCardHeader>
                                 <div className="flex items-center gap-3">
                                     <IonIcon icon={waterOutline} className="text-2xl text-blue-400" />
-                                    <IonLabel className="text-lg font-bold text-white">Watering Amount</IonLabel>
+                                    <IonLabel className="text-lg font-bold text-white">{t('wizard.schedule.wateringAmount')}</IonLabel>
                                 </div>
                             </IonCardHeader>
                             <IonCardContent className="space-y-4">
@@ -3068,16 +3060,16 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                     onIonChange={e => updateCurrentSchedule({ wateringMode: e.detail.value as 'duration' | 'volume' })}
                                 >
                                     <IonSegmentButton value="duration">
-                                        <IonLabel>Duration (min)</IonLabel>
+                                        <IonLabel>{t('wizard.schedule.durationMinutes')}</IonLabel>
                                     </IonSegmentButton>
                                     <IonSegmentButton value="volume">
-                                        <IonLabel>Volume (L)</IonLabel>
+                                        <IonLabel>{t('wizard.schedule.volumeLiters')}</IonLabel>
                                     </IonSegmentButton>
                                 </IonSegment>
 
                                 <IonItem lines="none" className="bg-transparent">
                                     <IonLabel position="stacked">
-                                        {currentSchedule.wateringMode === 'duration' ? 'Duration (minutes)' : 'Volume (liters)'}
+                                        {currentSchedule.wateringMode === 'duration' ? t('wizard.manual.durationLabel') : t('wizard.manual.volumeLabel')}
                                     </IonLabel>
                                     <IonInput
                                         type="number"
@@ -3096,9 +3088,9 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                         <IonCardContent>
                             <IonItem lines="none" className="bg-transparent">
                                 <IonLabel>
-                                    <h2>FAO-56 Auto Calculation</h2>
+                                    <h2>{t('wizard.schedule.autoCalculationTitle')}</h2>
                                     <p className="text-gray-400 text-sm">
-                                        Automatically adjust watering based on weather and plant needs
+                                        {t('wizard.schedule.autoCalculationDesc')}
                                     </p>
                                 </IonLabel>
                                 <IonToggle
@@ -3122,12 +3114,12 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
             <div className="w-20 h-20 bg-cyber-emerald/20 rounded-full flex items-center justify-center mb-6">
                 <IonIcon icon={checkmarkCircle} className="text-4xl text-cyber-emerald" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">All Set!</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">{t('wizard.complete.title')}</h2>
             <p className="text-gray-400 mb-8">
-                Your irrigation system is fully configured. You can now monitor and control everything from the dashboard.
+                {t('wizard.complete.subtitle')}
             </p>
             <IonButton expand="block" color="secondary" onClick={onClose}>
-                Go to Dashboard
+                {t('wizard.complete.goToDashboard')}
             </IonButton>
         </div>
     );
@@ -3148,25 +3140,25 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
             // Step 1 = Plant selection
             if (zoneSubStep === 1 && !zone.plant) {
                 return {
-                    message: 'Selectează o plantă',
-                    fixLabel: 'Selectează'
+                    message: t('wizard.validation.plantRequired'),
+                    fixLabel: t('common.fix')
                 };
             }
             // Step 3 = Soil & Irrigation (NOT step 2 which is Location!)
             if (zoneSubStep === 3) {
                 if (!zone.soil && !zone.irrigationMethod) {
                     return {
-                        message: 'Selectează tipul de sol și metoda de irigare'
+                        message: t('wizard.validation.soilAndIrrigationRequired')
                     };
                 }
                 if (!zone.soil) {
                     return {
-                        message: 'Selectează tipul de sol'
+                        message: t('wizard.validation.soilRequired')
                     };
                 }
                 if (!zone.irrigationMethod) {
                     return {
-                        message: 'Selectează metoda de irigare'
+                        message: t('wizard.validation.irrigationRequired')
                     };
                 }
             }
@@ -3202,7 +3194,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                 color="danger"
                                 onClick={error.fixAction}
                             >
-                                {error.fixLabel || 'Fix'}
+                                {error.fixLabel || t('common.fix')}
                             </IonButton>
                         )}
                     </div>
@@ -3282,12 +3274,15 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
 
             const stepNames = isFao56
                 ? [t('wizard.steps.mode'), t('wizard.steps.plant'), t('wizard.steps.location'), t('wizard.steps.soil'), t('wizard.steps.environment'), t('wizard.summary.title'), t('wizard.steps.schedule')]
-                : [t('wizard.steps.mode'), 'Settings', '', '', '', t('wizard.summary.title'), t('wizard.steps.schedule')];
+                : [t('wizard.steps.mode'), t('wizard.steps.settings'), '', '', '', t('wizard.summary.title'), t('wizard.steps.schedule')];
 
-            return `${t('wizard.phases.zones').replace('Zone', '')} ${currentZoneIndex + 1} - ${stepNames[zoneSubStep]}`;
+            const stepName = stepNames[zoneSubStep] || '';
+            return t('wizard.zoneStepTitle')
+                .replace('{index}', String(currentZoneIndex + 1))
+                .replace('{step}', stepName);
         }
         if (phase === 4) return t('wizard.phases.complete');
-        return 'Setup Wizard';
+        return t('wizard.title');
     };
 
     // 1.4: Handle close with confirmation if unsaved changes
@@ -3307,6 +3302,9 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
         onEscape: handleCloseWithConfirm,
         enabled: isOpen && phase >= 0 && phase < 4
     });
+
+    const zoneCount = currentZoneIndex + 1;
+    const zonePluralSuffix = language === 'ro' ? (zoneCount > 1 ? 'e' : '') : (zoneCount > 1 ? 's' : '');
 
     return (
         <IonModal isOpen={isOpen} backdropDismiss={false} className="glass-modal">
@@ -3367,7 +3365,13 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
 
                     <div className="text-center">
                         <span className="text-gray-400 text-sm">
-                            {phase === 0 ? t('wizard.phases.welcome') : phase === 1 ? t('wizard.phases.system') : `Zone ${currentZoneIndex + 1}/8`}
+                            {phase === 0
+                                ? t('wizard.phases.welcome')
+                                : phase === 1
+                                    ? t('wizard.phases.system')
+                                    : t('wizard.zoneProgress')
+                                        .replace('{current}', String(currentZoneIndex + 1))
+                                        .replace('{total}', String(zoneConfigs.length))}
                         </span>
                     </div>
 
@@ -3393,24 +3397,26 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
             <IonAlert
                 isOpen={showZoneCompleteAlert}
                 onDidDismiss={() => setShowZoneCompleteAlert(false)}
-                header={`Zone ${currentZoneIndex + 1} Complete! ✓`}
+                header={t('wizard.complete.zoneCompleteTitle').replace('{index}', String(zoneCount))}
                 message={currentZoneIndex < 7
-                    ? `You have configured ${currentZoneIndex + 1} zone${currentZoneIndex > 0 ? 's' : ''}. Would you like to add another zone or finish the setup?`
-                    : 'All 8 zones have been configured!'
+                    ? t('wizard.complete.zoneCompleteMessage')
+                        .replace('{count}', String(zoneCount))
+                        .replace('{plural}', zonePluralSuffix)
+                    : t('wizard.complete.allZonesCompleteMessage')
                 }
                 buttons={currentZoneIndex < 7 ? [
                     {
-                        text: 'Finish Setup',
+                        text: t('wizard.complete.finishSetup'),
                         role: 'cancel',
                         handler: handleFinishSetup
                     },
                     {
-                        text: 'Configure More Zones',
+                        text: t('wizard.complete.configureMoreZones'),
                         handler: handleAddAnotherZone
                     }
                 ] : [
                     {
-                        text: 'Complete Setup',
+                        text: t('wizard.complete.completeSetup'),
                         handler: handleFinishSetup
                     }
                 ]}

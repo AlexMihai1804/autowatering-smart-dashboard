@@ -11,6 +11,7 @@ import {
 import { useAppStore } from '../store/useAppStore';
 import { BleService } from '../services/BleService';
 import { HistoryDetailedEntry } from '../types/firmware_structs';
+import { useI18n } from '../i18n';
 
 interface WateringHistoryCardProps {
     onToast?: (message: string, color?: string) => void;
@@ -19,6 +20,8 @@ interface WateringHistoryCardProps {
 const WateringHistoryCard: React.FC<WateringHistoryCardProps> = ({ onToast }) => {
     const { wateringHistory, connectionState, zones } = useAppStore();
     const bleService = BleService.getInstance();
+    const { t, language } = useI18n();
+    const locale = language === 'ro' ? 'ro-RO' : 'en-US';
     
     const [loading, setLoading] = useState(false);
     const [historyType, setHistoryType] = useState<'detailed' | 'daily' | 'monthly'>('detailed');
@@ -41,10 +44,10 @@ const WateringHistoryCard: React.FC<WateringHistoryCardProps> = ({ onToast }) =>
                     await bleService.getMonthlyHistory(0xFF, 0);
                     break;
             }
-            onToast?.('History loaded', 'success');
+            onToast?.(t('wateringHistory.loaded'), 'success');
         } catch (error: any) {
             console.error('Failed to load history:', error);
-            onToast?.(`Failed: ${error.message}`, 'danger');
+            onToast?.(t('errors.failedWithReason').replace('{error}', error.message), 'danger');
         } finally {
             setLoading(false);
         }
@@ -52,23 +55,23 @@ const WateringHistoryCard: React.FC<WateringHistoryCardProps> = ({ onToast }) =>
 
     const handleClearHistory = async () => {
         if (!isConnected) return;
-        if (!window.confirm('Clear ALL watering history? This cannot be undone.')) return;
+        if (!window.confirm(t('wateringHistory.clearConfirm'))) return;
         
         setLoading(true);
         try {
             await bleService.clearWateringHistory();
-            onToast?.('History cleared', 'warning');
+            onToast?.(t('wateringHistory.cleared'), 'warning');
         } catch (error: any) {
-            onToast?.(`Failed: ${error.message}`, 'danger');
+            onToast?.(t('errors.failedWithReason').replace('{error}', error.message), 'danger');
         } finally {
             setLoading(false);
         }
     };
 
     const formatTimestamp = (ts: number): string => {
-        if (ts === 0) return '--';
+        if (ts === 0) return t('common.notAvailable');
         const date = new Date(ts * 1000);
-        return date.toLocaleString('ro-RO', {
+        return date.toLocaleString(locale, {
             day: '2-digit',
             month: 'short',
             hour: '2-digit',
@@ -78,15 +81,15 @@ const WateringHistoryCard: React.FC<WateringHistoryCardProps> = ({ onToast }) =>
 
     const getZoneName = (channelId: number): string => {
         const zone = zones.find(z => z.channel_id === channelId);
-        return zone?.name || `Zone ${channelId}`;
+        return zone?.name || `${t('zones.zone')} ${channelId}`;
     };
 
     const getTriggerText = (trigger: number): string => {
         switch (trigger) {
-            case 0: return 'Manual';
-            case 1: return 'Schedule';
-            case 2: return 'Remote';
-            default: return 'Unknown';
+            case 0: return t('labels.manual');
+            case 1: return t('labels.schedule');
+            case 2: return t('labels.remote');
+            default: return t('labels.unknown');
         }
     };
 
@@ -107,7 +110,7 @@ const WateringHistoryCard: React.FC<WateringHistoryCardProps> = ({ onToast }) =>
                 <div className="flex justify-between items-center">
                     <IonCardTitle className="text-white flex items-center gap-2">
                         <IonIcon icon={time} className="text-blue-400" />
-                        Watering History
+                        {t('wateringHistory.title')}
                     </IonCardTitle>
                     <div className="flex gap-2">
                         <IonButton 
@@ -140,13 +143,13 @@ const WateringHistoryCard: React.FC<WateringHistoryCardProps> = ({ onToast }) =>
                     className="mb-4"
                 >
                     <IonSegmentButton value="detailed">
-                        <IonLabel>Recent</IonLabel>
+                        <IonLabel>{t('labels.recent')}</IonLabel>
                     </IonSegmentButton>
                     <IonSegmentButton value="daily">
-                        <IonLabel>Daily</IonLabel>
+                        <IonLabel>{t('labels.daily')}</IonLabel>
                     </IonSegmentButton>
                     <IonSegmentButton value="monthly">
-                        <IonLabel>Monthly</IonLabel>
+                        <IonLabel>{t('labels.monthly')}</IonLabel>
                     </IonSegmentButton>
                 </IonSegment>
 
@@ -154,8 +157,8 @@ const WateringHistoryCard: React.FC<WateringHistoryCardProps> = ({ onToast }) =>
                 {wateringHistory.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                         <IonIcon icon={calendarOutline} className="text-4xl mb-2" />
-                        <p>No history data</p>
-                        <p className="text-sm">Tap refresh to load</p>
+                        <p>{t('wateringHistory.noData')}</p>
+                        <p className="text-sm">{t('wateringHistory.tapRefresh')}</p>
                     </div>
                 ) : (
                     <div className="max-h-80 overflow-y-auto">
@@ -174,7 +177,7 @@ const WateringHistoryCard: React.FC<WateringHistoryCardProps> = ({ onToast }) =>
                                         </div>
                                         <div className="text-right">
                                             <div className="text-cyber-cyan font-mono text-sm">
-                                                {entry.actual_value_ml} ml
+                                                {entry.actual_value_ml}{t('common.mlShort')}
                                             </div>
                                             <IonBadge color={entry.trigger_type === 1 ? 'primary' : 'medium'} className="text-xs">
                                                 {getTriggerText(entry.trigger_type)}
@@ -194,19 +197,19 @@ const WateringHistoryCard: React.FC<WateringHistoryCardProps> = ({ onToast }) =>
                             <div className="text-2xl font-bold text-white">
                                 {wateringHistory.length}
                             </div>
-                            <div className="text-xs text-gray-400">Sessions</div>
+                            <div className="text-xs text-gray-400">{t('labels.sessions')}</div>
                         </div>
                         <div>
                             <div className="text-2xl font-bold text-cyber-cyan">
-                                {(wateringHistory.reduce((sum, e) => sum + e.actual_value_ml, 0) / 1000).toFixed(1)}L
+                                {(wateringHistory.reduce((sum, e) => sum + e.actual_value_ml, 0) / 1000).toFixed(1)}{t('common.litersShort')}
                             </div>
-                            <div className="text-xs text-gray-400">Total Volume</div>
+                            <div className="text-xs text-gray-400">{t('labels.totalVolume')}</div>
                         </div>
                         <div>
                             <div className="text-2xl font-bold text-green-400">
-                                {Math.round(wateringHistory.filter(e => e.success_status === 1).length / wateringHistory.length * 100)}%
+                                {Math.round(wateringHistory.filter(e => e.success_status === 1).length / wateringHistory.length * 100)}{t('common.percent')}
                             </div>
-                            <div className="text-xs text-gray-400">Success Rate</div>
+                            <div className="text-xs text-gray-400">{t('labels.successRate')}</div>
                         </div>
                     </div>
                 )}

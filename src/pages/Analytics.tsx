@@ -6,9 +6,11 @@ import WateringHistoryCard from '../components/WateringHistoryCard';
 import RainHistoryCard from '../components/RainHistoryCard';
 import EnvHistoryCard from '../components/EnvHistoryCard';
 import StatisticsCard from '../components/StatisticsCard';
+import { useI18n } from '../i18n';
 
 const Analytics: React.FC = () => {
   const { currentTask, envData, connectionState, wateringHistory, rainHistoryDaily } = useAppStore();
+  const { t } = useI18n();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastColor, setToastColor] = useState<string>('dark');
 
@@ -36,19 +38,19 @@ const Analytics: React.FC = () => {
       <IonContent className="bg-cyber-dark">
         <div className="p-6 max-w-7xl mx-auto pb-24">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-white">Analytics</h1>
+            <h1 className="text-3xl font-bold text-white">{t('analytics.title')}</h1>
             <span className={`text-sm font-mono ${connectionState === 'connected' ? 'text-cyber-primary' : 'text-gray-500'}`}>
-              {connectionState === 'connected' ? 'LIVE DATA' : 'OFFLINE'}
+              {connectionState === 'connected' ? t('analytics.liveData') : t('analytics.offline')}
             </span>
           </div>
 
           {/* Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             {[
-              { label: 'Total Volume', value: `${totalVolumeLiters} L`, color: 'text-blue-400' },
-              { label: 'Current Temp', value: `${currentTemp}°C`, color: 'text-orange-400' },
-              { label: 'Rain (7d)', value: `${totalRainMm} mm`, color: 'text-cyan-400' },
-              { label: 'Efficiency', value: `${efficiencyPct}%`, color: 'text-green-400' },
+              { label: t('labels.totalVolume'), value: `${totalVolumeLiters} ${t('common.litersShort')}`, color: 'text-blue-400' },
+              { label: t('analytics.summary.currentTemp'), value: `${currentTemp}${t('common.degreesC')}`, color: 'text-orange-400' },
+              { label: t('analytics.summary.rain7d'), value: `${totalRainMm} ${t('common.mm')}`, color: 'text-cyan-400' },
+              { label: t('labels.efficiency'), value: `${efficiencyPct}${t('common.percent')}`, color: 'text-green-400' },
             ].map((stat, index) => (
               <motion.div
                 key={index}

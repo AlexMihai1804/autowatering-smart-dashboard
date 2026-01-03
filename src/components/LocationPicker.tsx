@@ -24,6 +24,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-lea
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { LocationData } from '../types/wizard';
+import { useI18n } from '../i18n';
 
 // Fix Leaflet default marker icon issue with bundlers
 // We need to manually set the icon URLs since Vite doesn't handle Leaflet's default icons
@@ -184,6 +185,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     const [manualLat, setManualLat] = useState('');
     const [manualLng, setManualLng] = useState('');
     const [autoTriggered, setAutoTriggered] = useState(false);
+    const { t } = useI18n();
     
     // Default center (Europe - roughly center of coverage area)
     const defaultCenter: [number, number] = [48.8566, 2.3522]; // Paris
@@ -261,17 +263,17 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         const lng = parseFloat(manualLng);
         
         if (isNaN(lat) || isNaN(lng)) {
-            setGpsError('Coordonate invalide. Folosiți format decimal (ex: 44.4268, 26.1025)');
+            setGpsError(t('locationPicker.invalidCoordinates'));
             return;
         }
         
         if (lat < -90 || lat > 90) {
-            setGpsError('Latitudinea trebuie să fie între -90 și 90');
+            setGpsError(t('locationPicker.latitudeRange'));
             return;
         }
         
         if (lng < -180 || lng > 180) {
-            setGpsError('Longitudinea trebuie să fie între -180 și 180');
+            setGpsError(t('locationPicker.longitudeRange'));
             return;
         }
         
@@ -362,7 +364,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             </div>
             
             <IonText color="medium" style={{ display: 'block', textAlign: 'center', marginBottom: '12px' }}>
-                <small>Apasă pe hartă pentru a selecta locația sau trage markerul</small>
+                <small>{t('locationPicker.instruction')}</small>
             </IonText>
             
             {/* Current Location Display */}
@@ -375,12 +377,17 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
                                     <IonIcon icon={locationOutline} color="primary" style={{ fontSize: '24px' }} />
                                 </IonCol>
                                 <IonCol>
-                                    <div style={{ fontWeight: 'bold' }}>Locație selectată</div>
+                                    <div style={{ fontWeight: 'bold' }}>{t('locationPicker.selectedTitle')}</div>
                                     <div style={{ fontSize: '14px', color: 'var(--ion-color-medium)' }}>
                                         {value.latitude.toFixed(6)}, {value.longitude.toFixed(6)}
                                     </div>
                                     <div style={{ fontSize: '12px', color: 'var(--ion-color-medium)' }}>
-                                        Sursă: {value.source === 'gps' ? 'GPS' : value.source === 'map' ? 'Hartă' : 'Manual'}
+                                        {t('locationPicker.sourceLabel')
+                                            .replace('{source}', value.source === 'gps'
+                                                ? t('locationPicker.sourceGps')
+                                                : value.source === 'map'
+                                                    ? t('locationPicker.sourceMap')
+                                                    : t('locationPicker.sourceManual'))}
                                     </div>
                                 </IonCol>
                             </IonRow>
@@ -396,7 +403,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
                 onClick={() => setShowManualInput(!showManualInput)}
                 disabled={disabled}
             >
-                {showManualInput ? 'Ascunde introducerea manuală' : 'Introdu coordonate manual'}
+                {showManualInput ? t('locationPicker.hideManual') : t('locationPicker.manualEntry')}
             </IonButton>
             
             {/* Manual Input Form */}
@@ -407,7 +414,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
                             <IonRow>
                                 <IonCol size="6">
                                     <IonItem>
-                                        <IonLabel position="stacked">Latitudine</IonLabel>
+                                        <IonLabel position="stacked">{t('locationPicker.latitude')}</IonLabel>
                                         <IonInput
                                             type="number"
                                             value={manualLat}
@@ -419,7 +426,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
                                 </IonCol>
                                 <IonCol size="6">
                                     <IonItem>
-                                        <IonLabel position="stacked">Longitudine</IonLabel>
+                                        <IonLabel position="stacked">{t('locationPicker.longitude')}</IonLabel>
                                         <IonInput
                                             type="number"
                                             value={manualLng}
@@ -437,7 +444,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
                                         onClick={handleManualSubmit}
                                         disabled={disabled || !manualLat || !manualLng}
                                     >
-                                        Setează locația
+                                        {t('locationPicker.setLocation')}
                                     </IonButton>
                                 </IonCol>
                             </IonRow>

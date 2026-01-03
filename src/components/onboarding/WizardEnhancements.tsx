@@ -34,6 +34,7 @@ import {
     informationCircleOutline,
     flashOutline,
 } from 'ionicons/icons';
+import { useI18n } from '../../i18n';
 
 // ============================================================================
 // 3.1: Input Validation Feedback
@@ -116,39 +117,39 @@ export const ValidationFeedback: React.FC<ValidationFeedbackProps> = ({ errors, 
 };
 
 // Zone name validation rules
-export const zoneNameRules: ValidationRule[] = [
+export const getZoneNameRules = (t: (key: string) => string): ValidationRule[] => [
     {
         validate: (v: string) => Boolean(v && v.trim().length > 0),
-        message: 'Zone name is required',
+        message: t('wizard.validation.zoneNameRequired'),
         type: 'error',
     },
     {
         validate: (v: string) => !v || v.trim().length >= 2,
-        message: 'Zone name should be at least 2 characters',
+        message: t('wizard.validation.zoneNameTooShort'),
         type: 'error',
     },
     {
         validate: (v: string) => !v || v.trim().length <= 30,
-        message: 'Zone name is quite long',
+        message: t('wizard.validation.zoneNameTooLong'),
         type: 'warning',
     },
 ];
 
 // Coverage validation rules
-export const coverageRules: ValidationRule[] = [
+export const getCoverageRules = (t: (key: string) => string): ValidationRule[] => [
     {
         validate: (v: number) => v !== undefined && v !== null,
-        message: 'Coverage value is required',
+        message: t('wizard.validation.coverageRequired'),
         type: 'error',
     },
     {
         validate: (v: number) => !v || v > 0,
-        message: 'Coverage must be greater than 0',
+        message: t('wizard.validation.coverageInvalid'),
         type: 'error',
     },
     {
         validate: (v: number) => !v || v <= 10000,
-        message: 'Coverage value seems very high',
+        message: t('wizard.validation.coverageTooHigh'),
         type: 'warning',
     },
 ];
@@ -165,9 +166,12 @@ interface SkipStepButtonProps {
 
 export const SkipStepButton: React.FC<SkipStepButtonProps> = ({ 
     onSkip, 
-    label = 'Use Defaults',
+    label,
     disabled = false 
 }) => {
+    const { t } = useI18n();
+    const buttonLabel = label ?? t('common.useDefaults');
+
     return (
         <IonButton
             fill="clear"
@@ -178,7 +182,7 @@ export const SkipStepButton: React.FC<SkipStepButtonProps> = ({
             className="text-gray-400"
         >
             <IonIcon icon={flashOutline} slot="start" />
-            {label}
+            {buttonLabel}
         </IonButton>
     );
 };
@@ -200,6 +204,8 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
     onRetry,
     onDismiss 
 }) => {
+    const { t } = useI18n();
+
     return (
         <IonCard className="glass-panel border border-red-500/30 bg-red-500/10">
             <IonCardContent className="py-3">
@@ -213,12 +219,12 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
                         <div className="flex gap-2 mt-2">
                             {onRetry && (
                                 <IonButton size="small" fill="outline" color="danger" onClick={onRetry}>
-                                    Try Again
+                                    {t('errors.tryAgain')}
                                 </IonButton>
                             )}
                             {onDismiss && (
                                 <IonButton size="small" fill="clear" color="medium" onClick={onDismiss}>
-                                    Dismiss
+                                    {t('common.close')}
                                 </IonButton>
                             )}
                         </div>
@@ -230,37 +236,37 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
 };
 
 // Error message mapping
-export const getErrorDetails = (errorCode: string): { message: string; suggestion: string } => {
+export const getErrorDetails = (t: (key: string) => string, errorCode: string): { message: string; suggestion: string } => {
     const errorMap: Record<string, { message: string; suggestion: string }> = {
         'GPS_DENIED': {
-            message: 'GPS permission denied',
-            suggestion: 'Enable location permissions in your device settings, or use the map to select a location.',
+            message: t('errors.gpsDenied'),
+            suggestion: t('errors.gpsDeniedSuggestion'),
         },
         'GPS_TIMEOUT': {
-            message: 'GPS request timed out',
-            suggestion: 'Make sure you\'re in an area with good GPS signal. Try moving outdoors.',
+            message: t('errors.gpsTimeout'),
+            suggestion: t('errors.gpsTimeoutSuggestion'),
         },
         'GPS_NOT_AVAILABLE': {
-            message: 'GPS is not available',
-            suggestion: 'Your device may not have GPS capability. Use the map or enter coordinates manually.',
+            message: t('errors.gpsUnavailable'),
+            suggestion: t('errors.gpsUnavailableSuggestion'),
         },
         'BLE_DISCONNECTED': {
-            message: 'Device disconnected',
-            suggestion: 'Make sure your irrigation controller is powered on and within range.',
+            message: t('errors.connectionLost'),
+            suggestion: t('errors.checkConnection'),
         },
         'SAVE_FAILED': {
-            message: 'Failed to save configuration',
-            suggestion: 'Check your connection to the device and try again.',
+            message: t('errors.saveFailed'),
+            suggestion: t('errors.checkConnection'),
         },
         'SOIL_DETECTION_FAILED': {
-            message: 'Could not detect soil type',
-            suggestion: 'The location may not have soil data coverage. Select a soil type manually.',
+            message: t('wizard.soil.detectionFailed'),
+            suggestion: t('wizard.soil.manualSelectButton'),
         },
     };
     
     return errorMap[errorCode] || {
-        message: errorCode,
-        suggestion: 'Please try again or contact support if the problem persists.',
+        message: t('errors.failedWithReason').replace('{error}', errorCode || t('labels.unknown')),
+        suggestion: t('errors.tryAgain'),
     };
 };
 
@@ -324,7 +330,10 @@ interface UndoButtonProps {
     label?: string;
 }
 
-export const UndoButton: React.FC<UndoButtonProps> = ({ onUndo, disabled, label = 'Undo' }) => {
+export const UndoButton: React.FC<UndoButtonProps> = ({ onUndo, disabled, label }) => {
+    const { t } = useI18n();
+    const buttonLabel = label ?? t('common.undo');
+
     if (disabled) return null;
     
     return (
@@ -336,7 +345,7 @@ export const UndoButton: React.FC<UndoButtonProps> = ({ onUndo, disabled, label 
             className="animate-fade-in"
         >
             <IonIcon icon={arrowUndoOutline} slot="start" />
-            {label}
+            {buttonLabel}
         </IonButton>
     );
 };
@@ -485,6 +494,8 @@ interface HelpTooltipProps {
 export const HelpTooltip: React.FC<HelpTooltipProps> = ({ content, title, children }) => {
     const [showPopover, setShowPopover] = useState(false);
     const triggerId = `help-trigger-${Math.random().toString(36).slice(2, 9)}`;
+    const { t } = useI18n();
+    const helpLabel = t('a11y.helpLabel').replace('{title}', title ?? t('wizard.title'));
     
     return (
         <>
@@ -492,7 +503,7 @@ export const HelpTooltip: React.FC<HelpTooltipProps> = ({ content, title, childr
                 id={triggerId}
                 onClick={() => setShowPopover(true)}
                 className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-                aria-label="Help"
+                aria-label={helpLabel}
             >
                 <IonIcon icon={helpCircleOutline} className="text-gray-400 text-sm" />
             </button>
@@ -521,36 +532,36 @@ export const HelpTooltip: React.FC<HelpTooltipProps> = ({ content, title, childr
 };
 
 // Predefined help content
-export const HELP_CONTENT = {
+export const getHelpContent = (t: (key: string) => string) => ({
     kc: {
-        title: 'Crop Coefficient (Kc)',
-        content: 'The Kc value represents how much water a plant needs relative to a reference grass. Higher Kc means more water needed.',
+        title: t('wizard.tooltips.items.kc.title'),
+        content: t('wizard.tooltips.items.kc.description'),
     },
     fao56: {
-        title: 'FAO-56 Method',
-        content: 'A scientific approach to irrigation that calculates water needs based on weather, plant type, soil, and growing stage.',
+        title: t('wizard.tooltips.items.fao56.title'),
+        content: t('wizard.tooltips.items.fao56.description'),
     },
     cycleSoak: {
-        title: 'Cycle & Soak',
-        content: 'Breaks watering into cycles with pauses (soak time) to allow water to absorb, preventing runoff on clay or compacted soils.',
+        title: t('wizard.tooltips.items.cycleSoak.title'),
+        content: t('wizard.tooltips.items.cycleSoak.description'),
     },
     coverage: {
-        title: 'Coverage Area',
-        content: 'The total area or number of plants this zone waters. Used to calculate water volume.',
+        title: t('wizard.tooltips.items.coverage.title'),
+        content: t('wizard.tooltips.items.coverage.description'),
     },
     sunExposure: {
-        title: 'Sun Exposure',
-        content: 'How much direct sunlight the zone receives. More sun means more evaporation and higher water needs.',
+        title: t('wizard.tooltips.items.sunExposure.title'),
+        content: t('wizard.tooltips.items.sunExposure.description'),
     },
     soilInfiltration: {
-        title: 'Infiltration Rate',
-        content: 'How fast water enters the soil. Clay has low infiltration (needs cycle/soak), sand has high infiltration.',
+        title: t('wizard.tooltips.items.infiltrationRate.title'),
+        content: t('wizard.tooltips.items.infiltrationRate.description'),
     },
     etZero: {
-        title: 'Reference ET (ET₀)',
-        content: 'Evapotranspiration for a reference grass surface. Used as a baseline to calculate actual crop water needs.',
+        title: t('wizard.tooltips.items.et0.title'),
+        content: t('wizard.tooltips.items.et0.description'),
     },
-};
+});
 
 // ============================================================================
 // 4.3: Tutorial Mode
@@ -666,7 +677,11 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
     isFirst,
     isLast,
 }) => {
+    const { t } = useI18n();
     const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+    const stepProgress = t('wizard.tutorial.stepProgress')
+        .replace('{current}', String(currentStep + 1))
+        .replace('{total}', String(totalSteps));
     
     useEffect(() => {
         const target = document.querySelector(step.target);
@@ -708,23 +723,23 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
                 <div className="flex items-center gap-2 mb-2">
                     <IonIcon icon={informationCircleOutline} className="text-cyber-emerald" />
                     <span className="text-xs text-gray-400">
-                        Step {currentStep + 1} of {totalSteps}
+                        {stepProgress}
                     </span>
                 </div>
                 <h4 className="text-white font-bold mb-2">{step.title}</h4>
                 <p className="text-gray-300 text-sm mb-4">{step.content}</p>
                 <div className="flex items-center justify-between">
                     <IonButton fill="clear" size="small" color="medium" onClick={onSkip}>
-                        Skip Tour
+                        {t('wizard.tutorial.skip')}
                     </IonButton>
                     <div className="flex gap-2">
                         {!isFirst && (
                             <IonButton fill="outline" size="small" onClick={onPrevious}>
-                                Back
+                                {t('common.back')}
                             </IonButton>
                         )}
                         <IonButton fill="solid" size="small" color="success" onClick={onNext}>
-                            {isLast ? 'Finish' : 'Next'}
+                            {isLast ? t('common.finish') : t('common.next')}
                         </IonButton>
                     </div>
                 </div>

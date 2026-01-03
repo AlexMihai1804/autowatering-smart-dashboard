@@ -1,8 +1,10 @@
 import React from 'react';
 import { useHistory } from 'react-router-dom';
+import { useI18n } from '../../i18n';
 
 const MobileNoDevices: React.FC = () => {
   const history = useHistory();
+  const { t } = useI18n();
 
   const handleAddDevice = () => {
     history.push('/scan');
@@ -18,7 +20,7 @@ const MobileNoDevices: React.FC = () => {
       <div className="flex items-center p-4 pt-12 pb-2 justify-between z-20">
         <div className="w-12"></div>
         <h2 className="text-lg font-bold leading-tight tracking-tight flex-1 text-center text-white">
-          AutoWatering
+          {t('mobileNoDevices.appName')}
         </h2>
         <div className="flex w-12 items-center justify-end">
           <button 
@@ -53,10 +55,10 @@ const MobileNoDevices: React.FC = () => {
         {/* Text Content */}
         <div className="flex flex-col items-center gap-3 text-center mb-8">
           <h1 className="text-3xl font-bold leading-tight tracking-tight text-white">
-            No Controllers Connected
+            {t('mobileNoDevices.title')}
           </h1>
           <p className="text-base font-normal leading-relaxed text-white/60 max-w-[300px]">
-            Pair your AutoWatering device to automate your garden and track usage.
+            {t('mobileNoDevices.subtitle')}
           </p>
         </div>
       </div>
@@ -69,7 +71,7 @@ const MobileNoDevices: React.FC = () => {
           className="flex w-full cursor-pointer items-center justify-center rounded-full h-14 bg-mobile-primary hover:bg-mobile-primary/90 text-black text-lg font-bold leading-normal tracking-wide shadow-lg shadow-mobile-primary/30 transition-all active:scale-[0.98]"
         >
           <span className="material-symbols-outlined mr-2">add_circle</span>
-          <span>Add Device</span>
+          <span>{t('mobileNoDevices.addDevice')}</span>
         </button>
         
         {/* Secondary Action */}
@@ -77,7 +79,7 @@ const MobileNoDevices: React.FC = () => {
           onClick={handleHelp}
           className="flex w-full cursor-pointer items-center justify-center rounded-full h-10 bg-transparent text-white/50 text-sm font-medium hover:text-mobile-primary transition-colors"
         >
-          <span>Need help setting up?</span>
+          <span>{t('mobileNoDevices.needHelp')}</span>
         </button>
       </div>
     </div>

@@ -40,6 +40,7 @@ import {
     type PlantCategoryInfo,
 } from '../../utils/onboardingHelpers';
 import { WhatsThisTooltip } from './WhatsThisTooltip';
+import { useI18n } from '../../i18n';
 
 interface PlantSelectorProps {
     /** Currently selected plant */
@@ -61,11 +62,11 @@ const getKcColor = (kc: number | null): string => {
     return 'danger';  // High water need
 };
 
-const getKcLabel = (kc: number | null): string => {
-    if (kc == null) return 'N/A';
-    if (kc < 0.85) return 'Apă redusă';
-    if (kc <= 1.0) return 'Apă medie';
-    return 'Apă multă';
+const getKcLabel = (kc: number | null, t: (key: string) => string): string => {
+    if (kc == null) return t('common.notAvailable');
+    if (kc < 0.85) return t('wizard.plant.waterNeedLow');
+    if (kc <= 1.0) return t('wizard.plant.waterNeedMedium');
+    return t('wizard.plant.waterNeedHigh');
 };
 
 export const PlantSelector: React.FC<PlantSelectorProps> = ({
@@ -74,6 +75,7 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
     onChange,
     disabled = false,
 }) => {
+    const { t } = useI18n();
     const [searchText, setSearchText] = useState('');
     const [activeCategory, setActiveCategory] = useState<PlantCategoryId | 'all'>('all');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -158,7 +160,7 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
             {/* Header */}
             <div className="flex items-center gap-2 mb-3">
                 <IonIcon icon={leafOutline} className="text-green-400 text-xl" />
-                <IonLabel className="text-white font-bold">Ce vrei să uzi?</IonLabel>
+                <IonLabel className="text-white font-bold">{t('wizard.plant.title')}</IonLabel>
                 <WhatsThisTooltip tooltipKey="kc" size="small" />
             </div>
 
@@ -166,7 +168,7 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
             <IonSearchbar
                 value={searchText}
                 onIonInput={(e) => setSearchText(e.detail.value || '')}
-                placeholder="Caută plantă... (ex: tomate, gazon)"
+                placeholder={t('wizard.plant.searchPlaceholder')}
                 className="mb-3"
                 debounce={200}
             />
@@ -178,7 +180,7 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
                     color={activeCategory === 'all' ? 'primary' : 'medium'}
                     outline={activeCategory !== 'all'}
                 >
-                    🌍 Toate ({plants.length})
+                    ?? {t('wizard.plant.allCategories')} ({plants.length})
                 </IonChip>
                 {(Object.keys(PLANT_CATEGORIES) as PlantCategoryId[]).map(cat => {
                     const count = getCategoryCount(cat);
@@ -191,7 +193,7 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
                             color={activeCategory === cat ? 'primary' : 'medium'}
                             outline={activeCategory !== cat}
                         >
-                            {PLANT_CATEGORIES[cat].emoji} {PLANT_CATEGORIES[cat].label} ({count})
+                            {PLANT_CATEGORIES[cat].emoji} {t(PLANT_CATEGORIES[cat].labelKey)} ({count})
                         </IonChip>
                     );
                 })}
@@ -200,7 +202,7 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
             {/* View mode toggle */}
             <div className="flex items-center justify-between mb-3">
                 <span className="text-gray-400 text-sm">
-                    {filteredPlants.length} plante
+                    {filteredPlants.length} {t('wizard.plant.plantsLabel')}
                 </span>
                 <IonSegment 
                     value={viewMode} 
@@ -230,10 +232,10 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
                             </div>
                             <div className="text-right">
                                 <IonBadge color={getKcColor(value.kc_mid)}>
-                                    Kc: {value.kc_mid != null ? value.kc_mid.toFixed(2) : 'N/A'}
+                                    Kc: {value.kc_mid != null ? value.kc_mid.toFixed(2) : t('common.notAvailable')}
                                 </IonBadge>
                                 <p className="text-xs text-gray-500 m-0 mt-1">
-                                    {getKcLabel(value.kc_mid)}
+                                    {getKcLabel(value.kc_mid, t)}
                                 </p>
                             </div>
                             <IonIcon icon={checkmarkCircle} className="text-cyber-emerald text-xl" />
@@ -247,7 +249,7 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
                 <div className="mb-4">
                     <div className="flex items-center gap-2 mb-2">
                         <IonIcon icon={starOutline} className="text-yellow-400" />
-                        <span className="text-gray-300 text-sm font-medium">Populare</span>
+                        <span className="text-gray-300 text-sm font-medium">{t('wizard.plant.popular')}</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                         {popularPlants.map((plant: PlantDBEntry) => (
@@ -296,7 +298,7 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
                                 </p>
                                 <div className="mt-2">
                                     <IonBadge color={getKcColor(plant.kc_mid)} className="text-xs">
-                                        {getKcLabel(plant.kc_mid)}
+                                        {getKcLabel(plant.kc_mid, t)}
                                     </IonBadge>
                                 </div>
                             </div>
@@ -330,7 +332,7 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
                                         </IonLabel>
                                         <div slot="end" className="text-right">
                                             <IonBadge color={getKcColor(plant.kc_mid)}>
-                                                Kc: {plant.kc_mid != null ? plant.kc_mid.toFixed(2) : 'N/A'}
+                                                Kc: {plant.kc_mid != null ? plant.kc_mid.toFixed(2) : t('common.notAvailable')}
                                             </IonBadge>
                                             {isSelected && (
                                                 <IonIcon icon={checkmarkCircle} color="success" className="block mt-1" />
@@ -344,8 +346,8 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
                                 <IonItem>
                                     <IonLabel className="text-center text-gray-400 py-4">
                                         <IonIcon icon={searchOutline} className="text-3xl mb-2" />
-                                        <p>Nicio plantă găsită</p>
-                                        <p className="text-sm">Încearcă altă căutare sau categorie</p>
+                                        <p>{t('wizard.plant.noResultsTitle')}</p>
+                                        <p className="text-sm">{t('wizard.plant.noResultsHint')}</p>
                                     </IonLabel>
                                 </IonItem>
                             )}
@@ -357,13 +359,13 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
             {/* Kc explanation */}
             <div className="mt-3 bg-white/5 rounded-lg p-3">
                 <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm text-gray-300 font-medium">Ce înseamnă Kc?</span>
+                    <span className="text-sm text-gray-300 font-medium">{t('wizard.plant.kcMeaning')}</span>
                     <WhatsThisTooltip tooltipKey="kc" size="small" />
                 </div>
                 <div className="flex gap-2 text-xs">
-                    <IonBadge color="success">{'< 0.5 = Apă redusă'}</IonBadge>
-                    <IonBadge color="warning">{'0.5-0.8 = Apă medie'}</IonBadge>
-                    <IonBadge color="danger">{'> 0.8 = Apă multă'}</IonBadge>
+                    <IonBadge color="success">{t('wizard.plant.kcLegendLow')}</IonBadge>
+                    <IonBadge color="warning">{t('wizard.plant.kcLegendMedium')}</IonBadge>
+                    <IonBadge color="danger">{t('wizard.plant.kcLegendHigh')}</IonBadge>
                 </div>
             </div>
         </div>

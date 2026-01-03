@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useI18n } from '../../i18n';
 
 interface Permission {
   id: string;
-  name: string;
-  description: string;
   icon: string;
   required: boolean;
   granted: boolean;
@@ -13,33 +12,43 @@ interface Permission {
 
 const MobilePermissions: React.FC = () => {
   const history = useHistory();
+  const { t } = useI18n();
 
   const [permissions, setPermissions] = useState<Permission[]>([
     {
       id: 'bluetooth',
-      name: 'Bluetooth',
-      description: 'Required to connect to your irrigation device',
       icon: 'bluetooth',
       required: true,
       granted: false,
     },
     {
       id: 'location',
-      name: 'Location',
-      description: 'Needed for weather data and Bluetooth scanning',
       icon: 'location_on',
       required: true,
       granted: false,
     },
     {
       id: 'notifications',
-      name: 'Notifications',
-      description: 'Get alerts about watering schedules and issues',
       icon: 'notifications',
       required: false,
       granted: false,
     },
   ]);
+
+  const permissionText: Record<string, { name: string; description: string }> = {
+    bluetooth: {
+      name: t('mobilePermissions.permissions.bluetooth.name'),
+      description: t('mobilePermissions.permissions.bluetooth.description'),
+    },
+    location: {
+      name: t('mobilePermissions.permissions.location.name'),
+      description: t('mobilePermissions.permissions.location.description'),
+    },
+    notifications: {
+      name: t('mobilePermissions.permissions.notifications.name'),
+      description: t('mobilePermissions.permissions.notifications.description'),
+    },
+  };
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const currentPermission = permissions[currentIndex];
@@ -95,7 +104,7 @@ const MobilePermissions: React.FC = () => {
             onClick={handleContinue}
             className="text-mobile-text-muted text-sm font-medium hover:text-white transition-colors"
           >
-            Skip All
+            {t('mobilePermissions.skipAll')}
           </button>
         </div>
 
@@ -129,7 +138,7 @@ const MobilePermissions: React.FC = () => {
               </span>
               {currentPermission.required && !currentPermission.granted && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                  Required
+                  {t('mobilePermissions.required')}
                 </span>
               )}
             </div>
@@ -138,10 +147,12 @@ const MobilePermissions: React.FC = () => {
           {/* Text */}
           <div className="text-center mb-8">
             <h2 className="text-white text-2xl font-bold mb-3">
-              {currentPermission.granted ? `${currentPermission.name} Enabled` : `Enable ${currentPermission.name}`}
+              {currentPermission.granted
+                ? t('mobilePermissions.enabledTitle').replace('{name}', permissionText[currentPermission.id].name)
+                : t('mobilePermissions.enableTitle').replace('{name}', permissionText[currentPermission.id].name)}
             </h2>
             <p className="text-mobile-text-muted leading-relaxed">
-              {currentPermission.description}
+              {permissionText[currentPermission.id].description}
             </p>
           </div>
 
@@ -159,7 +170,7 @@ const MobilePermissions: React.FC = () => {
                 <span className="material-symbols-outlined text-sm">
                   {p.granted ? 'check' : p.icon}
                 </span>
-                <span>{p.name}</span>
+                <span>{permissionText[p.id].name}</span>
               </div>
             ))}
           </div>
@@ -172,7 +183,7 @@ const MobilePermissions: React.FC = () => {
                 className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined">check</span>
-                Allow {currentPermission.name}
+                {t('mobilePermissions.allow').replace('{name}', permissionText[currentPermission.id].name)}
               </button>
 
               {!currentPermission.required && (
@@ -180,7 +191,7 @@ const MobilePermissions: React.FC = () => {
                   onClick={handleSkip}
                   className="w-full h-12 bg-white/5 text-white font-semibold rounded-xl active:scale-[0.98] transition-transform"
                 >
-                  Skip for Now
+                  {t('mobilePermissions.skipForNow')}
                 </button>
               )}
             </div>
@@ -189,7 +200,7 @@ const MobilePermissions: React.FC = () => {
               onClick={() => setCurrentIndex(prev => prev + 1)}
               className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
             >
-              Continue
+              {t('common.continue')}
               <span className="material-symbols-outlined">arrow_forward</span>
             </button>
           ) : (
@@ -198,7 +209,7 @@ const MobilePermissions: React.FC = () => {
               className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined">rocket_launch</span>
-              Get Started
+              {t('mobilePermissions.getStarted')}
             </button>
           )}
         </motion.div>
@@ -209,7 +220,7 @@ const MobilePermissions: React.FC = () => {
         <div className="rounded-xl bg-white/5 p-4 flex items-start gap-3">
           <span className="material-symbols-outlined text-mobile-text-muted shrink-0">lock</span>
           <p className="text-mobile-text-muted text-sm leading-relaxed">
-            Your privacy is important to us. We only use these permissions for the app to function properly. Your data stays on your device.
+            {t('mobilePermissions.footerNote')}
           </p>
         </div>
       </div>

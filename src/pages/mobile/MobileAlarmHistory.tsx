@@ -3,6 +3,7 @@ import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { BleService } from '../../services/BleService';
 import MobileHeader from '../../components/mobile/MobileHeader';
+import { useI18n } from '../../i18n';
 import {
   AlarmCode,
   AlarmSeverity,
@@ -15,6 +16,7 @@ import {
 const MobileAlarmHistory: React.FC = () => {
   const history = useHistory();
   const bleService = BleService.getInstance();
+  const { t } = useI18n();
   
   const {
     alarmHistory,
@@ -63,11 +65,11 @@ const MobileAlarmHistory: React.FC = () => {
   const getZoneName = (channelId: number | undefined): string | null => {
     if (channelId === undefined) return null;
     const zone = zones.find(z => z.channel_id === channelId);
-    return zone?.name || `Zone ${channelId + 1}`;
+    return zone?.name || `${t('zones.zone')} ${channelId + 1}`;
   };
   
   const formatTimestamp = (ts: number): string => {
-    if (!ts) return 'Unknown';
+    if (!ts) return t('alarmHistory.time.unknown');
     const date = new Date(ts * 1000);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -75,10 +77,10 @@ const MobileAlarmHistory: React.FC = () => {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
     
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffMins < 1) return t('alarmHistory.time.justNow');
+    if (diffMins < 60) return t('alarmHistory.time.minutesAgo').replace('{count}', String(diffMins));
+    if (diffHours < 24) return t('alarmHistory.time.hoursAgo').replace('{count}', String(diffHours));
+    if (diffDays < 7) return t('alarmHistory.time.daysAgo').replace('{count}', String(diffDays));
     
     return date.toLocaleDateString();
   };
@@ -119,7 +121,7 @@ const MobileAlarmHistory: React.FC = () => {
   return (
     <div className="min-h-screen bg-mobile-bg flex flex-col">
       <MobileHeader
-        title="Alarm History"
+        title={t('alarmHistory.title')}
         showBackButton
         onBack={() => history.goBack()}
         rightAction={
@@ -144,10 +146,10 @@ const MobileAlarmHistory: React.FC = () => {
               </span>
             </div>
             <h3 className="text-lg font-semibold text-white mb-2">
-              No Alarms
+              {t('alarmHistory.emptyTitle')}
             </h3>
             <p className="text-white/60 text-sm">
-              Your irrigation system is running smoothly.
+              {t('alarmHistory.emptyMessage')}
             </p>
           </div>
         ) : (
@@ -155,7 +157,7 @@ const MobileAlarmHistory: React.FC = () => {
             {allAlarms.map((alarm, index) => {
               const severity = getAlarmSeverity(alarm.alarm_code);
               const styles = getSeverityStyles(severity);
-              const title = getAlarmTitle(alarm.alarm_code);
+              const title = getAlarmTitle(alarm.alarm_code, t);
               const channelId = getAffectedChannelFromAlarmData(alarm.alarm_code, alarm.alarm_data);
               const zoneName = getZoneName(channelId);
               const isActive = alarmStatus?.timestamp === alarm.timestamp && alarmStatus?.alarm_code !== AlarmCode.NONE;
@@ -181,12 +183,12 @@ const MobileAlarmHistory: React.FC = () => {
                       </span>
                       {isActive && (
                         <span className="px-2 py-0.5 bg-red-500/30 text-red-300 text-xs rounded-full font-medium">
-                          Active
+                          {t('alarmHistory.active')}
                         </span>
                       )}
                       {isCleared && (
                         <span className="px-2 py-0.5 bg-green-500/30 text-green-300 text-xs rounded-full font-medium">
-                          Cleared
+                          {t('alarmHistory.cleared')}
                         </span>
                       )}
                     </div>
@@ -201,7 +203,7 @@ const MobileAlarmHistory: React.FC = () => {
                       {formatTimestamp(alarm.timestamp)}
                       {isCleared && alarm.cleared_at && (
                         <span className="ml-2">
-                          • Cleared {formatTimestamp(alarm.cleared_at)}
+                          - {t('alarmHistory.clearedAt').replace('{time}', formatTimestamp(alarm.cleared_at))}
                         </span>
                       )}
                     </p>

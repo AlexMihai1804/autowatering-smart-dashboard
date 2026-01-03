@@ -1,5 +1,6 @@
 import React from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
+import { useI18n } from '../../i18n';
 
 interface LocationState {
   deviceName?: string;
@@ -9,8 +10,9 @@ interface LocationState {
 const MobileConnectionSuccess: React.FC = () => {
   const history = useHistory();
   const location = useLocation<LocationState>();
-  
-  const deviceName = location.state?.deviceName ?? 'AutoWater Pro';
+  const { t } = useI18n();
+
+  const deviceName = location.state?.deviceName ?? t('dashboard.deviceNamePlaceholder');
   const deviceId = location.state?.deviceId ?? 'AW-8839-X';
 
   const handleContinueSetup = () => {
@@ -54,12 +56,12 @@ const MobileConnectionSuccess: React.FC = () => {
 
         {/* Headline */}
         <h1 className="text-white tracking-tight text-[32px] font-bold leading-tight px-4 text-center mb-2">
-          Success!
+          {t('mobileConnectionSuccess.title')}
         </h1>
 
         {/* Body Text */}
         <p className="text-gray-400 text-base font-normal leading-relaxed px-4 text-center max-w-[280px]">
-          Your AutoWatering controller is paired and ready.
+          {t('mobileConnectionSuccess.subtitle')}
         </p>
 
         {/* Device Identity Card */}
@@ -69,10 +71,12 @@ const MobileConnectionSuccess: React.FC = () => {
             <div className="flex flex-col justify-center gap-1.5 flex-[2_2_0px] pl-2">
               <div className="flex items-center gap-1.5 mb-1">
                 <span className="size-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
-                <p className="text-green-500 text-xs font-semibold uppercase tracking-wider">Online</p>
+                <p className="text-green-500 text-xs font-semibold uppercase tracking-wider">{t('deviceSelector.online')}</p>
               </div>
               <p className="text-white text-lg font-bold leading-tight">{deviceName}</p>
-              <p className="text-gray-500 text-xs font-mono">ID: {deviceId}</p>
+              <p className="text-gray-500 text-xs font-mono">
+                {t('mobileConnectionSuccess.deviceId').replace('{id}', deviceId)}
+              </p>
             </div>
             
             {/* Right: Device Icon */}
@@ -89,14 +93,14 @@ const MobileConnectionSuccess: React.FC = () => {
           onClick={handleContinueSetup}
           className="w-full py-4 px-6 bg-mobile-primary hover:bg-mobile-primary/90 active:scale-[0.98] transition-all rounded-full shadow-lg shadow-mobile-primary/25 flex items-center justify-center group"
         >
-          <span className="text-black text-lg font-bold mr-2">Continue to Setup</span>
+          <span className="text-black text-lg font-bold mr-2">{t('mobileConnectionSuccess.continueSetup')}</span>
           <span className="material-symbols-outlined text-black transition-transform group-hover:translate-x-1">arrow_forward</span>
         </button>
         <p 
           onClick={handleSkipToDashboard}
           className="text-center mt-4 text-sm text-gray-500 font-medium cursor-pointer hover:text-mobile-primary transition-colors"
         >
-          Skip setup and go to Dashboard
+          {t('mobileConnectionSuccess.skipToDashboard')}
         </p>
       </div>
     </div>

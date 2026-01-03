@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useI18n } from '../../i18n';
 
 interface Device {
   id: string;
@@ -25,6 +26,8 @@ const MobileDeviceSelector: React.FC<MobileDeviceSelectorProps> = ({
   devices,
   currentDeviceId,
 }) => {
+  const { t } = useI18n();
+  const percentUnit = t('common.percent');
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredDevices = devices.filter(d =>
@@ -77,7 +80,7 @@ const MobileDeviceSelector: React.FC<MobileDeviceSelectorProps> = ({
             {/* Header */}
             <div className="p-4 border-b border-mobile-border-dark">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-white text-xl font-bold">Select Device</h3>
+                <h3 className="text-white text-xl font-bold">{t('deviceSelector.title')}</h3>
                 <button
                   onClick={onClose}
                   className="size-10 rounded-full bg-white/5 flex items-center justify-center text-mobile-text-muted hover:bg-white/10 transition-colors"
@@ -95,7 +98,7 @@ const MobileDeviceSelector: React.FC<MobileDeviceSelectorProps> = ({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search devices..."
+                  placeholder={t('deviceSelector.searchPlaceholder')}
                   className="w-full h-12 bg-mobile-bg-dark border border-mobile-border-dark rounded-xl pl-12 pr-4 text-white placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary"
                 />
               </div>
@@ -108,7 +111,7 @@ const MobileDeviceSelector: React.FC<MobileDeviceSelectorProps> = ({
                   <div className="size-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
                     <span className="material-symbols-outlined text-mobile-text-muted text-3xl">devices</span>
                   </div>
-                  <p className="text-mobile-text-muted">No devices found</p>
+                  <p className="text-mobile-text-muted">{t('deviceSelector.noDevices')}</p>
                 </div>
               ) : (
                 filteredDevices.map(device => (
@@ -143,7 +146,7 @@ const MobileDeviceSelector: React.FC<MobileDeviceSelectorProps> = ({
                         <h4 className="text-white font-bold">{device.name}</h4>
                         {device.id === currentDeviceId && (
                           <span className="text-xs bg-mobile-primary/10 text-mobile-primary px-2 py-0.5 rounded-full">
-                            Current
+                            {t('deviceSelector.current')}
                           </span>
                         )}
                       </div>
@@ -152,16 +155,16 @@ const MobileDeviceSelector: React.FC<MobileDeviceSelectorProps> = ({
                           <>
                             <span className="flex items-center gap-1">
                               <span className="material-symbols-outlined text-sm">{getSignalIcon(device.signalStrength)}</span>
-                              {device.signalStrength}%
+                              {device.signalStrength}{percentUnit}
                             </span>
                             <span className="flex items-center gap-1">
                               <span className="material-symbols-outlined text-sm">{getBatteryIcon(device.batteryLevel)}</span>
-                              {device.batteryLevel}%
+                              {device.batteryLevel}{percentUnit}
                             </span>
                           </>
                         ) : (
                           <span className="text-mobile-text-muted">
-                            Last seen: {device.lastSeen?.toLocaleTimeString() || 'Unknown'}
+                            {t('deviceSelector.lastSeen').replace('{time}', device.lastSeen?.toLocaleTimeString() || t('deviceSelector.unknown'))}
                           </span>
                         )}
                       </div>
@@ -173,7 +176,7 @@ const MobileDeviceSelector: React.FC<MobileDeviceSelectorProps> = ({
                         ? 'bg-mobile-primary/10 text-mobile-primary'
                         : 'bg-white/5 text-mobile-text-muted'
                     }`}>
-                      {device.isConnected ? 'Online' : 'Offline'}
+                      {device.isConnected ? t('deviceSelector.online') : t('deviceSelector.offline')}
                     </div>
                   </button>
                 ))
@@ -186,7 +189,7 @@ const MobileDeviceSelector: React.FC<MobileDeviceSelectorProps> = ({
                 className="w-full flex items-center justify-center gap-2 h-12 rounded-xl border border-dashed border-mobile-border-dark text-mobile-text-muted hover:border-mobile-primary/50 hover:text-mobile-primary transition-colors"
               >
                 <span className="material-symbols-outlined">add</span>
-                Add New Device
+                {t('deviceSelector.addDevice')}
               </button>
             </div>
           </motion.div>

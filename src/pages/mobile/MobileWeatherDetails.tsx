@@ -2,6 +2,7 @@ import React from 'react';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { useSettings } from '../../hooks/useSettings';
+import { useI18n } from '../../i18n';
 import {
   calcAverageSoilMoisturePercentPreferred,
   calcSoilMoisturePercentPreferred,
@@ -11,6 +12,8 @@ import {
 const MobileWeatherDetails: React.FC = () => {
   const history = useHistory();
   const { formatTemperature, useCelsius } = useSettings();
+  const { t } = useI18n();
+  const percentUnit = t('common.percent');
   const {
     envData,
     rainData,
@@ -35,7 +38,8 @@ const MobileWeatherDetails: React.FC = () => {
     autoCalc: globalAutoCalcStatus
   });
   const estimatedMoisture = moistureFromZones ?? moistureFromGlobal;
-  const moistureStatus = estimatedMoisture === null ? null : getSoilMoistureLabel(estimatedMoisture);
+  const moistureStatusKey = estimatedMoisture === null ? null : getSoilMoistureLabel(estimatedMoisture).toLowerCase();
+  const moistureStatus = moistureStatusKey ? t(`soilMoisture.${moistureStatusKey}`) : null;
   
   const temperature = envData?.temperature ?? 24;
   const humidity = envData?.humidity ?? 45;
@@ -52,14 +56,14 @@ const MobileWeatherDetails: React.FC = () => {
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
         <h2 className="text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-12">
-          Environment Status
+          {t('mobileWeatherDetails.title')}
         </h2>
       </div>
       
       {/* Last updated */}
       <p className="text-mobile-text-muted text-xs font-medium leading-normal pb-4 px-4 text-center flex items-center justify-center gap-1">
         <span className="material-symbols-outlined text-sm">sync</span>
-        Updated 2 mins ago
+        {t('mobileWeatherDetails.updated').replace('{minutes}', '2')}
       </p>
       
       {/* Scrollable Content */}
@@ -68,14 +72,16 @@ const MobileWeatherDetails: React.FC = () => {
         <div className="flex flex-col gap-5 px-4">
         {estimatedMoisture !== null && moistureStatus && (
           <>
-            {/* Soil Moisture Card */}
+            {/* Soil moisture card */}
             <div className="flex flex-col items-stretch rounded-2xl shadow-sm bg-mobile-card-dark overflow-hidden ring-1 ring-white/5">
               <div className="p-6 flex flex-col gap-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-white text-xl font-bold leading-tight">Soil Moisture</p>
+                    <p className="text-white text-xl font-bold leading-tight">{t('mobileWeatherDetails.soilMoisture.title')}</p>
                     <p className="text-mobile-text-muted text-sm font-medium mt-1">
-                      {zones[0]?.name ?? 'Zone 1'} • Overview
+                      {t('mobileWeatherDetails.zoneOverview')
+                        .replace('{zone}', zones[0]?.name ?? `${t('zones.zone')} 1`)
+                        .replace('{overview}', t('zones.overview'))}
                     </p>
                   </div>
                   <div className="size-10 rounded-full bg-mobile-primary/10 flex items-center justify-center">
@@ -106,7 +112,7 @@ const MobileWeatherDetails: React.FC = () => {
                       />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-2xl font-bold text-white">{estimatedMoisture}%</span>
+                      <span className="text-2xl font-bold text-white">{estimatedMoisture}{percentUnit}</span>
                       <span className="text-[10px] font-bold text-mobile-primary uppercase tracking-wider">
                         {moistureStatus}
                       </span>
@@ -118,12 +124,14 @@ const MobileWeatherDetails: React.FC = () => {
                       <span className="material-symbols-outlined text-mobile-primary text-xl mt-0.5">check_circle</span>
                       <div>
                         <p className="text-white text-sm font-bold leading-snug">
-                          {estimatedMoisture >= 60 ? 'Watering Skipped' : 'Watering Needed'}
+                          {estimatedMoisture >= 60
+                            ? t('mobileWeatherDetails.soilMoisture.wateringSkipped')
+                            : t('mobileWeatherDetails.soilMoisture.wateringNeeded')}
                         </p>
                         <p className="text-mobile-text-muted text-xs leading-relaxed mt-1">
-                          {estimatedMoisture >= 60 
-                            ? 'Soil moisture is sufficient for the next 24 hours.'
-                            : 'Consider running a watering cycle soon.'}
+                          {estimatedMoisture >= 60
+                            ? t('mobileWeatherDetails.soilMoisture.sufficient')
+                            : t('mobileWeatherDetails.soilMoisture.consider')}
                         </p>
                       </div>
                     </div>
@@ -151,14 +159,14 @@ const MobileWeatherDetails: React.FC = () => {
                 <span className="material-symbols-outlined text-xl">thermostat</span>
               </div>
               <span className="text-[10px] font-bold uppercase text-mobile-text-muted">
-                High {formatTemperature(temperature + 4)}
+                {t('mobileWeatherDetails.highLabel').replace('{value}', formatTemperature(temperature + 4))}
               </span>
             </div>
             <div>
-              <p className="text-mobile-text-muted text-sm font-medium">Temperature</p>
+              <p className="text-mobile-text-muted text-sm font-medium">{t('mobileWeatherDetails.temperature')}</p>
               <p className="text-white tracking-tight text-3xl font-extrabold leading-tight mt-1">
                 {formatTemperature(temperature, false)}
-                <span className="text-lg align-top text-mobile-text-muted">{useCelsius ? '°C' : '°F'}</span>
+                <span className="text-lg align-top text-mobile-text-muted">{useCelsius ? t('common.degreesC') : t('common.degreesF')}</span>
               </p>
             </div>
           </div>
@@ -170,14 +178,14 @@ const MobileWeatherDetails: React.FC = () => {
                 <span className="material-symbols-outlined text-xl">humidity_percentage</span>
               </div>
               <span className="text-[10px] font-bold uppercase text-mobile-text-muted">
-                Dew {formatTemperature(temperature - 8)}
+                {t('mobileWeatherDetails.dewLabel').replace('{value}', formatTemperature(temperature - 8))}
               </span>
             </div>
             <div>
-              <p className="text-mobile-text-muted text-sm font-medium">Humidity</p>
-              <p className="text-white tracking-tight text-3xl font-extrabold leading-tight mt-1">
-                {humidity.toFixed(0)}
-                <span className="text-lg align-top text-mobile-text-muted">%</span>
+              <p className="text-mobile-text-muted text-sm font-medium">{t('mobileWeatherDetails.humidity')}</p>
+                <p className="text-white tracking-tight text-3xl font-extrabold leading-tight mt-1">
+                  {humidity.toFixed(0)}
+                <span className="text-lg align-top text-mobile-text-muted">{percentUnit}</span>
               </p>
             </div>
           </div>
@@ -188,13 +196,13 @@ const MobileWeatherDetails: React.FC = () => {
               <div className="p-2 bg-mobile-primary/10 rounded-full text-mobile-primary">
                 <span className="material-symbols-outlined text-xl">rainy</span>
               </div>
-              <span className="text-[10px] font-bold uppercase text-mobile-text-muted">24h</span>
+              <span className="text-[10px] font-bold uppercase text-mobile-text-muted">{t('mobileWeatherDetails.last24h')}</span>
             </div>
             <div>
-              <p className="text-mobile-text-muted text-sm font-medium">Rainfall</p>
+              <p className="text-mobile-text-muted text-sm font-medium">{t('mobileWeatherDetails.rainfall')}</p>
               <p className="text-white tracking-tight text-3xl font-extrabold leading-tight mt-1">
                 {rainfall24h.toFixed(1)}
-                <span className="text-lg align-top text-mobile-text-muted font-medium pl-1">mm</span>
+                <span className="text-lg align-top text-mobile-text-muted font-medium pl-1">{t('mobileWeatherDetails.units.mm')}</span>
               </p>
             </div>
           </div>
@@ -205,13 +213,13 @@ const MobileWeatherDetails: React.FC = () => {
               <div className="p-2 bg-gray-500/20 rounded-full text-gray-400">
                 <span className="material-symbols-outlined text-xl">air</span>
               </div>
-              <span className="text-[10px] font-bold uppercase text-mobile-text-muted">NW</span>
+              <span className="text-[10px] font-bold uppercase text-mobile-text-muted">{t('mobileWeatherDetails.windDirection')}</span>
             </div>
             <div>
-              <p className="text-mobile-text-muted text-sm font-medium">Wind Speed</p>
+              <p className="text-mobile-text-muted text-sm font-medium">{t('mobileWeatherDetails.windSpeed')}</p>
               <p className="text-white tracking-tight text-3xl font-extrabold leading-tight mt-1">
                 8
-                <span className="text-lg align-top text-mobile-text-muted font-medium pl-1">km/h</span>
+                <span className="text-lg align-top text-mobile-text-muted font-medium pl-1">{t('mobileWeatherDetails.units.kmh')}</span>
               </p>
             </div>
           </div>
@@ -220,15 +228,15 @@ const MobileWeatherDetails: React.FC = () => {
         {/* Forecast Chart */}
         <div className="flex flex-col gap-2 rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-6">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-white text-base font-bold leading-normal">Rain & Temp Forecast</p>
+            <p className="text-white text-base font-bold leading-normal">{t('mobileWeatherDetails.forecast.title')}</p>
             <div className="flex gap-4">
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-mobile-primary" />
-                <span className="text-[10px] uppercase font-bold text-mobile-text-muted">Rain %</span>
+                <span className="text-[10px] uppercase font-bold text-mobile-text-muted">{t('mobileWeatherDetails.forecast.rainPercent')}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full border border-white/50" />
-                <span className="text-[10px] uppercase font-bold text-mobile-text-muted">Temp</span>
+                <span className="text-[10px] uppercase font-bold text-mobile-text-muted">{t('mobileWeatherDetails.forecast.temp')}</span>
               </div>
             </div>
           </div>
@@ -272,11 +280,11 @@ const MobileWeatherDetails: React.FC = () => {
             
             {/* X Axis Labels */}
             <div className="flex justify-between mt-2 text-xs font-medium text-white/30 px-2">
-              <span>Now</span>
-              <span>+3h</span>
-              <span>+6h</span>
-              <span>+12h</span>
-              <span>+24h</span>
+              <span>{t('mobileWeatherDetails.forecastLabels.now')}</span>
+              <span>{t('mobileWeatherDetails.forecastLabels.plus3h')}</span>
+              <span>{t('mobileWeatherDetails.forecastLabels.plus6h')}</span>
+              <span>{t('mobileWeatherDetails.forecastLabels.plus12h')}</span>
+              <span>{t('mobileWeatherDetails.forecastLabels.plus24h')}</span>
             </div>
           </div>
         </div>
@@ -287,3 +295,5 @@ const MobileWeatherDetails: React.FC = () => {
 };
 
 export default MobileWeatherDetails;
+
+

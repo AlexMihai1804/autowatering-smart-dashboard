@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useI18n } from '../i18n';
 
 export interface AppSettings {
   // Temperature
   useCelsius: boolean;
   
   // Units
-  useMetric: boolean; // true = metric (L, m²), false = imperial (gal, ft²)
+  useMetric: boolean; // true = metric (L, m2), false = imperial (gal, ft2)
   
   // Locale
   locale: string; // e.g., 'en-US', 'ro-RO'
@@ -77,6 +78,7 @@ const saveSettings = (settings: AppSettings): void => {
  */
 export function useSettings() {
   const [settings, setSettingsState] = useState<AppSettings>(loadSettings);
+  const { t } = useI18n();
 
   // Update a single setting
   const updateSetting = useCallback(<K extends keyof AppSettings>(
@@ -110,37 +112,34 @@ export function useSettings() {
   const formatTemperature = useCallback((celsius: number, showUnit = true): string => {
     if (settings.useCelsius) {
       const formatted = celsius.toFixed(1);
-      return showUnit ? `${formatted}°C` : formatted;
-    } else {
-      const fahrenheit = (celsius * 9/5) + 32;
-      const formatted = fahrenheit.toFixed(1);
-      return showUnit ? `${formatted}°F` : formatted;
+      return showUnit ? `${formatted}${t('common.degreesC')}` : formatted;
     }
-  }, [settings.useCelsius]);
+    const fahrenheit = (celsius * 9/5) + 32;
+    const formatted = fahrenheit.toFixed(1);
+    return showUnit ? `${formatted}${t('common.degreesF')}` : formatted;
+  }, [settings.useCelsius, t]);
 
   // Volume formatting (liters or gallons)
   const formatVolume = useCallback((liters: number, showUnit = true): string => {
     if (settings.useMetric) {
       const formatted = liters.toFixed(1);
-      return showUnit ? `${formatted} L` : formatted;
-    } else {
-      const gallons = liters * 0.264172;
-      const formatted = gallons.toFixed(1);
-      return showUnit ? `${formatted} gal` : formatted;
+      return showUnit ? `${formatted} ${t('common.litersShort')}` : formatted;
     }
-  }, [settings.useMetric]);
+    const gallons = liters * 0.264172;
+    const formatted = gallons.toFixed(1);
+    return showUnit ? `${formatted} ${t('common.gallonsShort')}` : formatted;
+  }, [settings.useMetric, t]);
 
-  // Area formatting (m² or ft²)
+  // Area formatting (m2 or ft2)
   const formatArea = useCallback((squareMeters: number, showUnit = true): string => {
     if (settings.useMetric) {
       const formatted = squareMeters.toFixed(1);
-      return showUnit ? `${formatted} m²` : formatted;
-    } else {
-      const sqft = squareMeters * 10.7639;
-      const formatted = sqft.toFixed(1);
-      return showUnit ? `${formatted} ft²` : formatted;
+      return showUnit ? `${formatted} ${t('common.squareMetersShort')}` : formatted;
     }
-  }, [settings.useMetric]);
+    const sqft = squareMeters * 10.7639;
+    const formatted = sqft.toFixed(1);
+    return showUnit ? `${formatted} ${t('common.squareFeetShort')}` : formatted;
+  }, [settings.useMetric, t]);
 
   return {
     settings,

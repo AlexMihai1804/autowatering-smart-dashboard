@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { BleService } from '../../services/BleService';
+import { useI18n } from '../../i18n';
 
 type PowerMode = 'performance' | 'balanced' | 'eco';
 
@@ -9,6 +10,8 @@ const MobilePowerMode: React.FC = () => {
   const history = useHistory();
   const { systemConfig, diagnosticsData } = useAppStore();
   const bleService = BleService.getInstance();
+  const { t } = useI18n();
+  const percentUnit = t('common.percent');
 
   const [selectedMode, setSelectedMode] = useState<PowerMode>('balanced');
   const [saving, setSaving] = useState(false);
@@ -30,35 +33,47 @@ const MobilePowerMode: React.FC = () => {
     {
       id: 'performance' as PowerMode,
       val: 0,
-      name: 'Performance',
+      name: t('mobilePowerMode.modes.performance.name'),
       icon: 'bolt',
       iconBg: 'bg-orange-500/20',
       iconColor: 'text-orange-400',
-      description: 'Maximum sensor frequency, instant response',
+      description: t('mobilePowerMode.modes.performance.description'),
       battery: '~2 weeks',
-      features: ['15-min sensor updates', 'Instant BLE advertising', 'Full logging'],
+      features: [
+        t('mobilePowerMode.modes.performance.features.update15'),
+        t('mobilePowerMode.modes.performance.features.bleInstant'),
+        t('mobilePowerMode.modes.performance.features.fullLogging'),
+      ],
     },
     {
       id: 'balanced' as PowerMode,
       val: 1,
-      name: 'Balanced',
+      name: t('mobilePowerMode.modes.balanced.name'),
       icon: 'balance',
       iconBg: 'bg-mobile-primary/20',
       iconColor: 'text-mobile-primary',
-      description: 'Good performance with reasonable battery life',
+      description: t('mobilePowerMode.modes.balanced.description'),
       battery: '~1 month',
-      features: ['30-min sensor updates', 'Normal BLE advertising', 'Standard logging'],
+      features: [
+        t('mobilePowerMode.modes.balanced.features.update30'),
+        t('mobilePowerMode.modes.balanced.features.bleNormal'),
+        t('mobilePowerMode.modes.balanced.features.standardLogging'),
+      ],
     },
     {
       id: 'eco' as PowerMode,
       val: 2,
-      name: 'Eco Saver',
+      name: t('mobilePowerMode.modes.eco.name'),
       icon: 'eco',
       iconBg: 'bg-green-600/20',
       iconColor: 'text-green-500',
-      description: 'Maximum battery life, reduced features',
+      description: t('mobilePowerMode.modes.eco.description'),
       battery: '~3 months',
-      features: ['Hourly sensor updates', 'Reduced BLE advertising', 'Minimal logging'],
+      features: [
+        t('mobilePowerMode.modes.eco.features.updateHourly'),
+        t('mobilePowerMode.modes.eco.features.bleReduced'),
+        t('mobilePowerMode.modes.eco.features.minimalLogging'),
+      ],
     },
   ];
 
@@ -78,7 +93,7 @@ const MobilePowerMode: React.FC = () => {
       history.goBack();
     } catch (e) {
       console.error('Failed to save power mode:', e);
-      alert('Failed to save settings.');
+      alert(t('mobilePowerMode.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -98,7 +113,7 @@ const MobilePowerMode: React.FC = () => {
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
         <h2 className="text-white text-lg font-bold leading-tight flex-1 text-center">
-          Power Mode
+          {t('mobilePowerMode.title')}
         </h2>
         <div className="size-12" />
       </div>
@@ -113,12 +128,16 @@ const MobilePowerMode: React.FC = () => {
               </span>
             </div>
             <div className="flex-1">
-              <p className="text-mobile-text-muted text-sm">{isMains ? 'Power Source' : 'Current Battery'}</p>
+              <p className="text-mobile-text-muted text-sm">
+                {isMains ? t('mobilePowerMode.powerSource') : t('mobilePowerMode.currentBattery')}
+              </p>
               <p className="text-white text-3xl font-bold">
-                {isMains ? 'Mains' : `${batteryLevel}%`}
+                {isMains ? t('mobilePowerMode.mains') : `${batteryLevel}${percentUnit}`}
               </p>
               <p className={`text-sm font-medium ${isMains ? 'text-blue-400' : 'text-mobile-primary'}`}>
-                {isMains ? 'External power connected' : (batteryLevel > 20 ? 'Good condition' : 'Low battery')}
+                {isMains
+                  ? t('mobilePowerMode.externalPower')
+                  : (batteryLevel > 20 ? t('mobilePowerMode.batteryGood') : t('mobilePowerMode.batteryLow'))}
               </p>
             </div>
           </div>
@@ -137,7 +156,7 @@ const MobilePowerMode: React.FC = () => {
         {/* Mode Selection */}
         <div className="space-y-3">
           <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
-            Select Power Mode
+            {t('mobilePowerMode.selectPowerMode')}
           </label>
 
           <div className="space-y-3">
@@ -184,7 +203,7 @@ const MobilePowerMode: React.FC = () => {
         <div className="rounded-xl bg-blue-500/10 border border-blue-500/20 p-4 flex items-start gap-3">
           <span className="material-symbols-outlined text-blue-400 shrink-0">info</span>
           <p className="text-blue-200 text-sm leading-relaxed">
-            Power mode changes take effect immediately. The device will briefly disconnect during the change.
+            {t('mobilePowerMode.infoNote')}
           </p>
         </div>
       </div>
@@ -197,7 +216,7 @@ const MobilePowerMode: React.FC = () => {
           className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
         >
           <span className="material-symbols-outlined">save</span>
-          {saving ? 'Saving...' : 'Apply Power Mode'}
+          {saving ? t('mobilePowerMode.saving') : t('mobilePowerMode.apply')}
         </button>
       </div>
     </div>
@@ -205,3 +224,4 @@ const MobilePowerMode: React.FC = () => {
 };
 
 export default MobilePowerMode;
+

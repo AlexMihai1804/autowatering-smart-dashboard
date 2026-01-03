@@ -14,6 +14,7 @@ import {
 } from '@ionic/react';
 import { helpCircleOutline, closeCircle } from 'ionicons/icons';
 import { getTooltipContent, TooltipContent } from '../../utils/onboardingHelpers';
+import { useI18n } from '../../i18n';
 
 interface WhatsThisTooltipProps {
     /** Key to lookup in WIZARD_TOOLTIPS */
@@ -41,10 +42,11 @@ export const WhatsThisTooltip: React.FC<WhatsThisTooltipProps> = ({
     color = 'var(--ion-color-medium)',
     className = '',
 }) => {
+    const { t } = useI18n();
     const [isOpen, setIsOpen] = useState(false);
     const [popoverEvent, setPopoverEvent] = useState<Event | undefined>();
 
-    const content = customContent || getTooltipContent(tooltipKey);
+    const content = customContent || getTooltipContent(t, tooltipKey);
 
     if (!content) {
         console.warn(`[WhatsThisTooltip] No content found for key: ${tooltipKey}`);
@@ -70,7 +72,7 @@ export const WhatsThisTooltip: React.FC<WhatsThisTooltipProps> = ({
                     marginLeft: '4px',
                     verticalAlign: 'middle',
                 }}
-                aria-label={`Ajutor: ${content.title}`}
+                aria-label={t('a11y.helpLabel').replace('{title}', content.title)}
             />
 
             <IonPopover
@@ -111,7 +113,7 @@ export const WhatsThisTooltip: React.FC<WhatsThisTooltipProps> = ({
                         {content.example && (
                             <div className="bg-white/10 rounded-lg p-2 mt-2">
                                 <p className="text-xs text-gray-300 m-0">
-                                    <span className="font-semibold text-cyber-emerald">Exemplu: </span>
+                                    <span className="font-semibold text-cyber-emerald">{t('wizard.tooltips.exampleLabel')} </span>
                                     {content.example}
                                 </p>
                             </div>

@@ -1,11 +1,13 @@
 import React from 'react';
 import { useAppStore } from '../../store/useAppStore';
+import { useI18n } from '../../i18n';
 
 /**
  * Full-screen loading component for initial app/data loading with progress bar
  */
 const LoadingScreen: React.FC = () => {
     const { syncProgress, syncMessage } = useAppStore();
+    const { t } = useI18n();
 
     return (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-mobile-bg-dark">
@@ -21,7 +23,7 @@ const LoadingScreen: React.FC = () => {
             </div>
 
             {/* Loading text */}
-            <h2 className="text-xl font-bold text-white mb-2">AutoWater</h2>
+            <h2 className="text-xl font-bold text-white mb-2">{t('mobileWelcome.appName')}</h2>
             <p className="text-mobile-text-muted text-sm mb-6">{syncMessage}</p>
 
             {/* Progress bar */}
@@ -33,8 +35,11 @@ const LoadingScreen: React.FC = () => {
                     ></div>
                 </div>
                 <div className="flex justify-between mt-2">
-                    <span className="text-xs text-mobile-text-muted">{Math.round(syncProgress)}%</span>
-                    <span className="text-xs text-mobile-text-muted">Loading data...</span>
+                    <span className="text-xs text-mobile-text-muted">
+                        {Math.round(syncProgress)}
+                        {t('common.percent')}
+                    </span>
+                    <span className="text-xs text-mobile-text-muted">{t('loadingScreen.loadingData')}</span>
                 </div>
             </div>
         </div>

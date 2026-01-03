@@ -29,6 +29,7 @@ import {
 
 import { IrrigationMethodEntry, PlantDBEntry } from '../../services/DatabaseService';
 import { IRRIGATION_METHOD_VISUALS } from '../../utils/onboardingHelpers';
+import { useI18n } from '../../i18n';
 
 interface IrrigationMethodSelectorCompactProps {
     value: IrrigationMethodEntry | null;
@@ -44,11 +45,11 @@ const getEmoji = (codeEnum: string): string => {
         return IRRIGATION_METHOD_VISUALS[codeEnum].emoji;
     }
     // Fallback based on type
-    if (codeEnum.includes('DRIP')) return '💧';
-    if (codeEnum.includes('SPRINKLER')) return '🌧️';
-    if (codeEnum.includes('MICRO')) return '🔬';
-    if (codeEnum.includes('MANUAL')) return '🪣';
-    return '💦';
+    if (codeEnum.includes('DRIP')) return 'D';
+    if (codeEnum.includes('SPRINKLER')) return 'S';
+    if (codeEnum.includes('MICRO')) return 'M';
+    if (codeEnum.includes('MANUAL')) return 'H';
+    return '?';
 };
 
 export const IrrigationMethodSelectorCompact: React.FC<IrrigationMethodSelectorCompactProps> = ({
@@ -58,6 +59,7 @@ export const IrrigationMethodSelectorCompact: React.FC<IrrigationMethodSelectorC
     onChange,
     disabled = false,
 }) => {
+    const { t } = useI18n();
     const [showAllMethods, setShowAllMethods] = useState(false);
 
     // Get top recommendations based on plant
@@ -99,11 +101,11 @@ export const IrrigationMethodSelectorCompact: React.FC<IrrigationMethodSelectorC
                                 <h3 className="text-white font-bold m-0">{value.name}</h3>
                                 <IonBadge color="success" className="text-xs">
                                     <IonIcon icon={checkmarkCircle} className="mr-1" />
-                                    Selectat
+                                    {t('common.selected')}
                                 </IonBadge>
                             </div>
                             <p className="text-gray-400 text-sm m-0">
-                                Eficiență: {value.efficiency_pct || 'N/A'}% • {value.application_rate_mm_h || 'N/A'} mm/h
+                                {t('wizard.irrigationMethod.efficiencyLabel')}: {value.efficiency_pct || t('common.notAvailable')}{t('common.percent')} \u2022 {t('wizard.irrigationMethod.applicationRateLabel')}: {value.application_rate_mm_h || t('common.notAvailable')} {t('common.mmPerHour')}
                             </p>
                         </div>
                         <IonButton 
@@ -112,7 +114,7 @@ export const IrrigationMethodSelectorCompact: React.FC<IrrigationMethodSelectorC
                             onClick={() => setShowAllMethods(true)}
                             disabled={disabled}
                         >
-                            Schimbă
+                            {t('common.change')}
                         </IonButton>
                     </div>
                 </IonCardContent>
@@ -126,7 +128,7 @@ export const IrrigationMethodSelectorCompact: React.FC<IrrigationMethodSelectorC
                 {/* Header */}
                 <div className="flex items-center gap-2 mb-3">
                     <IonIcon icon={waterOutline} className="text-xl text-cyber-aqua" />
-                    <IonLabel className="font-bold text-white">Metodă de irigare</IonLabel>
+                    <IonLabel className="font-bold text-white">{t('wizard.irrigationMethod.title')}</IonLabel>
                 </div>
 
                 {/* Quick selection chips - horizontal scroll */}
@@ -150,7 +152,7 @@ export const IrrigationMethodSelectorCompact: React.FC<IrrigationMethodSelectorC
                                 <span className="text-lg mr-1">{getEmoji(method.code_enum)}</span>
                                 <span className="text-sm">{method.name}</span>
                                 {isRecommended && !isSelected && (
-                                    <span className="ml-1 text-yellow-400">⭐</span>
+                                    <span className="ml-1 text-yellow-400">{t('wizard.irrigationMethod.recommendedBadge')}</span>
                                 )}
                                 {isSelected && <IonIcon icon={checkmarkCircle} className="ml-1" />}
                             </IonChip>
@@ -165,7 +167,7 @@ export const IrrigationMethodSelectorCompact: React.FC<IrrigationMethodSelectorC
                             <IonItem slot="header" lines="none" className="--background-transparent">
                                 <IonIcon icon={chevronDown} slot="start" className="text-gray-400" />
                                 <IonLabel className="text-gray-400 text-sm">
-                                    Mai multe metode ({otherMethods.length})
+                                    {t('wizard.irrigationMethod.moreMethods').replace('{count}', String(otherMethods.length))}
                                 </IonLabel>
                             </IonItem>
                             <div slot="content" className="pb-2">
@@ -188,7 +190,7 @@ export const IrrigationMethodSelectorCompact: React.FC<IrrigationMethodSelectorC
                                                 <IonLabel>
                                                     <h3 className="text-white m-0">{method.name}</h3>
                                                     <p className="text-gray-400 text-xs m-0">
-                                                        {method.efficiency_pct}% eficiență
+                                                        {method.efficiency_pct}{t('common.percent')} {t('wizard.irrigationMethod.efficiencyLabel')}
                                                     </p>
                                                 </IonLabel>
                                                 {isSelected && (
@@ -212,7 +214,7 @@ export const IrrigationMethodSelectorCompact: React.FC<IrrigationMethodSelectorC
                         onClick={() => setShowAllMethods(false)}
                         className="mt-2"
                     >
-                        Anulează
+                        {t('common.cancel')}
                     </IonButton>
                 )}
             </IonCardContent>

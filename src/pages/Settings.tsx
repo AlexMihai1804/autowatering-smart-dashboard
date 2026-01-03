@@ -110,7 +110,7 @@ const Settings: React.FC = () => {
                   `${String(rtcConfig.hour).padStart(2, '0')}:${String(rtcConfig.minute).padStart(2, '0')}:${String(rtcConfig.second).padStart(2, '0')} - ${rtcConfig.day}/${rtcConfig.month}/20${rtcConfig.year}` :
                   t('settings.notConnected')}
               </p>
-              <p className="text-xs text-cyber-emerald mt-2">✓ {t('settings.autoSynced')}</p>
+              <p className="text-xs text-cyber-emerald mt-2">{t('settings.autoSynced')}</p>
             </IonCardContent>
           </IonCard>
 
@@ -234,7 +234,7 @@ const Settings: React.FC = () => {
                       </div>
                       <div className="text-center">
                         <div className="text-lg font-bold text-white">{calibrationState.volume_ml}</div>
-                        <div className="text-xs">ml</div>
+                        <div className="text-xs">{t('common.mlShort')}</div>
                       </div>
                       <div className="text-center">
                         <div className="text-lg font-bold text-cyan-400">{calibrationState.pulses_per_liter}</div>

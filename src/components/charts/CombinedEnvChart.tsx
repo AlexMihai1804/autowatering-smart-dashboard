@@ -18,6 +18,7 @@ import {
     Brush
 } from 'recharts';
 import { CHART_COLORS } from './index';
+import { useI18n } from '../../i18n';
 
 interface EnvDataPoint {
     timestamp: number;
@@ -41,46 +42,6 @@ interface CombinedEnvChartProps {
     animate?: boolean;
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-        return (
-            <div className="bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl min-w-[140px]">
-                <p className="text-gray-400 text-xs mb-2 border-b border-gray-700 pb-2">{label}</p>
-                <div className="space-y-1.5">
-                    {payload.map((entry: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between gap-3 text-sm">
-                            <div className="flex items-center gap-2">
-                                <div 
-                                    className="w-2 h-2 rounded-full" 
-                                    style={{ backgroundColor: entry.color }}
-                                />
-                                <span className="text-gray-300">{entry.name}</span>
-                            </div>
-                            <span className="text-white font-medium">
-                                {formatValue(entry.name, entry.value)}
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
-    }
-    return null;
-};
-
-function formatValue(name: string, value: number): string {
-    if (name.toLowerCase().includes('temp')) {
-        return `${value.toFixed(1)}°C`;
-    }
-    if (name.toLowerCase().includes('humid')) {
-        return `${value.toFixed(0)}%`;
-    }
-    if (name.toLowerCase().includes('press')) {
-        return `${value.toFixed(0)} hPa`;
-    }
-    return value.toFixed(1);
-}
-
 const CombinedEnvChart: React.FC<CombinedEnvChartProps> = ({
     data,
     height = 350,
@@ -90,7 +51,49 @@ const CombinedEnvChart: React.FC<CombinedEnvChartProps> = ({
     enabledSeries = { temperature: true, humidity: true, pressure: false },
     animate = true
 }) => {
+    const { t, language } = useI18n();
     const [activeSeries, setActiveSeries] = useState(enabledSeries);
+    const locale = language === 'ro' ? 'ro-RO' : 'en-US';
+
+    const formatValue = (dataKey: string, value: number): string => {
+        if (dataKey === 'temperature') {
+            return `${value.toFixed(1)}${t('common.degreesC')}`;
+        }
+        if (dataKey === 'humidity') {
+            return `${value.toFixed(0)}${t('common.percent')}`;
+        }
+        if (dataKey === 'pressure') {
+            return `${value.toFixed(0)} ${t('common.hPa')}`;
+        }
+        return value.toFixed(1);
+    };
+
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl min-w-[140px]">
+                    <p className="text-gray-400 text-xs mb-2 border-b border-gray-700 pb-2">{label}</p>
+                    <div className="space-y-1.5">
+                        {payload.map((entry: any, index: number) => (
+                            <div key={index} className="flex items-center justify-between gap-3 text-sm">
+                                <div className="flex items-center gap-2">
+                                    <div 
+                                        className="w-2 h-2 rounded-full" 
+                                        style={{ backgroundColor: entry.color }}
+                                    />
+                                    <span className="text-gray-300">{entry.name}</span>
+                                </div>
+                                <span className="text-white font-medium">
+                                    {formatValue(entry.dataKey, entry.value)}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+        return null;
+    };
 
     if (!data || data.length === 0) {
         return (
@@ -99,8 +102,8 @@ const CombinedEnvChart: React.FC<CombinedEnvChartProps> = ({
                 style={{ height }}
             >
                 <div className="text-center">
-                    <p className="text-lg">🌡️</p>
-                    <p className="text-sm mt-2">No environmental data</p>
+                    <p className="text-lg">{t('common.notAvailable')}</p>
+                    <p className="text-sm mt-2">{t('charts.noEnvironmentalData')}</p>
                 </div>
             </div>
         );
@@ -109,7 +112,7 @@ const CombinedEnvChart: React.FC<CombinedEnvChartProps> = ({
     // Format data for chart
     const chartData = data.map(d => ({
         ...d,
-        label: d.label || new Date(d.timestamp * 1000).toLocaleTimeString('ro-RO', {
+        label: d.label || new Date(d.timestamp * 1000).toLocaleTimeString(locale, {
             hour: '2-digit',
             minute: '2-digit'
         })
@@ -157,7 +160,7 @@ const CombinedEnvChart: React.FC<CombinedEnvChartProps> = ({
                             fontSize={11}
                             tickLine={false}
                             axisLine={{ stroke: CHART_COLORS.grid }}
-                            tickFormatter={(value) => `${value}°`}
+                            tickFormatter={(value) => `${value}${t('common.degreesC')}`}
                             domain={['dataMin - 2', 'dataMax + 2']}
                         />
                     )}
@@ -171,7 +174,7 @@ const CombinedEnvChart: React.FC<CombinedEnvChartProps> = ({
                             fontSize={11}
                             tickLine={false}
                             axisLine={{ stroke: CHART_COLORS.grid }}
-                            tickFormatter={(value) => `${value}%`}
+                            tickFormatter={(value) => `${value}${t('common.percent')}`}
                             domain={[0, 100]}
                         />
                     )}
@@ -213,7 +216,7 @@ const CombinedEnvChart: React.FC<CombinedEnvChartProps> = ({
                             strokeWidth={2}
                             dot={false}
                             activeDot={{ r: 4, fill: CHART_COLORS.temperature }}
-                            name="Temperature"
+                            name={t('labels.temperature')}
                             isAnimationActive={animate}
                             animationDuration={800}
                         />
@@ -229,7 +232,7 @@ const CombinedEnvChart: React.FC<CombinedEnvChartProps> = ({
                             strokeDasharray="5 5"
                             dot={false}
                             activeDot={{ r: 4, fill: CHART_COLORS.humidity }}
-                            name="Humidity"
+                            name={t('labels.humidity')}
                             isAnimationActive={animate}
                             animationDuration={800}
                         />
@@ -245,7 +248,7 @@ const CombinedEnvChart: React.FC<CombinedEnvChartProps> = ({
                             strokeDasharray="3 3"
                             dot={false}
                             activeDot={{ r: 4, fill: CHART_COLORS.pressure }}
-                            name="Pressure"
+                            name={t('labels.pressure')}
                             isAnimationActive={animate}
                             animationDuration={800}
                         />

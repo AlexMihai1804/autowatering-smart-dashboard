@@ -33,7 +33,7 @@ const MobileSettings: React.FC = () => {
 
   const { resolvedTheme, setTheme } = useTheme();
   const { useMetric, updateSetting } = useSettings();
-  const { language, availableLanguages, setLanguage } = useI18n();
+  const { t, language, availableLanguages, setLanguage } = useI18n();
 
   const languageLabel =
     availableLanguages.find(l => l.code === language)?.nativeName || language.toUpperCase();
@@ -76,28 +76,28 @@ const MobileSettings: React.FC = () => {
   const deviceConfigItems: SettingsItem[] = [
     {
       icon: 'developer_board',
-      label: 'Device Settings',
+      label: t('mobileSettings.deviceSettings'),
       onClick: () => history.push('/device'),
       iconBgClass: 'bg-mobile-primary/20',
       iconTextClass: 'text-mobile-primary',
     },
     {
       icon: 'water_drop',
-      label: 'Zone Configuration',
+      label: t('mobileSettings.zoneConfiguration'),
       onClick: () => history.push('/zones'),
       iconBgClass: 'bg-mobile-primary/20',
       iconTextClass: 'text-mobile-primary',
     },
     {
       icon: 'calendar_month',
-      label: 'Watering Schedules',
+      label: t('mobileSettings.wateringSchedules'),
       onClick: () => console.log('Schedules'),
       iconBgClass: 'bg-mobile-primary/20',
       iconTextClass: 'text-mobile-primary',
     },
     {
       icon: 'thunderstorm',
-      label: 'Rain Delay',
+      label: t('mobileSettings.rainDelay'),
       onClick: () => console.log('Rain delay'),
       iconBgClass: 'bg-mobile-primary/20',
       iconTextClass: 'text-mobile-primary',
@@ -108,7 +108,7 @@ const MobileSettings: React.FC = () => {
   const appPreferencesItems: SettingsItem[] = [
     {
       icon: 'notifications',
-      label: 'Notifications',
+      label: t('mobileSettings.notifications'),
       onClick: () => history.push('/notifications'),
       iconBgClass: 'bg-gray-500/20',
       iconTextClass: 'text-gray-400',
@@ -116,7 +116,7 @@ const MobileSettings: React.FC = () => {
 
     {
       icon: 'warning',
-      label: 'Alarms',
+      label: t('mobileSettings.alarms'),
       onClick: () => history.push('/alarms'),
       iconBgClass: 'bg-gray-500/20',
       iconTextClass: 'text-gray-400',
@@ -130,14 +130,14 @@ const MobileSettings: React.FC = () => {
   const supportItems: SettingsItem[] = [
     {
       icon: 'help',
-      label: 'Help Center',
+      label: t('mobileSettings.helpCenter'),
       onClick: () => console.log('Help'),
       iconBgClass: 'bg-gray-500/20',
       iconTextClass: 'text-gray-400',
     },
     {
       icon: 'system_update',
-      label: 'Firmware',
+      label: t('mobileSettings.firmware'),
       value: 'v2.4.1',
       onClick: () => console.log('Firmware'),
       iconBgClass: 'bg-gray-500/20',
@@ -145,7 +145,7 @@ const MobileSettings: React.FC = () => {
     },
     {
       icon: 'info',
-      label: 'About',
+      label: t('mobileSettings.about'),
       onClick: () => console.log('About'),
       iconBgClass: 'bg-gray-500/20',
       iconTextClass: 'text-gray-400',
@@ -190,7 +190,7 @@ const MobileSettings: React.FC = () => {
     <div className="flex flex-col h-screen bg-mobile-bg-dark text-white overflow-hidden">
       {/* Header */}
       <div className="pt-8 px-4 pb-4 flex justify-between items-center safe-area-top shrink-0">
-        <h1 className="text-[32px] font-bold leading-tight tracking-tight">Settings</h1>
+        <h1 className="text-[32px] font-bold leading-tight tracking-tight">{t('mobileSettings.title')}</h1>
         <div className="w-10 h-10 rounded-full bg-mobile-surface-dark flex items-center justify-center shadow-sm">
           <span className="material-symbols-outlined text-gray-400">person</span>
         </div>
@@ -205,7 +205,7 @@ const MobileSettings: React.FC = () => {
               <div className="flex flex-col gap-2 flex-1">
                 <div className="flex flex-col">
                   <h2 className="text-lg font-bold leading-tight">
-                    {connectedDeviceId || 'AutoWater Device'}
+                    {connectedDeviceId || t('mobileSettings.autoWaterDevice')}
                   </h2>
                   <div className="flex items-center gap-2 mt-1">
                     {connectionState === 'connected' ? (
@@ -214,12 +214,16 @@ const MobileSettings: React.FC = () => {
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-mobile-primary opacity-75"></span>
                           <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-mobile-primary"></span>
                         </span>
-                        <p className="text-mobile-text-muted text-sm font-medium">Status: Online</p>
+                        <p className="text-mobile-text-muted text-sm font-medium">
+                          {t('mobileSettings.statusLabel').replace('{status}', t('mobileSettings.statusOnline'))}
+                        </p>
                       </>
                     ) : (
                       <>
                         <span className="w-2.5 h-2.5 rounded-full bg-gray-500"></span>
-                        <p className="text-gray-500 text-sm font-medium">Status: Offline</p>
+                        <p className="text-gray-500 text-sm font-medium">
+                          {t('mobileSettings.statusLabel').replace('{status}', t('mobileSettings.statusOffline'))}
+                        </p>
                       </>
                     )}
                   </div>
@@ -236,20 +240,20 @@ const MobileSettings: React.FC = () => {
               onClick={handleSwitchDevice}
               className="flex w-full cursor-pointer items-center justify-center rounded-full h-10 px-4 bg-mobile-border-dark active:scale-95 transition-transform"
             >
-              <span className="text-sm font-semibold text-white">Switch Device</span>
+              <span className="text-sm font-semibold text-white">{t('mobileSettings.switchDevice')}</span>
             </button>
           </div>
         </div>
 
         {/* Settings Sections */}
-        {renderSettingsSection({ title: 'Device Configuration', items: deviceConfigItems })}
-        {renderSettingsSection({ title: 'App Preferences', items: appPreferencesItems })}
+        {renderSettingsSection({ title: t('mobileSettings.sectionDeviceConfiguration'), items: deviceConfigItems })}
+        {renderSettingsSection({ title: t('mobileSettings.sectionAppPreferences'), items: appPreferencesItems })}
 
         {/* Inline Interactive Settings */}
         <div className="mb-6">
           <div className="px-4 mb-2">
             <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider pl-2 mb-2">
-              Customization
+              {t('mobileSettings.sectionCustomization')}
             </h3>
           </div>
           <div className="px-4">
@@ -260,8 +264,8 @@ const MobileSettings: React.FC = () => {
                   <span className="material-symbols-outlined">palette</span>
                 </div>
                 <div className="flex-1">
-                  <p className="text-base font-medium leading-normal text-white">Appearance</p>
-                  <p className="text-sm text-gray-500">{resolvedTheme === 'dark' ? 'Dark' : 'Light'}</p>
+                  <p className="text-base font-medium leading-normal text-white">{t('mobileSettings.appearance')}</p>
+                  <p className="text-sm text-gray-500">{resolvedTheme === 'dark' ? t('mobileSettings.themeDark') : t('mobileSettings.themeLight')}</p>
                 </div>
                 <Toggle
                   enabled={resolvedTheme === 'dark'}
@@ -275,7 +279,7 @@ const MobileSettings: React.FC = () => {
                   <span className="material-symbols-outlined">language</span>
                 </div>
                 <div className="flex-1">
-                  <p className="text-base font-medium leading-normal text-white">Language</p>
+                  <p className="text-base font-medium leading-normal text-white">{t('mobileSettings.language')}</p>
                   <p className="text-sm text-gray-500">{languageLabel}</p>
                 </div>
                 <Popover>
@@ -285,11 +289,11 @@ const MobileSettings: React.FC = () => {
                       onClick={(e: React.MouseEvent) => e.stopPropagation()}
                       className="px-4 py-2 rounded-xl bg-mobile-primary/10 text-mobile-primary text-sm font-bold hover:bg-mobile-primary/20 transition-colors"
                     >
-                      Change
+                      {t('common.change')}
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[220px]">
-                    <div className="text-xs font-bold text-mobile-text-muted mb-2">Select language</div>
+                    <div className="text-xs font-bold text-mobile-text-muted mb-2">{t('mobileSettings.selectLanguage')}</div>
                     <div className="flex flex-col gap-1">
                       {availableLanguages.map((lang) => {
                         const selected = lang.code === language;
@@ -318,8 +322,8 @@ const MobileSettings: React.FC = () => {
                   <span className="material-symbols-outlined">straighten</span>
                 </div>
                 <div className="flex-1">
-                  <p className="text-base font-medium leading-normal text-white">Units</p>
-                  <p className="text-sm text-gray-500">{useMetric ? 'Metric' : 'Imperial'}</p>
+                  <p className="text-base font-medium leading-normal text-white">{t('mobileSettings.units')}</p>
+                  <p className="text-sm text-gray-500">{useMetric ? t('mobileSettings.metric') : t('mobileSettings.imperial')}</p>
                 </div>
                 <Popover>
                   <PopoverTrigger asChild>
@@ -328,11 +332,11 @@ const MobileSettings: React.FC = () => {
                       onClick={(e) => e.stopPropagation()}
                       className="px-4 py-2 rounded-xl bg-mobile-primary/10 text-mobile-primary text-sm font-bold hover:bg-mobile-primary/20 transition-colors"
                     >
-                      Change
+                      {t('common.change')}
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[260px]">
-                    <div className="text-xs font-bold text-mobile-text-muted mb-2">Select units</div>
+                    <div className="text-xs font-bold text-mobile-text-muted mb-2">{t('mobileSettings.selectUnits')}</div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleUnitChange(true)}
@@ -341,7 +345,7 @@ const MobileSettings: React.FC = () => {
                             : 'bg-white/5 text-white border border-white/10 hover:border-mobile-primary/50'
                           }`}
                       >
-                        Metric
+                        {t('mobileSettings.metric')}
                       </button>
                       <button
                         onClick={() => handleUnitChange(false)}
@@ -350,7 +354,7 @@ const MobileSettings: React.FC = () => {
                             : 'bg-white/5 text-white border border-white/10 hover:border-mobile-primary/50'
                           }`}
                       >
-                        Imperial
+                        {t('mobileSettings.imperial')}
                       </button>
                     </div>
                   </PopoverContent>
@@ -360,7 +364,7 @@ const MobileSettings: React.FC = () => {
           </div>
         </div>
 
-        {renderSettingsSection({ title: 'Support', items: supportItems })}
+        {renderSettingsSection({ title: t('mobileSettings.sectionSupport'), items: supportItems })}
 
         {/* Sign Out */}
         <div className="px-4 mb-8">
@@ -368,10 +372,12 @@ const MobileSettings: React.FC = () => {
             onClick={handleDisconnect}
             className="w-full py-3 text-red-500 bg-mobile-surface-dark rounded-xl text-base font-bold shadow-sm active:scale-95 transition-transform border border-mobile-border-dark"
           >
-            Disconnect Device
+            {t('mobileSettings.disconnectDevice')}
           </button>
           <p className="text-center text-xs text-gray-600 mt-4">
-            AutoWatering App v1.0.0 (Build 1)
+            {t('mobileSettings.appVersion')
+              .replace('{version}', 'v1.0.0')
+              .replace('{build}', '1')}
           </p>
         </div>
 

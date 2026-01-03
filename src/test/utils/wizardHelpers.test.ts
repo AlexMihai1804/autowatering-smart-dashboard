@@ -11,6 +11,28 @@ import {
     parseDaysMask
 } from '../../utils/wizardHelpers';
 import type { UnifiedZoneConfig, WateringMode } from '../../types/wizard';
+import { translations, Language } from '../../i18n/translations';
+
+const resolveTranslation = (key: string, language: Language = 'en'): string => {
+    const keys = key.split('.');
+    let result: unknown = translations[language];
+
+    for (const k of keys) {
+        if (result && typeof result === 'object' && k in result) {
+            result = (result as Record<string, unknown>)[k];
+        } else {
+            return key;
+        }
+    }
+
+    return typeof result === 'string' ? result : key;
+};
+
+const t = (key: string) => resolveTranslation(key, 'en');
+const minutesShort = t('common.minutesShort');
+const hoursShort = t('common.hoursShort');
+const mlShort = t('common.mlShort');
+const litersShort = t('common.litersShort');
 
 // Helper to create a minimal valid zone config
 const createBaseConfig = (overrides: Partial<UnifiedZoneConfig> = {}): UnifiedZoneConfig => ({
@@ -40,23 +62,23 @@ describe('wizardHelpers.ts', () => {
     describe('validateZoneConfig', () => {
         it('should return valid for a complete duration config', () => {
             const config = createBaseConfig();
-            const result = validateZoneConfig(config);
+            const result = validateZoneConfig(config, t);
             expect(result.valid).toBe(true);
             expect(result.errors).toHaveLength(0);
         });
 
         it('should require zone name', () => {
             const config = createBaseConfig({ name: '' });
-            const result = validateZoneConfig(config);
+            const result = validateZoneConfig(config, t);
             expect(result.valid).toBe(false);
-            expect(result.errors).toContain('Numele zonei este obligatoriu');
+            expect(result.errors).toContain(t('wizard.validation.zoneNameRequired'));
         });
 
         it('should require zone name (whitespace only)', () => {
             const config = createBaseConfig({ name: '   ' });
-            const result = validateZoneConfig(config);
+            const result = validateZoneConfig(config, t);
             expect(result.valid).toBe(false);
-            expect(result.errors).toContain('Numele zonei este obligatoriu');
+            expect(result.errors).toContain(t('wizard.validation.zoneNameRequired'));
         });
 
         describe('FAO-56 Auto mode validation', () => {
@@ -67,9 +89,9 @@ describe('wizardHelpers.ts', () => {
                     soil: { texture: 'Loamy' } as any,
                     location: { latitude: 44.4, longitude: 26.0 }
                 });
-                const result = validateZoneConfig(config);
+                const result = validateZoneConfig(config, t);
                 expect(result.valid).toBe(false);
-                expect(result.errors).toContain('Selectează o plantă');
+                expect(result.errors).toContain(t('wizard.validation.plantRequired'));
             });
 
             it('should require soil for fao56_auto mode', () => {
@@ -79,9 +101,9 @@ describe('wizardHelpers.ts', () => {
                     soil: null,
                     location: { latitude: 44.4, longitude: 26.0 }
                 });
-                const result = validateZoneConfig(config);
+                const result = validateZoneConfig(config, t);
                 expect(result.valid).toBe(false);
-                expect(result.errors).toContain('Selectează un tip de sol');
+                expect(result.errors).toContain(t('wizard.validation.soilRequired'));
             });
 
             it('should require location for fao56_auto mode', () => {
@@ -91,9 +113,9 @@ describe('wizardHelpers.ts', () => {
                     soil: { texture: 'Loamy' } as any,
                     location: null
                 });
-                const result = validateZoneConfig(config);
+                const result = validateZoneConfig(config, t);
                 expect(result.valid).toBe(false);
-                expect(result.errors).toContain('Selectează locația GPS');
+                expect(result.errors).toContain(t('wizard.validation.locationRequired'));
             });
 
             it('should require positive coverage value for fao56_auto mode', () => {
@@ -104,9 +126,9 @@ describe('wizardHelpers.ts', () => {
                     location: { latitude: 44.4, longitude: 26.0 },
                     coverageValue: 0
                 });
-                const result = validateZoneConfig(config);
+                const result = validateZoneConfig(config, t);
                 expect(result.valid).toBe(false);
-                expect(result.errors).toContain('Introdu suprafața/numărul de plante');
+                expect(result.errors).toContain(t('wizard.validation.coverageRequired'));
             });
         });
 
@@ -119,12 +141,12 @@ describe('wizardHelpers.ts', () => {
                     location: null,
                     coverageValue: 0
                 });
-                const result = validateZoneConfig(config);
+                const result = validateZoneConfig(config, t);
                 expect(result.valid).toBe(false);
-                expect(result.errors).toContain('Selectează o plantă');
-                expect(result.errors).toContain('Selectează un tip de sol');
-                expect(result.errors).toContain('Selectează locația GPS');
-                expect(result.errors).toContain('Introdu suprafața/numărul de plante');
+                expect(result.errors).toContain(t('wizard.validation.plantRequired'));
+                expect(result.errors).toContain(t('wizard.validation.soilRequired'));
+                expect(result.errors).toContain(t('wizard.validation.locationRequired'));
+                expect(result.errors).toContain(t('wizard.validation.coverageRequired'));
             });
         });
 
@@ -134,9 +156,9 @@ describe('wizardHelpers.ts', () => {
                     wateringMode: 'duration',
                     schedule: { ...createBaseConfig().schedule, enabled: false }
                 });
-                const result = validateZoneConfig(config);
+                const result = validateZoneConfig(config, t);
                 expect(result.valid).toBe(false);
-                expect(result.errors).toContain('Activează programul');
+                expect(result.errors).toContain(t('wizard.validation.scheduleEnabled'));
             });
 
             it('should require positive duration value', () => {
@@ -144,9 +166,9 @@ describe('wizardHelpers.ts', () => {
                     wateringMode: 'duration',
                     schedule: { ...createBaseConfig().schedule, value: 0 }
                 });
-                const result = validateZoneConfig(config);
+                const result = validateZoneConfig(config, t);
                 expect(result.valid).toBe(false);
-                expect(result.errors).toContain('Introdu durata de irigare');
+                expect(result.errors).toContain(t('wizard.validation.durationRequired'));
             });
 
             it('should reject auto schedule type for duration mode', () => {
@@ -154,9 +176,9 @@ describe('wizardHelpers.ts', () => {
                     wateringMode: 'duration',
                     schedule: { ...createBaseConfig().schedule, type: 'auto' }
                 });
-                const result = validateZoneConfig(config);
+                const result = validateZoneConfig(config, t);
                 expect(result.valid).toBe(false);
-                expect(result.errors).toContain('Alege program zilnic sau periodic pentru modurile manuale');
+                expect(result.errors).toContain(t('wizard.validation.manualScheduleType'));
             });
         });
 
@@ -166,9 +188,9 @@ describe('wizardHelpers.ts', () => {
                     wateringMode: 'volume',
                     schedule: { ...createBaseConfig().schedule, value: 0 }
                 });
-                const result = validateZoneConfig(config);
+                const result = validateZoneConfig(config, t);
                 expect(result.valid).toBe(false);
-                expect(result.errors).toContain('Introdu volumul de irigare');
+                expect(result.errors).toContain(t('wizard.validation.volumeRequired'));
             });
         });
     });
@@ -193,79 +215,79 @@ describe('wizardHelpers.ts', () => {
 
     describe('getDaysFromMask', () => {
         it('should return "Zilnic" for all days (127)', () => {
-            expect(getDaysFromMask(127)).toBe('Zilnic');
+            expect(getDaysFromMask(127, t)).toBe(t('wizard.schedule.everyDay'));
         });
 
         it('should return "Niciuna" for no days (0)', () => {
-            expect(getDaysFromMask(0)).toBe('Niciuna');
+            expect(getDaysFromMask(0, t)).toBe(t('wizard.schedule.none'));
         });
 
         it('should return "Zile lucrătoare" for weekdays (31)', () => {
-            expect(getDaysFromMask(0b0011111)).toBe('Zile lucrătoare');
+            expect(getDaysFromMask(0b0011111, t)).toBe(t('wizard.schedule.weekdays'));
         });
 
         it('should return "Weekend" for Sat-Sun (96)', () => {
-            expect(getDaysFromMask(0b1100000)).toBe('Weekend');
+            expect(getDaysFromMask(0b1100000, t)).toBe(t('wizard.schedule.weekend'));
         });
 
         it('should return comma-separated days for custom selection', () => {
             // Monday and Wednesday (1 + 4 = 5)
-            expect(getDaysFromMask(0b0000101)).toBe('Lu, Mi');
+            expect(getDaysFromMask(0b0000101, t)).toBe(`${t('wizard.schedule.days.mon')}, ${t('wizard.schedule.days.wed')}`);
         });
 
         it('should return single day name', () => {
-            expect(getDaysFromMask(0b0000001)).toBe('Lu');
-            expect(getDaysFromMask(0b0000010)).toBe('Ma');
-            expect(getDaysFromMask(0b1000000)).toBe('Du');
+            expect(getDaysFromMask(0b0000001, t)).toBe(t('wizard.schedule.days.mon'));
+            expect(getDaysFromMask(0b0000010, t)).toBe(t('wizard.schedule.days.tue'));
+            expect(getDaysFromMask(0b1000000, t)).toBe(t('wizard.schedule.days.sun'));
         });
     });
 
     describe('formatDuration', () => {
         it('should format minutes only for less than 60', () => {
-            expect(formatDuration(30)).toBe('30 min');
-            expect(formatDuration(1)).toBe('1 min');
-            expect(formatDuration(59)).toBe('59 min');
+            expect(formatDuration(30, t)).toBe(`30 ${minutesShort}`);
+            expect(formatDuration(1, t)).toBe(`1 ${minutesShort}`);
+            expect(formatDuration(59, t)).toBe(`59 ${minutesShort}`);
         });
 
         it('should format hours only for exact hours', () => {
-            expect(formatDuration(60)).toBe('1h');
-            expect(formatDuration(120)).toBe('2h');
+            expect(formatDuration(60, t)).toBe(`1${hoursShort}`);
+            expect(formatDuration(120, t)).toBe(`2${hoursShort}`);
         });
 
         it('should format hours and minutes', () => {
-            expect(formatDuration(90)).toBe('1h 30min');
-            expect(formatDuration(150)).toBe('2h 30min');
+            expect(formatDuration(90, t)).toBe(`1${hoursShort} 30${minutesShort}`);
+            expect(formatDuration(150, t)).toBe(`2${hoursShort} 30${minutesShort}`);
         });
     });
 
     describe('formatVolume', () => {
         it('should format milliliters for less than 1L', () => {
-            expect(formatVolume(0.5)).toBe('500 ml');
-            expect(formatVolume(0.1)).toBe('100 ml');
-            expect(formatVolume(0.25)).toBe('250 ml');
+            expect(formatVolume(0.5, t)).toBe(`500 ${mlShort}`);
+            expect(formatVolume(0.1, t)).toBe(`100 ${mlShort}`);
+            expect(formatVolume(0.25, t)).toBe(`250 ${mlShort}`);
         });
 
         it('should format liters with one decimal', () => {
-            expect(formatVolume(1)).toBe('1.0 L');
-            expect(formatVolume(2.5)).toBe('2.5 L');
-            expect(formatVolume(10)).toBe('10.0 L');
+            expect(formatVolume(1, t)).toBe(`1.0 ${litersShort}`);
+            expect(formatVolume(2.5, t)).toBe(`2.5 ${litersShort}`);
+            expect(formatVolume(10, t)).toBe(`10.0 ${litersShort}`);
         });
     });
 
     describe('getModeDisplayText', () => {
         it('should return correct text for each mode', () => {
-            expect(getModeDisplayText('fao56_auto')).toBe('FAO-56 Auto');
-            expect(getModeDisplayText('fao56_eco')).toBe('FAO-56 Eco');
-            expect(getModeDisplayText('duration')).toBe('Timp');
-            expect(getModeDisplayText('volume')).toBe('Volum');
+            expect(getModeDisplayText('fao56_auto', t)).toBe(t('wizard.modes.fao56Auto'));
+            expect(getModeDisplayText('fao56_eco', t)).toBe(t('wizard.modes.fao56Eco'));
+            expect(getModeDisplayText('duration', t)).toBe(t('wizard.modes.duration'));
+            expect(getModeDisplayText('volume', t)).toBe(t('wizard.modes.volume'));
         });
     });
 
     describe('generateZoneSummary', () => {
         it('should include mode in summary', () => {
             const config = createBaseConfig();
-            const summary = generateZoneSummary(config);
-            expect(summary).toContain('Mod: Timp');
+            const summary = generateZoneSummary(config, { t });
+            expect(summary).toContain(`${t('wizard.summary.mode')}: ${t('wizard.modes.duration')}`);
         });
 
         it('should include duration for duration mode', () => {
@@ -273,8 +295,8 @@ describe('wizardHelpers.ts', () => {
                 wateringMode: 'duration',
                 schedule: { ...createBaseConfig().schedule, value: 30 }
             });
-            const summary = generateZoneSummary(config);
-            expect(summary).toContain('Durată: 30 min');
+            const summary = generateZoneSummary(config, { t });
+            expect(summary).toContain(`${t('wizard.summary.duration')}: ${formatDuration(30, t)}`);
         });
 
         it('should include volume for volume mode', () => {
@@ -282,8 +304,8 @@ describe('wizardHelpers.ts', () => {
                 wateringMode: 'volume',
                 schedule: { ...createBaseConfig().schedule, value: 5 }
             });
-            const summary = generateZoneSummary(config);
-            expect(summary).toContain('Volum: 5.0 L');
+            const summary = generateZoneSummary(config, { t });
+            expect(summary).toContain(`${t('wizard.summary.volume')}: ${formatVolume(5, t)}`);
         });
 
         it('should include plant details for FAO-56 modes', () => {
@@ -296,13 +318,13 @@ describe('wizardHelpers.ts', () => {
                 coverageType: 'area',
                 coverageValue: 50
             });
-            const summary = generateZoneSummary(config);
-            expect(summary).toContain('Mod: FAO-56 Auto');
-            expect(summary).toContain('Plantă: Tomato');
-            expect(summary).toContain('Sol: Loamy');
-            expect(summary).toContain('Irigație: Drip');
-            expect(summary.some(line => line.includes('Locație:'))).toBe(true);
-            expect(summary).toContain('Acoperire: 50 m²');
+            const summary = generateZoneSummary(config, { t });
+            expect(summary).toContain(`${t('wizard.summary.mode')}: ${t('wizard.modes.fao56Auto')}`);
+            expect(summary).toContain(`${t('wizard.summary.plant')}: Tomato`);
+            expect(summary).toContain(`${t('wizard.summary.soil')}: Loamy`);
+            expect(summary).toContain(`${t('wizard.summary.irrigation')}: Drip`);
+            expect(summary.some(line => line.includes(`${t('wizard.summary.location')}:`))).toBe(true);
+            expect(summary).toContain(`${t('wizard.summary.coverage')}: 50 ${t('common.squareMetersShort')}`);
         });
 
         it('should show plant count when coverage type is plants', () => {
@@ -314,8 +336,8 @@ describe('wizardHelpers.ts', () => {
                 coverageType: 'plants',
                 coverageValue: 20
             });
-            const summary = generateZoneSummary(config);
-            expect(summary).toContain('Acoperire: 20 plante');
+            const summary = generateZoneSummary(config, { t });
+            expect(summary).toContain(`${t('wizard.summary.coverage')}: 20 ${t('wizard.plant.plantsLabel')}`);
         });
 
         it('should include schedule information with time and days', () => {
@@ -329,8 +351,8 @@ describe('wizardHelpers.ts', () => {
                     daysMask: 127
                 }
             });
-            const summary = generateZoneSummary(config);
-            expect(summary.some(line => line.includes('Program:') && line.includes('06:30'))).toBe(true);
+            const summary = generateZoneSummary(config, { t });
+            expect(summary.some(line => line.includes(`${t('wizard.summary.schedule')}:`) && line.includes('06:30'))).toBe(true);
         });
 
         it('should include solar timing info when enabled', () => {
@@ -344,8 +366,12 @@ describe('wizardHelpers.ts', () => {
                     solarOffsetMinutes: 30
                 }
             });
-            const summary = generateZoneSummary(config);
-            expect(summary.some(line => line.includes('solar') && line.includes('răsărit'))).toBe(true);
+            const summary = generateZoneSummary(config, { t });
+            expect(summary.some(line =>
+                line.includes(t('wizard.schedule.sunrise')) &&
+                line.includes('30') &&
+                line.includes(t('common.minutesShort'))
+            )).toBe(true);
         });
     });
 

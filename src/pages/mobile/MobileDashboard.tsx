@@ -24,6 +24,7 @@ import { EcoBadge } from '../../components/EcoBadge';
 const MobileDashboard: React.FC = () => {
   const history = useHistory();
   const { t } = useI18n();
+  const percentUnit = t('common.percent');
   const { formatTemperature, useCelsius } = useSettings();
   const {
     zones,
@@ -61,9 +62,9 @@ const MobileDashboard: React.FC = () => {
   const otherDevices = devices.filter(d => d.id !== connectedDeviceId);
 
   const formatDeviceLabel = (id?: string | null) => {
-    if (!id) return 'AutoWater';
+    if (!id) return t('mobileWelcome.appName');
     if (id.length <= 14) return id;
-    return `${id.slice(0, 4)}…${id.slice(-4)}`;
+    return `${id.slice(0, 4)}...${id.slice(-4)}`;
   };
 
   // Ensure the currently connected device exists in known devices.
@@ -193,7 +194,7 @@ const MobileDashboard: React.FC = () => {
   // Temperature with proper formatting - show '--' when no data
   const tempC = envData?.temperature;
   const formattedTemp = tempC !== undefined ? formatTemperature(tempC, false) : '--';
-  const tempUnit = useCelsius ? '°C' : '°F';
+  const tempUnit = useCelsius ? t('common.degreesC') : t('common.degreesF');
 
   const nextWatering = useMemo(() => {
     const fallback = systemStatus.nextRun || '';
@@ -236,7 +237,7 @@ const MobileDashboard: React.FC = () => {
           <PopoverTrigger asChild>
             <button className="flex flex-col cursor-pointer group text-left">
               <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                {isSwitchingDevice ? 'Switching...' : t('dashboard.device')}
+                {isSwitchingDevice ? t('dashboard.switching') : t('dashboard.device')}
               </span>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold tracking-tight">
@@ -260,7 +261,7 @@ const MobileDashboard: React.FC = () => {
                         type="text"
                         value={renameValue}
                         onChange={(e) => setRenameValue(e.target.value)}
-                        placeholder="Device name"
+                        placeholder={t('dashboard.deviceNamePlaceholder')}
                         autoFocus
                         className="w-full px-3 py-2 rounded-lg bg-mobile-bg-dark border border-mobile-border-dark text-white text-sm font-medium focus:outline-none focus:border-mobile-primary"
                         onKeyDown={(e) => e.key === 'Enter' && handleSaveRename()}
@@ -390,7 +391,7 @@ const MobileDashboard: React.FC = () => {
                           {remainingTime} <span className="text-lg font-bold text-gray-500">{t('dashboard.remaining')}</span>
                         </h2>
                         <p className="text-xs text-mobile-primary font-semibold mt-1">
-                          {activeWateringZone?.name || `Zone ${currentTask?.channel_id}`}
+                          {activeWateringZone?.name || `${t('zones.zone')} ${currentTask?.channel_id}`}
                         </p>
                       </div>
                       <button
@@ -405,7 +406,7 @@ const MobileDashboard: React.FC = () => {
                     <div className="flex flex-col gap-2">
                       <div className="flex justify-between text-xs font-medium text-gray-400">
                         <span>{t('dashboard.progress')}</span>
-                        <span className="text-mobile-primary">{wateringProgress}%</span>
+                        <span className="text-mobile-primary">{wateringProgress}{percentUnit}</span>
                       </div>
                       <div className="h-3 w-full bg-mobile-border-dark rounded-full overflow-hidden">
                         <div
@@ -452,7 +453,7 @@ const MobileDashboard: React.FC = () => {
                           <div className="flex justify-between text-xs font-medium text-gray-400">
                             <span>{t('dashboard.soilMoisture')}</span>
                             <span className={soilMoisture > 60 ? 'text-mobile-primary' : soilMoisture > 30 ? 'text-yellow-500' : 'text-red-500'}>
-                              {soilMoistureLabel} ({soilMoisture}%)
+                              {soilMoistureLabel} ({soilMoisture}{percentUnit})
                             </span>
                           </div>
                           <div className="h-3 w-full bg-mobile-border-dark rounded-full overflow-hidden">
@@ -502,8 +503,8 @@ const MobileDashboard: React.FC = () => {
                   <span className="text-xs font-medium text-gray-400">{t('dashboard.humidity')}</span>
                 </div>
                 <div>
-                  <span className="text-2xl font-bold">{envData?.humidity?.toFixed(0) ?? '--'}%</span>
-                  <span className="text-xs text-gray-400 ml-1">{(envData?.humidity ?? 50) < 40 ? 'Dry' : 'Normal'}</span>
+                  <span className="text-2xl font-bold">{envData?.humidity?.toFixed(0) ?? '--'}{percentUnit}</span>
+                  <span className="text-xs text-gray-400 ml-1">{(envData?.humidity ?? 50) < 40 ? t('dashboard.humidityDry') : t('dashboard.humidityNormal')}</span>
                 </div>
               </div>
 
@@ -518,7 +519,7 @@ const MobileDashboard: React.FC = () => {
                   </div>
                   <div className="mt-1">
                     <span className="text-2xl font-bold">{rainData?.today_total_mm?.toFixed(1) ?? '0.0'}</span>
-                    <span className="text-sm text-gray-400 font-medium ml-1">mm</span>
+                    <span className="text-sm text-gray-400 font-medium ml-1">{t('common.mm')}</span>
                   </div>
                 </div>
 
@@ -574,7 +575,7 @@ const MobileDashboard: React.FC = () => {
               <div className="bg-mobile-surface-dark border border-mobile-primary/30 rounded-3xl p-4 mb-6">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-bold text-white">{t('dashboard.completeSetup')}</h3>
-                  <span className="text-mobile-primary text-sm font-bold">{onboardingState.overall_completion_pct}%</span>
+                  <span className="text-mobile-primary text-sm font-bold">{onboardingState.overall_completion_pct}{percentUnit}</span>
                 </div>
                 <div className="h-2 bg-mobile-border-dark rounded-full overflow-hidden mb-3">
                   <div
@@ -586,7 +587,7 @@ const MobileDashboard: React.FC = () => {
                   onClick={() => setShowWizard(true)}
                   className="w-full py-3 rounded-full bg-mobile-primary/20 text-mobile-primary font-bold text-sm"
                 >
-                  Continue Setup
+                  {t('dashboard.continueSetup')}
                 </button>
               </div>
             )}

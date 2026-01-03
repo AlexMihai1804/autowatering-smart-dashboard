@@ -14,6 +14,7 @@ import {
     Legend
 } from 'recharts';
 import { CHART_COLORS } from './index';
+import { useI18n } from '../../i18n';
 
 interface ChannelData {
     channelId: number;
@@ -32,45 +33,7 @@ interface ChannelDistributionChartProps {
     animate?: boolean;
 }
 
-const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-        const data = payload[0].payload;
-        
-        return (
-            <div className="bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
-                <div className="flex items-center gap-2 mb-2">
-                    <div 
-                        className="w-3 h-3 rounded-full" 
-                        style={{ backgroundColor: payload[0].payload.fill }}
-                    />
-                    <span className="text-white font-medium">{data.name}</span>
-                </div>
-                <div className="space-y-1 text-sm">
-                    <div className="flex justify-between gap-4">
-                        <span className="text-gray-400">Volume</span>
-                        <span className="text-cyan-400 font-medium">
-                            {data.volume >= 1000 
-                                ? `${(data.volume / 1000).toFixed(1)}L`
-                                : `${data.volume}ml`
-                            }
-                        </span>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                        <span className="text-gray-400">Sessions</span>
-                        <span className="text-white">{data.sessions}</span>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                        <span className="text-gray-400">Share</span>
-                        <span className="text-white">{data.percentage?.toFixed(1)}%</span>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-    return null;
-};
-
-const CustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) => {
+const CustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, percentUnit }: any) => {
     if (percent < 0.05) return null; // Don't show label for small slices
     
     const RADIAN = Math.PI / 180;
@@ -88,7 +51,7 @@ const CustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name
             fontSize={11}
             fontWeight={500}
         >
-            {`${(percent * 100).toFixed(0)}%`}
+            {`${(percent * 100).toFixed(0)}${percentUnit}`}
         </text>
     );
 };
@@ -101,6 +64,48 @@ const ChannelDistributionChart: React.FC<ChannelDistributionChartProps> = ({
     innerRadius = 50,
     animate = true
 }) => {
+    const { t } = useI18n();
+    const percentUnit = t('common.percent');
+    const litersShort = t('common.litersShort');
+    const mlShort = t('common.mlShort');
+    const renderLabel = (props: any) => <CustomLabel {...props} percentUnit={percentUnit} />;
+    const renderTooltip = ({ active, payload }: any) => {
+        if (active && payload && payload.length) {
+            const chartPayload = payload[0].payload;
+
+            return (
+                <div className="bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: payload[0].payload.fill }}
+                        />
+                        <span className="text-white font-medium">{chartPayload.name}</span>
+                    </div>
+                    <div className="space-y-1 text-sm">
+                        <div className="flex justify-between gap-4">
+                            <span className="text-gray-400">{t('labels.volume')}</span>
+                            <span className="text-cyan-400 font-medium">
+                                {chartPayload.volume >= 1000
+                                    ? `${(chartPayload.volume / 1000).toFixed(1)}${litersShort}`
+                                    : `${chartPayload.volume}${mlShort}`
+                                }
+                            </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                            <span className="text-gray-400">{t('labels.sessions')}</span>
+                            <span className="text-white">{chartPayload.sessions}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                            <span className="text-gray-400">{t('charts.share')}</span>
+                            <span className="text-white">{chartPayload.percentage?.toFixed(1)}{percentUnit}</span>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        return null;
+    };
     if (!data || data.length === 0) {
         return (
             <div 
@@ -108,8 +113,8 @@ const ChannelDistributionChart: React.FC<ChannelDistributionChartProps> = ({
                 style={{ height }}
             >
                 <div className="text-center">
-                    <p className="text-lg">📊</p>
-                    <p className="text-sm mt-2">No distribution data</p>
+                    <p className="text-lg">{t('common.notAvailable')}</p>
+                    <p className="text-sm mt-2">{t('charts.noDistributionData')}</p>
                 </div>
             </div>
         );
@@ -132,7 +137,7 @@ const ChannelDistributionChart: React.FC<ChannelDistributionChartProps> = ({
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={showLabels ? CustomLabel : undefined}
+                        label={showLabels ? renderLabel : undefined}
                         outerRadius={height / 3}
                         innerRadius={innerRadius}
                         dataKey="volume"
@@ -150,7 +155,7 @@ const ChannelDistributionChart: React.FC<ChannelDistributionChartProps> = ({
                         ))}
                     </Pie>
                     
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={renderTooltip} />
                     
                     {showLegend && (
                         <Legend
@@ -173,11 +178,11 @@ const ChannelDistributionChart: React.FC<ChannelDistributionChartProps> = ({
                     <div className="text-center">
                         <div className="text-2xl font-bold text-white">
                             {totalVolume >= 1000 
-                                ? `${(totalVolume / 1000).toFixed(1)}L`
-                                : `${totalVolume}ml`
+                                ? `${(totalVolume / 1000).toFixed(1)}${litersShort}`
+                                : `${totalVolume}${mlShort}`
                             }
                         </div>
-                        <div className="text-xs text-gray-400">Total</div>
+                        <div className="text-xs text-gray-400">{t('labels.total')}</div>
                     </div>
                 </div>
             )}

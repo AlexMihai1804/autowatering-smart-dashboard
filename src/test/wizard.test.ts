@@ -24,32 +24,50 @@ import {
     createInitialZones,
     canProceedFromStep
 } from '../types/wizard';
+import { translations, Language } from '../i18n/translations';
+
+const resolveTranslation = (key: string, language: Language = 'en'): string => {
+    const keys = key.split('.');
+    let result: unknown = translations[language];
+
+    for (const k of keys) {
+        if (result && typeof result === 'object' && k in result) {
+            result = (result as Record<string, unknown>)[k];
+        } else {
+            return key;
+        }
+    }
+
+    return typeof result === 'string' ? result : key;
+};
+
+const t = (key: string) => resolveTranslation(key, 'en');
 
 describe('wizard.ts - Constants', () => {
     describe('WATERING_MODE_LABELS', () => {
         it('should have labels for all modes', () => {
-            expect(WATERING_MODE_LABELS.fao56_auto).toBe('FAO-56 Auto');
-            expect(WATERING_MODE_LABELS.fao56_eco).toBe('FAO-56 Eco');
-            expect(WATERING_MODE_LABELS.duration).toBe('Duration');
-            expect(WATERING_MODE_LABELS.volume).toBe('Volume');
+            expect(WATERING_MODE_LABELS.fao56_auto).toBe('wizard.modes.fao56Auto');
+            expect(WATERING_MODE_LABELS.fao56_eco).toBe('wizard.modes.fao56Eco');
+            expect(WATERING_MODE_LABELS.duration).toBe('wizard.modes.duration');
+            expect(WATERING_MODE_LABELS.volume).toBe('wizard.modes.volume');
         });
     });
 
     describe('WATERING_MODE_DESCRIPTIONS', () => {
         it('should have descriptions for all modes', () => {
-            expect(WATERING_MODE_DESCRIPTIONS.fao56_auto).toContain('100%');
-            expect(WATERING_MODE_DESCRIPTIONS.fao56_eco).toContain('70%');
-            expect(WATERING_MODE_DESCRIPTIONS.duration).toContain('duration');
-            expect(WATERING_MODE_DESCRIPTIONS.volume).toContain('volume');
+            expect(WATERING_MODE_DESCRIPTIONS.fao56_auto).toBe('wizard.modes.fao56AutoDesc');
+            expect(WATERING_MODE_DESCRIPTIONS.fao56_eco).toBe('wizard.modes.fao56EcoDesc');
+            expect(WATERING_MODE_DESCRIPTIONS.duration).toBe('wizard.modes.durationDesc');
+            expect(WATERING_MODE_DESCRIPTIONS.volume).toBe('wizard.modes.volumeDesc');
         });
     });
 
     describe('WATERING_MODE_ICONS', () => {
         it('should have icons for all modes', () => {
-            expect(WATERING_MODE_ICONS.fao56_auto).toBe('🌱');
-            expect(WATERING_MODE_ICONS.fao56_eco).toBe('💧');
-            expect(WATERING_MODE_ICONS.duration).toBe('⏱️');
-            expect(WATERING_MODE_ICONS.volume).toBe('🚿');
+            expect(WATERING_MODE_ICONS.fao56_auto).toBeTruthy();
+            expect(WATERING_MODE_ICONS.fao56_eco).toBeTruthy();
+            expect(WATERING_MODE_ICONS.duration).toBeTruthy();
+            expect(WATERING_MODE_ICONS.volume).toBeTruthy();
         });
     });
 
@@ -286,20 +304,20 @@ describe('wizard.ts - Helper Functions', () => {
         describe('mode step', () => {
             it('should fail without name', () => {
                 const zone = { ...baseZone, name: '' };
-                const result = canProceedFromStep('mode', zone);
+                const result = canProceedFromStep('mode', zone, t);
                 expect(result.canProceed).toBe(false);
-                expect(result.error).toContain('name');
+                expect(result.error).toBe(t('wizard.validation.zoneNameRequired'));
             });
 
             it('should fail with whitespace-only name', () => {
                 const zone = { ...baseZone, name: '   ' };
-                const result = canProceedFromStep('mode', zone);
+                const result = canProceedFromStep('mode', zone, t);
                 expect(result.canProceed).toBe(false);
             });
 
             it('should pass with valid name', () => {
                 const zone = { ...baseZone, name: 'Front Lawn' };
-                const result = canProceedFromStep('mode', zone);
+                const result = canProceedFromStep('mode', zone, t);
                 expect(result.canProceed).toBe(true);
             });
         });
@@ -307,19 +325,19 @@ describe('wizard.ts - Helper Functions', () => {
         describe('plant step', () => {
             it('should fail without plant for FAO-56 mode', () => {
                 const zone = { ...baseZone, plant: null };
-                const result = canProceedFromStep('plant', zone);
+                const result = canProceedFromStep('plant', zone, t);
                 expect(result.canProceed).toBe(false);
-                expect(result.error).toContain('plant');
+                expect(result.error).toBe(t('wizard.validation.plantRequired'));
             });
 
             it('should pass with plant for FAO-56 mode', () => {
-                const result = canProceedFromStep('plant', baseZone);
+                const result = canProceedFromStep('plant', baseZone, t);
                 expect(result.canProceed).toBe(true);
             });
 
             it('should pass without plant for manual mode', () => {
                 const zone = { ...baseZone, wateringMode: 'duration' as WateringMode, plant: null };
-                const result = canProceedFromStep('plant', zone);
+                const result = canProceedFromStep('plant', zone, t);
                 expect(result.canProceed).toBe(true);
             });
         });
@@ -327,13 +345,13 @@ describe('wizard.ts - Helper Functions', () => {
         describe('soil step', () => {
             it('should fail without soil for FAO-56 mode', () => {
                 const zone = { ...baseZone, soil: null };
-                const result = canProceedFromStep('soil', zone);
+                const result = canProceedFromStep('soil', zone, t);
                 expect(result.canProceed).toBe(false);
-                expect(result.error).toContain('soil');
+                expect(result.error).toBe(t('wizard.validation.soilRequired'));
             });
 
             it('should pass with soil for FAO-56 mode', () => {
-                const result = canProceedFromStep('soil', baseZone);
+                const result = canProceedFromStep('soil', baseZone, t);
                 expect(result.canProceed).toBe(true);
             });
         });
@@ -341,13 +359,13 @@ describe('wizard.ts - Helper Functions', () => {
         describe('irrigation step', () => {
             it('should fail without irrigation method for FAO-56 mode', () => {
                 const zone = { ...baseZone, irrigationMethod: null };
-                const result = canProceedFromStep('irrigation', zone);
+                const result = canProceedFromStep('irrigation', zone, t);
                 expect(result.canProceed).toBe(false);
-                expect(result.error).toContain('irrigation');
+                expect(result.error).toBe(t('wizard.validation.irrigationRequired'));
             });
 
             it('should pass with irrigation method', () => {
-                const result = canProceedFromStep('irrigation', baseZone);
+                const result = canProceedFromStep('irrigation', baseZone, t);
                 expect(result.canProceed).toBe(true);
             });
         });
@@ -355,26 +373,26 @@ describe('wizard.ts - Helper Functions', () => {
         describe('environment step', () => {
             it('should fail without location for FAO-56 mode', () => {
                 const zone = { ...baseZone, location: null };
-                const result = canProceedFromStep('environment', zone);
+                const result = canProceedFromStep('environment', zone, t);
                 expect(result.canProceed).toBe(false);
-                expect(result.error).toContain('location');
+                expect(result.error).toBe(t('wizard.validation.locationRequired'));
             });
 
             it('should fail with zero coverage', () => {
                 const zone = { ...baseZone, coverageValue: 0 };
-                const result = canProceedFromStep('environment', zone);
+                const result = canProceedFromStep('environment', zone, t);
                 expect(result.canProceed).toBe(false);
-                expect(result.error).toContain('coverage');
+                expect(result.error).toBe(t('wizard.validation.coverageInvalid'));
             });
 
             it('should fail with negative coverage', () => {
                 const zone = { ...baseZone, coverageValue: -5 };
-                const result = canProceedFromStep('environment', zone);
+                const result = canProceedFromStep('environment', zone, t);
                 expect(result.canProceed).toBe(false);
             });
 
             it('should pass with valid location and coverage', () => {
-                const result = canProceedFromStep('environment', baseZone);
+                const result = canProceedFromStep('environment', baseZone, t);
                 expect(result.canProceed).toBe(true);
             });
         });
@@ -386,9 +404,9 @@ describe('wizard.ts - Helper Functions', () => {
                     wateringMode: 'duration' as WateringMode,
                     schedule: { ...DEFAULT_SCHEDULE, enabled: true, value: 0 }
                 };
-                const result = canProceedFromStep('schedule', zone);
+                const result = canProceedFromStep('schedule', zone, t);
                 expect(result.canProceed).toBe(false);
-                expect(result.error).toContain('duration/volume');
+                expect(result.error).toBe(t('wizard.validation.durationRequired'));
             });
 
             it('should pass with valid schedule for manual mode', () => {
@@ -397,7 +415,7 @@ describe('wizard.ts - Helper Functions', () => {
                     wateringMode: 'duration' as WateringMode,
                     schedule: { ...DEFAULT_SCHEDULE, enabled: true, value: 15 }
                 };
-                const result = canProceedFromStep('schedule', zone);
+                const result = canProceedFromStep('schedule', zone, t);
                 expect(result.canProceed).toBe(true);
             });
 
@@ -407,7 +425,7 @@ describe('wizard.ts - Helper Functions', () => {
                     wateringMode: 'duration' as WateringMode,
                     schedule: { ...DEFAULT_SCHEDULE, enabled: false, value: 0 }
                 };
-                const result = canProceedFromStep('schedule', zone);
+                const result = canProceedFromStep('schedule', zone, t);
                 expect(result.canProceed).toBe(true);
             });
 
@@ -416,14 +434,14 @@ describe('wizard.ts - Helper Functions', () => {
                     ...baseZone, 
                     schedule: { ...DEFAULT_SCHEDULE, enabled: true, value: 0 }
                 };
-                const result = canProceedFromStep('schedule', zone);
+                const result = canProceedFromStep('schedule', zone, t);
                 expect(result.canProceed).toBe(true);
             });
         });
 
         describe('summary step', () => {
             it('should always pass', () => {
-                const result = canProceedFromStep('summary', baseZone);
+                const result = canProceedFromStep('summary', baseZone, t);
                 expect(result.canProceed).toBe(true);
             });
         });
@@ -431,7 +449,7 @@ describe('wizard.ts - Helper Functions', () => {
         describe('unknown step', () => {
             it('should pass for unknown steps (default case)', () => {
                 // Cast to WizardStep to test the default case
-                const result = canProceedFromStep('unknown_step' as any, baseZone);
+                const result = canProceedFromStep('unknown_step' as any, baseZone, t);
                 expect(result.canProceed).toBe(true);
             });
         });

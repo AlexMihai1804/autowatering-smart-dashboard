@@ -1,5 +1,6 @@
 import React from 'react';
 import { HydraulicStatusData, HydraulicLockLevel, HydraulicLockReason, HydraulicProfileType } from '../types/firmware_structs';
+import { useI18n } from '../i18n';
 
 interface HydraulicDetailsCardProps {
     data: HydraulicStatusData | null | undefined;
@@ -7,6 +8,8 @@ interface HydraulicDetailsCardProps {
 
 const HydraulicDetailsCard: React.FC<HydraulicDetailsCardProps> = ({ data }) => {
     if (!data) return null;
+    const { t } = useI18n();
+    const percentUnit = t('common.percent');
 
     const {
         lock_level,
@@ -38,19 +41,19 @@ const HydraulicDetailsCard: React.FC<HydraulicDetailsCardProps> = ({ data }) => 
                         </span>
                     </div>
                     <div>
-                        <h3 className="text-white font-bold text-base">Protection Monitor</h3>
+                        <h3 className="text-white font-bold text-base">{t('hydraulicDetails.title')}</h3>
                         <p className={`text-xs font-medium ${isLocked ? 'text-red-400' : isLearning ? 'text-amber-400' : 'text-green-400'
                             }`}>
-                            {isLocked ? 'SYSTEM LOCKED' : isLearning ? 'LEARNING PHASE' : 'ACTIVE & SECURE'}
+                            {isLocked ? t('hydraulicDetails.statusLocked') : isLearning ? t('hydraulicDetails.statusLearning') : t('hydraulicDetails.statusActive')}
                         </p>
                     </div>
                 </div>
 
                 {/* Profile Badge */}
                 <div className="px-2 py-1 rounded-lg bg-black/20 text-[10px] font-bold text-white/50 uppercase tracking-widest border border-white/5">
-                    {profile_type === HydraulicProfileType.AUTO ? 'AUTO' :
-                        profile_type === HydraulicProfileType.SPRAY ? 'SPRAY' :
-                            profile_type === HydraulicProfileType.DRIP ? 'DRIP' : 'UNK'}
+                    {profile_type === HydraulicProfileType.AUTO ? t('hydraulicDetails.profileAuto') :
+                        profile_type === HydraulicProfileType.SPRAY ? t('hydraulicDetails.profileSpray') :
+                            profile_type === HydraulicProfileType.DRIP ? t('hydraulicDetails.profileDrip') : t('hydraulicDetails.profileUnknown')}
                 </div>
             </div>
 
@@ -61,13 +64,13 @@ const HydraulicDetailsCard: React.FC<HydraulicDetailsCardProps> = ({ data }) => 
                         <span className="material-symbols-outlined text-red-500 shrink-0">warning</span>
                         <div>
                             <p className="text-white font-bold text-sm">
-                                {lock_reason === HydraulicLockReason.HIGH_FLOW ? 'High Flow Alert' :
-                                    lock_reason === HydraulicLockReason.NO_FLOW ? 'No Flow Alert' :
-                                        lock_reason === HydraulicLockReason.UNEXPECTED ? 'Leak Detected' :
-                                            lock_reason === HydraulicLockReason.MAINLINE_LEAK ? 'Mainline Rupture' : 'Anomaly Detected'}
+                                {lock_reason === HydraulicLockReason.HIGH_FLOW ? t('hydraulicDetails.alertHighFlow') :
+                                    lock_reason === HydraulicLockReason.NO_FLOW ? t('hydraulicDetails.alertNoFlow') :
+                                        lock_reason === HydraulicLockReason.UNEXPECTED ? t('hydraulicDetails.alertLeak') :
+                                            lock_reason === HydraulicLockReason.MAINLINE_LEAK ? t('hydraulicDetails.alertMainline') : t('hydraulicDetails.alertAnomaly')}
                             </p>
                             <p className="text-red-300/80 text-xs mt-1 leading-relaxed">
-                                Zone was automatically locked to prevent damage. Please inspect the irrigation line and reset the zone.
+                                {t('hydraulicDetails.lockDescription')}
                             </p>
                         </div>
                     </div>
@@ -77,22 +80,22 @@ const HydraulicDetailsCard: React.FC<HydraulicDetailsCardProps> = ({ data }) => 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 divide-x divide-white/5 bg-white/[0.02]">
                 <div className="p-4 flex flex-col items-center justify-center">
-                    <span className="text-xs font-bold text-mobile-text-muted uppercase tracking-wider mb-1">Flow Rate</span>
+                    <span className="text-xs font-bold text-mobile-text-muted uppercase tracking-wider mb-1">{t('hydraulicDetails.flowRate')}</span>
                     <div className="flex items-baseline gap-1">
                         <span className="text-2xl font-black text-white tracking-tight">
                             {(nominal_flow_ml_min / 1000).toFixed(1)}
                         </span>
-                        <span className="text-sm font-medium text-mobile-text-muted">L/m</span>
+                        <span className="text-sm font-medium text-mobile-text-muted">{t('common.litersPerMinuteShort')}</span>
                     </div>
-                    {estimated && <span className="text-[10px] text-amber-500 font-bold mt-1 px-1.5 py-0.5 bg-amber-500/10 rounded">ESTIMATED</span>}
+                    {estimated && <span className="text-[10px] text-amber-500 font-bold mt-1 px-1.5 py-0.5 bg-amber-500/10 rounded">{t('hydraulicDetails.estimated')}</span>}
                 </div>
 
                 <div className="p-4 flex flex-col items-center justify-center">
-                    <span className="text-xs font-bold text-mobile-text-muted uppercase tracking-wider mb-1">Variance</span>
+                    <span className="text-xs font-bold text-mobile-text-muted uppercase tracking-wider mb-1">{t('hydraulicDetails.variance')}</span>
                     <div className="flex items-center gap-1">
-                        <span className="text-sm font-bold text-white bg-white/5 px-2 py-1 rounded-md">-{tolerance_low_percent}%</span>
+                        <span className="text-sm font-bold text-white bg-white/5 px-2 py-1 rounded-md">-{tolerance_low_percent}{percentUnit}</span>
                         <span className="text-white/20">/</span>
-                        <span className="text-sm font-bold text-white bg-white/5 px-2 py-1 rounded-md">+{tolerance_high_percent}%</span>
+                        <span className="text-sm font-bold text-white bg-white/5 px-2 py-1 rounded-md">+{tolerance_high_percent}{percentUnit}</span>
                     </div>
                 </div>
             </div>
@@ -101,7 +104,9 @@ const HydraulicDetailsCard: React.FC<HydraulicDetailsCardProps> = ({ data }) => 
             {isLearning && (
                 <div className="p-3 bg-amber-500/5 text-center border-t border-amber-500/10">
                     <p className="text-amber-400 text-xs font-medium">
-                        Calibrating System • Run {stable_runs}/5
+                        {t('hydraulicDetails.calibrating')
+                            .replace('{current}', String(stable_runs))
+                            .replace('{total}', '5')}
                     </p>
                 </div>
             )}

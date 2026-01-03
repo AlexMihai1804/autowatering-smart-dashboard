@@ -26,6 +26,7 @@ import {
 import DatePicker from 'react-multi-date-picker';
 
 import { useAppStore } from '../store/useAppStore';
+import { useI18n } from '../i18n';
 import { 
     HistoryService, 
     getHistoryService,
@@ -74,6 +75,8 @@ const HistoryDashboard: React.FC = () => {
         rainHistoryDaily,
         statistics
     } = useAppStore();
+    const { t, language } = useI18n();
+    const locale = language === 'ro' ? 'ro-RO' : 'en-US';
 
     // Local state
     const [activeTab, setActiveTab] = useState<ViewTab>('watering');
@@ -101,10 +104,10 @@ const HistoryDashboard: React.FC = () => {
     const channelNames = useMemo(() => {
         const names: { [key: number]: string } = {};
         zones.forEach(z => {
-            names[z.channel_id] = z.name || `Zone ${z.channel_id}`;
+            names[z.channel_id] = z.name || `${t('zones.zone')} ${z.channel_id}`;
         });
         return names;
-    }, [zones]);
+    }, [t, zones]);
 
     // Available channels from data
     const availableChannels = useMemo(() => {
@@ -164,14 +167,14 @@ const HistoryDashboard: React.FC = () => {
         wateringStats.channelBreakdown.forEach((data, channelId) => {
             distribution.push({
                 channelId,
-                name: channelNames[channelId] || `Zone ${channelId}`,
+                name: channelNames[channelId] || `${t('zones.zone')} ${channelId}`,
                 volume: data.volume,
                 sessions: data.sessions
             });
         });
         
         return distribution.sort((a, b) => b.volume - a.volume);
-    }, [wateringStats, channelNames]);
+    }, [wateringStats, channelNames, t]);
 
     // Sparkline data for stats cards
     const volumeSparkline = useMemo(() => {
@@ -199,10 +202,10 @@ const HistoryDashboard: React.FC = () => {
         setLoading(true);
         try {
             await historyService.syncAllHistory();
-            showToast('History synced', 'success');
+            showToast(t('historyDashboard.historySynced'), 'success');
         } catch (error: any) {
             console.error('Failed to sync history:', error);
-            showToast(`Sync failed: ${error.message}`, 'danger');
+            showToast(t('historyDashboard.syncFailed').replace('{error}', error.message), 'danger');
         } finally {
             setLoading(false);
             event?.detail.complete();
@@ -339,10 +342,10 @@ const HistoryDashboard: React.FC = () => {
                         <div>
                             <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
                                 <IonIcon icon={statsChart} className="text-cyan-400" />
-                                History Dashboard
+                                {t('historyDashboard.title')}
                             </h1>
                             <p className="text-gray-400 text-sm mt-1">
-                                {isConnected ? 'Live data available' : 'Showing cached data'}
+                                {isConnected ? t('historyDashboard.liveDataAvailable') : t('historyDashboard.cachedData')}
                             </p>
                         </div>
 
@@ -390,7 +393,7 @@ const HistoryDashboard: React.FC = () => {
                             {/* Channel filter chips */}
                             {availableChannels.length > 0 && (
                                 <div className="flex flex-wrap gap-2 flex-1">
-                                    <span className="text-gray-500 text-sm self-center mr-2">Filter:</span>
+                                    <span className="text-gray-500 text-sm self-center mr-2">{t('labels.filter')}:</span>
                                     {availableChannels.map(channelId => (
                                         <IonChip
                                             key={channelId}
@@ -407,7 +410,7 @@ const HistoryDashboard: React.FC = () => {
                                             onClick={clearChannelFilters}
                                             className="text-xs text-gray-500 hover:text-gray-300 ml-2"
                                         >
-                                            Clear
+                                            {t('historyDashboard.clearFilters')}
                                         </button>
                                     )}
                                 </div>
@@ -435,14 +438,16 @@ const HistoryDashboard: React.FC = () => {
                             </div>
                             <div className="text-2xl font-bold text-white">
                                 {wateringStats.totalVolumeMl >= 1000 
-                                    ? `${(wateringStats.totalVolumeMl / 1000).toFixed(1)}L`
-                                    : `${wateringStats.totalVolumeMl}ml`
+                                    ? `${(wateringStats.totalVolumeMl / 1000).toFixed(1)}${t('common.litersShort')}`
+                                    : `${wateringStats.totalVolumeMl}${t('common.mlShort')}`
                                 }
                             </div>
-                            <div className="text-xs text-gray-400 mt-1">Total Volume</div>
+                            <div className="text-xs text-gray-400 mt-1">{t('labels.totalVolume')}</div>
                             <div className="flex items-center gap-1 mt-2 text-xs">
                                 <IonIcon icon={checkmarkCircle} className="text-green-400" />
-                                <span className="text-gray-400">{wateringStats.successRate}% success</span>
+                                <span className="text-gray-400">
+                                    {t('historyDashboard.successRate').replace('{percent}', String(wateringStats.successRate))}
+                                </span>
                             </div>
                         </div>
 
@@ -457,12 +462,12 @@ const HistoryDashboard: React.FC = () => {
                             <div className="text-2xl font-bold text-white">
                                 {wateringStats.totalSessions}
                             </div>
-                            <div className="text-xs text-gray-400 mt-1">Watering Sessions</div>
+                            <div className="text-xs text-gray-400 mt-1">{t('historyDashboard.wateringSessions')}</div>
                             <div className="text-xs text-gray-500 mt-2">
                                 ~{wateringStats.avgVolumePerSession >= 1000 
-                                    ? `${(wateringStats.avgVolumePerSession / 1000).toFixed(1)}L`
-                                    : `${wateringStats.avgVolumePerSession}ml`
-                                } avg
+                                    ? `${(wateringStats.avgVolumePerSession / 1000).toFixed(1)}${t('common.litersShort')}`
+                                    : `${wateringStats.avgVolumePerSession}${t('common.mlShort')}`
+                                } {t('historyDashboard.avgSuffix')}
                             </div>
                         </div>
 
@@ -478,16 +483,16 @@ const HistoryDashboard: React.FC = () => {
                                 />
                             </div>
                             <div className="text-2xl font-bold text-white">
-                                {envStats.avgTemperature.toFixed(1)}°C
+                                {envStats.avgTemperature.toFixed(1)}{t('common.degreesC')}
                             </div>
-                            <div className="text-xs text-gray-400 mt-1">Avg Temperature</div>
+                            <div className="text-xs text-gray-400 mt-1">{t('historyDashboard.avgTemperature')}</div>
                             <div className="flex items-center gap-1 mt-2 text-xs">
                                 <IonIcon 
                                     icon={getTrendIcon(envStats.tempTrend)} 
                                     className={getTrendColor(envStats.tempTrend, true)}
                                 />
                                 <span className="text-gray-500">
-                                    {envStats.minTemperature.toFixed(0)}° - {envStats.maxTemperature.toFixed(0)}°
+                                    {envStats.minTemperature.toFixed(0)}{t('common.degreesC')} - {envStats.maxTemperature.toFixed(0)}{t('common.degreesC')}
                                 </span>
                             </div>
                         </div>
@@ -504,13 +509,15 @@ const HistoryDashboard: React.FC = () => {
                                 />
                             </div>
                             <div className="text-2xl font-bold text-white">
-                                {rainStats.totalRainfallMm.toFixed(1)}mm
+                                {rainStats.totalRainfallMm.toFixed(1)}{t('common.mm')}
                             </div>
-                            <div className="text-xs text-gray-400 mt-1">Total Rainfall</div>
+                            <div className="text-xs text-gray-400 mt-1">{t('historyDashboard.totalRainfall')}</div>
                             <div className="flex items-center gap-1 mt-2 text-xs">
                                 <IonIcon icon={cloudOutline} className="text-gray-400" />
                                 <span className="text-gray-500">
-                                    {rainStats.rainyDays} rainy / {rainStats.dryDays} dry days
+                                    {t('historyDashboard.rainyDryDays')
+                                        .replace('{rainy}', String(rainStats.rainyDays))
+                                        .replace('{dry}', String(rainStats.dryDays))}
                                 </span>
                             </div>
                         </div>
@@ -542,7 +549,7 @@ const HistoryDashboard: React.FC = () => {
                                 } as React.CSSProperties}
                             >
                                 <IonIcon icon={water} />
-                                <IonLabel>Watering</IonLabel>
+                                <IonLabel>{t('historyDashboard.tabs.watering')}</IonLabel>
                             </IonSegmentButton>
                             <IonSegmentButton 
                                 value="environment"
@@ -552,7 +559,7 @@ const HistoryDashboard: React.FC = () => {
                                 } as React.CSSProperties}
                             >
                                 <IonIcon icon={thermometer} />
-                                <IonLabel>Environment</IonLabel>
+                                <IonLabel>{t('historyDashboard.tabs.environment')}</IonLabel>
                             </IonSegmentButton>
                             <IonSegmentButton 
                                 value="rain"
@@ -562,7 +569,7 @@ const HistoryDashboard: React.FC = () => {
                                 } as React.CSSProperties}
                             >
                                 <IonIcon icon={rainy} />
-                                <IonLabel>Rainfall</IonLabel>
+                                <IonLabel>{t('historyDashboard.tabs.rainfall')}</IonLabel>
                             </IonSegmentButton>
                         </IonSegment>
                     </motion.div>
@@ -583,7 +590,7 @@ const HistoryDashboard: React.FC = () => {
                                     <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-800 rounded-xl p-4">
                                         <h3 className="text-white font-medium mb-4 flex items-center gap-2">
                                             <IonIcon icon={statsChart} className="text-cyan-400" />
-                                            Volume Over Time
+                                            {t('historyDashboard.volumeOverTime')}
                                         </h3>
                                         <WateringVolumeChart 
                                             data={aggregatedWatering}
@@ -596,10 +603,10 @@ const HistoryDashboard: React.FC = () => {
                                     {/* Distribution Chart */}
                                     {channelDistribution.length > 1 && (
                                         <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-800 rounded-xl p-4">
-                                            <h3 className="text-white font-medium mb-4 flex items-center gap-2">
-                                                <IonIcon icon={water} className="text-green-400" />
-                                                Channel Distribution
-                                            </h3>
+                                        <h3 className="text-white font-medium mb-4 flex items-center gap-2">
+                                            <IonIcon icon={water} className="text-green-400" />
+                                            {t('historyDashboard.channelDistribution')}
+                                        </h3>
                                             <div className="relative">
                                                 <ChannelDistributionChart 
                                                     data={channelDistribution}
@@ -614,7 +621,7 @@ const HistoryDashboard: React.FC = () => {
                                     <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-800 rounded-xl p-4">
                                         <h3 className="text-white font-medium mb-4 flex items-center gap-2">
                                             <IonIcon icon={timeOutline} className="text-purple-400" />
-                                            Recent Sessions
+                                            {t('historyDashboard.recentSessions')}
                                         </h3>
                                         <div className="space-y-2 max-h-64 overflow-y-auto">
                                             {filteredWateringHistory.slice(0, 10).map((entry, idx) => (
@@ -628,10 +635,10 @@ const HistoryDashboard: React.FC = () => {
                                                         }`} />
                                                         <div>
                                                             <span className="text-white text-sm">
-                                                                {channelNames[entry.channel_id] || `Zone ${entry.channel_id}`}
+                                                                {channelNames[entry.channel_id] || `${t('zones.zone')} ${entry.channel_id}`}
                                                             </span>
                                                             <span className="text-gray-500 text-xs ml-2">
-                                                                {new Date(entry.timestamp * 1000).toLocaleString('ro-RO', {
+                                                                {new Date(entry.timestamp * 1000).toLocaleString(locale, {
                                                                     day: '2-digit',
                                                                     month: 'short',
                                                                     hour: '2-digit',
@@ -642,18 +649,18 @@ const HistoryDashboard: React.FC = () => {
                                                     </div>
                                                     <div className="text-cyan-400 font-medium text-sm">
                                                         {entry.actual_value_ml >= 1000 
-                                                            ? `${(entry.actual_value_ml / 1000).toFixed(1)}L`
-                                                            : `${entry.actual_value_ml}ml`
+                                                            ? `${(entry.actual_value_ml / 1000).toFixed(1)}${t('common.litersShort')}`
+                                                            : `${entry.actual_value_ml}${t('common.mlShort')}`
                                                         }
                                                     </div>
                                                 </div>
                                             ))}
-                                            {filteredWateringHistory.length === 0 && (
-                                                <div className="text-center py-8 text-gray-500">
-                                                    <IonIcon icon={water} className="text-3xl mb-2" />
-                                                    <p>No watering sessions in selected period</p>
-                                                </div>
-                                            )}
+                                                {filteredWateringHistory.length === 0 && (
+                                                    <div className="text-center py-8 text-gray-500">
+                                                        <IonIcon icon={water} className="text-3xl mb-2" />
+                                                    <p>{t('historyDashboard.noSessionsInPeriod')}</p>
+                                                    </div>
+                                                )}
                                         </div>
                                     </div>
                                 </div>
@@ -666,7 +673,7 @@ const HistoryDashboard: React.FC = () => {
                                     <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-800 rounded-xl p-4">
                                         <h3 className="text-white font-medium mb-4 flex items-center gap-2">
                                             <IonIcon icon={thermometer} className="text-orange-400" />
-                                            Temperature & Humidity
+                                            {t('historyDashboard.temperatureHumidity')}
                                         </h3>
                                         <TemperatureHumidityChart 
                                             data={aggregatedEnv.map(d => ({
@@ -677,7 +684,7 @@ const HistoryDashboard: React.FC = () => {
                                                 humidity: d.humidityAvg,
                                                 label: d.date.includes('T') 
                                                     ? d.date.split('T')[1] + ':00'
-                                                    : new Date(d.date).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' })
+                                                    : new Date(d.date).toLocaleDateString(locale, { day: '2-digit', month: 'short' })
                                             }))}
                                             height={320}
                                         />
@@ -687,39 +694,39 @@ const HistoryDashboard: React.FC = () => {
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                                         <div className="bg-gray-800/40 rounded-xl p-4 text-center">
                                             <div className="text-orange-400 text-xl mb-1">
-                                                {envStats.minTemperature.toFixed(1)}°C
+                                                {envStats.minTemperature.toFixed(1)}{t('common.degreesC')}
                                             </div>
-                                            <div className="text-gray-500 text-xs">Min Temp</div>
+                                            <div className="text-gray-500 text-xs">{t('historyDashboard.minTemp')}</div>
                                         </div>
                                         <div className="bg-gray-800/40 rounded-xl p-4 text-center">
                                             <div className="text-orange-400 text-xl mb-1">
-                                                {envStats.maxTemperature.toFixed(1)}°C
+                                                {envStats.maxTemperature.toFixed(1)}{t('common.degreesC')}
                                             </div>
-                                            <div className="text-gray-500 text-xs">Max Temp</div>
+                                            <div className="text-gray-500 text-xs">{t('historyDashboard.maxTemp')}</div>
                                         </div>
                                         <div className="bg-gray-800/40 rounded-xl p-4 text-center">
                                             <div className="text-blue-400 text-xl mb-1">
-                                                {envStats.avgHumidity.toFixed(0)}%
+                                                {envStats.avgHumidity.toFixed(0)}{t('common.percent')}
                                             </div>
-                                            <div className="text-gray-500 text-xs">Avg Humidity</div>
+                                            <div className="text-gray-500 text-xs">{t('historyDashboard.avgHumidity')}</div>
                                         </div>
                                         <div className="bg-gray-800/40 rounded-xl p-4 text-center">
                                             <div className="text-blue-400 text-xl mb-1">
-                                                {envStats.minHumidity.toFixed(0)}%
+                                                {envStats.minHumidity.toFixed(0)}{t('common.percent')}
                                             </div>
-                                            <div className="text-gray-500 text-xs">Min Humidity</div>
+                                            <div className="text-gray-500 text-xs">{t('historyDashboard.minHumidity')}</div>
                                         </div>
                                         <div className="bg-gray-800/40 rounded-xl p-4 text-center">
                                             <div className="text-blue-400 text-xl mb-1">
-                                                {envStats.maxHumidity.toFixed(0)}%
+                                                {envStats.maxHumidity.toFixed(0)}{t('common.percent')}
                                             </div>
-                                            <div className="text-gray-500 text-xs">Max Humidity</div>
+                                            <div className="text-gray-500 text-xs">{t('historyDashboard.maxHumidity')}</div>
                                         </div>
                                         <div className="bg-gray-800/40 rounded-xl p-4 text-center">
                                             <div className="text-purple-400 text-xl mb-1">
-                                                {envStats.avgPressure.toFixed(0)} hPa
+                                                {envStats.avgPressure.toFixed(0)} {t('common.hPa')}
                                             </div>
-                                            <div className="text-gray-500 text-xs">Avg Pressure</div>
+                                            <div className="text-gray-500 text-xs">{t('historyDashboard.avgPressure')}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -732,7 +739,7 @@ const HistoryDashboard: React.FC = () => {
                                     <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-800 rounded-xl p-4">
                                         <h3 className="text-white font-medium mb-4 flex items-center gap-2">
                                             <IonIcon icon={rainy} className="text-blue-400" />
-                                            Rainfall History
+                                            {t('historyDashboard.rainfallHistory')}
                                         </h3>
                                         <RainfallChart 
                                             data={aggregatedRain}
@@ -745,39 +752,39 @@ const HistoryDashboard: React.FC = () => {
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                                         <div className="bg-gray-800/40 rounded-xl p-4 text-center">
                                             <div className="text-cyan-400 text-xl mb-1">
-                                                {rainStats.totalRainfallMm.toFixed(1)} mm
+                                                {rainStats.totalRainfallMm.toFixed(1)} {t('common.mm')}
                                             </div>
-                                            <div className="text-gray-500 text-xs">Total Rainfall</div>
+                                            <div className="text-gray-500 text-xs">{t('historyDashboard.totalRainfall')}</div>
                                         </div>
                                         <div className="bg-gray-800/40 rounded-xl p-4 text-center">
                                             <div className="text-cyan-400 text-xl mb-1">
-                                                {rainStats.avgDailyMm.toFixed(1)} mm
+                                                {rainStats.avgDailyMm.toFixed(1)} {t('common.mm')}
                                             </div>
-                                            <div className="text-gray-500 text-xs">Daily Average</div>
+                                            <div className="text-gray-500 text-xs">{t('historyDashboard.dailyAverage')}</div>
                                         </div>
                                         <div className="bg-gray-800/40 rounded-xl p-4 text-center">
                                             <div className="text-blue-400 text-xl mb-1">
-                                                {rainStats.maxHourlyMm.toFixed(1)} mm
+                                                {rainStats.maxHourlyMm.toFixed(1)} {t('common.mm')}
                                             </div>
-                                            <div className="text-gray-500 text-xs">Max Hourly</div>
+                                            <div className="text-gray-500 text-xs">{t('historyDashboard.maxHourly')}</div>
                                         </div>
                                         <div className="bg-gray-800/40 rounded-xl p-4 text-center">
                                             <div className="text-green-400 text-xl mb-1">
                                                 {rainStats.rainyDays}
                                             </div>
-                                            <div className="text-gray-500 text-xs">Rainy Days</div>
+                                            <div className="text-gray-500 text-xs">{t('historyDashboard.rainyDays')}</div>
                                         </div>
                                         <div className="bg-gray-800/40 rounded-xl p-4 text-center">
                                             <div className="text-amber-400 text-xl mb-1">
                                                 {rainStats.dryDays}
                                             </div>
-                                            <div className="text-gray-500 text-xs">Dry Days</div>
+                                            <div className="text-gray-500 text-xs">{t('historyDashboard.dryDays')}</div>
                                         </div>
                                         <div className="bg-gray-800/40 rounded-xl p-4 text-center">
                                             <div className="text-red-400 text-xl mb-1">
                                                 {rainStats.longestDrySpell}
                                             </div>
-                                            <div className="text-gray-500 text-xs">Longest Dry Spell</div>
+                                            <div className="text-gray-500 text-xs">{t('historyDashboard.longestDrySpell')}</div>
                                         </div>
                                     </div>
                                 </div>

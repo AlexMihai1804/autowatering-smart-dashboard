@@ -16,6 +16,7 @@ import {
     ReferenceLine
 } from 'recharts';
 import { CHART_COLORS } from './index';
+import { useI18n } from '../../i18n';
 
 interface RainDataPoint {
     date: string;
@@ -32,41 +33,6 @@ interface RainfallChartProps {
     animate?: boolean;
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-        const entry = payload[0].payload;
-        
-        return (
-            <div className="bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
-                <p className="text-gray-400 text-xs mb-2">{label}</p>
-                <div className="space-y-1.5">
-                    <div className="flex items-center justify-between gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-cyan-400" />
-                            <span className="text-gray-300">Total</span>
-                        </div>
-                        <span className="text-white font-medium">
-                            {entry.totalMm.toFixed(1)} mm
-                        </span>
-                    </div>
-                    {entry.maxHourlyMm !== undefined && (
-                        <div className="flex items-center justify-between gap-4 text-sm">
-                            <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-blue-400" />
-                                <span className="text-gray-300">Max/hr</span>
-                            </div>
-                            <span className="text-white font-medium">
-                                {entry.maxHourlyMm.toFixed(1)} mm
-                            </span>
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
-    }
-    return null;
-};
-
 const RainfallChart: React.FC<RainfallChartProps> = ({
     data,
     height = 250,
@@ -74,6 +40,43 @@ const RainfallChart: React.FC<RainfallChartProps> = ({
     showAverage = true,
     animate = true
 }) => {
+    const { t, language } = useI18n();
+    const locale = language === 'ro' ? 'ro-RO' : 'en-US';
+    const renderTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            const entry = payload[0].payload;
+
+            return (
+                <div className="bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
+                    <p className="text-gray-400 text-xs mb-2">{label}</p>
+                    <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-4 text-sm">
+                            <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-cyan-400" />
+                                <span className="text-gray-300">{t('labels.total')}</span>
+                            </div>
+                            <span className="text-white font-medium">
+                                {entry.totalMm.toFixed(1)} {t('common.mm')}
+                            </span>
+                        </div>
+                        {entry.maxHourlyMm !== undefined && (
+                            <div className="flex items-center justify-between gap-4 text-sm">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-blue-400" />
+                                    <span className="text-gray-300">{t('charts.maxPerHour')}</span>
+                                </div>
+                                <span className="text-white font-medium">
+                                    {entry.maxHourlyMm.toFixed(1)} {t('common.mm')}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        return null;
+    };
+
     if (!data || data.length === 0) {
         return (
             <div 
@@ -81,8 +84,8 @@ const RainfallChart: React.FC<RainfallChartProps> = ({
                 style={{ height }}
             >
                 <div className="text-center">
-                    <p className="text-lg">🌧️</p>
-                    <p className="text-sm mt-2">No rain data</p>
+                    <p className="text-lg">{t('common.notAvailable')}</p>
+                    <p className="text-sm mt-2">{t('charts.noRainData')}</p>
                 </div>
             </div>
         );
@@ -103,7 +106,7 @@ const RainfallChart: React.FC<RainfallChartProps> = ({
             return `${parts[1]}:00`;
         }
         const date = new Date(dateStr);
-        return date.toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' });
+        return date.toLocaleDateString(locale, { day: '2-digit', month: 'short' });
     }
 
     const gradientId = 'rainGradient';
@@ -145,11 +148,11 @@ const RainfallChart: React.FC<RainfallChartProps> = ({
                         fontSize={11}
                         tickLine={false}
                         axisLine={{ stroke: CHART_COLORS.grid }}
-                        tickFormatter={(value) => `${value}mm`}
+                        tickFormatter={(value) => `${value}${t('common.mm')}`}
                         domain={[0, 'auto']}
                     />
                     
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={renderTooltip} />
 
                     {showAverage && avgRainfall > 0 && (
                         <ReferenceLine 

@@ -6,13 +6,14 @@ import {
 } from '@ionic/react';
 import { 
     thermometer, refreshCircle, calendarOutline, trashOutline,
-    waterOutline, cloudOutline, trendingUp, trendingDown
+    waterOutline, cloudOutline
 } from 'ionicons/icons';
 import { useAppStore } from '../store/useAppStore';
 import { BleService } from '../services/BleService';
+import { useI18n } from '../i18n';
 
 interface EnvHistoryCardProps {
-    onToast?: (message: string, color?: string) => void;
+    onToast: (message: string, color: string) => void;
 }
 
 const EnvHistoryCard: React.FC<EnvHistoryCardProps> = ({ onToast }) => {
@@ -24,6 +25,7 @@ const EnvHistoryCard: React.FC<EnvHistoryCardProps> = ({ onToast }) => {
         envData  // Current live data
     } = useAppStore();
     const bleService = BleService.getInstance();
+    const { t } = useI18n();
     
     const [loading, setLoading] = useState(false);
     const [viewType, setViewType] = useState<'live' | 'hourly' | 'daily'>('live');
@@ -47,10 +49,10 @@ const EnvHistoryCard: React.FC<EnvHistoryCardProps> = ({ onToast }) => {
                     await bleService.getEnvDailyHistory(7);
                     break;
             }
-            onToast?.('Environmental history loaded', 'success');
+            onToast(t('envHistory.loaded'), 'success');
         } catch (error: any) {
             console.error('Failed to load env history:', error);
-            onToast?.(`Failed: ${error.message}`, 'danger');
+            onToast(t('errors.failedWithReason').replace('{error}', error.message), 'danger');
         } finally {
             setLoading(false);
         }
@@ -58,14 +60,14 @@ const EnvHistoryCard: React.FC<EnvHistoryCardProps> = ({ onToast }) => {
 
     const handleClearHistory = async () => {
         if (!isConnected) return;
-        if (!window.confirm('Clear ALL environmental history? This cannot be undone.')) return;
+        if (!window.confirm(t('envHistory.clearConfirm'))) return;
         
         setLoading(true);
         try {
             await bleService.clearEnvHistory();
-            onToast?.('History cleared', 'warning');
+            onToast(t('envHistory.cleared'), 'warning');
         } catch (error: any) {
-            onToast?.(`Failed: ${error.message}`, 'danger');
+            onToast(t('errors.failedWithReason').replace('{error}', error.message), 'danger');
         } finally {
             setLoading(false);
         }
@@ -104,7 +106,7 @@ const EnvHistoryCard: React.FC<EnvHistoryCardProps> = ({ onToast }) => {
                 <div className="flex justify-between items-center">
                     <IonCardTitle className="text-white flex items-center gap-2">
                         <IonIcon icon={thermometer} className="text-orange-400" />
-                        Environmental History
+                        {t('envHistory.title')}
                     </IonCardTitle>
                     <div className="flex gap-2">
                         <IonButton 
@@ -137,13 +139,13 @@ const EnvHistoryCard: React.FC<EnvHistoryCardProps> = ({ onToast }) => {
                     className="mb-4"
                 >
                     <IonSegmentButton value="live">
-                        <IonLabel>Current</IonLabel>
+                        <IonLabel>{t('labels.current')}</IonLabel>
                     </IonSegmentButton>
                     <IonSegmentButton value="hourly">
-                        <IonLabel>24h</IonLabel>
+                        <IonLabel>{t('envHistory.last24Hours')}</IonLabel>
                     </IonSegmentButton>
                     <IonSegmentButton value="daily">
-                        <IonLabel>7 Days</IonLabel>
+                        <IonLabel>{t('envHistory.last7Days')}</IonLabel>
                     </IonSegmentButton>
                 </IonSegment>
 
@@ -153,18 +155,18 @@ const EnvHistoryCard: React.FC<EnvHistoryCardProps> = ({ onToast }) => {
                         <div className="bg-gradient-to-br from-orange-900/30 to-red-900/30 p-4 rounded-xl text-center">
                             <IonIcon icon={thermometer} className="text-3xl text-orange-400 mb-2" />
                             <div className="text-3xl font-bold text-white">
-                                {envData ? envData.temperature.toFixed(1) : '--'}°C
+                                {envData ? envData.temperature.toFixed(1) : '--'}{t('common.degreesC')}
                             </div>
-                            <div className="text-xs text-gray-400 mt-1">Temperature</div>
+                            <div className="text-xs text-gray-400 mt-1">{t('labels.temperature')}</div>
                         </div>
                         
                         {/* Humidity */}
                         <div className="bg-gradient-to-br from-blue-900/30 to-cyan-900/30 p-4 rounded-xl text-center">
                             <IonIcon icon={waterOutline} className="text-3xl text-blue-400 mb-2" />
                             <div className="text-3xl font-bold text-white">
-                                {envData ? envData.humidity.toFixed(0) : '--'}%
+                                {envData ? envData.humidity.toFixed(0) : '--'}{t('common.percent')}
                             </div>
-                            <div className="text-xs text-gray-400 mt-1">Humidity</div>
+                            <div className="text-xs text-gray-400 mt-1">{t('labels.humidity')}</div>
                         </div>
                         
                         {/* Pressure */}
@@ -173,7 +175,7 @@ const EnvHistoryCard: React.FC<EnvHistoryCardProps> = ({ onToast }) => {
                             <div className="text-3xl font-bold text-white">
                                 {envData ? envData.pressure.toFixed(0) : '--'}
                             </div>
-                            <div className="text-xs text-gray-400 mt-1">hPa</div>
+                            <div className="text-xs text-gray-400 mt-1">{t('common.hPa')}</div>
                         </div>
                     </div>
                 )}
@@ -183,8 +185,8 @@ const EnvHistoryCard: React.FC<EnvHistoryCardProps> = ({ onToast }) => {
                         {envHistoryHourly.length === 0 ? (
                             <div className="text-center py-8 text-gray-500">
                                 <IonIcon icon={calendarOutline} className="text-4xl mb-2" />
-                                <p>No hourly data</p>
-                                <p className="text-sm">Tap refresh to load</p>
+                                <p>{t('envHistory.noHourlyData')}</p>
+                                <p className="text-sm">{t('statistics.tapRefresh')}</p>
                             </div>
                         ) : (
                             <>
@@ -220,28 +222,28 @@ const EnvHistoryCard: React.FC<EnvHistoryCardProps> = ({ onToast }) => {
                                         />
                                     </svg>
                                     {/* Y-axis labels */}
-                                    <div className="absolute left-0 top-0 text-xs text-orange-400">{maxTemp.toFixed(0)}°</div>
-                                    <div className="absolute left-0 bottom-0 text-xs text-orange-400">{minTemp.toFixed(0)}°</div>
+                                    <div className="absolute left-0 top-0 text-xs text-orange-400">{maxTemp.toFixed(0)}{t('common.degreesC')}</div>
+                                    <div className="absolute left-0 bottom-0 text-xs text-orange-400">{minTemp.toFixed(0)}{t('common.degreesC')}</div>
                                 </div>
                                 
                                 {/* Stats Row */}
                                 <div className="grid grid-cols-3 gap-2 text-center text-sm">
                                     <div>
-                                        <span className="text-gray-400">Min:</span>
+                                        <span className="text-gray-400">{t('labels.min')}:</span>
                                         <span className="text-blue-300 ml-1">
-                                            {formatTemp(Math.min(...envHistoryHourly.map(e => e.temp_min_x100)))}°
+                                            {formatTemp(Math.min(...envHistoryHourly.map(e => e.temp_min_x100)))}{t('common.degreesC')}
                                         </span>
                                     </div>
                                     <div>
-                                        <span className="text-gray-400">Avg:</span>
+                                        <span className="text-gray-400">{t('labels.avg')}:</span>
                                         <span className="text-orange-300 ml-1">
-                                            {formatTemp(envHistoryHourly.reduce((s, e) => s + e.temp_avg_x100, 0) / envHistoryHourly.length)}°
+                                            {formatTemp(envHistoryHourly.reduce((s, e) => s + e.temp_avg_x100, 0) / envHistoryHourly.length)}{t('common.degreesC')}
                                         </span>
                                     </div>
                                     <div>
-                                        <span className="text-gray-400">Max:</span>
+                                        <span className="text-gray-400">{t('labels.max')}:</span>
                                         <span className="text-red-300 ml-1">
-                                            {formatTemp(Math.max(...envHistoryHourly.map(e => e.temp_max_x100)))}°
+                                            {formatTemp(Math.max(...envHistoryHourly.map(e => e.temp_max_x100)))}{t('common.degreesC')}
                                         </span>
                                     </div>
                                 </div>
@@ -255,7 +257,7 @@ const EnvHistoryCard: React.FC<EnvHistoryCardProps> = ({ onToast }) => {
                         {envHistoryDaily.length === 0 ? (
                             <div className="text-center py-8 text-gray-500">
                                 <IonIcon icon={calendarOutline} className="text-4xl mb-2" />
-                                <p>No daily data</p>
+                                <p>{t('envHistory.noDailyData')}</p>
                             </div>
                         ) : (
                             <div className="space-y-2">
@@ -273,7 +275,7 @@ const EnvHistoryCard: React.FC<EnvHistoryCardProps> = ({ onToast }) => {
                                                 {/* Temperature range bar */}
                                                 <div className="flex items-center gap-1 flex-1">
                                                     <span className="text-blue-300 text-xs w-8">
-                                                        {formatTemp(entry.temp_min_x100)}°
+                                                        {formatTemp(entry.temp_min_x100)}{t('common.degreesC')}
                                                     </span>
                                                     <div className="flex-1 h-2 bg-gray-700 rounded-full relative overflow-hidden">
                                                         <div 
@@ -285,13 +287,13 @@ const EnvHistoryCard: React.FC<EnvHistoryCardProps> = ({ onToast }) => {
                                                         />
                                                     </div>
                                                     <span className="text-red-300 text-xs w-8">
-                                                        {formatTemp(entry.temp_max_x100)}°
+                                                        {formatTemp(entry.temp_max_x100)}{t('common.degreesC')}
                                                     </span>
                                                 </div>
                                                 
                                                 {/* Humidity */}
                                                 <div className="text-blue-400 text-sm w-12 text-right">
-                                                    {formatHumidity(entry.humidity_avg_x100)}%
+                                                    {formatHumidity(entry.humidity_avg_x100)}{t('common.percent')}
                                                 </div>
                                             </div>
                                         </div>

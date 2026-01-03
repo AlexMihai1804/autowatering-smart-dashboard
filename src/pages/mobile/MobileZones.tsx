@@ -212,7 +212,7 @@ const MobileZones: React.FC = () => {
                     <p className="text-sm font-bold text-white">{globalNextRun}</p>
                   </div>
                   <div className="bg-mobile-primary/20 text-mobile-primary text-xs font-bold px-2 py-1 rounded-full mt-1">
-                    -15% {t('weather.waterSave')}
+                    -15{t('common.percent')} {t('weather.waterSave')}
                   </div>
                 </div>
               </div>
@@ -275,7 +275,7 @@ const MobileZones: React.FC = () => {
                             </div>
                             <div>
                               <h4 className="font-bold text-base leading-tight">
-                                {zone.name || `Zone ${zone.channel_id + 1}`}
+                                {zone.name || `${t('zones.zone')} ${zone.channel_id + 1}`}
                               </h4>
                               {isZoneWatering ? (
                                 <div className="flex items-center gap-1 text-mobile-primary text-xs font-bold mt-0.5">

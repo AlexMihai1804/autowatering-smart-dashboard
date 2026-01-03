@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useI18n } from '../../i18n';
 
 interface MobileConfirmModalProps {
   isOpen: boolean;
@@ -20,13 +21,16 @@ const MobileConfirmModal: React.FC<MobileConfirmModalProps> = ({
   onConfirm,
   title,
   message,
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
+  confirmText,
+  cancelText,
   icon = 'warning',
   variant = 'danger',
   requireConfirmation,
 }) => {
+  const { t } = useI18n();
   const [confirmInput, setConfirmInput] = React.useState('');
+  const confirmLabel = confirmText ?? t('common.confirm');
+  const cancelLabel = cancelText ?? t('common.cancel');
 
   const variantColors = {
     danger: {
@@ -116,7 +120,7 @@ const MobileConfirmModal: React.FC<MobileConfirmModalProps> = ({
               <div className="w-full px-6 pt-6 pb-2">
                 <label className="flex flex-col w-full">
                   <span className="text-xs font-semibold text-mobile-text-muted uppercase tracking-wider mb-2 text-center">
-                    Type '{requireConfirmation}' to confirm
+                    {t('mobileConfirm.typeToConfirm').replace('{value}', requireConfirmation)}
                   </span>
                   <input
                     type="text"
@@ -142,14 +146,14 @@ const MobileConfirmModal: React.FC<MobileConfirmModalProps> = ({
                             ? `${colors.buttonBg} ${colors.glowColor} text-white` 
                             : 'bg-white/10 text-white/30 cursor-not-allowed'}`}
               >
-                {confirmText}
+                {confirmLabel}
               </button>
               <button
                 onClick={handleClose}
                 className="w-full h-12 rounded-lg bg-transparent border border-mobile-border-dark 
                          text-mobile-text-muted font-semibold text-sm hover:bg-white/5 transition-colors"
               >
-                {cancelText}
+                {cancelLabel}
               </button>
             </div>
           </motion.div>

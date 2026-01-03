@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonSearchbar, IonList, IonItem, IonLabel, IonNote, IonIcon } from '@ionic/react';
 import { close, checkmark } from 'ionicons/icons';
 import { useAppStore } from '../store/useAppStore';
+import { useI18n } from '../i18n';
 import { PlantDBEntry, SoilDBEntry } from '../services/DatabaseService';
 
 interface ConfigWizardProps {
@@ -15,6 +16,9 @@ const ConfigWizard: React.FC<ConfigWizardProps> = ({ isOpen, onClose, onSave, in
     const [step, setStep] = useState(1);
     const [searchText, setSearchText] = useState('');
     const { plantDb, soilDb } = useAppStore();
+    const { t, language } = useI18n();
+
+    const getPlantName = (plant: PlantDBEntry) => (language === 'ro' && plant.common_name_ro ? plant.common_name_ro : plant.common_name_en);
 
     // Form State
     const [selectedPlant, setSelectedPlant] = useState<PlantDBEntry | null>(null);
@@ -39,7 +43,7 @@ const ConfigWizard: React.FC<ConfigWizardProps> = ({ isOpen, onClose, onSave, in
                 plantId: selectedPlant?.id,
                 soilId: selectedSoil?.id,
                 autoEnabled,
-                name: selectedPlant?.common_name_en || "New Zone"
+                name: selectedPlant ? getPlantName(selectedPlant) : t('zoneDetails.zone')
             });
             onClose();
         }
@@ -49,7 +53,11 @@ const ConfigWizard: React.FC<ConfigWizardProps> = ({ isOpen, onClose, onSave, in
         <IonModal isOpen={isOpen} onDidDismiss={onClose} className="glass-modal">
             <IonHeader className="ion-no-border">
                 <IonToolbar className="bg-cyber-dark text-white" style={{ '--background': '#0f172a' }}>
-                    <IonTitle>Zone Setup - Step {step}/3</IonTitle>
+                    <IonTitle>
+                        {t('wizard.title')} - {t('wizard.tutorial.stepProgress')
+                            .replace('{current}', String(step))
+                            .replace('{total}', '3')}
+                    </IonTitle>
                     <IonButtons slot="end">
                         <IonButton onClick={onClose}>
                             <IonIcon icon={close} />
@@ -63,11 +71,11 @@ const ConfigWizard: React.FC<ConfigWizardProps> = ({ isOpen, onClose, onSave, in
                     {/* Step 1: Plant Selection */}
                     {step === 1 && (
                         <div className="flex-1 flex flex-col">
-                            <h2 className="text-xl font-bold text-white mb-2">Select Crop</h2>
+                            <h2 className="text-xl font-bold text-white mb-2">{t('wizard.steps.plant')}</h2>
                             <IonSearchbar 
                                 value={searchText} 
                                 onIonInput={e => setSearchText(e.detail.value!)} 
-                                placeholder="Search plants (e.g. Tomato)"
+                                placeholder={t('wizard.plant.searchPlaceholder')}
                                 className="mb-4"
                             />
                             <div className="flex-1 overflow-y-auto glass-panel">
@@ -81,7 +89,7 @@ const ConfigWizard: React.FC<ConfigWizardProps> = ({ isOpen, onClose, onSave, in
                                             style={{ '--background': 'transparent', '--color': 'white' }}
                                         >
                                             <IonLabel>
-                                                <h2>{plant.common_name_en}</h2>
+                                                <h2>{getPlantName(plant)}</h2>
                                                 <p className="text-gray-400">{plant.category}</p>
                                             </IonLabel>
                                             {selectedPlant?.id === plant.id && <IonIcon icon={checkmark} slot="end" color="secondary" />}
@@ -95,7 +103,7 @@ const ConfigWizard: React.FC<ConfigWizardProps> = ({ isOpen, onClose, onSave, in
                     {/* Step 2: Soil Selection */}
                     {step === 2 && (
                         <div className="flex-1 flex flex-col">
-                            <h2 className="text-xl font-bold text-white mb-4">Select Soil Type</h2>
+                            <h2 className="text-xl font-bold text-white mb-4">{t('wizard.soil.title')}</h2>
                             <div className="flex-1 overflow-y-auto glass-panel">
                                 <IonList className="bg-transparent">
                                     {soilDb.map(soil => (
@@ -107,7 +115,7 @@ const ConfigWizard: React.FC<ConfigWizardProps> = ({ isOpen, onClose, onSave, in
                                         >
                                             <IonLabel>
                                                 <h2>{soil.texture}</h2>
-                                                <p className="text-gray-400">Infiltration: {soil.infiltration_rate_mm_h} mm/h</p>
+                                                <p className="text-gray-400">{t('wizard.soil.infiltration')}: {soil.infiltration_rate_mm_h} {t('common.mmPerHour')}</p>
                                             </IonLabel>
                                             {selectedSoil?.id === soil.id && <IonIcon icon={checkmark} slot="end" color="secondary" />}
                                         </IonItem>
@@ -120,12 +128,12 @@ const ConfigWizard: React.FC<ConfigWizardProps> = ({ isOpen, onClose, onSave, in
                     {/* Step 3: Automation Settings */}
                     {step === 3 && (
                         <div className="flex-1">
-                            <h2 className="text-xl font-bold text-white mb-6">Automation</h2>
+                            <h2 className="text-xl font-bold text-white mb-6">{t('wizard.steps.schedule')}</h2>
                             
                             <div className="glass-panel p-4 mb-4 flex items-center justify-between">
                                 <div>
-                                    <h3 className="text-lg font-bold text-white">FAO-56 Auto Schedule</h3>
-                                    <p className="text-sm text-gray-400">Automatically calculate water needs based on weather and plant stage.</p>
+                                    <h3 className="text-lg font-bold text-white">{t('wizard.schedule.fao56Smart')}</h3>
+                                    <p className="text-sm text-gray-400">{t('wizard.schedule.fao56SmartDesc')}</p>
                                 </div>
                                 <div 
                                     className={`w-14 h-8 rounded-full p-1 cursor-pointer transition-colors ${autoEnabled ? 'bg-cyber-emerald' : 'bg-gray-600'}`}
@@ -136,15 +144,15 @@ const ConfigWizard: React.FC<ConfigWizardProps> = ({ isOpen, onClose, onSave, in
                             </div>
 
                             <div className="glass-panel p-4">
-                                <h3 className="text-white font-bold mb-2">Summary</h3>
+                                <h3 className="text-white font-bold mb-2">{t('wizard.summary.title')}</h3>
                                 <div className="space-y-2 text-sm">
                                     <div className="flex justify-between">
-                                        <span className="text-gray-400">Crop:</span>
-                                        <span className="text-white">{selectedPlant?.common_name_en || 'Not Selected'}</span>
+                                        <span className="text-gray-400">{t('wizard.summary.plant')}:</span>
+                                        <span className="text-white">{selectedPlant ? getPlantName(selectedPlant) : t('labels.none')}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-gray-400">Soil:</span>
-                                        <span className="text-white">{selectedSoil?.texture || 'Not Selected'}</span>
+                                        <span className="text-gray-400">{t('wizard.summary.soil')}:</span>
+                                        <span className="text-white">{selectedSoil?.texture || t('labels.none')}</span>
                                     </div>
                                 </div>
                             </div>
@@ -154,14 +162,14 @@ const ConfigWizard: React.FC<ConfigWizardProps> = ({ isOpen, onClose, onSave, in
                     {/* Footer Navigation */}
                     <div className="mt-4 flex justify-between pt-4 border-t border-white/10">
                         <IonButton fill="clear" color="medium" onClick={() => step > 1 ? setStep(step - 1) : onClose()}>
-                            {step === 1 ? 'Cancel' : 'Back'}
+                            {step === 1 ? t('common.cancel') : t('common.back')}
                         </IonButton>
                         <IonButton 
                             color="secondary" 
                             onClick={handleNext}
                             disabled={(step === 1 && !selectedPlant) || (step === 2 && !selectedSoil)}
                         >
-                            {step === 3 ? 'Save Configuration' : 'Next'}
+                            {step === 3 ? t('common.save') : t('common.next')}
                         </IonButton>
                     </div>
                 </div>

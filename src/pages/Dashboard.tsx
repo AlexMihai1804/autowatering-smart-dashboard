@@ -8,9 +8,11 @@ import OnboardingWizard from '../components/OnboardingWizard';
 import TaskControlCard from '../components/TaskControlCard';
 import AlarmCard from '../components/AlarmCard';
 import DiagnosticsCard from '../components/DiagnosticsCard';
+import { useI18n } from '../i18n';
 
 const Dashboard: React.FC = () => {
   const { connectionState, systemStatus, connectedDeviceId, currentTask, zones, onboardingState, envData, rainData } = useAppStore();
+  const { t } = useI18n();
   const bleService = BleService.getInstance();
   const [showWizard, setShowWizard] = useState(false);
   const [wizardAutoLaunched, setWizardAutoLaunched] = useState(false);
@@ -25,15 +27,15 @@ const Dashboard: React.FC = () => {
   // Emergency Stop Handler
   const handleEmergencyStop = async () => {
     if (connectionState !== 'connected') {
-      handleToast('Not connected', 'danger');
+      handleToast(t('dashboard.notConnected'), 'danger');
       return;
     }
     try {
       await bleService.stopCurrentWatering();
       await bleService.clearTaskQueue();
-      handleToast('Emergency stop executed!', 'warning');
+      handleToast(t('dashboard.emergencyStopSuccess'), 'warning');
     } catch (error: any) {
-      handleToast(`Failed: ${error.message}`, 'danger');
+      handleToast(t('dashboard.emergencyStopFailed').replace('{error}', error.message), 'danger');
     }
   };
 
@@ -89,13 +91,13 @@ const Dashboard: React.FC = () => {
 
   const getSystemStatusText = (status: SystemStatus) => {
     switch (status) {
-      case SystemStatus.OK: return 'SYSTEM OK';
-      case SystemStatus.NO_FLOW: return 'NO FLOW DETECTED';
-      case SystemStatus.UNEXPECTED_FLOW: return 'UNEXPECTED FLOW';
-      case SystemStatus.FAULT: return 'SYSTEM FAULT';
-      case SystemStatus.RTC_ERROR: return 'RTC ERROR';
-      case SystemStatus.LOW_POWER: return 'LOW POWER';
-      default: return 'UNKNOWN';
+      case SystemStatus.OK: return t('dashboard.systemStatus.ok');
+      case SystemStatus.NO_FLOW: return t('dashboard.systemStatus.noFlow');
+      case SystemStatus.UNEXPECTED_FLOW: return t('dashboard.systemStatus.unexpectedFlow');
+      case SystemStatus.FAULT: return t('dashboard.systemStatus.fault');
+      case SystemStatus.RTC_ERROR: return t('dashboard.systemStatus.rtcError');
+      case SystemStatus.LOW_POWER: return t('dashboard.systemStatus.lowPower');
+      default: return t('dashboard.systemStatus.unknown');
     }
   };
 
@@ -104,6 +106,23 @@ const Dashboard: React.FC = () => {
   const progress = isWatering && currentTask && currentTask.target_value > 0 
     ? Math.round((currentTask.current_value / currentTask.target_value) * 100) 
     : 0;
+  const connectionStateLabels = {
+    connected: t('dashboard.connectionState.connected'),
+    disconnected: t('dashboard.connectionState.disconnected'),
+    scanning: t('dashboard.connectionState.scanning'),
+    connecting: t('dashboard.connectionState.connecting'),
+  } as const;
+  const connectionLabel = connectionState === 'connected'
+    ? t('dashboard.linked').replace('{id}', connectedDeviceId || '')
+    : connectionStateLabels[connectionState];
+  const activeZoneName = activeZone?.name || `${t('zones.zone')} ${currentTask?.channel_id}`;
+  const rainStatusLabel = !rainData
+    ? t('dashboard.rainStatusUnknown')
+    : rainData.sensor_status === 1
+      ? (rainData.current_rate_mm_h > 0
+          ? t('dashboard.rainStatusRaining').replace('{rate}', String(rainData.current_rate_mm_h))
+          : t('dashboard.rainStatusDry'))
+      : t('dashboard.rainStatusInactive');
 
   return (
     <IonPage>
@@ -113,8 +132,8 @@ const Dashboard: React.FC = () => {
           {/* Top Header Area */}
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-white tracking-tight">COMMAND DECK</h1>
-              <p className="text-cyber-medium text-sm uppercase tracking-widest mt-1">System Overview</p>
+              <h1 className="text-3xl font-bold text-white tracking-tight">{t('dashboard.title')}</h1>
+              <p className="text-cyber-medium text-sm uppercase tracking-widest mt-1">{t('dashboard.subtitle')}</p>
             </div>
             
             {/* Emergency Stop */}
@@ -124,7 +143,7 @@ const Dashboard: React.FC = () => {
               disabled={connectionState !== 'connected'}
             >
               <IonIcon icon={power} />
-              EMERGENCY STOP
+              {t('dashboard.emergencyStop')}
             </button>
           </div>
           
@@ -136,11 +155,11 @@ const Dashboard: React.FC = () => {
             
             <div className="flex items-center justify-between relative z-10">
               <div>
-                <h2 className="text-xl font-semibold text-gray-200 mb-1">Connection Uplink</h2>
+                <h2 className="text-xl font-semibold text-gray-200 mb-1">{t('dashboard.connectionUplink')}</h2>
                 <div className="flex items-center gap-3">
                   <div className={`w-3 h-3 rounded-full ${connectionState === 'connected' ? 'bg-cyber-emerald shadow-[0_0_10px_#10b981]' : 'bg-gray-500'}`}></div>
                   <span className="text-gray-400 font-mono">
-                    {connectionState === 'connected' ? `LINKED: ${connectedDeviceId}` : connectionState.toUpperCase()}
+                    {connectionLabel}
                   </span>
                 </div>
               </div>
@@ -151,7 +170,13 @@ const Dashboard: React.FC = () => {
                 onClick={handleScan}
                 className="font-mono"
               >
-                {connectionState === 'connected' ? 'DISCONNECT' : (connectionState === 'scanning' ? 'SCANNING...' : 'INITIATE SCAN')}
+                {connectionState === 'connected'
+                  ? t('dashboard.disconnect')
+                  : connectionState === 'scanning'
+                    ? t('dashboard.scanning')
+                    : connectionState === 'connecting'
+                      ? t('dashboard.connecting')
+                      : t('dashboard.initiateScan')}
               </IonButton>
             </div>
           </div>
@@ -166,20 +191,20 @@ const Dashboard: React.FC = () => {
           {connectionState === 'connected' && onboardingState && !isInitialSetupDone && (
             <div className="glass-card p-6 mb-6 bg-gradient-to-r from-indigo-900/40 to-purple-900/40 border-indigo-500/30">
               <div className="flex justify-between items-center mb-2">
-                <h2 className="text-xl font-semibold text-white">System Setup</h2>
-                <span className="text-indigo-300 font-mono">{onboardingState.overall_completion_pct}% Complete</span>
+                <h2 className="text-xl font-semibold text-white">{t('dashboard.systemSetup')}</h2>
+                <span className="text-indigo-300 font-mono">{onboardingState.overall_completion_pct}{t('common.percent')} {t('dashboard.complete')}</span>
               </div>
               <IonProgressBar value={onboardingState.overall_completion_pct / 100} color="secondary" className="mb-4 h-2 rounded-full"></IonProgressBar>
               
               <div className="grid grid-cols-3 gap-2 mb-4 text-xs text-gray-400">
-                <div>Channels: {onboardingState.channels_completion_pct}%</div>
-                <div>System: {onboardingState.system_completion_pct}%</div>
-                <div>Schedules: {onboardingState.schedules_completion_pct}%</div>
+                <div>{t('dashboard.channels')}: {onboardingState.channels_completion_pct}{t('common.percent')}</div>
+                <div>{t('dashboard.system')}: {onboardingState.system_completion_pct}{t('common.percent')}</div>
+                <div>{t('dashboard.schedules')}: {onboardingState.schedules_completion_pct}{t('common.percent')}</div>
               </div>
 
               <IonButton expand="block" color="secondary" onClick={() => setShowWizard(true)}>
                 <IonIcon icon={settings} slot="start" />
-                CONTINUE SETUP
+                {t('dashboard.continueSetup')}
               </IonButton>
             </div>
           )}
@@ -188,12 +213,12 @@ const Dashboard: React.FC = () => {
           {connectionState === 'connected' && onboardingState && isInitialSetupDone && (
             <div className="glass-card p-4 mb-6 flex justify-between items-center">
               <div>
-                <h3 className="text-white font-semibold">System Configured</h3>
-                <p className="text-gray-400 text-sm">All zones and schedules are set up</p>
+                <h3 className="text-white font-semibold">{t('dashboard.systemConfigured')}</h3>
+                <p className="text-gray-400 text-sm">{t('dashboard.allZonesConfigured')}</p>
               </div>
               <IonButton fill="outline" color="secondary" onClick={() => setShowWizard(true)}>
                 <IonIcon icon={settings} slot="start" />
-                Reconfigure
+                {t('dashboard.reconfigure')}
               </IonButton>
             </div>
           )}
@@ -202,37 +227,37 @@ const Dashboard: React.FC = () => {
             {/* Weather Card */}
             <div className="glass-card p-6 bg-gradient-to-br from-white/5 to-cyber-cyan/10 border-cyber-cyan/20">
               <div className="flex justify-between items-start mb-4">
-                <h2 className="text-xl font-semibold text-white">Environmental Sensors</h2>
+                <h2 className="text-xl font-semibold text-white">{t('dashboard.environmentalSensors')}</h2>
                 <span className={`text-xs border px-2 py-1 rounded ${envData ? 'text-cyber-cyan border-cyber-cyan/30' : 'text-gray-500 border-gray-500/30'}`}>
-                    {envData ? 'LIVE' : 'OFFLINE'}
+                    {envData ? t('dashboard.live') : t('dashboard.offline')}
                 </span>
               </div>
               
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div className="p-3 rounded-lg bg-white/5">
                   <div className="text-2xl font-bold text-cyber-cyan">
-                    {envData ? envData.temperature.toFixed(1) : '--'}°C
+                    {envData ? envData.temperature.toFixed(1) : '--'}{t('common.degreesC')}
                   </div>
-                  <div className="text-xs text-gray-400 uppercase mt-1">Temp</div>
+                  <div className="text-xs text-gray-400 uppercase mt-1">{t('dashboard.temp')}</div>
                 </div>
                 <div className="p-3 rounded-lg bg-white/5">
                   <div className="text-2xl font-bold text-blue-400">
-                    {envData ? envData.humidity.toFixed(0) : '--'}%
+                    {envData ? envData.humidity.toFixed(0) : '--'}{t('common.percent')}
                   </div>
-                  <div className="text-xs text-gray-400 uppercase mt-1">Humidity</div>
+                  <div className="text-xs text-gray-400 uppercase mt-1">{t('dashboard.humidity')}</div>
                 </div>
                 <div className="p-3 rounded-lg bg-white/5">
                   <div className="text-2xl font-bold text-yellow-400">
-                    {envData ? envData.pressure.toFixed(0) : '--'}
+                    {envData ? envData.pressure.toFixed(0) : '--'} {t('common.hPa')}
                   </div>
-                  <div className="text-xs text-gray-400 uppercase mt-1">Pressure</div>
+                  <div className="text-xs text-gray-400 uppercase mt-1">{t('labels.pressure')}</div>
                 </div>
               </div>
               
               <div className="mt-4 pt-4 border-t border-white/10 flex justify-between items-center">
-                <span className="text-sm text-gray-400">Rain Sensor</span>
+                <span className="text-sm text-gray-400">{t('dashboard.rainSensorLabel')}</span>
                 <span className={`text-sm font-bold ${(rainData?.current_rate_mm_h || 0) > 0 ? 'text-blue-400 animate-pulse' : 'text-cyber-emerald'}`}>
-                    {rainData ? (rainData.sensor_status === 1 ? (rainData.current_rate_mm_h > 0 ? `RAINING (${rainData.current_rate_mm_h} mm/h)` : 'DRY') : 'INACTIVE') : 'UNKNOWN'}
+                    {rainStatusLabel}
                 </span>
               </div>
             </div>
@@ -248,25 +273,25 @@ const Dashboard: React.FC = () => {
                         style={{ animationDuration: '3s' }}
                     ></div>
                     <div className="absolute inset-0 flex items-center justify-center text-cyber-cyan font-bold text-xl">
-                      {progress}%
+                      {progress}{t('common.percent')}
                     </div>
                   </div>
                   <h3 className="text-xl text-white font-bold">
-                    {activeZone ? activeZone.name : `Zone ${currentTask?.channel_id}`} Active
+                    {t('dashboard.zoneActive').replace('{zone}', activeZoneName)}
                   </h3>
-                  <p className="text-cyber-cyan animate-pulse">Watering in progress...</p>
+                  <p className="text-cyber-cyan animate-pulse">{t('dashboard.wateringInProgressLabel')}</p>
                 </>
               ) : (
                 <>
                   <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-4 border ${
                       systemStatus.state === SystemStatus.OK ? 'bg-cyber-emerald/10 border-cyber-emerald/30' : 'bg-red-500/10 border-red-500/30'
                   }`}>
-                    <IonIcon icon={leaf} className={`text-4xl ${
+                  <IonIcon icon={leaf} className={`text-4xl ${
                         systemStatus.state === SystemStatus.OK ? 'text-cyber-emerald' : 'text-red-500'
                     }`} />
                   </div>
                   <h3 className="text-xl text-white font-bold">{getSystemStatusText(systemStatus.state)}</h3>
-                  <p className="text-gray-400 mt-2">Next scheduled run:</p>
+                  <p className="text-gray-400 mt-2">{t('dashboard.nextScheduledRun')}</p>
                   <p className="text-cyber-emerald font-mono text-lg">{systemStatus.nextRun || '--:--'}</p>
                 </>
               )}

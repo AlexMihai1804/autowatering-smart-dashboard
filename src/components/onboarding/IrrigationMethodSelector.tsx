@@ -34,6 +34,7 @@ import {
     type IrrigationMethodVisual 
 } from '../../utils/onboardingHelpers';
 import { WhatsThisTooltip } from './WhatsThisTooltip';
+import { useI18n } from '../../i18n';
 
 interface IrrigationMethodSelectorProps {
     /** Currently selected method */
@@ -74,7 +75,12 @@ export const IrrigationMethodSelector: React.FC<IrrigationMethodSelectorProps> =
     onChange,
     disabled = false,
 }) => {
+    const { t, language } = useI18n();
+    const percentUnit = t('common.percent');
     const [searchText, setSearchText] = useState('');
+    const selectedPlantName = selectedPlant
+        ? (language === 'ro' ? selectedPlant.common_name_ro : selectedPlant.common_name_en)
+        : '';
 
     // Sort methods: plant-recommended first, then by name
     const sortedMethods = useMemo(() => {
@@ -123,7 +129,7 @@ export const IrrigationMethodSelector: React.FC<IrrigationMethodSelectorProps> =
         }
         
         // Default
-        return { emoji: '💧', description: 'Metodă de irigare', bgColor: 'from-blue-500/20 to-cyan-500/20' };
+        return { emoji: '💧', descriptionKey: 'wizard.irrigationMethod.descriptionFallback', bgColor: 'from-blue-500/20 to-cyan-500/20' };
     };
 
     const isRecommended = (method: IrrigationMethodEntry): boolean => {
@@ -135,7 +141,7 @@ export const IrrigationMethodSelector: React.FC<IrrigationMethodSelectorProps> =
             {/* Header with info */}
             <div className="flex items-center gap-2 mb-3">
                 <IonIcon icon={waterOutline} className="text-cyber-aqua text-xl" />
-                <IonLabel className="text-white font-bold">Metodă de irigare</IonLabel>
+                <IonLabel className="text-white font-bold">{t('wizard.irrigationMethod.title')}</IonLabel>
                 <WhatsThisTooltip tooltipKey="irrigation_method" size="small" />
             </div>
 
@@ -143,7 +149,7 @@ export const IrrigationMethodSelector: React.FC<IrrigationMethodSelectorProps> =
             <IonSearchbar
                 value={searchText}
                 onIonInput={(e) => setSearchText(e.detail.value || '')}
-                placeholder="Caută metodă..."
+                placeholder={t('wizard.irrigationMethod.searchPlaceholder')}
                 className="mb-4"
                 debounce={200}
             />
@@ -153,7 +159,7 @@ export const IrrigationMethodSelector: React.FC<IrrigationMethodSelectorProps> =
                 <div className="mb-4">
                     <div className="flex items-center gap-2 mb-2">
                         <IonIcon icon={thumbsUpOutline} className="text-green-400" />
-                        <span className="text-gray-300 text-sm">Recomandate pentru {selectedPlant.common_name_ro}:</span>
+                        <span className="text-gray-300 text-sm">{t('wizard.irrigationMethod.recommendedFor').replace('{plant}', selectedPlantName)}</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                         {topRecommendations.map(method => {
@@ -193,12 +199,12 @@ export const IrrigationMethodSelector: React.FC<IrrigationMethodSelectorProps> =
                                     <h3 className="text-white font-bold m-0">{value.name}</h3>
                                     {isRecommended(value) && (
                                         <IonBadge color="success" className="text-xs">
-                                            Recomandat
+                                            {t('wizard.irrigationMethod.recommendedBadge')}
                                         </IonBadge>
                                     )}
                                 </div>
                                 <p className="text-gray-400 text-sm m-0">
-                                    {getMethodVisual(value.code_enum).description}
+                                    {t(getMethodVisual(value.code_enum).descriptionKey)}
                                 </p>
                             </div>
                             <IonIcon icon={checkmarkCircle} className="text-cyber-emerald text-2xl" />
@@ -207,15 +213,15 @@ export const IrrigationMethodSelector: React.FC<IrrigationMethodSelectorProps> =
                         {/* Method details */}
                         <div className="grid grid-cols-2 gap-2 mt-3">
                             <div className="bg-white/5 rounded-lg p-2">
-                                <p className="text-xs text-gray-400 m-0">Eficiență</p>
+                                <p className="text-xs text-gray-400 m-0">{t('wizard.irrigationMethod.efficiencyLabel')}</p>
                                 <p className="text-white font-medium m-0">
-                                    {value.efficiency_pct != null ? `${value.efficiency_pct}%` : 'N/A'}
+                                    {value.efficiency_pct != null ? `${value.efficiency_pct}${percentUnit}` : t('common.notAvailable')}
                                 </p>
                             </div>
                             <div className="bg-white/5 rounded-lg p-2">
-                                <p className="text-xs text-gray-400 m-0">Rată aplicare</p>
+                                <p className="text-xs text-gray-400 m-0">{t('wizard.irrigationMethod.applicationRateLabel')}</p>
                                 <p className="text-white font-medium m-0">
-                                    {value.application_rate_mm_h || 'N/A'}
+                                    {value.application_rate_mm_h || t('common.notAvailable')}
                                 </p>
                             </div>
                         </div>
@@ -227,7 +233,7 @@ export const IrrigationMethodSelector: React.FC<IrrigationMethodSelectorProps> =
             <IonCard className="glass-panel">
                 <IonCardHeader className="pb-1">
                     <IonLabel className="text-gray-300 text-sm">
-                        Toate metodele ({filteredMethods.length})
+                        {t('wizard.irrigationMethod.allMethods').replace('{count}', String(filteredMethods.length))}
                     </IonLabel>
                 </IonCardHeader>
                 <IonCardContent className="p-0">
@@ -258,12 +264,12 @@ export const IrrigationMethodSelector: React.FC<IrrigationMethodSelectorProps> =
                                             <h2 className="text-white font-medium m-0">{method.name}</h2>
                                             {recommended && (
                                                 <IonBadge color="success" className="text-xs opacity-70">
-                                                    ⭐
+                                                    {t('wizard.irrigationMethod.recommendedBadge')}
                                                 </IonBadge>
                                             )}
                                         </div>
                                         <p className="text-gray-400 text-sm m-0">
-                                            {method.recommended_for || visual.description}
+                                            {method.recommended_for || t(visual.descriptionKey)}
                                         </p>
                                         <div className="flex gap-2 mt-1">
                                             <IonChip 
@@ -271,12 +277,12 @@ export const IrrigationMethodSelector: React.FC<IrrigationMethodSelectorProps> =
                                                 color={CATEGORY_COLORS[category] || 'medium'}
                                                 className="h-5 text-xs m-0"
                                             >
-                                                {category}
+                                                {t(`wizard.irrigationMethod.categories.${category}`)}
                                             </IonChip>
                                             {method.efficiency_pct != null && (
                                                 <span className="text-xs text-gray-500 flex items-center gap-1">
                                                     <IonIcon icon={speedometerOutline} />
-                                                    {method.efficiency_pct}%
+                                                    {method.efficiency_pct}{percentUnit}
                                                 </span>
                                             )}
                                         </div>
@@ -295,9 +301,7 @@ export const IrrigationMethodSelector: React.FC<IrrigationMethodSelectorProps> =
 
                         {filteredMethods.length === 0 && (
                             <IonItem>
-                                <IonLabel className="text-center text-gray-400">
-                                    Nicio metodă găsită pentru "{searchText}"
-                                </IonLabel>
+                                <IonLabel className="text-center text-gray-400">{t('wizard.irrigationMethod.noResults').replace('{query}', searchText)}</IonLabel>
                             </IonItem>
                         )}
                     </IonList>
@@ -306,9 +310,7 @@ export const IrrigationMethodSelector: React.FC<IrrigationMethodSelectorProps> =
 
             {/* Info about sorting */}
             {selectedPlant && (
-                <p className="text-xs text-gray-500 text-center mt-2">
-                    💡 Metodele sunt sortate după compatibilitatea cu planta selectată
-                </p>
+                <p className="text-xs text-gray-500 text-center mt-2">{t('wizard.irrigationMethod.sortedNote')}</p>
             )}
         </div>
     );

@@ -5,9 +5,11 @@ import { useAppStore } from '../store/useAppStore';
 import ZoneCard from '../components/ZoneCard';
 import ZoneConfigModal from '../components/ZoneConfigModal';
 import { TaskStatus, isChannelConfigComplete } from '../types/firmware_structs';
+import { useI18n } from '../i18n';
 
 const Zones: React.FC = () => {
   const { zones, currentTask, autoCalcStatus, systemConfig, wizardState, onboardingState } = useAppStore();
+  const { t } = useI18n();
   
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -88,8 +90,10 @@ const Zones: React.FC = () => {
       <IonContent className="bg-cyber-dark">
         <div className="p-6 max-w-7xl mx-auto pb-24">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-white">Irrigation Zones</h1>
-            <span className="text-gray-400 text-sm">{zones.length} Active</span>
+            <h1 className="text-3xl font-bold text-white">{t('zones.irrigationZones')}</h1>
+            <span className="text-gray-400 text-sm">
+              {t('zones.activeCount').replace('{count}', String(zones.length))}
+            </span>
           </div>
 
           {(() => {
@@ -97,9 +101,9 @@ const Zones: React.FC = () => {
             if (visibleZones.length === 0) {
               return (
                 <div className="text-center py-20 opacity-50">
-                  <div className="text-6xl mb-4">dYO?</div>
-                  <h3 className="text-xl font-bold text-white">No Zones Configured</h3>
-                  <p className="text-gray-400">Tap + to add your first zone</p>
+                  <div className="text-6xl mb-4">{t('common.notAvailable')}</div>
+                  <h3 className="text-xl font-bold text-white">{t('zones.noZonesConfigured')}</h3>
+                  <p className="text-gray-400">{t('zones.tapAddZone')}</p>
                 </div>
               );
             }
@@ -144,5 +148,4 @@ const Zones: React.FC = () => {
 };
 
 export default Zones;
-
 

@@ -27,6 +27,7 @@ import {
     getCalibrationAccuracy,
     formatCalibration
 } from '../services/CalibrationService';
+import { useI18n } from '../i18n';
 
 interface CalibrationWizardProps {
     isOpen: boolean;
@@ -36,6 +37,7 @@ interface CalibrationWizardProps {
 type WizardStep = 'intro' | 'measuring' | 'volume' | 'result' | 'complete' | 'error';
 
 const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }) => {
+    const { t } = useI18n();
     const {
         isCalibrating,
         stage,
@@ -104,7 +106,7 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
 
     const handleFinish = async () => {
         if (volumeInput < MIN_CALIBRATION_VOLUME_ML) {
-            setError(`Volumul minim este ${MIN_CALIBRATION_VOLUME_ML}ml`);
+            setError(t('calibration.minVolumeError').replace('{min}', String(MIN_CALIBRATION_VOLUME_ML)));
             return;
         }
 
@@ -114,7 +116,7 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
             if (res.success) {
                 setStep('result');
             } else {
-                setError(res.error || 'Calibration failed');
+                setError(res.error || t('calibration.calibrationFailed'));
                 setStep('error');
             }
         } catch (e: any) {
@@ -130,7 +132,7 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
             if (res.success) {
                 setStep('complete');
             } else {
-                setError(res.error || 'Failed to apply');
+                setError(res.error || t('calibration.applyFailed'));
                 setStep('error');
             }
         } catch (e: any) {
@@ -166,36 +168,34 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
                         
                         <div>
                             <h2 className="text-xl font-semibold text-white mb-2">
-                                Calibrare Senzor Debit
+                                {t('calibration.introTitle')}
                             </h2>
                             <p className="text-gray-400">
-                                Calibrarea măsoară câte pulsuri generează senzorul pentru fiecare litru de apă.
+                                {t('calibration.introDescription')}
                             </p>
                         </div>
 
                         <div className="bg-gray-800/50 rounded-lg p-4 text-left">
-                            <h3 className="text-sm font-medium text-gray-300 mb-2">Înainte de a începe:</h3>
+                            <h3 className="text-sm font-medium text-gray-300 mb-2">{t('calibration.beforeStartTitle')}</h3>
                             <ul className="text-sm text-gray-400 space-y-1">
-                                <li>• Pregătiți un recipient gradat (2L recomandat)</li>
-                                <li>• Asigurați-vă că aveți apă disponibilă</li>
-                                <li>• Procesul durează 1-2 minute</li>
+                                <li>{t('calibration.beforeStartItem1')}</li>
+                                <li>{t('calibration.beforeStartItem2')}</li>
+                                <li>{t('calibration.beforeStartItem3')}</li>
                             </ul>
                         </div>
 
                         <div className="bg-gray-800/30 rounded-lg p-3">
                             <p className="text-sm text-gray-500">
-                                Calibrare curentă: <span className="text-white font-medium">
-                                    {formatCalibration(currentPulsesPerLiter)}
-                                </span>
+                                {t('calibration.currentCalibration').replace('{value}', formatCalibration(currentPulsesPerLiter))}
                             </p>
                         </div>
 
                         <div className="flex gap-3">
                             <IonButton expand="block" fill="outline" onClick={handleClose} className="flex-1">
-                                Anulează
+                                {t('common.cancel')}
                             </IonButton>
                             <IonButton expand="block" onClick={handleStart} className="flex-1">
-                                Începe
+                                {t('common.start')}
                             </IonButton>
                         </div>
                     </div>
@@ -210,10 +210,10 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
 
                         <div>
                             <h2 className="text-xl font-semibold text-white mb-2">
-                                Măsurare în curs...
+                                {t('calibration.measuringTitle')}
                             </h2>
                             <p className="text-gray-400">
-                                Deschideți robinetul și lăsați apa să curgă în recipient.
+                                {t('calibration.measuringDescription')}
                             </p>
                         </div>
 
@@ -223,13 +223,13 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
                                     <p className="text-3xl font-bold text-white">
                                         {progress?.pulses || 0}
                                     </p>
-                                    <p className="text-sm text-gray-400">Pulsuri</p>
+                                    <p className="text-sm text-gray-400">{t('calibration.pulsesLabel')}</p>
                                 </div>
                                 <div>
                                     <p className="text-3xl font-bold text-cyan-400">
                                         {elapsedTime}
                                     </p>
-                                    <p className="text-sm text-gray-400">Timp</p>
+                                    <p className="text-sm text-gray-400">{t('calibration.timeLabel')}</p>
                                 </div>
                             </div>
                         </div>
@@ -237,15 +237,15 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
                         <IonProgressBar type="indeterminate" color="success" />
 
                         <p className="text-sm text-amber-400">
-                            ⚠️ Nu opriți apa până nu apăsați "Gata"
+                            {t('calibration.dontStopWater')}
                         </p>
 
                         <div className="flex gap-3">
                             <IonButton expand="block" color="danger" fill="outline" onClick={handleStop} className="flex-1">
-                                Anulează
+                                {t('common.cancel')}
                             </IonButton>
                             <IonButton expand="block" color="success" onClick={() => setStep('volume')} className="flex-1">
-                                Gata
+                                {t('common.finish')}
                             </IonButton>
                         </div>
                     </div>
@@ -260,21 +260,21 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
 
                         <div>
                             <h2 className="text-xl font-semibold text-white mb-2">
-                                Cât de multă apă ați colectat?
+                                {t('calibration.volumeTitle')}
                             </h2>
                             <p className="text-gray-400">
-                                Măsurați volumul exact din recipient (în mililitri).
+                                {t('calibration.volumeDescription')}
                             </p>
                         </div>
 
                         <div className="bg-gray-800/50 rounded-lg p-4">
                             <p className="text-sm text-gray-400 mb-2">
-                                Pulsuri numărate: <span className="text-white font-bold">{progress?.pulses || 0}</span>
+                                {t('calibration.pulsesCounted').replace('{count}', String(progress?.pulses || 0))}
                             </p>
                         </div>
 
                         <IonItem className="bg-gray-800/50 rounded-lg">
-                            <IonLabel position="stacked" className="text-gray-400">Volum (ml)</IonLabel>
+                            <IonLabel position="stacked" className="text-gray-400">{t('calibration.volumeLabel')}</IonLabel>
                             <IonInput
                                 type="number"
                                 value={volumeInput}
@@ -285,7 +285,9 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
                         </IonItem>
 
                         <p className="text-xs text-gray-500">
-                            Minim {MIN_CALIBRATION_VOLUME_ML}ml, recomandat {RECOMMENDED_CALIBRATION_VOLUME_ML}ml
+                            {t('calibration.volumeHint')
+                                .replace('{min}', String(MIN_CALIBRATION_VOLUME_ML))
+                                .replace('{recommended}', String(RECOMMENDED_CALIBRATION_VOLUME_ML))}
                         </p>
 
                         {error && (
@@ -294,7 +296,7 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
 
                         <div className="flex gap-3">
                             <IonButton expand="block" fill="outline" onClick={() => setStep('measuring')} className="flex-1">
-                                Înapoi
+                                {t('common.back')}
                             </IonButton>
                             <IonButton expand="block" onClick={handleFinish} className="flex-1">
                                 Calculează
@@ -312,9 +314,9 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
                     low: 'text-red-400'
                 };
                 const accuracyLabels = {
-                    high: 'Excelentă',
-                    medium: 'Acceptabilă',
-                    low: 'Verificați conexiunile'
+                    high: t('calibration.accuracyHigh'),
+                    medium: t('calibration.accuracyMedium'),
+                    low: t('calibration.accuracyLow')
                 };
 
                 return (
@@ -325,7 +327,7 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
 
                         <div>
                             <h2 className="text-xl font-semibold text-white mb-2">
-                                Calibrare Calculată!
+                                {t('calibration.resultTitle')}
                             </h2>
                         </div>
 
@@ -333,26 +335,26 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
                             <p className="text-4xl font-bold text-cyan-400 mb-2">
                                 {pulsesPerLiter}
                             </p>
-                            <p className="text-gray-400">pulsuri / litru</p>
+                            <p className="text-gray-400">{t('calibration.pulsesPerLiterLabel')}</p>
                             
                             <div className="mt-4 pt-4 border-t border-gray-700">
                                 <p className={`text-sm ${accuracyColors[accuracy]}`}>
-                                    Precizie: {accuracyLabels[accuracy]}
+                                    {t('calibration.accuracyLabel').replace('{level}', accuracyLabels[accuracy])}
                                 </p>
                             </div>
                         </div>
 
                         <div className="bg-gray-800/30 rounded-lg p-3 text-sm text-gray-400">
-                            <p>Pulsuri numărate: {result?.pulsesCounted}</p>
-                            <p>Volum măsurat: {volumeInput}ml</p>
+                            <p>{t('calibration.summaryPulses').replace('{count}', String(result?.pulsesCounted ?? 0))}</p>
+                            <p>{t('calibration.summaryVolume').replace('{volume}', String(volumeInput))}</p>
                         </div>
 
                         <div className="flex gap-3">
                             <IonButton expand="block" fill="outline" onClick={() => setStep('intro')} className="flex-1">
-                                Renunță
+                                {t('common.cancel')}
                             </IonButton>
                             <IonButton expand="block" color="success" onClick={handleApply} className="flex-1">
-                                Aplică
+                                {t('common.apply')}
                             </IonButton>
                         </div>
                     </div>
@@ -367,10 +369,10 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
 
                         <div>
                             <h2 className="text-xl font-semibold text-white mb-2">
-                                Calibrare Salvată!
+                                {t('calibration.completeTitle')}
                             </h2>
                             <p className="text-gray-400">
-                                Noua calibrare a fost aplicată cu succes.
+                                {t('calibration.completeDescription')}
                             </p>
                         </div>
 
@@ -381,7 +383,7 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
                         </div>
 
                         <IonButton expand="block" onClick={handleClose}>
-                            Închide
+                            {t('common.close')}
                         </IonButton>
                     </div>
                 );
@@ -395,7 +397,7 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
 
                         <div>
                             <h2 className="text-xl font-semibold text-white mb-2">
-                                Eroare
+                                {t('calibration.errorTitle')}
                             </h2>
                             <p className="text-red-400">
                                 {error || 'A apărut o eroare'}
@@ -404,10 +406,10 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
 
                         <div className="flex gap-3">
                             <IonButton expand="block" fill="outline" onClick={handleClose} className="flex-1">
-                                Închide
+                                {t('common.close')}
                             </IonButton>
                             <IonButton expand="block" onClick={() => setStep('intro')} className="flex-1">
-                                Încearcă din nou
+                                {t('calibration.retry')}
                             </IonButton>
                         </div>
                     </div>
@@ -419,7 +421,7 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
         <IonModal isOpen={isOpen} onDidDismiss={handleClose}>
             <IonHeader>
                 <IonToolbar className="bg-gray-900">
-                    <IonTitle className="text-white">Calibrare Senzor</IonTitle>
+                    <IonTitle className="text-white">{t('calibration.title')}</IonTitle>
                 </IonToolbar>
             </IonHeader>
             <IonContent className="bg-gray-900">

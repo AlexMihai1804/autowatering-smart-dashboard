@@ -19,20 +19,20 @@ import { UnifiedZoneConfig } from '../types/wizard';
 export type PlantCategoryId = 'legume' | 'fructe' | 'gazon' | 'flori' | 'copaci' | 'arbusti' | 'aromate' | 'altele';
 
 export interface PlantCategoryInfo {
-    label: string;
+    labelKey: string;
     emoji: string;
     dbCategories: string[];  // Maps to PlantDBEntry.category values
 }
 
 export const PLANT_CATEGORIES: Record<PlantCategoryId, PlantCategoryInfo> = {
-    legume: { label: 'Legume', emoji: '🍅', dbCategories: ['Vegetable', 'Agriculture'] },
-    fructe: { label: 'Fructe', emoji: '🍎', dbCategories: ['Fruit'] },
-    gazon: { label: 'Gazon', emoji: '🌿', dbCategories: ['Lawn', 'Grass'] },
-    flori: { label: 'Flori', emoji: '🌸', dbCategories: ['Flower', 'Gardening'] },
-    copaci: { label: 'Copaci', emoji: '🌳', dbCategories: ['Tree'] },
-    arbusti: { label: 'Arbuști', emoji: '🌲', dbCategories: ['Shrub', 'Landscaping'] },
-    aromate: { label: 'Aromate', emoji: '🌿', dbCategories: ['Herb'] },
-    altele: { label: 'Altele', emoji: '🪴', dbCategories: ['Indoor', 'Succulent', 'Houseplant', 'Other'] },
+    legume: { labelKey: 'categories.vegetables', emoji: '🍅', dbCategories: ['Vegetable', 'Agriculture'] },
+    fructe: { labelKey: 'categories.fruits', emoji: '🍎', dbCategories: ['Fruit'] },
+    gazon: { labelKey: 'categories.lawn', emoji: '🌿', dbCategories: ['Lawn', 'Grass'] },
+    flori: { labelKey: 'categories.flowers', emoji: '🌸', dbCategories: ['Flower', 'Gardening'] },
+    copaci: { labelKey: 'categories.trees', emoji: '🌳', dbCategories: ['Tree'] },
+    arbusti: { labelKey: 'categories.shrubs', emoji: '🌲', dbCategories: ['Shrub', 'Landscaping'] },
+    aromate: { labelKey: 'categories.herbs', emoji: '🌿', dbCategories: ['Herb'] },
+    altele: { labelKey: 'categories.other', emoji: '🪴', dbCategories: ['Indoor', 'Succulent', 'Houseplant', 'Other'] },
 };
 
 /**
@@ -80,54 +80,54 @@ export interface IrrigationMethodWithScore extends IrrigationMethodEntry {
 export interface IrrigationMethodVisual {
     emoji: string;
     image?: string;
-    description: string;
+    descriptionKey: string;
     bgColor: string;
 }
 
 export const IRRIGATION_METHOD_VISUALS: Record<string, IrrigationMethodVisual> = {
     'IRRIG_DRIP_SURFACE': { 
         emoji: '💧', 
-        description: 'Picurare lentă la rădăcină. Eficiență 90%+',
+        descriptionKey: 'wizard.irrigationMethod.descriptions.dripSurface',
         bgColor: 'from-blue-500/20 to-cyan-500/20'
     },
     'IRRIG_DRIP_SUBSURFACE': { 
         emoji: '💧⬇️', 
-        description: 'Picurare sub sol. Ideal pentru gazon',
+        descriptionKey: 'wizard.irrigationMethod.descriptions.dripSubsurface',
         bgColor: 'from-blue-600/20 to-teal-500/20'
     },
     'IRRIG_SPRINKLER_SET': { 
         emoji: '🌀', 
-        description: 'Stropire rotativă. Bun pentru suprafețe mari',
+        descriptionKey: 'wizard.irrigationMethod.descriptions.sprinklerSet',
         bgColor: 'from-cyan-500/20 to-sky-500/20'
     },
     'IRRIG_SPRINKLER_POPUP': { 
         emoji: '🌀⬆️', 
-        description: 'Sprinkler ascuns. Aspect estetic',
+        descriptionKey: 'wizard.irrigationMethod.descriptions.sprinklerPopup',
         bgColor: 'from-sky-500/20 to-indigo-500/20'
     },
     'IRRIG_MICROSPRAY': { 
         emoji: '🌫️', 
-        description: 'Ceață fină. Ideal pentru flori și ierburi',
+        descriptionKey: 'wizard.irrigationMethod.descriptions.microspray',
         bgColor: 'from-purple-500/20 to-pink-500/20'
     },
     'IRRIG_SOAKER': { 
         emoji: '🔌', 
-        description: 'Furtun poros. Simplu de instalat',
+        descriptionKey: 'wizard.irrigationMethod.descriptions.soaker',
         bgColor: 'from-green-500/20 to-emerald-500/20'
     },
     'IRRIG_BASIN_FLOOD': { 
         emoji: '🌊', 
-        description: 'Inundare controlată. Pentru pomi și arbuști',
+        descriptionKey: 'wizard.irrigationMethod.descriptions.basinFlood',
         bgColor: 'from-blue-500/20 to-indigo-500/20'
     },
     'IRRIG_MANUAL': { 
         emoji: '✋', 
-        description: 'Manual cu furtun. Flexibilitate maximă',
+        descriptionKey: 'wizard.irrigationMethod.descriptions.manual',
         bgColor: 'from-amber-500/20 to-orange-500/20'
     },
     'IRRIG_FURROW': { 
         emoji: '〰️', 
-        description: 'Irigare prin șanțuri. Pentru grădini mari',
+        descriptionKey: 'wizard.irrigationMethod.descriptions.furrow',
         bgColor: 'from-yellow-500/20 to-amber-500/20'
     },
 };
@@ -253,110 +253,124 @@ export interface TooltipContent {
     icon?: string;
 }
 
-export const WIZARD_TOOLTIPS: Record<string, TooltipContent> = {
-    'fao56': {
-        title: 'Ce este FAO-56?',
-        description: 'O metodă științifică dezvoltată de ONU (FAO) pentru calculul precis al nevoilor de apă ale plantelor. Ia în considerare tipul plantei, solul, vremea și faza de creștere.',
-        example: 'Folosită de ferme și grădini profesionale în peste 150 de țări.',
-        icon: '🌍'
+interface TooltipKeyContent {
+    titleKey: string;
+    descriptionKey: string;
+    exampleKey?: string;
+    icon?: string;
+}
+
+const WIZARD_TOOLTIP_KEYS: Record<string, TooltipKeyContent> = {
+    fao56: {
+        titleKey: 'wizard.tooltips.items.fao56.title',
+        descriptionKey: 'wizard.tooltips.items.fao56.description',
+        exampleKey: 'wizard.tooltips.items.fao56.example',
+        icon: '???',
     },
-    'field_capacity': {
-        title: 'Capacitate de câmp (Field Capacity)',
-        description: 'Cantitatea maximă de apă pe care solul o poate reține împotriva gravitației. Este ca un burete ud - toată apa care nu curge.',
-        example: 'Nisip: ~15%, Argilă: ~45%, Loam: ~35%',
-        icon: '🧽'
+    field_capacity: {
+        titleKey: 'wizard.tooltips.items.fieldCapacity.title',
+        descriptionKey: 'wizard.tooltips.items.fieldCapacity.description',
+        exampleKey: 'wizard.tooltips.items.fieldCapacity.example',
+        icon: '??',
     },
-    'wilting_point': {
-        title: 'Punct de ofilire (Wilting Point)',
-        description: 'Nivelul de umiditate la care plantele nu mai pot extrage apă din sol și încep să se ofilească. Sub acest nivel = plantă în suferință.',
-        example: 'Nisip: ~5%, Argilă: ~25%, Loam: ~15%',
-        icon: '🥀'
+    wilting_point: {
+        titleKey: 'wizard.tooltips.items.wiltingPoint.title',
+        descriptionKey: 'wizard.tooltips.items.wiltingPoint.description',
+        exampleKey: 'wizard.tooltips.items.wiltingPoint.example',
+        icon: '??',
     },
-    'infiltration_rate': {
-        title: 'Rată de infiltrare',
-        description: 'Cât de repede absoarbe solul apa. Nisipul absoarbe rapid (risc de scurgere în adâncime), argila lent (risc de băltire la suprafață).',
-        example: 'Nisip: 25+ mm/h, Argilă: 3-5 mm/h',
-        icon: '💧'
+    infiltration_rate: {
+        titleKey: 'wizard.tooltips.items.infiltrationRate.title',
+        descriptionKey: 'wizard.tooltips.items.infiltrationRate.description',
+        exampleKey: 'wizard.tooltips.items.infiltrationRate.example',
+        icon: '??',
     },
-    'cycle_soak': {
-        title: 'Cycle & Soak',
-        description: 'Tehnică pentru soluri grele (argiloase): udă puțin, pauză să absoarbă, repetă. Previne bălțile și scurgerea pe suprafață.',
-        example: 'Argilă: 3 min udare, 20 min pauză, repetă de 3 ori',
-        icon: '🔄'
+    cycle_soak: {
+        titleKey: 'wizard.tooltips.items.cycleSoak.title',
+        descriptionKey: 'wizard.tooltips.items.cycleSoak.description',
+        exampleKey: 'wizard.tooltips.items.cycleSoak.example',
+        icon: '??',
     },
-    'kc_coefficient': {
-        title: 'Coeficient Kc',
-        description: 'Raportul dintre consumul de apă al plantei tale și cel al gazonului de referință. Valori >1 = consumă mai mult decât gazonul.',
-        example: 'Tomate la fructificare: Kc=1.15, Gazon: Kc=1.0',
-        icon: '📊'
+    kc_coefficient: {
+        titleKey: 'wizard.tooltips.items.kc.title',
+        descriptionKey: 'wizard.tooltips.items.kc.description',
+        exampleKey: 'wizard.tooltips.items.kc.example',
+        icon: '??',
     },
-    'kc': {
-        title: 'Coeficient Kc',
-        description: 'Raportul dintre consumul de apă al plantei tale și cel al gazonului de referință. Valori >1 = consumă mai mult decât gazonul.',
-        example: 'Tomate la fructificare: Kc=1.15, Gazon: Kc=1.0',
-        icon: '📊'
+    kc: {
+        titleKey: 'wizard.tooltips.items.kc.title',
+        descriptionKey: 'wizard.tooltips.items.kc.description',
+        exampleKey: 'wizard.tooltips.items.kc.example',
+        icon: '??',
     },
-    'irrigation_method': {
-        title: 'Metodă de irigare',
-        description: 'Modul în care apa este distribuită plantelor. Alegerea corectă depinde de tipul plantei și de sol.',
-        example: 'Picurare pentru legume, Sprinkler pentru gazon',
-        icon: '🚿'
+    irrigation_method: {
+        titleKey: 'wizard.tooltips.items.irrigationMethod.title',
+        descriptionKey: 'wizard.tooltips.items.irrigationMethod.description',
+        exampleKey: 'wizard.tooltips.items.irrigationMethod.example',
+        icon: '??',
     },
-    'et0': {
-        title: 'Evapotranspirație (ET₀)',
-        description: 'Cantitatea de apă care se evaporă din sol + transpirată de plante. Depinde de temperatură, vânt, umiditate. Vara: mare, iarna: mică.',
-        example: 'Ianuarie RO: ~0.5 mm/zi, Iulie RO: ~5-6 mm/zi',
-        icon: '☀️'
+    et0: {
+        titleKey: 'wizard.tooltips.items.et0.title',
+        descriptionKey: 'wizard.tooltips.items.et0.description',
+        exampleKey: 'wizard.tooltips.items.et0.example',
+        icon: '???',
     },
-    'coverage': {
-        title: 'Suprafață / Nr. plante',
-        description: 'Zona udată de acest canal. Poți specifica în metri pătrați (pentru gazon, paturi de flori) sau număr de plante (pentru legume, pomi).',
-        example: '15 m² gazon sau 20 de plante de tomate',
-        icon: '📐'
+    coverage: {
+        titleKey: 'wizard.tooltips.items.coverage.title',
+        descriptionKey: 'wizard.tooltips.items.coverage.description',
+        exampleKey: 'wizard.tooltips.items.coverage.example',
+        icon: '??',
     },
-    'sun_exposure': {
-        title: 'Expunere la soare',
-        description: 'Cât soare direct primește zona pe parcursul zilei. Afectează evaporarea și necesarul de apă.',
-        example: 'Umbră totală: 20-30%, Parțial: 50-70%, Soare plin: 80-100%',
-        icon: '☀️'
+    sun_exposure: {
+        titleKey: 'wizard.tooltips.items.sunExposure.title',
+        descriptionKey: 'wizard.tooltips.items.sunExposure.description',
+        exampleKey: 'wizard.tooltips.items.sunExposure.example',
+        icon: '??',
     },
-    'max_volume': {
-        title: 'Volum maxim (siguranță)',
-        description: 'Limită de siguranță pentru a preveni inundarea. Sistemul nu va turna mai mult de atât într-o singură sesiune, indiferent de calcule.',
-        example: 'Ghiveci mic: 5L, Strat legume: 50L, Gazon 100m²: 200L',
-        icon: '🛡️'
+    max_volume: {
+        titleKey: 'wizard.tooltips.items.maxVolume.title',
+        descriptionKey: 'wizard.tooltips.items.maxVolume.description',
+        exampleKey: 'wizard.tooltips.items.maxVolume.example',
+        icon: '??',
     },
-    'planting_date': {
-        title: 'Data plantării',
-        description: 'Când au fost plantate. Sistemul ajustează automat coeficientul Kc în funcție de faza de creștere (răsad → dezvoltare → maturitate → sfârșit).',
-        example: 'Tomate plantate pe 15 Mai → Kc crește treptat până în Iulie',
-        icon: '📅'
+    planting_date: {
+        titleKey: 'wizard.tooltips.items.plantingDate.title',
+        descriptionKey: 'wizard.tooltips.items.plantingDate.description',
+        exampleKey: 'wizard.tooltips.items.plantingDate.example',
+        icon: '??',
     },
-    'drip_irrigation': {
-        title: 'Irigare prin picurare (Drip)',
-        description: 'Apă livrată lent, direct la rădăcină. Cea mai eficientă metodă (90%+ eficiență), minimizează evaporarea și bolile foliare.',
-        example: 'Ideal pentru: legume, pomi, arbuști, flori în straturi',
-        icon: '💧'
+    drip_irrigation: {
+        titleKey: 'wizard.tooltips.items.dripIrrigation.title',
+        descriptionKey: 'wizard.tooltips.items.dripIrrigation.description',
+        exampleKey: 'wizard.tooltips.items.dripIrrigation.example',
+        icon: '??',
     },
-    'sprinkler': {
-        title: 'Sprinkler (Stropire)',
-        description: 'Simulează ploaia naturală. Pierde 20-30% prin evaporare, dar acoperă suprafețe mari uniform.',
-        example: 'Ideal pentru: gazon, suprafețe mari deschise',
-        icon: '🌀'
+    sprinkler: {
+        titleKey: 'wizard.tooltips.items.sprinkler.title',
+        descriptionKey: 'wizard.tooltips.items.sprinkler.description',
+        exampleKey: 'wizard.tooltips.items.sprinkler.example',
+        icon: '???',
     },
-    'soil_auto_detect': {
-        title: 'Detectare automată sol',
-        description: 'Folosim baza de date globală SoilGrids (ISRIC) care conține informații despre sol la rezoluție de 250m, bazate pe analize satelitare și probe de teren.',
-        example: 'Precizie: înaltă pentru zone agricole, medie pentru zone urbane',
-        icon: '🔍'
+    soil_auto_detect: {
+        titleKey: 'wizard.tooltips.items.soilAutoDetect.title',
+        descriptionKey: 'wizard.tooltips.items.soilAutoDetect.description',
+        exampleKey: 'wizard.tooltips.items.soilAutoDetect.example',
+        icon: '??',
     },
 };
 
 /**
  * Get tooltip content by key
  */
-export function getTooltipContent(key: string): TooltipContent | null {
-    return WIZARD_TOOLTIPS[key] || null;
+export function getTooltipContent(t: (key: string) => string, key: string): TooltipContent | null {
+    const content = WIZARD_TOOLTIP_KEYS[key];
+    if (!content) return null;
+    return {
+        title: t(content.titleKey),
+        description: t(content.descriptionKey),
+        example: content.exampleKey ? t(content.exampleKey) : undefined,
+        icon: content.icon,
+    };
 }
 
 // ============================================================================
@@ -372,7 +386,7 @@ export interface ValidationWarning {
 /**
  * Generate contextual warnings/suggestions based on configuration
  */
-export function getConfigurationWarnings(config: Partial<UnifiedZoneConfig>): ValidationWarning[] {
+export function getConfigurationWarnings(t: (key: string) => string, config: Partial<UnifiedZoneConfig>): ValidationWarning[] {
     const warnings: ValidationWarning[] = [];
 
     // Irrigation method vs plant mismatch
@@ -383,7 +397,7 @@ export function getConfigurationWarnings(config: Partial<UnifiedZoneConfig>): Va
         if (plantRecommends.includes('DRIP') && selectedMethod.includes('SPRINKLER')) {
             warnings.push({
                 type: 'suggestion',
-                message: `${config.plant.common_name_en} preferă irigare prin picurare. Sprinkler poate cauza boli foliare.`,
+                message: t('wizard.warnings.irrigationDripPreferred').replace('{plant}', config.plant.common_name_en),
                 field: 'irrigationMethod'
             });
         }
@@ -392,7 +406,7 @@ export function getConfigurationWarnings(config: Partial<UnifiedZoneConfig>): Va
             config.plant.category?.toLowerCase().includes('lawn')) {
             warnings.push({
                 type: 'info',
-                message: 'Gazonul se udă de obicei cu sprinkler pentru acoperire uniformă. Drip funcționează dar necesită spațiere atentă.',
+                message: t('wizard.warnings.lawnSprinklerPreferred'),
                 field: 'irrigationMethod'
             });
         }
@@ -404,7 +418,7 @@ export function getConfigurationWarnings(config: Partial<UnifiedZoneConfig>): Va
         if (typeof infiltration === 'number' && infiltration < 8) {
             warnings.push({
                 type: 'suggestion',
-                message: `Solul ${config.soil.texture} absoarbe apa lent. Recomandăm activarea Cycle & Soak pentru a preveni scurgerea.`,
+                message: t('wizard.warnings.slowSoilCycleSoak').replace('{soil}', config.soil.texture),
                 field: 'enableCycleSoak'
             });
         }
@@ -415,14 +429,14 @@ export function getConfigurationWarnings(config: Partial<UnifiedZoneConfig>): Va
         if (config.coverageType === 'area' && config.coverageValue > 200) {
             warnings.push({
                 type: 'info',
-                message: 'Suprafață mare! Asigură-te că debitul sistemului este suficient pentru acoperire uniformă.',
+                message: t('wizard.warnings.largeArea'),
                 field: 'coverageValue'
             });
         }
         if (config.coverageType === 'plants' && config.coverageValue > 50) {
             warnings.push({
                 type: 'info',
-                message: 'Multe plante pe un singur canal. Verifică că toate primesc apă suficientă.',
+                message: t('wizard.warnings.manyPlants'),
                 field: 'coverageValue'
             });
         }
@@ -433,14 +447,14 @@ export function getConfigurationWarnings(config: Partial<UnifiedZoneConfig>): Va
         if (config.sunExposure > 95) {
             warnings.push({
                 type: 'info',
-                message: 'Expunere maximă la soare. Plantele vor avea nevoie de mai multă apă în zilele călduroase.',
+                message: t('wizard.warnings.highSunExposure'),
                 field: 'sunExposure'
             });
         }
         if (config.sunExposure < 20 && config.plant && !config.plant.indoor_ok) {
             warnings.push({
                 type: 'warning',
-                message: `${config.plant.common_name_en} preferă soare. În umbră totală poate avea probleme de creștere.`,
+                message: t('wizard.warnings.lowSunExposure').replace('{plant}', config.plant.common_name_en),
                 field: 'sunExposure'
             });
         }

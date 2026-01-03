@@ -12,6 +12,7 @@
 import { useMemo } from 'react';
 import type { UnifiedZoneConfig, LocationData } from '../types/wizard';
 import type { PlantDBEntry, SoilDBEntry, IrrigationMethodEntry } from '../services/DatabaseService';
+import { translations, Language, DEFAULT_LANGUAGE } from '../i18n/translations';
 
 export interface SmartDefaults {
     /** Suggested location based on other zones */
@@ -123,12 +124,9 @@ export const getCloneableProperties = (sourceZone: UnifiedZoneConfig): Partial<U
 /**
  * Get suggested zone name based on index
  */
-export const getSuggestedZoneName = (index: number, language: 'en' | 'ro' = 'en'): string => {
-    const names = language === 'ro' 
-        ? ['Zona 1', 'Zona 2', 'Zona 3', 'Zona 4', 'Zona 5', 'Zona 6', 'Zona 7', 'Zona 8']
-        : ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5', 'Zone 6', 'Zone 7', 'Zone 8'];
-    
-    return names[index] || `Zone ${index + 1}`;
+export const getSuggestedZoneName = (index: number, language: Language = DEFAULT_LANGUAGE): string => {
+    const zoneLabel = translations[language]?.zones?.zone || translations.en.zones.zone;
+    return `${zoneLabel} ${index + 1}`;
 };
 
 export default useSmartDefaults;

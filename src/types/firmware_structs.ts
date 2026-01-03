@@ -2,6 +2,8 @@
 // ENUMS - BLE Protocol Constants
 // ============================================================================
 
+import { translations } from '../i18n/translations';
+
 export enum SystemStatus {
     OK = 0,
     NO_FLOW = 1,
@@ -1130,6 +1132,25 @@ export const SOIL_MOISTURE_STATUS = {
 // Alarm Helper Functions
 // ============================================================================
 
+type Translator = (key: string) => string;
+
+const translateEn = (key: string): string => {
+    const keys = key.split('.');
+    let result: unknown = translations.en;
+
+    for (const part of keys) {
+        if (result && typeof result === 'object' && part in (result as Record<string, unknown>)) {
+            result = (result as Record<string, unknown>)[part];
+        } else {
+            return key;
+        }
+    }
+
+    return typeof result === 'string' ? result : key;
+};
+
+const getTranslator = (t?: Translator): Translator => t ?? translateEn;
+
 /**
  * Get the severity level of an alarm for UI display prioritization
  */
@@ -1156,60 +1177,91 @@ export function getAlarmSeverity(code: AlarmCode): AlarmSeverity {
 /**
  * Get human-readable title for an alarm code
  */
-export function getAlarmTitle(code: AlarmCode): string {
-    switch (code) {
-        case AlarmCode.NONE:
-            return 'No Alarm';
-        case AlarmCode.NO_FLOW:
-            return 'No Water Flow';
-        case AlarmCode.UNEXPECTED_FLOW:
-            return 'Unexpected Flow Detected';
-        case AlarmCode.FREEZE_LOCKOUT:
-            return 'Freeze Protection Active';
-        case AlarmCode.HIGH_FLOW:
-            return 'High Flow Alert';
-        case AlarmCode.LOW_FLOW:
-            return 'Low Flow Warning';
-        case AlarmCode.MAINLINE_LEAK:
-            return 'Mainline Leak Detected';
-        case AlarmCode.CHANNEL_LOCK:
-            return 'Zone Locked';
-        case AlarmCode.GLOBAL_LOCK:
-            return 'System Locked';
-        default:
-            return `Unknown Alarm (${code})`;
-    }
+export function getAlarmTitle(code: AlarmCode, t?: Translator): string {
+    const translate = getTranslator(t);
+    const key = (() => {
+        switch (code) {
+            case AlarmCode.NONE:
+                return 'noAlarm';
+            case AlarmCode.NO_FLOW:
+                return 'noFlow';
+            case AlarmCode.UNEXPECTED_FLOW:
+                return 'unexpectedFlow';
+            case AlarmCode.FREEZE_LOCKOUT:
+                return 'freezeProtection';
+            case AlarmCode.HIGH_FLOW:
+                return 'highFlow';
+            case AlarmCode.LOW_FLOW:
+                return 'lowFlow';
+            case AlarmCode.MAINLINE_LEAK:
+                return 'mainlineLeak';
+            case AlarmCode.CHANNEL_LOCK:
+                return 'zoneLocked';
+            case AlarmCode.GLOBAL_LOCK:
+                return 'systemLocked';
+            default:
+                return 'unknown';
+        }
+    })();
+
+    const title = translate(`alarmCard.names.${key}`);
+    return key === 'unknown' ? title.replace('{code}', String(code)) : title;
 }
 
 /**
  * Get human-readable description for an alarm code with optional channel info
  */
-export function getAlarmDescription(code: AlarmCode, channelId?: number, alarmData?: number): string {
-    const zoneText = channelId !== undefined ? ` Zone ${channelId + 1}` : '';
+export function getAlarmDescription(code: AlarmCode, channelId?: number, alarmData?: number, t?: Translator): string {
+    const translate = getTranslator(t);
+    const zoneLabel = translate('zones.zone');
+    const zoneName = channelId !== undefined ? `${zoneLabel} ${channelId + 1}` : '';
 
     switch (code) {
         case AlarmCode.NONE:
-            return 'System operating normally.';
-        case AlarmCode.NO_FLOW:
-            return `No water flow detected${zoneText ? ' in' + zoneText : ''} during watering. Check water supply and connections.`;
+            return translate('alarmCard.detailedDescriptions.noAlarm');
+        case AlarmCode.NO_FLOW: {
+            const key = channelId !== undefined
+                ? 'alarmCard.detailedDescriptions.noFlowZone'
+                : 'alarmCard.detailedDescriptions.noFlow';
+            return translate(key).replace('{zone}', zoneName);
+        }
         case AlarmCode.UNEXPECTED_FLOW:
-            return `Water flow detected while all valves are closed (${alarmData || 0} pulses). Possible leak or stuck valve.`;
-        case AlarmCode.FREEZE_LOCKOUT:
-            const tempText = alarmData === 0xFFFF ? 'stale sensor data' :
-                alarmData ? `${(alarmData / 10).toFixed(1)}°C` : 'low temperature';
-            return `Watering suspended due to freeze risk (${tempText}). Will resume when safe.`;
-        case AlarmCode.HIGH_FLOW:
-            return `Flow rate exceeded safe limits${zoneText ? ' in' + zoneText : ''}. Possible burst pipe or leak.`;
-        case AlarmCode.LOW_FLOW:
-            return `Flow rate below expected${zoneText ? ' in' + zoneText : ''}. Check for blockages or low pressure.`;
+            return translate('alarmCard.detailedDescriptions.unexpectedFlow')
+                .replace('{pulses}', String(alarmData ?? 0));
+        case AlarmCode.FREEZE_LOCKOUT: {
+            const tempText = alarmData === 0xFFFF
+                ? translate('alarmCard.detailTokens.freezeTempStale')
+                : alarmData
+                    ? `${(alarmData / 10).toFixed(1)}${translate('common.degreesC')}`
+                    : translate('alarmCard.detailTokens.freezeTempLow');
+            return translate('alarmCard.detailedDescriptions.freezeProtection')
+                .replace('{temp}', tempText);
+        }
+        case AlarmCode.HIGH_FLOW: {
+            const key = channelId !== undefined
+                ? 'alarmCard.detailedDescriptions.highFlowZone'
+                : 'alarmCard.detailedDescriptions.highFlow';
+            return translate(key).replace('{zone}', zoneName);
+        }
+        case AlarmCode.LOW_FLOW: {
+            const key = channelId !== undefined
+                ? 'alarmCard.detailedDescriptions.lowFlowZone'
+                : 'alarmCard.detailedDescriptions.lowFlow';
+            return translate(key).replace('{zone}', zoneName);
+        }
         case AlarmCode.MAINLINE_LEAK:
-            return `Static test detected flow (${alarmData || 0} pulses) with all zones off. Mainline leak suspected.`;
-        case AlarmCode.CHANNEL_LOCK:
-            return `${zoneText ? zoneText + ' has been' : 'Zone'} locked due to repeated anomalies. Manual unlock required.`;
+            return translate('alarmCard.detailedDescriptions.mainlineLeak')
+                .replace('{pulses}', String(alarmData ?? 0));
+        case AlarmCode.CHANNEL_LOCK: {
+            const key = channelId !== undefined
+                ? 'alarmCard.detailedDescriptions.zoneLockedZone'
+                : 'alarmCard.detailedDescriptions.zoneLocked';
+            return translate(key).replace('{zone}', zoneName);
+        }
         case AlarmCode.GLOBAL_LOCK:
-            return 'System locked due to critical hydraulic issue. All watering suspended until cleared.';
+            return translate('alarmCard.detailedDescriptions.systemLocked');
         default:
-            return 'Unrecognized alarm. Contact support if issue persists.';
+            return translate('alarmCard.detailedDescriptions.unknown');
     }
 }
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAppStore } from '../../store/useAppStore';
+import { useI18n } from '../../i18n';
 import {
   AlarmCode,
   AlarmSeverity,
@@ -14,6 +15,7 @@ interface MobileAlarmCardProps {
 
 const MobileAlarmCard: React.FC<MobileAlarmCardProps> = ({ onTap }) => {
   const { alarmStatus, zones, connectionState } = useAppStore();
+  const { t } = useI18n();
   
   const isConnected = connectionState === 'connected';
   const hasAlarm = alarmStatus && alarmStatus.alarm_code !== AlarmCode.NONE;
@@ -24,12 +26,12 @@ const MobileAlarmCard: React.FC<MobileAlarmCardProps> = ({ onTap }) => {
   
   const alarmCode = alarmStatus.alarm_code;
   const severity = getAlarmSeverity(alarmCode);
-  const title = getAlarmTitle(alarmCode);
+  const title = getAlarmTitle(alarmCode, t);
   const channelId = getAffectedChannelFromAlarmData(alarmCode, alarmStatus.alarm_data);
   
   // Get zone name if we have a channel ID
   const zoneName = channelId !== undefined 
-    ? zones.find(z => z.channel_id === channelId)?.name || `Zone ${channelId + 1}`
+    ? zones.find(z => z.channel_id === channelId)?.name || `${t('zones.zone')} ${channelId + 1}`
     : undefined;
   
   const getSeverityStyles = (sev: AlarmSeverity) => {

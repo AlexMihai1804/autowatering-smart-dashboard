@@ -3,6 +3,7 @@ import { useHistory } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import { BleService } from '../../services/BleService';
+import { useI18n } from '../../i18n';
 import {
   AlarmCode,
   AlarmSeverity,
@@ -20,6 +21,7 @@ interface AlarmPopupProps {
 const AlarmPopup: React.FC<AlarmPopupProps> = ({ onToast }) => {
   const history = useHistory();
   const bleService = BleService.getInstance();
+  const { t } = useI18n();
   
   const {
     alarmStatus,
@@ -43,13 +45,13 @@ const AlarmPopup: React.FC<AlarmPopupProps> = ({ onToast }) => {
   // Get alarm details
   const alarmCode = alarmStatus?.alarm_code || AlarmCode.NONE;
   const severity = getAlarmSeverity(alarmCode);
-  const title = getAlarmTitle(alarmCode);
+  const title = getAlarmTitle(alarmCode, t);
   const channelId = getAffectedChannelFromAlarmData(alarmCode, alarmStatus?.alarm_data || 0);
-  const description = getAlarmDescription(alarmCode, channelId, alarmStatus?.alarm_data);
+  const description = getAlarmDescription(alarmCode, channelId, alarmStatus?.alarm_data, t);
   
   // Get zone name if we have a channel ID
   const zoneName = channelId !== undefined 
-    ? zones.find(z => z.channel_id === channelId)?.name || `Zone ${channelId + 1}`
+    ? zones.find(z => z.channel_id === channelId)?.name || `${t('zones.zone')} ${channelId + 1}`
     : undefined;
   
   // Calculate retry countdown for soft-locked channels
@@ -92,7 +94,7 @@ const AlarmPopup: React.FC<AlarmPopupProps> = ({ onToast }) => {
   
   const handleClearAlarm = async () => {
     if (!isConnected) {
-      onToast?.('Not connected', 'danger');
+      onToast?.(t('errors.notConnected'), 'danger');
       return;
     }
     
@@ -100,10 +102,10 @@ const AlarmPopup: React.FC<AlarmPopupProps> = ({ onToast }) => {
     try {
       await bleService.clearAllAlarms();
       setAlarmPopupDismissed(true);
-      onToast?.('Alarm cleared', 'success');
+      onToast?.(t('alarmPopup.cleared'), 'success');
     } catch (error: any) {
       console.error('Failed to clear alarm:', error);
-      onToast?.(`Failed: ${error.message}`, 'danger');
+      onToast?.(t('errors.failedWithReason').replace('{error}', error.message), 'danger');
     } finally {
       setIsClearing(false);
     }
@@ -115,10 +117,10 @@ const AlarmPopup: React.FC<AlarmPopupProps> = ({ onToast }) => {
   };
   
   const formatRetryTime = (seconds: number): string => {
-    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 60) return `${seconds}${t('common.secondsShort')}`;
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}m ${secs}s`;
+    return `${mins}${t('common.minutesShort')} ${secs}${t('common.secondsShort')}`;
   };
   
   const getSeverityStyles = (sev: AlarmSeverity) => {
@@ -239,7 +241,7 @@ const AlarmPopup: React.FC<AlarmPopupProps> = ({ onToast }) => {
                 <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-white/10 rounded-xl">
                   <span className="material-symbols-outlined text-lg text-white/60">schedule</span>
                   <span className="text-white/80 text-sm">
-                    Auto-retry in <span className="font-bold text-white">{formatRetryTime(retryCountdown)}</span>
+                    {t('alarmPopup.retryIn').replace('{time}', formatRetryTime(retryCountdown))}
                   </span>
                 </div>
               )}
@@ -257,7 +259,7 @@ const AlarmPopup: React.FC<AlarmPopupProps> = ({ onToast }) => {
                   onClick={handleDismiss}
                   className="flex-1 py-3.5 px-4 bg-white/10 hover:bg-white/20 rounded-xl text-white font-medium transition-colors"
                 >
-                  Dismiss
+                  {t('alarmPopup.dismiss')}
                 </button>
                 <button
                   onClick={handleClearAlarm}
@@ -266,13 +268,12 @@ const AlarmPopup: React.FC<AlarmPopupProps> = ({ onToast }) => {
                 >
                   {isClearing ? (
                     <>
-                      <span className="animate-spin">⏳</span>
-                      Clearing...
+                      {t('alarmPopup.clearing')}
                     </>
                   ) : (
                     <>
                       <span className="material-symbols-outlined text-lg">check_circle</span>
-                      Clear Alarm
+                      {t('alarmPopup.clearAlarm')}
                     </>
                   )}
                 </button>
@@ -284,7 +285,7 @@ const AlarmPopup: React.FC<AlarmPopupProps> = ({ onToast }) => {
                 className="w-full mt-3 py-2 text-white/60 hover:text-white/80 text-sm font-medium transition-colors flex items-center justify-center gap-1"
               >
                 <span className="material-symbols-outlined text-base">history</span>
-                View Alarm History
+                {t('alarmPopup.viewHistory')}
               </button>
             </div>
             
