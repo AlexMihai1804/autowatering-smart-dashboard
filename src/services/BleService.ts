@@ -5034,67 +5034,65 @@ export class BleService {
     }
 
     private parsePackPlant(data: DataView): PackPlantV1 {
-        // Parse common_name (32 bytes at offset 12)
-        const commonNameBytes = new Uint8Array(data.buffer, data.byteOffset + 12, 32);
+        // Parse common_name (48 bytes at offset 8)
+        const commonNameBytes = new Uint8Array(data.buffer, data.byteOffset + 8, 48);
         let nullIndex = commonNameBytes.indexOf(0);
-        if (nullIndex === -1) nullIndex = 32;
+        if (nullIndex === -1) nullIndex = 48;
         const common_name = new TextDecoder().decode(commonNameBytes.slice(0, nullIndex));
         
-        // Parse scientific_name (32 bytes at offset 44)
-        const sciNameBytes = new Uint8Array(data.buffer, data.byteOffset + 44, 32);
+        // Parse scientific_name (64 bytes at offset 56)
+        const sciNameBytes = new Uint8Array(data.buffer, data.byteOffset + 56, 64);
         nullIndex = sciNameBytes.indexOf(0);
-        if (nullIndex === -1) nullIndex = 32;
+        if (nullIndex === -1) nullIndex = 64;
         const scientific_name = new TextDecoder().decode(sciNameBytes.slice(0, nullIndex));
         
         return {
-            // Identification (12 bytes)
+            // Identification (8 bytes)
             plant_id: data.getUint16(0, true),
             pack_id: data.getUint16(2, true),
             version: data.getUint16(4, true),
-            source: data.getUint8(6),
-            flags: data.getUint8(7),
-            reserved_id: data.getUint32(8, true),
+            reserved: data.getUint16(6, true),
             
-            // Names (64 bytes)
+            // Names (112 bytes)
             common_name,
             scientific_name,
             
-            // FAO-56 Crop Coefficients (8 bytes)
-            kc_ini: data.getUint16(76, true),
-            kc_mid: data.getUint16(78, true),
-            kc_end: data.getUint16(80, true),
-            kc_flags: data.getUint16(82, true),
+            // Crop Coefficients ×1000 (8 bytes)
+            kc_ini_x1000: data.getUint16(120, true),
+            kc_dev_x1000: data.getUint16(122, true),
+            kc_mid_x1000: data.getUint16(124, true),
+            kc_end_x1000: data.getUint16(126, true),
             
-            // Growth Stage Durations (8 bytes)
-            l_ini_days: data.getUint16(84, true),
-            l_dev_days: data.getUint16(86, true),
-            l_mid_days: data.getUint16(88, true),
-            l_end_days: data.getUint16(90, true),
+            // Root Depth mm (4 bytes)
+            root_depth_min_mm: data.getUint16(128, true),
+            root_depth_max_mm: data.getUint16(130, true),
             
-            // Root Characteristics (8 bytes)
-            root_depth_min: data.getUint16(92, true),
-            root_depth_max: data.getUint16(94, true),
-            root_growth_rate: data.getUint16(96, true),
-            root_flags: data.getUint16(98, true),
+            // Growth Stages days (6 bytes)
+            stage_days_ini: data.getUint8(132),
+            stage_days_dev: data.getUint8(133),
+            stage_days_mid: data.getUint16(134, true),
+            stage_days_end: data.getUint8(136),
+            growth_cycle: data.getUint8(137),
             
-            // Water Requirements (8 bytes)
-            depletion_fraction: data.getUint16(100, true),
-            yield_response: data.getUint16(102, true),
-            critical_depletion: data.getUint16(104, true),
-            water_flags: data.getUint16(106, true),
+            // Depletion and Spacing (10 bytes)
+            depletion_fraction_p_x1000: data.getUint16(138, true),
+            spacing_row_mm: data.getUint16(140, true),
+            spacing_plant_mm: data.getUint16(142, true),
+            density_x100: data.getUint16(144, true),
+            canopy_max_x1000: data.getUint16(146, true),
             
-            // Environmental Tolerances (8 bytes)
-            temp_min: data.getInt8(108),
-            temp_max: data.getInt8(109),
-            temp_optimal_low: data.getInt8(110),
-            temp_optimal_high: data.getInt8(111),
-            humidity_min: data.getUint8(112),
-            humidity_max: data.getUint8(113),
-            light_min: data.getUint8(114),
-            light_max: data.getUint8(115),
+            // Temperature (3 bytes)
+            frost_tolerance_c: data.getInt8(148),
+            temp_opt_min_c: data.getUint8(149),
+            temp_opt_max_c: data.getUint8(150),
             
-            // Reserved
-            reserved: data.getUint32(116, true),
+            // Irrigation (1 byte)
+            typ_irrig_method_id: data.getUint8(151),
+            
+            // User-Adjustable (4 bytes)
+            water_need_factor_x100: data.getUint16(152, true),
+            irrigation_freq_days: data.getUint8(154),
+            prefer_area_based: data.getUint8(155),
         };
     }
 
@@ -5102,41 +5100,37 @@ export class BleService {
      * Write a custom plant to Pack Storage
      * @param plant The plant data to write (plant_id must be ≥224)
      * 
-     * Structure: pack_plant_v1_t (120 bytes)
-     * Offsets per PACK_SCHEMA.md:
+     * Structure: pack_plant_v1_t (156 bytes)
+     * Offsets per PACK_SCHEMA.md v1.0.0:
      *   0-1:   plant_id (uint16_t)
      *   2-3:   pack_id (uint16_t)
      *   4-5:   version (uint16_t)
-     *   6:     source (uint8_t)
-     *   7:     flags (uint8_t)
-     *   8-11:  reserved_id (uint32_t)
-     *   12-43: common_name[32]
-     *   44-75: scientific_name[32]
-     *   76-77: kc_ini (uint16_t, ×100)
-     *   78-79: kc_mid (uint16_t, ×100)
-     *   80-81: kc_end (uint16_t, ×100)
-     *   82-83: kc_flags (uint16_t)
-     *   84-85: l_ini_days (uint16_t)
-     *   86-87: l_dev_days (uint16_t)
-     *   88-89: l_mid_days (uint16_t)
-     *   90-91: l_end_days (uint16_t)
-     *   92-93: root_depth_min (uint16_t, mm)
-     *   94-95: root_depth_max (uint16_t, mm)
-     *   96-97: root_growth_rate (uint16_t, mm/day ×10)
-     *   98-99: root_flags (uint16_t)
-     *   100-101: depletion_fraction (uint16_t, ×100)
-     *   102-103: yield_response (uint16_t, ×100)
-     *   104-105: critical_depletion (uint16_t, ×100)
-     *   106-107: water_flags (uint16_t)
-     *   108: temp_min (int8_t, °C)
-     *   109: temp_max (int8_t, °C)
-     *   110: temp_optimal_low (int8_t, °C)
-     *   111: temp_optimal_high (int8_t, °C)
-     *   112: humidity_min (uint8_t, %)
-     *   113: humidity_max (uint8_t, %)
-     *   114: light_min (uint8_t, hours)
-     *   115: light_max (uint8_t, hours)
-     *   116-119: reserved (uint32_t)
+     *   6-7:   reserved (uint16_t)
+     *   8-55:  common_name[48]
+     *   56-119: scientific_name[64]
+     *   120-121: kc_ini_x1000 (uint16_t)
+     *   122-123: kc_dev_x1000 (uint16_t)
+     *   124-125: kc_mid_x1000 (uint16_t)
+     *   126-127: kc_end_x1000 (uint16_t)
+     *   128-129: root_depth_min_mm (uint16_t)
+     *   130-131: root_depth_max_mm (uint16_t)
+     *   132: stage_days_ini (uint8_t)
+     *   133: stage_days_dev (uint8_t)
+     *   134-135: stage_days_mid (uint16_t)
+     *   136: stage_days_end (uint8_t)
+     *   137: growth_cycle (uint8_t)
+     *   138-139: depletion_fraction_p_x1000 (uint16_t)
+     *   140-141: spacing_row_mm (uint16_t)
+     *   142-143: spacing_plant_mm (uint16_t)
+     *   144-145: density_x100 (uint16_t)
+     *   146-147: canopy_max_x1000 (uint16_t)
+     *   148: frost_tolerance_c (int8_t)
+     *   149: temp_opt_min_c (uint8_t)
+     *   150: temp_opt_max_c (uint8_t)
+     *   151: typ_irrig_method_id (uint8_t)
+     *   152-153: water_need_factor_x100 (uint16_t)
+     *   154: irrigation_freq_days (uint8_t)
+     *   155: prefer_area_based (uint8_t)
      */
     async writePackPlant(plant: PackPlantV1): Promise<void> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
@@ -5145,62 +5139,60 @@ export class BleService {
             throw new Error(`Invalid plant_id ${plant.plant_id}: custom plants must be ≥${PLANT_ID_RANGES.CUSTOM_MIN}`);
         }
         
-        // Build the 120-byte payload per pack_plant_v1_t
-        const data = new Uint8Array(120);
+        // Build the 156-byte payload per pack_plant_v1_t
+        const data = new Uint8Array(156);
         const view = new DataView(data.buffer);
         const encoder = new TextEncoder();
         
-        // Header (12 bytes)
+        // Identification (8 bytes)
         view.setUint16(0, plant.plant_id, true);
         view.setUint16(2, plant.pack_id, true);
         view.setUint16(4, plant.version, true);
-        data[6] = plant.source;
-        data[7] = plant.flags;
-        view.setUint32(8, plant.reserved_id, true);
+        view.setUint16(6, plant.reserved, true);
         
-        // Names (64 bytes)
+        // Names (112 bytes)
         const commonNameBytes = encoder.encode(plant.common_name);
-        data.set(commonNameBytes.slice(0, 31), 12); // Leave room for null terminator
+        data.set(commonNameBytes.slice(0, 47), 8); // Leave room for null terminator
         
         const scientificNameBytes = encoder.encode(plant.scientific_name);
-        data.set(scientificNameBytes.slice(0, 31), 44); // Leave room for null terminator
+        data.set(scientificNameBytes.slice(0, 63), 56); // Leave room for null terminator
         
-        // Kc Coefficients (8 bytes)
-        view.setUint16(76, plant.kc_ini, true);
-        view.setUint16(78, plant.kc_mid, true);
-        view.setUint16(80, plant.kc_end, true);
-        view.setUint16(82, plant.kc_flags, true);
+        // Crop Coefficients ×1000 (8 bytes)
+        view.setUint16(120, plant.kc_ini_x1000, true);
+        view.setUint16(122, plant.kc_dev_x1000, true);
+        view.setUint16(124, plant.kc_mid_x1000, true);
+        view.setUint16(126, plant.kc_end_x1000, true);
         
-        // Growth Stages (8 bytes)
-        view.setUint16(84, plant.l_ini_days, true);
-        view.setUint16(86, plant.l_dev_days, true);
-        view.setUint16(88, plant.l_mid_days, true);
-        view.setUint16(90, plant.l_end_days, true);
+        // Root Depth mm (4 bytes)
+        view.setUint16(128, plant.root_depth_min_mm, true);
+        view.setUint16(130, plant.root_depth_max_mm, true);
         
-        // Root Parameters (8 bytes)
-        view.setUint16(92, plant.root_depth_min, true);
-        view.setUint16(94, plant.root_depth_max, true);
-        view.setUint16(96, plant.root_growth_rate, true);
-        view.setUint16(98, plant.root_flags, true);
+        // Growth Stages days (6 bytes)
+        data[132] = plant.stage_days_ini;
+        data[133] = plant.stage_days_dev;
+        view.setUint16(134, plant.stage_days_mid, true);
+        data[136] = plant.stage_days_end;
+        data[137] = plant.growth_cycle;
         
-        // Water Requirements (8 bytes)
-        view.setUint16(100, plant.depletion_fraction, true);
-        view.setUint16(102, plant.yield_response, true);
-        view.setUint16(104, plant.critical_depletion, true);
-        view.setUint16(106, plant.water_flags, true);
+        // Depletion and Spacing (10 bytes)
+        view.setUint16(138, plant.depletion_fraction_p_x1000, true);
+        view.setUint16(140, plant.spacing_row_mm, true);
+        view.setUint16(142, plant.spacing_plant_mm, true);
+        view.setUint16(144, plant.density_x100, true);
+        view.setUint16(146, plant.canopy_max_x1000, true);
         
-        // Environmental Tolerances (8 bytes)
-        view.setInt8(108, plant.temp_min);
-        view.setInt8(109, plant.temp_max);
-        view.setInt8(110, plant.temp_optimal_low);
-        view.setInt8(111, plant.temp_optimal_high);
-        data[112] = plant.humidity_min;
-        data[113] = plant.humidity_max;
-        data[114] = plant.light_min;
-        data[115] = plant.light_max;
+        // Temperature (3 bytes)
+        view.setInt8(148, plant.frost_tolerance_c);
+        data[149] = plant.temp_opt_min_c;
+        data[150] = plant.temp_opt_max_c;
         
-        // Reserved (4 bytes)
-        view.setUint32(116, plant.reserved, true);
+        // Irrigation (1 byte)
+        data[151] = plant.typ_irrig_method_id;
+        
+        // User-Adjustable (4 bytes)
+        view.setUint16(152, plant.water_need_factor_x100, true);
+        data[154] = plant.irrigation_freq_days;
+        data[155] = plant.prefer_area_based;
         
         await BleClient.write(
             this.connectedDeviceId,

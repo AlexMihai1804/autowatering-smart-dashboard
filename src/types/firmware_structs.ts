@@ -1405,7 +1405,7 @@ export const CONFIG_STATUS_FLAGS = {
 // ============================================================================
 
 /**
- * Pack Plant V1 Structure - 120 bytes (from PACK_SCHEMA.md)
+ * Pack Plant V1 Structure - 156 bytes (from PACK_SCHEMA.md v1.0.0)
  * Characteristic UUID: 12345678-1234-5678-9abc-def123456786
  * 
  * Plant ID ranges:
@@ -1413,73 +1413,74 @@ export const CONFIG_STATUS_FLAGS = {
  *   1-223 = ROM built-in plants
  *   ≥224 = Custom plants from Pack Storage
  * 
- * Note: Kc values are ×100 (e.g., 115 = 1.15)
+ * Note: Kc values are ×1000 (e.g., 1150 = 1.15)
+ * 
+ * Structure breakdown:
+ *   Identification: 8 bytes
+ *   Names: 112 bytes (common_name[48] + scientific_name[64])
+ *   Crop Coefficients: 8 bytes (4 Kc values ×1000)
+ *   Root Depth: 4 bytes
+ *   Growth Stages: 6 bytes
+ *   Depletion & Spacing: 10 bytes
+ *   Temperature: 3 bytes
+ *   Irrigation: 1 byte
+ *   User-Adjustable: 4 bytes
+ *   Total: 156 bytes
  */
 export interface PackPlantV1 {
-    // === Identification (12 bytes) ===
-    plant_id: number;              // u16 @0: unique plant ID (≥224 for custom)
-    pack_id: number;               // u16 @2: 0=standalone, else pack ID
+    // === Identification (8 bytes) ===
+    plant_id: number;              // u16 @0: unique plant ID (1-65534)
+    pack_id: number;               // u16 @2: 0=standalone, 1+=from pack
     version: number;               // u16 @4: plant data version
-    source: number;                // u8 @6: plant_source_t enum
-    flags: number;                 // u8 @7: feature flags
-    reserved_id: number;           // u32 @8: reserved
+    reserved: number;              // u16 @6: reserved for alignment
     
-    // === Names (64 bytes) ===
-    common_name: string;           // char[32] @12: common name
-    scientific_name: string;       // char[32] @44: scientific name
+    // === Names (112 bytes) ===
+    common_name: string;           // char[48] @8: common name
+    scientific_name: string;       // char[64] @56: scientific name
     
-    // === FAO-56 Crop Coefficients (8 bytes) ===
-    kc_ini: number;                // u16 @76: Kc initial ×100
-    kc_mid: number;                // u16 @78: Kc mid ×100
-    kc_end: number;                // u16 @80: Kc end ×100
-    kc_flags: number;              // u16 @82: coefficient flags
+    // === Crop Coefficients ×1000 (8 bytes) ===
+    kc_ini_x1000: number;          // u16 @120: Kc initial stage ×1000
+    kc_dev_x1000: number;          // u16 @122: Kc development stage ×1000
+    kc_mid_x1000: number;          // u16 @124: Kc mid-season stage ×1000
+    kc_end_x1000: number;          // u16 @126: Kc end season stage ×1000
     
-    // === Growth Stage Durations (8 bytes) ===
-    l_ini_days: number;            // u16 @84: initial stage days
-    l_dev_days: number;            // u16 @86: development stage days
-    l_mid_days: number;            // u16 @88: mid-season stage days
-    l_end_days: number;            // u16 @90: late season stage days
+    // === Root Depth in mm (4 bytes) ===
+    root_depth_min_mm: number;     // u16 @128: minimum root depth mm
+    root_depth_max_mm: number;     // u16 @130: maximum root depth mm
     
-    // === Root Characteristics (8 bytes) ===
-    root_depth_min: number;        // u16 @92: min root depth mm
-    root_depth_max: number;        // u16 @94: max root depth mm
-    root_growth_rate: number;      // u16 @96: growth rate mm/day ×10
-    root_flags: number;            // u16 @98: root zone flags
+    // === Growth Stages in days (6 bytes) ===
+    stage_days_ini: number;        // u8 @132: initial stage duration days
+    stage_days_dev: number;        // u8 @133: development stage duration days
+    stage_days_mid: number;        // u16 @134: mid-season stage duration days
+    stage_days_end: number;        // u8 @136: end season stage duration days
+    growth_cycle: number;          // u8 @137: 0=annual, 1=perennial
     
-    // === Water Requirements (8 bytes) ===
-    depletion_fraction: number;    // u16 @100: allowable depletion ×100
-    yield_response: number;        // u16 @102: Ky factor ×100
-    critical_depletion: number;    // u16 @104: critical stress point ×100
-    water_flags: number;           // u16 @106: water management flags
+    // === Depletion and Spacing (10 bytes) ===
+    depletion_fraction_p_x1000: number; // u16 @138: allowable depletion ×1000
+    spacing_row_mm: number;        // u16 @140: row spacing mm
+    spacing_plant_mm: number;      // u16 @142: plant spacing mm
+    density_x100: number;          // u16 @144: plants/m² ×100
+    canopy_max_x1000: number;      // u16 @146: max canopy cover fraction ×1000
     
-    // === Environmental Tolerances (8 bytes) ===
-    temp_min: number;              // i8 @108: min temperature °C
-    temp_max: number;              // i8 @109: max temperature °C
-    temp_optimal_low: number;      // i8 @110: optimal low temp °C
-    temp_optimal_high: number;     // i8 @111: optimal high temp °C
-    humidity_min: number;          // u8 @112: min humidity %
-    humidity_max: number;          // u8 @113: max humidity %
-    light_min: number;             // u8 @114: min light klux
-    light_max: number;             // u8 @115: max light klux
+    // === Temperature (3 bytes) ===
+    frost_tolerance_c: number;     // i8 @148: frost tolerance °C (signed)
+    temp_opt_min_c: number;        // u8 @149: optimal minimum °C
+    temp_opt_max_c: number;        // u8 @150: optimal maximum °C
     
-    // === Reserved (4 bytes) ===
-    reserved: number;              // u32 @116: future expansion
+    // === Irrigation (1 byte) ===
+    typ_irrig_method_id: number;   // u8 @151: typical irrigation method ID
+    
+    // === User-Adjustable Parameters (4 bytes) ===
+    water_need_factor_x100: number; // u16 @152: water need multiplier ×100 (10-500)
+    irrigation_freq_days: number;   // u8 @154: recommended irrigation frequency days
+    prefer_area_based: number;      // u8 @155: 1=area-based, 0=plant count
 }
 
-export const PACK_PLANT_V1_SIZE = 120;
+export const PACK_PLANT_V1_SIZE = 156;
 
-export const PLANT_SOURCE = {
-    UNKNOWN: 0,
-    FAO56: 1,
-    USER: 2,
-    IMPORTED: 3
-} as const;
-
-export const PLANT_FLAGS = {
-    PERENNIAL: 0x01,
-    GREENHOUSE: 0x02,
-    DROUGHT_TOLERANT: 0x04,
-    HIGH_HUMIDITY: 0x08
+export const GROWTH_CYCLE = {
+    ANNUAL: 0,
+    PERENNIAL: 1
 } as const;
 
 /**
