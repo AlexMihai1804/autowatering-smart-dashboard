@@ -4989,12 +4989,15 @@ export class BleService {
     }
 
     private parsePackTransferStatus(data: DataView): PackTransferStatus {
+        // bt_pack_xfer_status_t - 16 bytes per BLE_PACK_SERVICE.md
         return {
-            operation: data.getUint8(0),
-            status: data.getUint8(1),
-            plant_id: data.getUint16(2, true),
-            bytes_transferred: data.getUint16(4, true),
-            error_code: data.getUint16(6, true),
+            state: data.getUint8(0),
+            progress_pct: data.getUint8(1),
+            pack_id: data.getUint16(2, true),
+            bytes_received: data.getUint32(4, true),
+            bytes_expected: data.getUint32(8, true),
+            last_error: data.getUint8(12),
+            // reserved[3] at offset 13-15
         };
     }
 

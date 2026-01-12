@@ -10,7 +10,8 @@ export enum SystemStatus {
     UNEXPECTED_FLOW = 2,
     FAULT = 3,
     RTC_ERROR = 4,
-    LOW_POWER = 5
+    LOW_POWER = 5,
+    FREEZE_LOCKOUT = 6
 }
 
 export enum TaskStatus {
@@ -617,7 +618,7 @@ export const ENV_HISTORY_FRAGMENT_SIZE = 232;
 export const RAIN_HISTORY_MAX_FRAGMENTS = 255;
 
 // ============================================================================
-// Current Task Data (Characteristic #16) - 22 bytes
+// Current Task Data (Characteristic #16) - 21 bytes
 // ============================================================================
 export interface CurrentTaskData {
     channel_id: number;      /* 0-7 or 0xFF if idle */
@@ -631,7 +632,7 @@ export interface CurrentTaskData {
 }
 
 // ============================================================================
-// Onboarding Status (Characteristic #24) - 29 bytes
+// Onboarding Status (Characteristic #24) - 33 bytes
 // ============================================================================
 
 /**
@@ -1323,7 +1324,7 @@ export function getLockReasonDescription(reason: HydraulicLockReason): string {
 }
 
 // ============================================================================
-// Interval Mode Configuration (Characteristic #34) - 20 bytes
+// Interval Mode Configuration (Characteristic #34) - 17 bytes
 // UUID: 12345678-1234-5678-9abc-def123456785
 // Controls Cycle & Soak ON/OFF timing durations per-channel
 // ============================================================================
@@ -1508,16 +1509,29 @@ export const PACK_STATUS = {
 } as const;
 
 /**
- * Pack Transfer Status - 8 bytes
+ * Pack Transfer Status - 16 bytes (bt_pack_xfer_status_t)
  * Characteristic UUID: 12345678-1234-5678-9abc-def123456788
+ * 
+ * Used for read response and notifications during multi-part pack transfers.
  */
 export interface PackTransferStatus {
-    operation: number;             // u8 @0: 0=idle, 1=write, 2=delete, 3=list
-    status: number;                // u8 @1: result code
-    plant_id: number;              // u16 @2: affected plant ID
-    bytes_transferred: number;     // u16 @4: progress bytes
-    error_code: number;            // u16 @6: error detail
+    state: number;                 // u8 @0: pack_transfer_state_t (0=idle, 1=receiving, 2=complete, 3=error)
+    progress_pct: number;          // u8 @1: 0-100%
+    pack_id: number;               // u16 @2: current pack (0 if idle)
+    bytes_received: number;        // u32 @4: bytes received so far
+    bytes_expected: number;        // u32 @8: total expected bytes
+    last_error: number;            // u8 @12: pack_result_t error code
+    // reserved[3] @13-15: padding to 16 bytes
 }
+
+export const PACK_TRANSFER_STATUS_SIZE = 16;
+
+export const PACK_TRANSFER_STATE = {
+    IDLE: 0,
+    RECEIVING: 1,
+    COMPLETE: 2,
+    ERROR: 3
+} as const;
 
 export const PACK_OPERATIONS = {
     IDLE: 0,
