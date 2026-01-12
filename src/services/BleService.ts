@@ -1,6 +1,6 @@
 import { BleClient, BleDevice, ConnectionPriority, ScanResult } from '@capacitor-community/bluetooth-le';
 import { BleFragmentationManager } from './BleFragmentationManager';
-import { SERVICE_UUID, CUSTOM_CONFIG_SERVICE_UUID, CHAR_UUIDS } from '../types/uuids';
+import { SERVICE_UUID, CUSTOM_CONFIG_SERVICE_UUID, PACK_SERVICE_UUID, CHAR_UUIDS } from '../types/uuids';
 import { useAppStore } from '../store/useAppStore';
 import {
     ChannelConfigData,
@@ -44,6 +44,16 @@ import {
     SOIL_MOISTURE_OPERATIONS,
     SOIL_MOISTURE_STATUS,
     IntervalModeConfigData,
+    ConfigResetResponse,
+    CONFIG_RESET_STATUS,
+    ConfigStatusResponse,
+    CONFIG_STATUS_COMMANDS,
+    PackPlantV1,
+    PackStats,
+    PackTransferStatus,
+    PACK_OPERATIONS,
+    PACK_RESULT,
+    PLANT_ID_RANGES,
     isAlarmCritical
 } from '../types/firmware_structs';
 
@@ -4863,5 +4873,421 @@ export class BleService {
             configured: result.getUint8(8) !== 0,
             last_update: result.getUint32(9, true),
         };
+    }
+
+    // ========================================================================
+    // Config Reset (#32) and Config Status (#33)
+    // ========================================================================
+
+    /**
+     * Read Config Reset status
+     * Returns current reset operation status
+     */
+    async readConfigReset(): Promise<ConfigResetResponse> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+        const result = await BleClient.read(
+            this.connectedDeviceId,
+            CUSTOM_CONFIG_SERVICE_UUID,
+            CHAR_UUIDS.CONFIG_RESET
+        );
+        return this.parseConfigResetResponse(new DataView(result.buffer));
+    }
+
+    private parseConfigResetResponse(data: DataView): ConfigResetResponse {
+        return {
+            status: data.getUint8(0),
+            subsystem: data.getUint8(1),
+            reserved: data.getUint16(2, true),
+        };
+    }
+
+    /**
+     * Read Config Status
+     * Returns configuration completeness status
+     */
+    async readConfigStatus(): Promise<ConfigStatusResponse> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+        const result = await BleClient.read(
+            this.connectedDeviceId,
+            CUSTOM_CONFIG_SERVICE_UUID,
+            CHAR_UUIDS.CONFIG_STATUS
+        );
+        return this.parseConfigStatusResponse(new DataView(result.buffer));
+    }
+
+    /**
+     * Send Config Status command (query, validate, or reset)
+     * @param command Command byte from CONFIG_STATUS_COMMANDS
+     */
+    async sendConfigStatusCommand(command: number): Promise<void> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+        const data = new Uint8Array([command]);
+        await BleClient.write(
+            this.connectedDeviceId,
+            CUSTOM_CONFIG_SERVICE_UUID,
+            CHAR_UUIDS.CONFIG_STATUS,
+            new DataView(data.buffer)
+        );
+        console.log(`[BLE] Sent Config Status command: 0x${command.toString(16)}`);
+    }
+
+    private parseConfigStatusResponse(data: DataView): ConfigStatusResponse {
+        return {
+            overall_completeness: data.getUint8(0),
+            channel_mask: data.getUint8(1),
+            schedule_mask: data.getUint8(2),
+            compensation_status: data.getUint8(3),
+            custom_soil_count: data.getUint8(4),
+            onboarding_complete: data.getUint8(5),
+            flags: data.getUint16(6, true),
+        };
+    }
+
+    // ========================================================================
+    // Pack Service - Custom Plant Management
+    // Service UUID: 12345678-1234-5678-9abc-def123456800
+    // ========================================================================
+
+    /**
+     * Read Pack Stats - total custom plants, flash usage, change counter
+     */
+    async readPackStats(): Promise<PackStats> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+        const result = await BleClient.read(
+            this.connectedDeviceId,
+            PACK_SERVICE_UUID,
+            CHAR_UUIDS.PACK_STATS
+        );
+        return this.parsePackStats(new DataView(result.buffer));
+    }
+
+    private parsePackStats(data: DataView): PackStats {
+        return {
+            total_bytes: data.getUint32(0, true),
+            used_bytes: data.getUint32(4, true),
+            free_bytes: data.getUint32(8, true),
+            plant_count: data.getUint16(12, true),
+            pack_count: data.getUint16(14, true),
+            builtin_count: data.getUint16(16, true),
+            status: data.getUint8(18),
+            reserved: data.getUint8(19),
+            change_counter: data.getUint32(20, true),
+        };
+    }
+
+    /**
+     * Read Pack Transfer Status - current operation progress
+     */
+    async readPackTransferStatus(): Promise<PackTransferStatus> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+        const result = await BleClient.read(
+            this.connectedDeviceId,
+            PACK_SERVICE_UUID,
+            CHAR_UUIDS.PACK_TRANSFER
+        );
+        return this.parsePackTransferStatus(new DataView(result.buffer));
+    }
+
+    private parsePackTransferStatus(data: DataView): PackTransferStatus {
+        return {
+            operation: data.getUint8(0),
+            status: data.getUint8(1),
+            plant_id: data.getUint16(2, true),
+            bytes_transferred: data.getUint16(4, true),
+            error_code: data.getUint16(6, true),
+        };
+    }
+
+    /**
+     * Read a Pack Plant by plant_id
+     * @param plantId The plant ID to read (≥224 for custom plants)
+     * @returns PackPlantV1 or null if not found
+     */
+    async readPackPlant(plantId: number): Promise<PackPlantV1 | null> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+        
+        // Write plant_id to select which plant to read
+        const selectData = new Uint8Array(2);
+        const selectView = new DataView(selectData.buffer);
+        selectView.setUint16(0, plantId, true);
+        
+        await BleClient.write(
+            this.connectedDeviceId,
+            PACK_SERVICE_UUID,
+            CHAR_UUIDS.PACK_PLANT,
+            new DataView(selectData.buffer)
+        );
+        
+        // Read the plant data
+        const result = await BleClient.read(
+            this.connectedDeviceId,
+            PACK_SERVICE_UUID,
+            CHAR_UUIDS.PACK_PLANT
+        );
+        
+        if (result.byteLength < 56) {
+            console.log(`[BLE] Pack plant read returned insufficient data: ${result.byteLength} bytes`);
+            return null;
+        }
+        
+        return this.parsePackPlant(new DataView(result.buffer));
+    }
+
+    private parsePackPlant(data: DataView): PackPlantV1 {
+        // Parse common_name (32 bytes at offset 12)
+        const commonNameBytes = new Uint8Array(data.buffer, data.byteOffset + 12, 32);
+        let nullIndex = commonNameBytes.indexOf(0);
+        if (nullIndex === -1) nullIndex = 32;
+        const common_name = new TextDecoder().decode(commonNameBytes.slice(0, nullIndex));
+        
+        // Parse scientific_name (32 bytes at offset 44)
+        const sciNameBytes = new Uint8Array(data.buffer, data.byteOffset + 44, 32);
+        nullIndex = sciNameBytes.indexOf(0);
+        if (nullIndex === -1) nullIndex = 32;
+        const scientific_name = new TextDecoder().decode(sciNameBytes.slice(0, nullIndex));
+        
+        return {
+            // Identification (12 bytes)
+            plant_id: data.getUint16(0, true),
+            pack_id: data.getUint16(2, true),
+            version: data.getUint16(4, true),
+            source: data.getUint8(6),
+            flags: data.getUint8(7),
+            reserved_id: data.getUint32(8, true),
+            
+            // Names (64 bytes)
+            common_name,
+            scientific_name,
+            
+            // FAO-56 Crop Coefficients (8 bytes)
+            kc_ini: data.getUint16(76, true),
+            kc_mid: data.getUint16(78, true),
+            kc_end: data.getUint16(80, true),
+            kc_flags: data.getUint16(82, true),
+            
+            // Growth Stage Durations (8 bytes)
+            l_ini_days: data.getUint16(84, true),
+            l_dev_days: data.getUint16(86, true),
+            l_mid_days: data.getUint16(88, true),
+            l_end_days: data.getUint16(90, true),
+            
+            // Root Characteristics (8 bytes)
+            root_depth_min: data.getUint16(92, true),
+            root_depth_max: data.getUint16(94, true),
+            root_growth_rate: data.getUint16(96, true),
+            root_flags: data.getUint16(98, true),
+            
+            // Water Requirements (8 bytes)
+            depletion_fraction: data.getUint16(100, true),
+            yield_response: data.getUint16(102, true),
+            critical_depletion: data.getUint16(104, true),
+            water_flags: data.getUint16(106, true),
+            
+            // Environmental Tolerances (8 bytes)
+            temp_min: data.getInt8(108),
+            temp_max: data.getInt8(109),
+            temp_optimal_low: data.getInt8(110),
+            temp_optimal_high: data.getInt8(111),
+            humidity_min: data.getUint8(112),
+            humidity_max: data.getUint8(113),
+            light_min: data.getUint8(114),
+            light_max: data.getUint8(115),
+            
+            // Reserved
+            reserved: data.getUint32(116, true),
+        };
+    }
+
+    /**
+     * Write a custom plant to Pack Storage
+     * @param plant The plant data to write (plant_id must be ≥224)
+     * 
+     * Structure: pack_plant_v1_t (120 bytes)
+     * Offsets per PACK_SCHEMA.md:
+     *   0-1:   plant_id (uint16_t)
+     *   2-3:   pack_id (uint16_t)
+     *   4-5:   version (uint16_t)
+     *   6:     source (uint8_t)
+     *   7:     flags (uint8_t)
+     *   8-11:  reserved_id (uint32_t)
+     *   12-43: common_name[32]
+     *   44-75: scientific_name[32]
+     *   76-77: kc_ini (uint16_t, ×100)
+     *   78-79: kc_mid (uint16_t, ×100)
+     *   80-81: kc_end (uint16_t, ×100)
+     *   82-83: kc_flags (uint16_t)
+     *   84-85: l_ini_days (uint16_t)
+     *   86-87: l_dev_days (uint16_t)
+     *   88-89: l_mid_days (uint16_t)
+     *   90-91: l_end_days (uint16_t)
+     *   92-93: root_depth_min (uint16_t, mm)
+     *   94-95: root_depth_max (uint16_t, mm)
+     *   96-97: root_growth_rate (uint16_t, mm/day ×10)
+     *   98-99: root_flags (uint16_t)
+     *   100-101: depletion_fraction (uint16_t, ×100)
+     *   102-103: yield_response (uint16_t, ×100)
+     *   104-105: critical_depletion (uint16_t, ×100)
+     *   106-107: water_flags (uint16_t)
+     *   108: temp_min (int8_t, °C)
+     *   109: temp_max (int8_t, °C)
+     *   110: temp_optimal_low (int8_t, °C)
+     *   111: temp_optimal_high (int8_t, °C)
+     *   112: humidity_min (uint8_t, %)
+     *   113: humidity_max (uint8_t, %)
+     *   114: light_min (uint8_t, hours)
+     *   115: light_max (uint8_t, hours)
+     *   116-119: reserved (uint32_t)
+     */
+    async writePackPlant(plant: PackPlantV1): Promise<void> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+        
+        if (plant.plant_id < PLANT_ID_RANGES.CUSTOM_MIN) {
+            throw new Error(`Invalid plant_id ${plant.plant_id}: custom plants must be ≥${PLANT_ID_RANGES.CUSTOM_MIN}`);
+        }
+        
+        // Build the 120-byte payload per pack_plant_v1_t
+        const data = new Uint8Array(120);
+        const view = new DataView(data.buffer);
+        const encoder = new TextEncoder();
+        
+        // Header (12 bytes)
+        view.setUint16(0, plant.plant_id, true);
+        view.setUint16(2, plant.pack_id, true);
+        view.setUint16(4, plant.version, true);
+        data[6] = plant.source;
+        data[7] = plant.flags;
+        view.setUint32(8, plant.reserved_id, true);
+        
+        // Names (64 bytes)
+        const commonNameBytes = encoder.encode(plant.common_name);
+        data.set(commonNameBytes.slice(0, 31), 12); // Leave room for null terminator
+        
+        const scientificNameBytes = encoder.encode(plant.scientific_name);
+        data.set(scientificNameBytes.slice(0, 31), 44); // Leave room for null terminator
+        
+        // Kc Coefficients (8 bytes)
+        view.setUint16(76, plant.kc_ini, true);
+        view.setUint16(78, plant.kc_mid, true);
+        view.setUint16(80, plant.kc_end, true);
+        view.setUint16(82, plant.kc_flags, true);
+        
+        // Growth Stages (8 bytes)
+        view.setUint16(84, plant.l_ini_days, true);
+        view.setUint16(86, plant.l_dev_days, true);
+        view.setUint16(88, plant.l_mid_days, true);
+        view.setUint16(90, plant.l_end_days, true);
+        
+        // Root Parameters (8 bytes)
+        view.setUint16(92, plant.root_depth_min, true);
+        view.setUint16(94, plant.root_depth_max, true);
+        view.setUint16(96, plant.root_growth_rate, true);
+        view.setUint16(98, plant.root_flags, true);
+        
+        // Water Requirements (8 bytes)
+        view.setUint16(100, plant.depletion_fraction, true);
+        view.setUint16(102, plant.yield_response, true);
+        view.setUint16(104, plant.critical_depletion, true);
+        view.setUint16(106, plant.water_flags, true);
+        
+        // Environmental Tolerances (8 bytes)
+        view.setInt8(108, plant.temp_min);
+        view.setInt8(109, plant.temp_max);
+        view.setInt8(110, plant.temp_optimal_low);
+        view.setInt8(111, plant.temp_optimal_high);
+        data[112] = plant.humidity_min;
+        data[113] = plant.humidity_max;
+        data[114] = plant.light_min;
+        data[115] = plant.light_max;
+        
+        // Reserved (4 bytes)
+        view.setUint32(116, plant.reserved, true);
+        
+        await BleClient.write(
+            this.connectedDeviceId,
+            PACK_SERVICE_UUID,
+            CHAR_UUIDS.PACK_PLANT,
+            new DataView(data.buffer)
+        );
+        
+        console.log(`[BLE] Wrote Pack Plant: id=${plant.plant_id}, name="${plant.common_name}"`);
+    }
+
+    /**
+     * Delete a custom plant from Pack Storage
+     * @param plantId The plant ID to delete (≥224)
+     */
+    async deletePackPlant(plantId: number): Promise<void> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+        
+        if (plantId < PLANT_ID_RANGES.CUSTOM_MIN) {
+            throw new Error(`Invalid plant_id ${plantId}: cannot delete ROM plants`);
+        }
+        
+        // Write delete command: [operation=2][plant_id]
+        const data = new Uint8Array(3);
+        data[0] = PACK_OPERATIONS.DELETE;
+        const view = new DataView(data.buffer);
+        view.setUint16(1, plantId, true);
+        
+        await BleClient.write(
+            this.connectedDeviceId,
+            PACK_SERVICE_UUID,
+            CHAR_UUIDS.PACK_TRANSFER,
+            new DataView(data.buffer)
+        );
+        
+        console.log(`[BLE] Deleted Pack Plant: id=${plantId}`);
+    }
+
+    /**
+     * List all custom plant IDs in Pack Storage
+     * @returns Array of plant IDs
+     */
+    async listPackPlantIds(): Promise<number[]> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+        
+        // Send list command
+        const cmdData = new Uint8Array([PACK_OPERATIONS.LIST]);
+        await BleClient.write(
+            this.connectedDeviceId,
+            PACK_SERVICE_UUID,
+            CHAR_UUIDS.PACK_TRANSFER,
+            new DataView(cmdData.buffer)
+        );
+        
+        // Read the result (array of uint16 plant IDs)
+        const result = await BleClient.read(
+            this.connectedDeviceId,
+            PACK_SERVICE_UUID,
+            CHAR_UUIDS.PACK_TRANSFER
+        );
+        
+        const view = new DataView(result.buffer);
+        const plantIds: number[] = [];
+        
+        // Skip first 2 bytes (operation + status), then read plant IDs
+        for (let i = 4; i + 1 < result.byteLength; i += 2) {
+            const id = view.getUint16(i, true);
+            if (id >= PLANT_ID_RANGES.CUSTOM_MIN) {
+                plantIds.push(id);
+            }
+        }
+        
+        console.log(`[BLE] Listed ${plantIds.length} custom plants`);
+        return plantIds;
+    }
+
+    /**
+     * Check if Pack Service is available on the connected device
+     */
+    async isPackServiceAvailable(): Promise<boolean> {
+        if (!this.connectedDeviceId) return false;
+        
+        try {
+            const services = await BleClient.getServices(this.connectedDeviceId);
+            return services.some(s => s.uuid.toLowerCase() === PACK_SERVICE_UUID.toLowerCase());
+        } catch {
+            return false;
+        }
     }
 }

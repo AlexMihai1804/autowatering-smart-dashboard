@@ -3,6 +3,9 @@ export const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef0';
 // Custom Configuration Service (separate from main Irrigation Service)
 export const CUSTOM_CONFIG_SERVICE_UUID = '12345678-1234-5678-9abc-def123456780';
 
+// Pack Service (Plant Packs system for custom plants on external flash)
+export const PACK_SERVICE_UUID = '12345678-1234-5678-9abc-def123456800';
+
 export const CHAR_UUIDS = {
     VALVE_CONTROL: '12345678-1234-5678-1234-56789abcdef1',
     FLOW_SENSOR: '12345678-1234-5678-1234-56789abcdef2',
@@ -35,6 +38,12 @@ export const CHAR_UUIDS = {
     BULK_SYNC_SNAPSHOT: '12345678-1234-5678-1234-56789abcde60',
     // Custom Configuration Service characteristics
     CUSTOM_SOIL_CONFIG: '12345678-1234-5678-9abc-def123456781',
+    CONFIG_RESET: '12345678-1234-5678-9abc-def123456782',
+    CONFIG_STATUS: '12345678-1234-5678-9abc-def123456783',
     SOIL_MOISTURE_CONFIG: '12345678-1234-5678-9abc-def123456784',
     INTERVAL_MODE_CONFIG: '12345678-1234-5678-9abc-def123456785',
+    // Pack Service characteristics
+    PACK_PLANT: '12345678-1234-5678-9abc-def123456786',
+    PACK_STATS: '12345678-1234-5678-9abc-def123456787',
+    PACK_TRANSFER: '12345678-1234-5678-9abc-def123456788',
 };

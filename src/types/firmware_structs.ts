@@ -893,33 +893,42 @@ export interface ScheduleConfigData {
     solar_offset_minutes: number; /* int8 (-120..120) */
 }
 
+/**
+ * Growing Environment Data (71 bytes)
+ * Characteristic #14 - UUID: 12345678-1234-5678-1234-56789abcdefe
+ * 
+ * Plant ID (plant_db_index) ranges:
+ *   0 = not set / unassigned
+ *   1-223 = ROM built-in plants
+ *   ≥224 = Custom plants from Pack Storage
+ */
 export interface GrowingEnvData {
-    channel_id: number;              /* uint8 */
-    plant_db_index: number;          /* uint16 */
-    soil_db_index: number;           /* uint8 */
-    irrigation_method_index: number; /* uint8 */
-    use_area_based: boolean;         /* uint8 */
+    channel_id: number;              /* uint8 @0 */
+    plant_db_index: number;          /* uint16 @1-2: unified plant_id (0=unset, 1-223=ROM, ≥224=custom) */
+    soil_db_index: number;           /* uint8 @3 */
+    irrigation_method_index: number; /* uint8 @4 */
+    use_area_based: boolean;         /* uint8 @5 */
     coverage: {
-        area_m2?: number;            /* float */
-        plant_count?: number;        /* uint16 */
+        area_m2?: number;            /* float @6-9 (if use_area_based) */
+        plant_count?: number;        /* uint16 @6-7 (if !use_area_based) */
     };
-    auto_mode: number;               /* uint8 */
-    max_volume_limit_l: number;      /* float */
-    enable_cycle_soak: boolean;      /* uint8 */
-    planting_date_unix: number;      /* uint32 */
-    days_after_planting: number;     /* uint16 */
-    latitude_deg: number;            /* float */
-    sun_exposure_pct: number;        /* uint8 */
-    /* Legacy/Custom Plant Fields */
-    plant_type: number;              /* uint8 */
-    specific_plant: number;          /* uint16 */
-    soil_type: number;               /* uint8 */
-    irrigation_method: number;       /* uint8 */
-    sun_percentage: number;          /* uint8 */
-    custom_name: string;             /* char[32] */
-    water_need_factor: number;       /* float */
-    irrigation_freq_days: number;    /* uint8 */
-    prefer_area_based: boolean;      /* uint8 */
+    auto_mode: number;               /* uint8 @10: 0=manual, 1=quality, 2=eco */
+    max_volume_limit_l: number;      /* float @11-14 */
+    enable_cycle_soak: boolean;      /* uint8 @15 */
+    planting_date_unix: number;      /* uint32 @16-19 */
+    days_after_planting: number;     /* uint16 @20-21 */
+    latitude_deg: number;            /* float @22-25 */
+    sun_exposure_pct: number;        /* uint8 @26 */
+    /* Legacy fields (offsets 27-70) - kept for backwards compatibility */
+    plant_type: number;              /* uint8 @27 */
+    specific_plant: number;          /* uint16 @28-29 */
+    soil_type: number;               /* uint8 @30 */
+    irrigation_method: number;       /* uint8 @31 */
+    sun_percentage: number;          /* uint8 @32 */
+    custom_name: string;             /* char[32] @33-64 */
+    water_need_factor: number;       /* float @65-68 */
+    irrigation_freq_days: number;    /* uint8 @69 */
+    prefer_area_based: boolean;      /* uint8 @70 */
 }
 
 /**
@@ -1314,17 +1323,238 @@ export function getLockReasonDescription(reason: HydraulicLockReason): string {
 }
 
 // ============================================================================
-// Interval Mode Configuration (Characteristic #32) - 16 bytes
+// Interval Mode Configuration (Characteristic #34) - 20 bytes
 // UUID: 12345678-1234-5678-9abc-def123456785
 // Controls Cycle & Soak ON/OFF timing durations per-channel
 // ============================================================================
 export interface IntervalModeConfigData {
-    channel_id: number;       // 0-7
-    enabled: boolean;         // 0=disabled, 1=enabled
-    watering_minutes: number; // 0-60, cycle duration
-    watering_seconds: number; // 0-59, additional seconds
-    pause_minutes: number;    // 0-60, soak duration
-    pause_seconds: number;    // 0-59, additional seconds
-    configured: boolean;      // Read-only, runtime gate
-    last_update: number;      // uint32 timestamp
+    channel_id: number;       // u8 @0: 0-7
+    enabled: boolean;         // u8 @1: 0=disabled, 1=enabled
+    watering_minutes: number; // u16 @2: 0-60, cycle duration
+    watering_seconds: number; // u8 @4: 0-59, additional seconds
+    pause_minutes: number;    // u16 @5: 0-60, soak duration
+    pause_seconds: number;    // u8 @7: 0-59, additional seconds
+    configured: boolean;      // u8 @8: Read-only, runtime gate
+    last_update: number;      // u32 @9: timestamp
+    // reserved[7] @13-19: padding to 20 bytes
+}
+
+// ============================================================================
+// Config Reset Response (Characteristic #32) - 4 bytes
+// UUID: 12345678-1234-5678-9abc-def123456782
+// Returns reset operation status
+// ============================================================================
+export interface ConfigResetResponse {
+    status: number;      // u8 @0: 0=idle, 1=in_progress, 2=complete, 3=error
+    subsystem: number;   // u8 @1: which subsystem was reset
+    reserved: number;    // u16 @2: reserved
+}
+
+export const CONFIG_RESET_STATUS = {
+    IDLE: 0,
+    IN_PROGRESS: 1,
+    COMPLETE: 2,
+    ERROR: 3
+} as const;
+
+export const CONFIG_RESET_SUBSYSTEMS = {
+    ALL: 0x00,
+    CHANNELS: 0x01,
+    SCHEDULES: 0x02,
+    COMPENSATION: 0x03,
+    CUSTOM_SOIL: 0x04,
+    HISTORY: 0x05
+} as const;
+
+// ============================================================================
+// Config Status Response (Characteristic #33) - 8 bytes
+// UUID: 12345678-1234-5678-9abc-def123456783
+// Returns configuration completeness status
+// ============================================================================
+export interface ConfigStatusResponse {
+    overall_completeness: number; // u8 @0: 0-100%
+    channel_mask: number;         // u8 @1: bitmask of configured channels
+    schedule_mask: number;        // u8 @2: bitmask of channels with schedules
+    compensation_status: number;  // u8 @3: 0=default, 1=customized
+    custom_soil_count: number;    // u8 @4: number of custom soil profiles
+    onboarding_complete: number;  // u8 @5: 0/1
+    flags: number;                // u16 @6: status flags
+}
+
+export const CONFIG_STATUS_COMMANDS = {
+    QUERY: 0x00,
+    VALIDATE: 0x01,
+    RESET_ALL: 0x10,
+    RESET_CHANNELS: 0x11,
+    RESET_SCHEDULES: 0x12,
+    RESET_COMPENSATION: 0x13,
+    RESET_CUSTOM_SOIL: 0x14,
+    RESET_HISTORY: 0x15
+} as const;
+
+export const CONFIG_STATUS_FLAGS = {
+    NEEDS_SYNC: 0x01,
+    NVS_ERROR: 0x02,
+    VALIDATION_ERROR: 0x04
+} as const;
+
+// ============================================================================
+// Pack System Types (Pack Service)
+// Service UUID: 12345678-1234-5678-9abc-def123456800
+// External flash storage for custom plant profiles
+// ============================================================================
+
+/**
+ * Pack Plant V1 Structure - 120 bytes (from PACK_SCHEMA.md)
+ * Characteristic UUID: 12345678-1234-5678-9abc-def123456786
+ * 
+ * Plant ID ranges:
+ *   0 = not set / unassigned
+ *   1-223 = ROM built-in plants
+ *   ≥224 = Custom plants from Pack Storage
+ * 
+ * Note: Kc values are ×100 (e.g., 115 = 1.15)
+ */
+export interface PackPlantV1 {
+    // === Identification (12 bytes) ===
+    plant_id: number;              // u16 @0: unique plant ID (≥224 for custom)
+    pack_id: number;               // u16 @2: 0=standalone, else pack ID
+    version: number;               // u16 @4: plant data version
+    source: number;                // u8 @6: plant_source_t enum
+    flags: number;                 // u8 @7: feature flags
+    reserved_id: number;           // u32 @8: reserved
+    
+    // === Names (64 bytes) ===
+    common_name: string;           // char[32] @12: common name
+    scientific_name: string;       // char[32] @44: scientific name
+    
+    // === FAO-56 Crop Coefficients (8 bytes) ===
+    kc_ini: number;                // u16 @76: Kc initial ×100
+    kc_mid: number;                // u16 @78: Kc mid ×100
+    kc_end: number;                // u16 @80: Kc end ×100
+    kc_flags: number;              // u16 @82: coefficient flags
+    
+    // === Growth Stage Durations (8 bytes) ===
+    l_ini_days: number;            // u16 @84: initial stage days
+    l_dev_days: number;            // u16 @86: development stage days
+    l_mid_days: number;            // u16 @88: mid-season stage days
+    l_end_days: number;            // u16 @90: late season stage days
+    
+    // === Root Characteristics (8 bytes) ===
+    root_depth_min: number;        // u16 @92: min root depth mm
+    root_depth_max: number;        // u16 @94: max root depth mm
+    root_growth_rate: number;      // u16 @96: growth rate mm/day ×10
+    root_flags: number;            // u16 @98: root zone flags
+    
+    // === Water Requirements (8 bytes) ===
+    depletion_fraction: number;    // u16 @100: allowable depletion ×100
+    yield_response: number;        // u16 @102: Ky factor ×100
+    critical_depletion: number;    // u16 @104: critical stress point ×100
+    water_flags: number;           // u16 @106: water management flags
+    
+    // === Environmental Tolerances (8 bytes) ===
+    temp_min: number;              // i8 @108: min temperature °C
+    temp_max: number;              // i8 @109: max temperature °C
+    temp_optimal_low: number;      // i8 @110: optimal low temp °C
+    temp_optimal_high: number;     // i8 @111: optimal high temp °C
+    humidity_min: number;          // u8 @112: min humidity %
+    humidity_max: number;          // u8 @113: max humidity %
+    light_min: number;             // u8 @114: min light klux
+    light_max: number;             // u8 @115: max light klux
+    
+    // === Reserved (4 bytes) ===
+    reserved: number;              // u32 @116: future expansion
+}
+
+export const PACK_PLANT_V1_SIZE = 120;
+
+export const PLANT_SOURCE = {
+    UNKNOWN: 0,
+    FAO56: 1,
+    USER: 2,
+    IMPORTED: 3
+} as const;
+
+export const PLANT_FLAGS = {
+    PERENNIAL: 0x01,
+    GREENHOUSE: 0x02,
+    DROUGHT_TOLERANT: 0x04,
+    HIGH_HUMIDITY: 0x08
+} as const;
+
+/**
+ * Pack Stats Structure - 24 bytes (from BLE_PACK_SERVICE.md)
+ * Characteristic UUID: 12345678-1234-5678-9abc-def123456787
+ */
+export interface PackStats {
+    total_bytes: number;           // u32 @0: total partition size
+    used_bytes: number;            // u32 @4: currently used
+    free_bytes: number;            // u32 @8: available
+    plant_count: number;           // u16 @12: installed custom plants
+    pack_count: number;            // u16 @14: installed packs
+    builtin_count: number;         // u16 @16: ROM plants (223)
+    status: number;                // u8 @18: 0=ok, 1=not mounted, 2=error
+    reserved: number;              // u8 @19: reserved
+    change_counter: number;        // u32 @20: increments on each change
+}
+
+export const PACK_STATS_SIZE = 24;
+
+export const PACK_STATUS = {
+    OK: 0,
+    NOT_MOUNTED: 1,
+    ERROR: 2
+} as const;
+
+/**
+ * Pack Transfer Status - 8 bytes
+ * Characteristic UUID: 12345678-1234-5678-9abc-def123456788
+ */
+export interface PackTransferStatus {
+    operation: number;             // u8 @0: 0=idle, 1=write, 2=delete, 3=list
+    status: number;                // u8 @1: result code
+    plant_id: number;              // u16 @2: affected plant ID
+    bytes_transferred: number;     // u16 @4: progress bytes
+    error_code: number;            // u16 @6: error detail
+}
+
+export const PACK_OPERATIONS = {
+    IDLE: 0,
+    WRITE: 1,
+    DELETE: 2,
+    LIST: 3
+} as const;
+
+export const PACK_RESULT = {
+    SUCCESS: 0,
+    ERROR_NOT_FOUND: 1,
+    ERROR_FULL: 2,
+    ERROR_INVALID: 3,
+    ERROR_FLASH: 4,
+    ERROR_CRC: 5,
+    ERROR_IN_PROGRESS: 6
+} as const;
+
+/**
+ * Plant ID range constants
+ */
+export const PLANT_ID_RANGES = {
+    UNSET: 0,
+    ROM_MIN: 1,
+    ROM_MAX: 223,
+    CUSTOM_MIN: 224
+} as const;
+
+/**
+ * Check if a plant_id refers to a custom plant
+ */
+export function isCustomPlant(plantId: number): boolean {
+    return plantId >= PLANT_ID_RANGES.CUSTOM_MIN;
+}
+
+/**
+ * Check if a plant_id refers to a ROM/built-in plant
+ */
+export function isRomPlant(plantId: number): boolean {
+    return plantId >= PLANT_ID_RANGES.ROM_MIN && plantId <= PLANT_ID_RANGES.ROM_MAX;
 }
