@@ -39,6 +39,64 @@ interface ValidationError {
   message: string;
 }
 
+// Help Tip Component with expandable info
+const HelpTip: React.FC<{ 
+  title: string; 
+  content: string; 
+  example?: string;
+  icon?: string;
+}> = ({ title, content, example, icon = 'help' }) => {
+  const [expanded, setExpanded] = useState(false);
+  
+  return (
+    <div className="mt-2">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+      >
+        <span className="material-symbols-outlined text-sm">{icon}</span>
+        <span>{title}</span>
+        <span className={`material-symbols-outlined text-sm transition-transform ${expanded ? 'rotate-180' : ''}`}>
+          expand_more
+        </span>
+      </button>
+      {expanded && (
+        <div className="mt-2 p-3 bg-blue-500/10 rounded-xl border border-blue-500/20 text-xs">
+          <p className="text-blue-200">{content}</p>
+          {example && (
+            <p className="text-blue-400 mt-2 italic">💡 {example}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Info Card for step overviews
+const InfoCard: React.FC<{ 
+  icon: string; 
+  title: string; 
+  description: string;
+  color?: string;
+}> = ({ icon, title, description, color = 'blue' }) => {
+  const colors: Record<string, string> = {
+    blue: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
+    green: 'bg-green-500/10 border-green-500/20 text-green-400',
+    cyan: 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400',
+    amber: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
+  };
+  
+  return (
+    <div className={`rounded-xl p-3 border ${colors[color]} flex items-start gap-3`}>
+      <span className="material-symbols-outlined text-lg mt-0.5">{icon}</span>
+      <div>
+        <p className="text-sm font-medium text-white">{title}</p>
+        <p className="text-xs text-mobile-text-muted mt-0.5">{description}</p>
+      </div>
+    </div>
+  );
+};
+
 const CATEGORIES = [
   'Vegetables',
   'Fruits',
@@ -281,6 +339,14 @@ const MobileCreatePlant: React.FC = () => {
               <p className="text-sm text-mobile-text-muted">{t('mobileCreatePlant.steps.basic.subtitle')}</p>
             </div>
 
+            {/* Step Help Card */}
+            <InfoCard
+              icon="info"
+              title={t('mobileCreatePlant.help.basicTitle')}
+              description={t('mobileCreatePlant.help.basicDesc')}
+              color="blue"
+            />
+
             {/* Name */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-white">{t('mobileCreatePlant.fields.name')} *</label>
@@ -299,17 +365,30 @@ const MobileCreatePlant: React.FC = () => {
                   {getError('name')}
                 </p>
               )}
+              <HelpTip
+                title={t('mobileCreatePlant.help.whyName')}
+                content={t('mobileCreatePlant.help.nameExplain')}
+                example={t('mobileCreatePlant.help.nameExample')}
+              />
             </div>
 
             {/* Scientific Name */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-white">{t('mobileCreatePlant.fields.scientificName')}</label>
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-white">{t('mobileCreatePlant.fields.scientificName')}</label>
+                <span className="text-xs text-mobile-text-muted px-2 py-0.5 bg-white/5 rounded-full">{t('common.optional')}</span>
+              </div>
               <input
                 type="text"
                 value={formData.scientificName}
                 onChange={e => updateField('scientificName', e.target.value)}
                 placeholder={t('mobileCreatePlant.placeholders.scientificName')}
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-mobile-text-muted focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all italic"
+              />
+              <HelpTip
+                title={t('mobileCreatePlant.help.whyScientific')}
+                content={t('mobileCreatePlant.help.scientificExplain')}
+                example={t('mobileCreatePlant.help.scientificExample')}
               />
             </div>
 
@@ -331,6 +410,10 @@ const MobileCreatePlant: React.FC = () => {
                   </button>
                 ))}
               </div>
+              <HelpTip
+                title={t('mobileCreatePlant.help.whyCategory')}
+                content={t('mobileCreatePlant.help.categoryExplain')}
+              />
             </div>
 
             {/* Growth Cycle */}
@@ -351,6 +434,11 @@ const MobileCreatePlant: React.FC = () => {
                   </button>
                 ))}
               </div>
+              <HelpTip
+                title={t('mobileCreatePlant.help.whyCycle')}
+                content={t('mobileCreatePlant.help.cycleExplain')}
+                example={t('mobileCreatePlant.help.cycleExample')}
+              />
             </div>
           </div>
         )}
@@ -364,6 +452,61 @@ const MobileCreatePlant: React.FC = () => {
               </div>
               <h3 className="text-xl font-bold text-white mb-1">{t('mobileCreatePlant.steps.growth.title')}</h3>
               <p className="text-sm text-mobile-text-muted">{t('mobileCreatePlant.steps.growth.subtitle')}</p>
+            </div>
+
+            {/* Step Help Card */}
+            <InfoCard
+              icon="info"
+              title={t('mobileCreatePlant.help.growthTitle')}
+              description={t('mobileCreatePlant.help.growthDesc')}
+              color="green"
+            />
+
+            {/* What are growth stages? */}
+            <div className="bg-green-500/10 rounded-2xl p-4 border border-green-500/20">
+              <button
+                onClick={() => {
+                  const el = document.getElementById('growth-help-detail');
+                  if (el) el.classList.toggle('hidden');
+                }}
+                className="w-full flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-green-400">school</span>
+                  <span className="text-sm font-medium text-green-400">{t('mobileCreatePlant.help.whatAreStages')}</span>
+                </div>
+                <span className="material-symbols-outlined text-green-400 text-sm">expand_more</span>
+              </button>
+              <div id="growth-help-detail" className="hidden mt-3 space-y-2 text-xs">
+                <div className="flex items-start gap-2">
+                  <div className="w-3 h-3 rounded-full bg-yellow-500 mt-1 shrink-0" />
+                  <div>
+                    <p className="font-medium text-white">{t('mobileCreatePlant.stages.initial')}</p>
+                    <p className="text-mobile-text-muted">{t('mobileCreatePlant.help.stageIniDetail')}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-3 h-3 rounded-full bg-lime-500 mt-1 shrink-0" />
+                  <div>
+                    <p className="font-medium text-white">{t('mobileCreatePlant.stages.development')}</p>
+                    <p className="text-mobile-text-muted">{t('mobileCreatePlant.help.stageDevDetail')}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500 mt-1 shrink-0" />
+                  <div>
+                    <p className="font-medium text-white">{t('mobileCreatePlant.stages.midSeason')}</p>
+                    <p className="text-mobile-text-muted">{t('mobileCreatePlant.help.stageMidDetail')}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-3 h-3 rounded-full bg-amber-500 mt-1 shrink-0" />
+                  <div>
+                    <p className="font-medium text-white">{t('mobileCreatePlant.stages.lateSeason')}</p>
+                    <p className="text-mobile-text-muted">{t('mobileCreatePlant.help.stageEndDetail')}</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Visual Timeline Preview */}
@@ -480,6 +623,49 @@ const MobileCreatePlant: React.FC = () => {
               <p className="text-sm text-mobile-text-muted">{t('mobileCreatePlant.steps.water.subtitle')}</p>
             </div>
 
+            {/* Step Help Card */}
+            <InfoCard
+              icon="info"
+              title={t('mobileCreatePlant.help.waterTitle')}
+              description={t('mobileCreatePlant.help.waterDesc')}
+              color="cyan"
+            />
+
+            {/* What is Kc? Educational Card */}
+            <div className="bg-cyan-500/10 rounded-2xl p-4 border border-cyan-500/20">
+              <button
+                onClick={() => {
+                  const el = document.getElementById('kc-help-detail');
+                  if (el) el.classList.toggle('hidden');
+                }}
+                className="w-full flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-cyan-400">school</span>
+                  <span className="text-sm font-medium text-cyan-400">{t('mobileCreatePlant.help.whatIsKc')}</span>
+                </div>
+                <span className="material-symbols-outlined text-cyan-400 text-sm">expand_more</span>
+              </button>
+              <div id="kc-help-detail" className="hidden mt-3 space-y-3 text-xs">
+                <p className="text-mobile-text-muted">{t('mobileCreatePlant.help.kcExplain')}</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-white/5 rounded-lg p-2 text-center">
+                    <p className="text-lg font-bold text-cyan-400">0.3-0.5</p>
+                    <p className="text-[10px] text-mobile-text-muted">{t('mobileCreatePlant.help.kcLow')}</p>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-2 text-center">
+                    <p className="text-lg font-bold text-cyan-400">0.9-1.2</p>
+                    <p className="text-[10px] text-mobile-text-muted">{t('mobileCreatePlant.help.kcHigh')}</p>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-2 text-center">
+                    <p className="text-lg font-bold text-cyan-400">0.5-0.8</p>
+                    <p className="text-[10px] text-mobile-text-muted">{t('mobileCreatePlant.help.kcMod')}</p>
+                  </div>
+                </div>
+                <p className="text-cyan-400 italic">💡 {t('mobileCreatePlant.help.kcTip')}</p>
+              </div>
+            </div>
+
             {/* Kc Coefficients Visual */}
             <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
               <p className="text-sm font-medium text-white mb-3">{t('mobileCreatePlant.kcPreview')}</p>
@@ -536,9 +722,24 @@ const MobileCreatePlant: React.FC = () => {
 
             {/* Root Depth */}
             <div className="bg-white/5 rounded-2xl p-4 border border-white/5 space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-amber-400">straighten</span>
-                <p className="text-sm font-medium text-white">{t('mobileCreatePlant.rootDepth')}</p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-amber-400">straighten</span>
+                  <p className="text-sm font-medium text-white">{t('mobileCreatePlant.rootDepth')}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    const el = document.getElementById('root-help');
+                    if (el) el.classList.toggle('hidden');
+                  }}
+                  className="text-amber-400 hover:text-amber-300"
+                >
+                  <span className="material-symbols-outlined text-sm">help</span>
+                </button>
+              </div>
+              <div id="root-help" className="hidden bg-amber-500/10 rounded-lg p-3 text-xs">
+                <p className="text-amber-200">{t('mobileCreatePlant.help.rootExplain')}</p>
+                <p className="text-amber-400 mt-2 italic">💡 {t('mobileCreatePlant.help.rootTip')}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -574,8 +775,30 @@ const MobileCreatePlant: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-blue-400">humidity_percentage</span>
                   <p className="text-sm font-medium text-white">{t('mobileCreatePlant.depletionFraction')}</p>
+                  <button
+                    onClick={() => {
+                      const el = document.getElementById('depletion-help');
+                      if (el) el.classList.toggle('hidden');
+                    }}
+                    className="text-blue-400 hover:text-blue-300"
+                  >
+                    <span className="material-symbols-outlined text-sm">help</span>
+                  </button>
                 </div>
                 <span className="text-lg font-bold text-white">{formData.depletionFraction}%</span>
+              </div>
+              <div id="depletion-help" className="hidden bg-blue-500/10 rounded-lg p-3 text-xs">
+                <p className="text-blue-200">{t('mobileCreatePlant.help.depletionExplain')}</p>
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="flex items-center gap-1">
+                    <span className="text-red-400">20%</span>
+                    <span className="text-mobile-text-muted">= {t('mobileCreatePlant.help.depletionSensitive')}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-green-400">80%</span>
+                    <span className="text-mobile-text-muted">= {t('mobileCreatePlant.help.depletionTolerant')}</span>
+                  </div>
+                </div>
               </div>
               <input
                 type="range"
@@ -590,7 +813,26 @@ const MobileCreatePlant: React.FC = () => {
 
             {/* Irrigation Method */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-white">{t('mobileCreatePlant.irrigationMethod')}</label>
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-white">{t('mobileCreatePlant.irrigationMethod')}</label>
+                <button
+                  onClick={() => {
+                    const el = document.getElementById('irrigation-help');
+                    if (el) el.classList.toggle('hidden');
+                  }}
+                  className="text-mobile-text-muted hover:text-white"
+                >
+                  <span className="material-symbols-outlined text-sm">help</span>
+                </button>
+              </div>
+              <div id="irrigation-help" className="bg-white/5 rounded-lg p-3 text-xs hidden">
+                <p className="text-mobile-text-muted mb-2">{t('mobileCreatePlant.help.irrigationExplain')}</p>
+                <ul className="space-y-1 text-mobile-text-muted">
+                  <li><span className="text-white font-medium">Drip:</span> {t('mobileCreatePlant.help.irrigDrip')}</li>
+                  <li><span className="text-white font-medium">Sprinkler:</span> {t('mobileCreatePlant.help.irrigSprinkler')}</li>
+                  <li><span className="text-white font-medium">Manual:</span> {t('mobileCreatePlant.help.irrigManual')}</li>
+                </ul>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {IRRIGATION_METHODS.map(method => (
                   <button

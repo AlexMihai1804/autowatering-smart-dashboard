@@ -1886,6 +1886,45 @@ export interface TranslationKeys {
             mid: string;
             end: string;
         };
+        help: {
+            basicTitle: string;
+            basicDesc: string;
+            whyName: string;
+            nameExplain: string;
+            nameExample: string;
+            whyScientific: string;
+            scientificExplain: string;
+            scientificExample: string;
+            whyCategory: string;
+            categoryExplain: string;
+            whyCycle: string;
+            cycleExplain: string;
+            cycleExample: string;
+            growthTitle: string;
+            growthDesc: string;
+            whatAreStages: string;
+            stageIniDetail: string;
+            stageDevDetail: string;
+            stageMidDetail: string;
+            stageEndDetail: string;
+            waterTitle: string;
+            waterDesc: string;
+            whatIsKc: string;
+            kcExplain: string;
+            kcLow: string;
+            kcHigh: string;
+            kcMod: string;
+            kcTip: string;
+            rootExplain: string;
+            rootTip: string;
+            depletionExplain: string;
+            depletionSensitive: string;
+            depletionTolerant: string;
+            irrigationExplain: string;
+            irrigDrip: string;
+            irrigSprinkler: string;
+            irrigManual: string;
+        };
         growthTimeline: string;
         kcPreview: string;
         rootDepth: string;
@@ -4559,6 +4598,45 @@ export const en: TranslationKeys = {
             mid: 'Kc Mid (Full Growth)',
             end: 'Kc End (Maturity)',
         },
+        help: {
+            basicTitle: 'Plant Identity',
+            basicDesc: 'Start by giving your plant a recognizable name and classifying it properly.',
+            whyName: 'Why give a name?',
+            nameExplain: 'The name helps you identify this plant in your irrigation zones. Use a name you\'ll easily remember.',
+            nameExample: 'e.g. "Garden Tomatoes" or "Balcony Basil"',
+            whyScientific: 'Why scientific name?',
+            scientificExplain: 'Optional but useful to identify exact species. Helps when searching for specific growing information.',
+            scientificExample: 'e.g. "Ocimum basilicum" for basil',
+            whyCategory: 'Why choose a category?',
+            categoryExplain: 'Categories group similar plants with comparable water needs. This helps with default settings.',
+            whyCycle: 'What is growth cycle?',
+            cycleExplain: 'Determines how the plant completes its life: annuals complete in one season, perennials live multiple years, biennials take two years.',
+            cycleExample: 'Most vegetables are annual, most fruit trees are perennial',
+            growthTitle: 'Growth Timeline',
+            growthDesc: 'Define how long each growth phase lasts. This affects water scheduling throughout the season.',
+            whatAreStages: 'What are growth stages?',
+            stageIniDetail: 'Initial: Seedling/transplant phase. Plants are small, roots shallow, water needs low.',
+            stageDevDetail: 'Development: Rapid vegetative growth. Plants establish roots, water needs increasing.',
+            stageMidDetail: 'Mid-season: Full canopy, flowering/fruiting. Maximum water consumption.',
+            stageEndDetail: 'Late season: Maturation and harvest. Water needs decrease as plant finishes cycle.',
+            waterTitle: 'Irrigation Settings',
+            waterDesc: 'Set the water coefficients that determine how much water your plant needs at each stage.',
+            whatIsKc: 'What is Kc (Crop Coefficient)?',
+            kcExplain: 'Kc is a multiplier for reference evapotranspiration (ET₀). It tells us how much water the plant needs relative to a reference grass.',
+            kcLow: '0.3-0.5 = Low water needs (seedlings, drought-tolerant)',
+            kcHigh: '1.0-1.2 = High water needs (full growth, vegetables)',
+            kcMod: '0.6-0.8 = Moderate needs (established plants)',
+            kcTip: 'Tip: Most vegetables peak at Kc 0.9-1.1 during mid-season.',
+            rootExplain: 'Root depth determines how deep water can be stored in soil. Shallow roots need more frequent watering.',
+            rootTip: 'Vegetables: 30-60cm, Shrubs: 60-100cm, Trees: 100-200cm',
+            depletionExplain: 'Depletion fraction is how much soil water can be used before the plant is stressed. Higher = more drought tolerant.',
+            depletionSensitive: 'Water-sensitive plant',
+            depletionTolerant: 'Drought-tolerant plant',
+            irrigationExplain: 'Choose the irrigation method you\'ll use for this plant:',
+            irrigDrip: 'Slow, targeted watering at root zone. Best for vegetables & water conservation.',
+            irrigSprinkler: 'Overhead spray, covers larger area. Good for lawns and established beds.',
+            irrigManual: 'Hand watering with hose or watering can. Flexible but less consistent.',
+        },
         growthTimeline: 'Growth Timeline',
         kcPreview: 'Water Needs Preview',
         rootDepth: 'Root Depth',
@@ -7209,6 +7287,45 @@ export const ro: TranslationKeys = {
             initial: 'Kc Initial (Rasad)',
             mid: 'Kc Mijloc (Crestere Completa)',
             end: 'Kc Final (Maturitate)',
+        },
+        help: {
+            basicTitle: 'Identitatea Plantei',
+            basicDesc: 'Incepe prin a da plantei tale un nume recunoscut si clasifica-o corect.',
+            whyName: 'De ce sa dai un nume?',
+            nameExplain: 'Numele te ajuta sa identifici aceasta planta in zonele de irigare. Foloseste un nume pe care il vei retine usor.',
+            nameExample: 'ex. "Rosii de gradina" sau "Busuioc de balcon"',
+            whyScientific: 'De ce nume stiintific?',
+            scientificExplain: 'Optional dar util pentru a identifica specia exacta. Ajuta cand cauti informatii specifice despre cultivare.',
+            scientificExample: 'ex. "Ocimum basilicum" pentru busuioc',
+            whyCategory: 'De ce sa alegi o categorie?',
+            categoryExplain: 'Categoriile grupeaza plante similare cu nevoi de apa comparabile. Ajuta la setarile implicite.',
+            whyCycle: 'Ce este ciclul de crestere?',
+            cycleExplain: 'Determina cum isi completeaza planta viata: anualele se completeaza intr-un sezon, perenele traiesc mai multi ani, bienalele dureaza doi ani.',
+            cycleExample: 'Majoritatea legumelor sunt anuale, majoritatea pomilor fructiferi sunt perene',
+            growthTitle: 'Linie Temporala de Crestere',
+            growthDesc: 'Defineste cat dureaza fiecare faza de crestere. Aceasta afecteaza programul de udare pe tot sezonul.',
+            whatAreStages: 'Ce sunt stadiile de crestere?',
+            stageIniDetail: 'Initial: Faza de rasad/transplant. Plantele sunt mici, radacinile putin adanci, nevoi scazute de apa.',
+            stageDevDetail: 'Dezvoltare: Crestere vegetativa rapida. Plantele isi stabilesc radacinile, nevoile de apa cresc.',
+            stageMidDetail: 'Mijloc sezon: Frunzis complet, inflorire/fructificare. Consum maxim de apa.',
+            stageEndDetail: 'Final sezon: Maturare si recoltare. Nevoile de apa scad pe masura ce planta isi termina ciclul.',
+            waterTitle: 'Setari de Irigare',
+            waterDesc: 'Seteaza coeficientii de apa care determina cat de multa apa are nevoie planta ta in fiecare stadiu.',
+            whatIsKc: 'Ce este Kc (Coeficient Cultural)?',
+            kcExplain: 'Kc este un multiplicator pentru evapotranspiratia de referinta (ET₀). Ne spune cat de multa apa are nevoie planta fata de o iarba de referinta.',
+            kcLow: '0.3-0.5 = Nevoi scazute de apa (rasaduri, tolerante la seceta)',
+            kcHigh: '1.0-1.2 = Nevoi mari de apa (crestere completa, legume)',
+            kcMod: '0.6-0.8 = Nevoi moderate (plante stabilite)',
+            kcTip: 'Sfat: Majoritatea legumelor ating Kc 0.9-1.1 la mijlocul sezonului.',
+            rootExplain: 'Adancimea radacinilor determina cat de adanc poate fi stocata apa in sol. Radacinile putin adanci necesita udare mai frecventa.',
+            rootTip: 'Legume: 30-60cm, Arbusti: 60-100cm, Copaci: 100-200cm',
+            depletionExplain: 'Fractia de epuizare este cat din apa solului poate fi folosita inainte ca planta sa fie stresata. Mai mare = mai toleranta la seceta.',
+            depletionSensitive: 'Planta sensibila la apa',
+            depletionTolerant: 'Planta toleranta la seceta',
+            irrigationExplain: 'Alege metoda de irigare pe care o vei folosi pentru aceasta planta:',
+            irrigDrip: 'Udare lenta, tintita la zona radacinilor. Cea mai buna pentru legume si economisirea apei.',
+            irrigSprinkler: 'Stropire de sus, acopera o zona mai mare. Buna pentru gazon si straturi stabilite.',
+            irrigManual: 'Udare manuala cu furtun sau stropitoare. Flexibila dar mai putin consistenta.',
         },
         growthTimeline: 'Linie temporala crestere',
         kcPreview: 'Previzualizare nevoi apa',
