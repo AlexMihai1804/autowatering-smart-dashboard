@@ -93,6 +93,44 @@ import {
 import { useI18n } from '../i18n';
 
 // ============================================================================
+// Helper function to translate plant category
+// ============================================================================
+const translatePlantCategory = (category: string, t: (key: string) => string): string => {
+    const categoryMap: Record<string, string> = {
+        'Agriculture': 'plantCategories.agriculture',
+        'Gardening': 'plantCategories.gardening',
+        'Landscaping': 'plantCategories.landscaping',
+        'Indoor': 'plantCategories.indoor',
+        'Succulent': 'plantCategories.succulent',
+        'Fruit': 'plantCategories.fruit',
+        'Vegetable': 'plantCategories.vegetable',
+        'Herb': 'plantCategories.herb',
+        'Lawn': 'plantCategories.lawn',
+        'Shrub': 'plantCategories.shrub'
+    };
+    
+    const key = categoryMap[category];
+    return key ? t(key) : category;
+};
+
+// ============================================================================
+// Helper function to translate soil texture
+// ============================================================================
+const translateSoilTexture = (texture: string, t: (key: string) => string): string => {
+    const textureMap: Record<string, string> = {
+        'Sand': 'soilTextures.sand',
+        'Loamy Sand': 'soilTextures.loamySand',
+        'Sandy Loam': 'soilTextures.sandyLoam',
+        'Loam': 'soilTextures.loam',
+        'Silt Loam': 'soilTextures.siltLoam',
+        'Clay Loam': 'soilTextures.clayLoam'
+    };
+    
+    const key = textureMap[texture];
+    return key ? t(key) : texture;
+};
+
+// ============================================================================
 // Mode Card Component
 // ============================================================================
 
@@ -800,7 +838,7 @@ const ConfigWizard: React.FC = () => {
                                     >
                                         <IonLabel>
                                             <h2>{plant.common_name_en}</h2>
-                                            <p>{plant.common_name_ro || plant.common_name_en} - {plant.category}</p>
+                                            <p>{language === 'ro' ? plant.common_name_ro : plant.common_name_en} - {translatePlantCategory(plant.category, t)}</p>
                                         </IonLabel>
                                         {currentConfig.plant?.id === plant.id && (
                                             <IonIcon icon={checkmark} slot="end" />
@@ -831,7 +869,7 @@ const ConfigWizard: React.FC = () => {
                                         color={currentConfig.soil?.id === soil.id ? 'primary' : undefined}
                                     >
                                         <IonLabel>
-                                            <h2>{soil.texture}</h2>
+                                            <h2>{translateSoilTexture(soil.texture, t)}</h2>
                                             <p>{t('wizard.soil.infiltration')}: {soil.infiltration_rate_mm_h} {t('common.mmPerHour')}</p>
                                         </IonLabel>
                                         {currentConfig.soil?.id === soil.id && (

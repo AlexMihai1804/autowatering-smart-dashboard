@@ -104,6 +104,24 @@ import {
 } from './onboarding/WizardEnhancements';
 
 // ============================================================================
+// Helper function to translate soil texture
+// ============================================================================
+const translateSoilTexture = (texture: string | undefined, t: (key: string) => string): string => {
+    if (!texture) return '';
+    const textureMap: Record<string, string> = {
+        'Sand': 'soilTextures.sand',
+        'Loamy Sand': 'soilTextures.loamySand',
+        'Sandy Loam': 'soilTextures.sandyLoam',
+        'Loam': 'soilTextures.loam',
+        'Silt Loam': 'soilTextures.siltLoam',
+        'Clay Loam': 'soilTextures.clayLoam'
+    };
+    
+    const key = textureMap[texture];
+    return key ? t(key) : texture;
+};
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -2463,7 +2481,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                         <div className="flex items-center justify-between py-2 border-b border-white/10">
                                             <span className="text-gray-400">{t('wizard.summary.soil')}</span>
                                             <div className="text-right">
-                                                <span className="text-white">{currentZone.soil?.texture}</span>
+                                                <span className="text-white">{translateSoilTexture(currentZone.soil?.texture, t)}</span>
                                                 <p className="text-xs text-gray-400">
                                                     {t('wizard.soil.infiltration')}: {currentZone.soil?.infiltration_rate_mm_h} {t('common.mmPerHour')}
                                                 </p>
@@ -2501,7 +2519,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                                 <span className="text-gray-400">{t('wizard.summary.cycleSoak')}</span>
                                                 <div className="flex items-center gap-2">
                                                     <IonChip color="tertiary" style={{ margin: 0, height: '24px', fontSize: '0.7rem' }}>
-                                                        {currentZone.cycleSoakWateringMin}m / {currentZone.cycleSoakPauseMin}m
+                                                        {currentZone.cycleSoakWateringMin}{t('common.minutesShort')} / {currentZone.cycleSoakPauseMin}{t('common.minutesShort')}
                                                     </IonChip>
                                                     {channelStatus.hasCycleSoak && <IonIcon icon={checkmarkCircle} color="success" />}
                                                 </div>

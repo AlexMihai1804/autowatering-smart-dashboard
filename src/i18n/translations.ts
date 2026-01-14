@@ -569,6 +569,21 @@ export interface TranslationKeys {
         shrub: string;
     };
 
+    // Soil textures (database)
+    soilTextures: {
+        sand: string;
+        loamySand: string;
+        sandyLoam: string;
+        loam: string;
+        siltLoam: string;
+        clayLoam: string;
+        sandyClayLoam: string;
+        siltyClayLoam: string;
+        clay: string;
+        siltyClay: string;
+        sandyClay: string;
+    };
+
     // Types
     types: {
         plant: {
@@ -1716,6 +1731,88 @@ export interface TranslationKeys {
             powerMode: { label: string; subtitle: string; };
             resetOptions: { label: string; subtitle: string; };
             timeLocation: { label: string; subtitle: string; };
+            packsPlants: { label: string; subtitle: string; subtitleWithCount: string; };
+        };
+    };
+
+    mobilePacksSettings: {
+        title: string;
+        loading: string;
+        syncError: string;
+        tabs: {
+            plants: string;
+            packs: string;
+        };
+        storage: {
+            title: string;
+            flash: string;
+            free: string;
+            romPlants: string;
+            customPlants: string;
+            packs: string;
+            unavailable: string;
+        };
+        plants: {
+            builtIn: string;
+            installed: string;
+        };
+        customPlants: {
+            title: string;
+            empty: string;
+            emptyHint: string;
+            partial: string;
+            installed: string;
+            manageHint: string;
+        };
+        romPlants: {
+            title: string;
+            plantsCount: string;
+            more: string;
+        };
+        updates: {
+            title: string;
+            hint: string;
+            check: string;
+            checking: string;
+            upToDate: string;
+            available: string;
+            install: string;
+        };
+        packs: {
+            installed: string;
+            available: string;
+            base: string;
+            empty: string;
+            emptyHint: string;
+            comingSoon: string;
+            comingSoonHint: string;
+        };
+        deleteConfirm: {
+            title: string;
+            message: string;
+            confirm: string;
+        };
+        plantDetails: {
+            scientificName: string;
+            category: string;
+            plantId: string;
+            packId: string;
+            rootingDepth: string;
+            version: string;
+            kcIni: string;
+            kcMid: string;
+            kcEnd: string;
+            close: string;
+        };
+        packDetails: {
+            plantsInPack: string;
+            noPlants: string;
+            close: string;
+        };
+        labels: {
+            id: string;
+            version: string;
+            pack: string;
         };
     };
 
@@ -2241,6 +2338,7 @@ export interface TranslationKeys {
         soilDetectGpsDenied: string;
         soilDetectNotAvailable: string;
         soilDetectFailed: string;
+        noCustomSoilProfile: string;
         customSoilTitle: string;
         customSoilGps: string;
         customSoilSaved: string;
@@ -2378,6 +2476,13 @@ export interface TranslationKeys {
 
     loadingScreen: {
         loadingData: string;
+        syncCheckingSetup: string;
+        syncReadingSensors: string;
+        syncReadingRain: string;
+        syncReadingStatus: string;
+        syncReadingConfig: string;
+        syncReadingMoisture: string;
+        syncReady: string;
     };
 
     appSettings: {
@@ -3071,6 +3176,20 @@ export const en: TranslationKeys = {
         herb: 'Herb',
         lawn: 'Lawn',
         shrub: 'Shrub',
+    },
+
+    soilTextures: {
+        sand: 'Sand',
+        loamySand: 'Loamy Sand',
+        sandyLoam: 'Sandy Loam',
+        loam: 'Loam',
+        siltLoam: 'Silt Loam',
+        clayLoam: 'Clay Loam',
+        sandyClayLoam: 'Sandy Clay Loam',
+        siltyClayLoam: 'Silty Clay Loam',
+        clay: 'Clay',
+        siltyClay: 'Silty Clay',
+        sandyClay: 'Sandy Clay',
     },
 
     types: {
@@ -4187,6 +4306,87 @@ export const en: TranslationKeys = {
             powerMode: { label: 'Power Mode', subtitle: 'Battery and performance settings' },
             resetOptions: { label: 'Reset Options', subtitle: 'Clear settings or data' },
             timeLocation: { label: 'Time & Location', subtitle: 'Sync time and GPS' },
+            packsPlants: { label: 'Packs & Plants', subtitle: 'Manage installed plant profiles', subtitleWithCount: '{count} custom plants installed' },
+        },
+    },
+    mobilePacksSettings: {
+        title: 'Packs & Plants',
+        loading: 'Loading data from device...',
+        syncError: 'Failed to load data. Please try again.',
+        tabs: {
+            plants: 'Plants',
+            packs: 'Packs',
+        },
+        storage: {
+            title: 'Storage',
+            flash: 'Flash Storage',
+            free: '{amount} available',
+            romPlants: 'ROM Plants',
+            customPlants: 'Custom',
+            packs: 'Packs',
+            unavailable: 'Storage info not available',
+        },
+        plants: {
+            builtIn: 'Built-in database',
+            installed: 'From packs',
+        },
+        customPlants: {
+            title: 'Custom Plants',
+            empty: 'No custom plants installed',
+            emptyHint: 'Custom plants can be added via pack installation',
+            partial: 'Partial list',
+            installed: 'custom plants installed',
+            manageHint: 'Custom plants are managed via pack installation',
+        },
+        romPlants: {
+            title: 'Built-in Plants',
+            plantsCount: 'plants',
+            more: 'more',
+        },
+        updates: {
+            title: 'Updates',
+            hint: 'Check for new plant packs',
+            check: 'Check',
+            checking: 'Checking...',
+            upToDate: 'Everything is up to date',
+            available: 'Updates available',
+            install: 'Install',
+        },
+        packs: {
+            installed: 'Installed Packs',
+            available: 'Available Packs',
+            base: 'Base Plant Database',
+            empty: 'No packs installed',
+            emptyHint: 'Packs can be downloaded to add new plants',
+            comingSoon: 'More packs coming soon',
+            comingSoonHint: 'Check back later for additional plant packs',
+        },
+        deleteConfirm: {
+            title: 'Delete Plant',
+            message: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
+            confirm: 'Delete',
+        },
+        plantDetails: {
+            scientificName: 'Scientific Name',
+            category: 'Category',
+            plantId: 'Plant ID',
+            packId: 'Pack ID',
+            rootingDepth: 'Rooting Depth',
+            version: 'Version',
+            kcIni: 'Kc Initial',
+            kcMid: 'Kc Mid',
+            kcEnd: 'Kc End',
+            close: 'Close',
+        },
+        packDetails: {
+            plantsInPack: 'Plants in Pack',
+            noPlants: 'No plants found in this pack',
+            close: 'Close',
+        },
+        labels: {
+            id: 'ID',
+            version: 'v',
+            pack: 'Pack',
         },
     },
     mobileFlowCalibration: {
@@ -4696,6 +4896,7 @@ export const en: TranslationKeys = {
         soilDetectGpsDenied: 'GPS permission denied',
         soilDetectNotAvailable: 'Soil detection not available',
         soilDetectFailed: 'Soil detection failed',
+        noCustomSoilProfile: 'No custom soil profile. Tap "Detect from GPS" first.',
         customSoilTitle: 'Custom Soil',
         customSoilGps: 'Custom soil: {name}',
         customSoilSaved: 'Custom soil saved: {name}',
@@ -4832,6 +5033,13 @@ export const en: TranslationKeys = {
     },
     loadingScreen: {
         loadingData: 'Loading data...',
+        syncCheckingSetup: 'Checking setup...',
+        syncReadingSensors: 'Reading sensors...',
+        syncReadingRain: 'Reading rain data...',
+        syncReadingStatus: 'Reading system status...',
+        syncReadingConfig: 'Reading configuration...',
+        syncReadingMoisture: 'Reading moisture...',
+        syncReady: 'Ready!',
     },
     appSettings: {
         title: 'App Settings',
@@ -4996,8 +5204,6 @@ export const ro: TranslationKeys = {
         successRate: 'Rată de succes',
         temperature: 'Temperatură',
         humidity: 'Umiditate',
-        humidityDry: 'Uscat',
-        humidityNormal: 'Normal',
         pressure: 'Presiune',
         rainfall: 'Precipitații',
         avg: 'Medie',
@@ -5524,6 +5730,19 @@ export const ro: TranslationKeys = {
         shrub: 'Arbusti',
     },
 
+    soilTextures: {
+        sand: 'Nisip',
+        loamySand: 'Nisip lutos',
+        sandyLoam: 'Lut nisipos',
+        loam: 'Lut',
+        siltLoam: 'Lut siltatic',
+        clayLoam: 'Lut argilos',
+        sandyClayLoam: 'Lut argilos nisipos',
+        siltyClayLoam: 'Lut argilos siltos',
+        clay: 'Argilă',
+        siltyClay: 'Argilă siltică',
+        sandyClay: 'Argilă nisipoasă',
+    },
 
     types: {
         plant: {
@@ -6639,6 +6858,87 @@ export const ro: TranslationKeys = {
             powerMode: { label: 'Mod energie', subtitle: 'Setari baterie si performanta' },
             resetOptions: { label: 'Optiuni resetare', subtitle: 'Sterge setari sau date' },
             timeLocation: { label: 'Timp si locatie', subtitle: 'Sincronizare timp si GPS' },
+            packsPlants: { label: 'Pachete si plante', subtitle: 'Gestioneaza profilele de plante', subtitleWithCount: '{count} plante custom instalate' },
+        },
+    },
+    mobilePacksSettings: {
+        title: 'Pachete si plante',
+        loading: 'Se incarca datele de pe dispozitiv...',
+        syncError: 'Eroare la incarcarea datelor. Incearca din nou.',
+        tabs: {
+            plants: 'Plante',
+            packs: 'Pachete',
+        },
+        storage: {
+            title: 'Stocare',
+            flash: 'Memorie Flash',
+            free: '{amount} disponibil',
+            romPlants: 'Plante ROM',
+            customPlants: 'Custom',
+            packs: 'Pachete',
+            unavailable: 'Info stocare indisponibil',
+        },
+        plants: {
+            builtIn: 'Baza de date integrata',
+            installed: 'Din pachete',
+        },
+        customPlants: {
+            title: 'Plante personalizate',
+            empty: 'Nicio planta personalizata instalata',
+            emptyHint: 'Plantele personalizate pot fi adaugate prin instalarea de pachete',
+            partial: 'Lista partiala',
+            installed: 'plante personalizate instalate',
+            manageHint: 'Plantele custom se gestioneaza prin instalarea de pachete',
+        },
+        romPlants: {
+            title: 'Plante integrate',
+            plantsCount: 'plante',
+            more: 'mai multe',
+        },
+        updates: {
+            title: 'Actualizari',
+            hint: 'Verifica pachete noi sau actualizari',
+            check: 'Verifica actualizari',
+            checking: 'Se verifica...',
+            upToDate: 'Totul este la zi',
+            available: 'Actualizari disponibile',
+            install: 'Instaleaza',
+        },
+        packs: {
+            installed: 'Pachete instalate',
+            available: 'Pachete disponibile',
+            base: 'Baza de date plante',
+            empty: 'Niciun pachet instalat',
+            emptyHint: 'Pachetele pot fi descarcate pentru a adauga plante noi',
+            comingSoon: 'Mai multe pachete in curand',
+            comingSoonHint: 'Revino mai tarziu pentru pachete aditionale',
+        },
+        deleteConfirm: {
+            title: 'Sterge planta',
+            message: 'Esti sigur ca vrei sa stergi "{name}"? Aceasta actiune nu poate fi anulata.',
+            confirm: 'Sterge',
+        },
+        plantDetails: {
+            scientificName: 'Nume stiintific',
+            category: 'Categorie',
+            plantId: 'ID planta',
+            packId: 'ID pachet',
+            rootingDepth: 'Adancime radacini',
+            version: 'Versiune',
+            kcIni: 'Kc Initial',
+            kcMid: 'Kc Mijloc',
+            kcEnd: 'Kc Final',
+            close: 'Inchide',
+        },
+        packDetails: {
+            plantsInPack: 'Plante din pachet',
+            noPlants: 'Nu s-au gasit plante in acest pachet',
+            close: 'Inchide',
+        },
+        labels: {
+            id: 'ID',
+            version: 'v',
+            pack: 'Pachet',
         },
     },
     mobileFlowCalibration: {
@@ -7148,6 +7448,7 @@ export const ro: TranslationKeys = {
         soilDetectGpsDenied: 'Permisiune GPS refuzata',
         soilDetectNotAvailable: 'Detectarea solului nu este disponibila',
         soilDetectFailed: 'Detectarea solului a esuat',
+        noCustomSoilProfile: 'Niciun profil de sol personalizat. Apasă "Detectează din GPS" mai întâi.',
         customSoilTitle: 'Sol personalizat',
         customSoilGps: 'Sol personalizat: {name}',
         customSoilSaved: 'Sol salvat: {name}',
@@ -7284,6 +7585,13 @@ export const ro: TranslationKeys = {
     },
     loadingScreen: {
         loadingData: 'Se incarca datele...',
+        syncCheckingSetup: 'Verificare configurare...',
+        syncReadingSensors: 'Citire senzori...',
+        syncReadingRain: 'Citire date ploaie...',
+        syncReadingStatus: 'Citire stare sistem...',
+        syncReadingConfig: 'Citire configuratie...',
+        syncReadingMoisture: 'Citire umiditate...',
+        syncReady: 'Gata!',
     },
     appSettings: {
         title: 'Setari aplicatie',

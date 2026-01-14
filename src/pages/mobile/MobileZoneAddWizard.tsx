@@ -86,7 +86,7 @@ const MobileZoneAddWizard: React.FC = () => {
 
   const { zones, systemConfig, onboardingState, wizardState, plantDb, soilDb, irrigationMethodDb } = useAppStore();
   const bleService = BleService.getInstance();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   // Get unconfigured channels
   const unconfiguredChannels = useMemo(() => {
@@ -871,7 +871,8 @@ const MobileZoneAddWizard: React.FC = () => {
                 const customParams = estimateSoilParametersFromTexture(
                   soilResult.clay,
                   soilResult.sand,
-                  soilResult.silt
+                  soilResult.silt,
+                  { language }
                 );
 
                 updateZoneConfig({

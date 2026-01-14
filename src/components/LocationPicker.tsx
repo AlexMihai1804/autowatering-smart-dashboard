@@ -219,13 +219,13 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             const errorMessage = (error as Error).message;
             
             if (errorMessage === 'GPS_DENIED') {
-                setGpsError('GPS permisiune refuzată. Folosiți harta sau introduceți manual coordonatele.');
+                setGpsError(t('errors.gpsDeniedSuggestion'));
                 setShowManualInput(true);
             } else if (errorMessage === 'GPS_NOT_AVAILABLE') {
-                setGpsError('GPS indisponibil. Folosiți harta sau introduceți manual coordonatele.');
+                setGpsError(t('errors.gpsUnavailableSuggestion'));
                 setShowManualInput(true);
             } else {
-                setGpsError('Eroare GPS. Încercați din nou sau folosiți harta.');
+                setGpsError(t('errors.gpsFailed'));
             }
         } finally {
             setIsGettingGPS(false);

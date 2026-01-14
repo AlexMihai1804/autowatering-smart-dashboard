@@ -32,6 +32,21 @@ import { LocationData } from '../../types/wizard';
 import { useAppStore } from '../../store/useAppStore';
 import { useI18n } from '../../i18n';
 
+// Helper function to translate soil texture
+const translateSoilTexture = (texture: string, t: (key: string) => string): string => {
+    const textureMap: Record<string, string> = {
+        'Sand': 'soilTextures.sand',
+        'Loamy Sand': 'soilTextures.loamySand',
+        'Sandy Loam': 'soilTextures.sandyLoam',
+        'Loam': 'soilTextures.loam',
+        'Silt Loam': 'soilTextures.siltLoam',
+        'Clay Loam': 'soilTextures.clayLoam'
+    };
+    
+    const key = textureMap[texture];
+    return key ? t(key) : texture;
+};
+
 interface SoilSelectorProps {
     /** Currently selected soil */
     value: SoilDBEntry | null;
@@ -80,7 +95,7 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
     disabled = false,
 }) => {
     const { soilDb } = useAppStore();
-    const { t } = useI18n();
+    const { t, language } = useI18n();
     const [isDetecting, setIsDetecting] = useState(false);
     const [hasAttemptedDetection, setHasAttemptedDetection] = useState(false);
     const [showManualList, setShowManualList] = useState(false);
@@ -126,7 +141,8 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
                     const customParams = estimateSoilParametersFromTexture(
                         result.clay,
                         result.sand,
-                        result.silt
+                        result.silt,
+                        { language }
                     );
                     
                     // Always create custom soil from detected values for more accurate FAO-56
@@ -273,7 +289,7 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
                             >
                                 <span className="text-2xl mr-3">{emoji}</span>
                                 <IonLabel>
-                                    <h2 className="text-white">{soil.texture}</h2>
+                                    <h2 className="text-white">{translateSoilTexture(soil.texture, t)}</h2>
                                     <p className="text-gray-400 text-sm">
                                         {t('wizard.soil.infiltration')}: {soil.infiltration_rate_mm_h} {t('common.mmPerHour')}
                                         {' \u2022 '}

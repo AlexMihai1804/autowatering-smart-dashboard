@@ -14,6 +14,7 @@ import { SoilDBEntry } from './DatabaseService';
 import { useAppStore } from '../store/useAppStore';
 import { fromArrayBuffer } from 'geotiff';
 import { geoInterruptedHomolosine } from 'd3-geo-projection';
+import { translations, Language, DEFAULT_LANGUAGE } from '../i18n/translations';
 
 // ============================================================================
 // Types
@@ -1104,8 +1105,14 @@ export function estimateSoilParametersFromTexture(
     clay: number,
     sand: number,
     silt: number,
-    organicMatter: number = 2.0
+    options?: {
+        organicMatter?: number;
+        language?: Language;
+    }
 ): CustomSoilParameters {
+    const organicMatter = options?.organicMatter ?? 2.0;
+    const language = options?.language ?? DEFAULT_LANGUAGE;
+
     // Normalize values to fractions (0-1)
     const total = clay + sand + silt;
     const C = (clay / total);  // Clay fraction
@@ -1170,8 +1177,27 @@ export function estimateSoilParametersFromTexture(
     // Ensure FC > WP
     const finalWP = Math.min(wiltingPoint, fieldCapacity - 2);
 
+    const textureKeyMap: Record<string, string> = {
+        Sand: 'sand',
+        LoamySand: 'loamySand',
+        SandyLoam: 'sandyLoam',
+        Loam: 'loam',
+        SiltLoam: 'siltLoam',
+        ClayLoam: 'clayLoam',
+        SandyClayLoam: 'sandyClayLoam',
+        SiltyClayLoam: 'siltyClayLoam',
+        Clay: 'clay',
+        SiltyClay: 'siltyClay',
+        SandyClay: 'sandyClay',
+    };
+
+    const textureKey = textureKeyMap[textureClass];
+    const displayName = textureKey
+        ? (translations[language]?.soilTextures as Record<string, string> | undefined)?.[textureKey] || textureClass
+        : textureClass;
+
     return {
-        name: `Detected ${textureClass}`,
+        name: displayName,
         field_capacity: Math.round(fieldCapacity * 10) / 10,
         wilting_point: Math.round(finalWP * 10) / 10,
         infiltration_rate: Math.round(infiltrationRate * 10) / 10,

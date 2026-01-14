@@ -299,7 +299,7 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
                                 {t('common.back')}
                             </IonButton>
                             <IonButton expand="block" onClick={handleFinish} className="flex-1">
-                                Calculează
+                                {t('calibration.calculate')}
                             </IonButton>
                         </div>
                     </div>
@@ -400,7 +400,7 @@ const CalibrationWizard: React.FC<CalibrationWizardProps> = ({ isOpen, onClose }
                                 {t('calibration.errorTitle')}
                             </h2>
                             <p className="text-red-400">
-                                {error || 'A apărut o eroare'}
+                                {error || t('calibration.errorDefault')}
                             </p>
                         </div>
 

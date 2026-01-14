@@ -40,6 +40,21 @@ import { WhatsThisTooltip } from './WhatsThisTooltip';
 import { useAppStore } from '../../store/useAppStore';
 import { useI18n } from '../../i18n';
 
+// Helper function to translate soil texture
+const translateSoilTexture = (texture: string, t: (key: string) => string): string => {
+    const textureMap: Record<string, string> = {
+        'Sand': 'soilTextures.sand',
+        'Loamy Sand': 'soilTextures.loamySand',
+        'Sandy Loam': 'soilTextures.sandyLoam',
+        'Loam': 'soilTextures.loam',
+        'Silt Loam': 'soilTextures.siltLoam',
+        'Clay Loam': 'soilTextures.clayLoam'
+    };
+    
+    const key = textureMap[texture];
+    return key ? t(key) : texture;
+};
+
 interface SoilSelectorProps {
     /** Currently selected soil */
     value: SoilDBEntry | null;
@@ -207,7 +222,7 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
                             </div>
                             <div className="flex-1">
                                 <h3 className="text-white font-bold text-lg m-0">
-                                    {value.texture}
+                                    {translateSoilTexture(value.texture, t)}
                                 </h3>
                                 <p className="text-gray-400 text-sm m-0">
                                     {value.soil_type}
@@ -356,7 +371,7 @@ export const SoilSelector: React.FC<SoilSelectorProps> = ({
                                                 {visual.emoji}
                                             </div>
                                             <IonLabel>
-                                                <h2 className="text-white font-medium">{soil.texture}</h2>
+                                                <h2 className="text-white font-medium">{translateSoilTexture(soil.texture, t)}</h2>
                                                 <p className="text-gray-400 text-sm">
                                                     {t('wizard.soil.infiltration')}: {soil.infiltration_rate_mm_h != null ? `${soil.infiltration_rate_mm_h} ${t('common.mmPerHour')}` : t('common.notAvailable')}
                                                 </p>

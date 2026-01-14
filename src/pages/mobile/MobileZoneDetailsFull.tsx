@@ -41,8 +41,8 @@ const MobileZoneDetailsFull: React.FC = () => {
 
   const channelIdNum = parseInt(channelId, 10);
   const bleService = BleService.getInstance();
-  const { t } = useI18n();
-  const plantCategoryLabels = useMemo(() => ({
+  const { t, language } = useI18n();
+  const plantCategoryLabels: Record<string, string> = useMemo(() => ({
     Agriculture: t('plantCategories.agriculture'),
     Gardening: t('plantCategories.gardening'),
     Landscaping: t('plantCategories.landscaping'),
@@ -295,27 +295,33 @@ const MobileZoneDetailsFull: React.FC = () => {
   // Lookup helpers - respect initialization state
   const plantName = useMemo(() => {
     if (!isChannelInitialized || !growing) return t('zoneDetails.notConfigured');
-    // Check for custom name first
-    if (growing.custom_name && growing.custom_name.trim()) {
-      return growing.custom_name;
-    }
+    // Show the actual plant name from database, NOT the custom zone name
     // plant_db_index 0 is valid (Wheat). Only show "Not configured" if truly uninitialized
     // which is already handled by isChannelInitialized check above
     const entry = plantDb.find(p => p.id === growing.plant_db_index);
     return entry?.common_name_en || t('mobileZoneDetails.plantId').replace('{id}', String(growing.plant_db_index));
   }, [growing, plantDb, isChannelInitialized, t]);
 
+  // Check if we have custom soil (from GPS detection or manual custom config)
+  const isCustomSoil = useMemo(() => {
+    if (customSoilConfig && customSoilConfig.status === 0 && customSoilConfig.name) return true;
+    if (pendingCustomSoil?.name) return true;
+    if (growing?.soil_db_index && growing.soil_db_index >= 200 && growing.soil_db_index < 255) return true;
+    return false;
+  }, [customSoilConfig, pendingCustomSoil, growing?.soil_db_index]);
+
   const soilName = useMemo(() => {
     if (!isChannelInitialized || !growing) return t('zoneDetails.notConfigured');
 
     // Check if we have a custom soil configuration from store (from device read)
+    // Just show the name directly, badge will indicate it's custom
     if (customSoilConfig && customSoilConfig.status === 0 && customSoilConfig.name) {
-      return t('mobileZoneDetails.customSoilName').replace('{name}', customSoilConfig.name);
+      return customSoilConfig.name;
     }
 
     // If we have pending custom soil detection info (during edit), show it
     if (pendingCustomSoil?.name) {
-      return t('mobileZoneDetails.customSoilName').replace('{name}', pendingCustomSoil.name);
+      return pendingCustomSoil.name;
     }
 
     // soil_db_index >= 200 was old way to indicate custom/satellite soil (legacy)
@@ -708,7 +714,8 @@ const MobileZoneDetailsFull: React.FC = () => {
         const customParams = estimateSoilParametersFromTexture(
           soilResult.clay,
           soilResult.sand,
-          soilResult.silt
+          soilResult.silt,
+          { language }
         );
         setPendingCustomSoil({
           name: customParams.name,
@@ -859,7 +866,7 @@ const MobileZoneDetailsFull: React.FC = () => {
             });
           }
         } else if (!existingCustomSoilName) {
-          throw new Error('No custom soil profile. Tap \"Detect from GPS\" first.');
+          throw new Error(t('mobileZoneDetails.noCustomSoilProfile'));
         }
 
         const newGrowing: GrowingEnvData = {
@@ -868,7 +875,7 @@ const MobileZoneDetailsFull: React.FC = () => {
         };
         await bleService.writeGrowingEnvironment(newGrowing);
       } else {
-        if (!selectedSoil) throw new Error('Please select a soil type.');
+        if (!selectedSoil) throw new Error(t('wizard.validation.soilRequired'));
         try {
           await bleService.deleteCustomSoilConfig(channelIdNum);
         } catch {
@@ -3040,10 +3047,15 @@ const MobileZoneDetailsFull: React.FC = () => {
                   <span className="material-symbols-outlined text-2xl">landscape</span>
                   <div>
                     <p className="text-mobile-text-muted text-xs">{t('zones.soilType')}</p>
-                    <p className="text-white font-bold">{soilName}</p>
-                    {growing?.soil_db_index && growing.soil_db_index >= 200 && (
-                      <span className="text-xs text-mobile-primary">{t('mobileZoneDetails.detectedFromGps')}</span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <p className="text-white font-bold">{soilName}</p>
+                      {isCustomSoil && (
+                        <span className="inline-flex items-center gap-1 bg-mobile-primary/20 text-mobile-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                          <span className="material-symbols-outlined text-xs">satellite_alt</span>
+                          GPS
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <span className="material-symbols-outlined text-mobile-text-muted">chevron_right</span>

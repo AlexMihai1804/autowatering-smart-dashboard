@@ -5,6 +5,40 @@ import { useAppStore } from '../store/useAppStore';
 import { useI18n } from '../i18n';
 import { PlantDBEntry, SoilDBEntry } from '../services/DatabaseService';
 
+// Helper function to translate plant category
+const translatePlantCategory = (category: string, t: (key: string) => string): string => {
+    const categoryMap: Record<string, string> = {
+        'Agriculture': 'plantCategories.agriculture',
+        'Gardening': 'plantCategories.gardening',
+        'Landscaping': 'plantCategories.landscaping',
+        'Indoor': 'plantCategories.indoor',
+        'Succulent': 'plantCategories.succulent',
+        'Fruit': 'plantCategories.fruit',
+        'Vegetable': 'plantCategories.vegetable',
+        'Herb': 'plantCategories.herb',
+        'Lawn': 'plantCategories.lawn',
+        'Shrub': 'plantCategories.shrub'
+    };
+    
+    const key = categoryMap[category];
+    return key ? t(key) : category;
+};
+
+// Helper function to translate soil texture
+const translateSoilTexture = (texture: string, t: (key: string) => string): string => {
+    const textureMap: Record<string, string> = {
+        'Sand': 'soilTextures.sand',
+        'Loamy Sand': 'soilTextures.loamySand',
+        'Sandy Loam': 'soilTextures.sandyLoam',
+        'Loam': 'soilTextures.loam',
+        'Silt Loam': 'soilTextures.siltLoam',
+        'Clay Loam': 'soilTextures.clayLoam'
+    };
+    
+    const key = textureMap[texture];
+    return key ? t(key) : texture;
+};
+
 interface ConfigWizardProps {
     isOpen: boolean;
     onClose: () => void;
@@ -90,7 +124,7 @@ const ConfigWizard: React.FC<ConfigWizardProps> = ({ isOpen, onClose, onSave, in
                                         >
                                             <IonLabel>
                                                 <h2>{getPlantName(plant)}</h2>
-                                                <p className="text-gray-400">{plant.category}</p>
+                                                <p className="text-gray-400">{translatePlantCategory(plant.category, t)}</p>
                                             </IonLabel>
                                             {selectedPlant?.id === plant.id && <IonIcon icon={checkmark} slot="end" color="secondary" />}
                                         </IonItem>
@@ -114,7 +148,7 @@ const ConfigWizard: React.FC<ConfigWizardProps> = ({ isOpen, onClose, onSave, in
                                             style={{ '--background': 'transparent', '--color': 'white' }}
                                         >
                                             <IonLabel>
-                                                <h2>{soil.texture}</h2>
+                                                <h2>{translateSoilTexture(soil.texture, t)}</h2>
                                                 <p className="text-gray-400">{t('wizard.soil.infiltration')}: {soil.infiltration_rate_mm_h} {t('common.mmPerHour')}</p>
                                             </IonLabel>
                                             {selectedSoil?.id === soil.id && <IonIcon icon={checkmark} slot="end" color="secondary" />}

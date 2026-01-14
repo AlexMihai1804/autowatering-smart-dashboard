@@ -42,6 +42,25 @@ import {
 import { WhatsThisTooltip } from './WhatsThisTooltip';
 import { useI18n } from '../../i18n';
 
+// Helper function to translate plant category
+const translatePlantCategory = (category: string, t: (key: string) => string): string => {
+    const categoryMap: Record<string, string> = {
+        'Agriculture': 'plantCategories.agriculture',
+        'Gardening': 'plantCategories.gardening',
+        'Landscaping': 'plantCategories.landscaping',
+        'Indoor': 'plantCategories.indoor',
+        'Succulent': 'plantCategories.succulent',
+        'Fruit': 'plantCategories.fruit',
+        'Vegetable': 'plantCategories.vegetable',
+        'Herb': 'plantCategories.herb',
+        'Lawn': 'plantCategories.lawn',
+        'Shrub': 'plantCategories.shrub'
+    };
+    
+    const key = categoryMap[category];
+    return key ? t(key) : category;
+};
+
 interface PlantSelectorProps {
     /** Currently selected plant */
     value: PlantDBEntry | null;
@@ -328,7 +347,7 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
                                         <IonLabel>
                                             <h2 className="text-white font-medium">{plant.common_name_ro}</h2>
                                             <p className="text-gray-400 text-sm">{plant.scientific_name}</p>
-                                            <p className="text-gray-500 text-xs">{plant.category}</p>
+                                            <p className="text-gray-500 text-xs">{translatePlantCategory(plant.category, t)}</p>
                                         </IonLabel>
                                         <div slot="end" className="text-right">
                                             <IonBadge color={getKcColor(plant.kc_mid)}>
