@@ -51,6 +51,7 @@ export interface TranslationKeys {
         hours: string;
         hoursShort: string;
         daysShort: string;
+        days: string;
         liters: string;
         litersShort: string;
         litersPerMinuteShort: string;
@@ -1768,6 +1769,7 @@ export interface TranslationKeys {
             title: string;
             plantsCount: string;
             more: string;
+            showMore: string;
         };
         updates: {
             title: string;
@@ -1803,6 +1805,26 @@ export interface TranslationKeys {
             kcMid: string;
             kcEnd: string;
             close: string;
+            growthCycle: string;
+            growthRate: string;
+            cropCoefficients: string;
+            kcDev: string;
+            rootDepth: string;
+            rootMin: string;
+            rootMax: string;
+            depletionFraction: string;
+            growthStages: string;
+            stageIni: string;
+            stageDev: string;
+            stageMid: string;
+            stageEnd: string;
+            tolerances: string;
+            droughtTolerance: string;
+            shadeTolerance: string;
+            salinityTolerance: string;
+            irrigation: string;
+            recommendedMethod: string;
+            bleOnlyNote: string;
         };
         packDetails: {
             plantsInPack: string;
@@ -2623,6 +2645,7 @@ export const en: TranslationKeys = {
         hours: 'hours',
         hoursShort: 'h',
         daysShort: 'd',
+        days: 'days',
         liters: 'liters',
         litersShort: 'L',
         litersPerMinuteShort: 'L/min',
@@ -4342,6 +4365,7 @@ export const en: TranslationKeys = {
             title: 'Built-in Plants',
             plantsCount: 'plants',
             more: 'more',
+            showMore: 'Show more',
         },
         updates: {
             title: 'Updates',
@@ -4377,6 +4401,26 @@ export const en: TranslationKeys = {
             kcMid: 'Kc Mid',
             kcEnd: 'Kc End',
             close: 'Close',
+            growthCycle: 'Growth Cycle',
+            growthRate: 'Growth Rate',
+            cropCoefficients: 'Crop Coefficients (Kc)',
+            kcDev: 'Kc Development',
+            rootDepth: 'Root Depth',
+            rootMin: 'Minimum',
+            rootMax: 'Maximum',
+            depletionFraction: 'Depletion Fraction',
+            growthStages: 'Growth Stages (days)',
+            stageIni: 'Initial',
+            stageDev: 'Development',
+            stageMid: 'Mid-season',
+            stageEnd: 'Late-season',
+            tolerances: 'Tolerances',
+            droughtTolerance: 'Drought',
+            shadeTolerance: 'Shade',
+            salinityTolerance: 'Salinity',
+            irrigation: 'Irrigation',
+            recommendedMethod: 'Recommended Method',
+            bleOnlyNote: 'This plant only has basic BLE data. Full details available for ROM plants.',
         },
         packDetails: {
             plantsInPack: 'Plants in Pack',
@@ -5174,6 +5218,7 @@ export const ro: TranslationKeys = {
         hours: 'ore',
         hoursShort: 'h',
         daysShort: 'z',
+        days: 'zile',
         liters: 'litri',
         litersShort: 'L',
         litersPerMinuteShort: 'L/min',
@@ -6894,6 +6939,7 @@ export const ro: TranslationKeys = {
             title: 'Plante integrate',
             plantsCount: 'plante',
             more: 'mai multe',
+            showMore: 'Arata mai multe',
         },
         updates: {
             title: 'Actualizari',
@@ -6929,6 +6975,26 @@ export const ro: TranslationKeys = {
             kcMid: 'Kc Mijloc',
             kcEnd: 'Kc Final',
             close: 'Inchide',
+            growthCycle: 'Ciclu de crestere',
+            growthRate: 'Rata de crestere',
+            cropCoefficients: 'Coeficienti Kc',
+            kcDev: 'Kc Dezvoltare',
+            rootDepth: 'Adancime radacini',
+            rootMin: 'Minim',
+            rootMax: 'Maxim',
+            depletionFraction: 'Fractie epuizare',
+            growthStages: 'Stadii de crestere (zile)',
+            stageIni: 'Initial',
+            stageDev: 'Dezvoltare',
+            stageMid: 'Mijloc sezon',
+            stageEnd: 'Final sezon',
+            tolerances: 'Tolerante',
+            droughtTolerance: 'Seceta',
+            shadeTolerance: 'Umbra',
+            salinityTolerance: 'Salinitate',
+            irrigation: 'Irigare',
+            recommendedMethod: 'Metoda recomandata',
+            bleOnlyNote: 'Aceasta planta are doar date BLE de baza. Detalii complete disponibile pentru plantele ROM.',
         },
         packDetails: {
             plantsInPack: 'Plante din pachet',

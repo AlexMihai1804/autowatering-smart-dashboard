@@ -370,7 +370,7 @@ const MobilePacksSettings: React.FC = () => {
                             expand_more
                           </span>
                         </button>
-                        <div className="divide-y divide-white/5 max-h-64 overflow-y-auto">
+                        <div className={`divide-y divide-white/5 ${isExpanded ? 'max-h-[70vh]' : ''} overflow-y-auto`}>
                           {displayPlants.map((plant) => (
                             <button
                               key={plant.id}
@@ -390,6 +390,22 @@ const MobilePacksSettings: React.FC = () => {
                               </div>
                             </button>
                           ))}
+                          {/* Show more button when collapsed and more plants available */}
+                          {!isExpanded && plants.length > 5 && (
+                            <button
+                              onClick={() => {
+                                const newSet = new Set(expandedRomCategories);
+                                newSet.add(category);
+                                setExpandedRomCategories(newSet);
+                              }}
+                              className="w-full p-3 flex items-center justify-center gap-2 text-emerald-400 hover:bg-white/5 transition-colors"
+                            >
+                              <span className="material-symbols-outlined text-sm">expand_more</span>
+                              <span className="text-sm font-medium">
+                                {t('mobilePacksSettings.romPlants.showMore')} ({plants.length - 5})
+                              </span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
@@ -552,35 +568,233 @@ const MobilePacksSettings: React.FC = () => {
               {(() => {
                 const romPlant = plantDb.find(p => p.id === selectedPlant.plant_id);
                 if (!romPlant) {
+                  // Fallback: only BLE info available (custom plant not in CSV)
                   return (
-                    <div className="space-y-3">
-                      <DetailRow label={t('mobilePacksSettings.plantDetails.plantId')} value={selectedPlant.plant_id.toString()} />
-                      <DetailRow label={t('mobilePacksSettings.plantDetails.packId')} value={selectedPlant.pack_id.toString()} />
-                      <DetailRow label={t('mobilePacksSettings.plantDetails.version')} value={selectedPlant.version.toString()} />
+                    <div className="space-y-4">
+                      <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                        <div className="grid grid-cols-3 gap-3 text-center">
+                          <div>
+                            <p className="text-2xl font-bold text-white">{selectedPlant.plant_id}</p>
+                            <p className="text-xs text-mobile-text-muted">{t('mobilePacksSettings.plantDetails.plantId')}</p>
+                          </div>
+                          <div>
+                            <p className="text-2xl font-bold text-white">{selectedPlant.pack_id}</p>
+                            <p className="text-xs text-mobile-text-muted">{t('mobilePacksSettings.plantDetails.packId')}</p>
+                          </div>
+                          <div>
+                            <p className="text-2xl font-bold text-white">v{selectedPlant.version}</p>
+                            <p className="text-xs text-mobile-text-muted">{t('mobilePacksSettings.plantDetails.version')}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-amber-500/10 rounded-xl p-4 flex items-start gap-3">
+                        <span className="material-symbols-outlined text-amber-400 text-xl">info</span>
+                        <p className="text-sm text-amber-400">{t('mobilePacksSettings.plantDetails.bleOnlyNote')}</p>
+                      </div>
                     </div>
                   );
                 }
                 
+                // Full CSV data available - show all details in a visual layout
+                const hasKcData = romPlant.kc_ini != null || romPlant.kc_mid != null || romPlant.kc_end != null;
+                const hasRootData = romPlant.root_depth_min_m != null || romPlant.root_depth_max_m != null;
+                const hasStageData = romPlant.stage_days_ini || romPlant.stage_days_dev || romPlant.stage_days_mid || romPlant.stage_days_end;
+                const hasToleranceData = romPlant.drought_tolerance || romPlant.shade_tolerance || romPlant.salinity_tolerance;
+                const totalDays = (romPlant.stage_days_ini || 0) + (romPlant.stage_days_dev || 0) + (romPlant.stage_days_mid || 0) + (romPlant.stage_days_end || 0);
+                
                 return (
-                  <div className="space-y-3">
-                    <DetailRow label={t('mobilePacksSettings.plantDetails.scientificName')} value={romPlant.scientific_name || '-'} />
-                    <DetailRow label={t('mobilePacksSettings.plantDetails.category')} value={romPlant.category || '-'} />
-                    <DetailRow label={t('mobilePacksSettings.plantDetails.plantId')} value={romPlant.id.toString()} />
-                    <DetailRow label={t('mobilePacksSettings.plantDetails.packId')} value={selectedPlant.pack_id.toString()} />
-                    {romPlant.kc_ini !== undefined && romPlant.kc_ini !== null && (
-                      <DetailRow label={t('mobilePacksSettings.plantDetails.kcIni')} value={romPlant.kc_ini.toFixed(2)} />
+                  <div className="space-y-4">
+                    {/* Scientific Name & Category Card */}
+                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                      {romPlant.scientific_name && (
+                        <p className="text-sm text-mobile-text-muted italic mb-1">{romPlant.scientific_name}</p>
+                      )}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {romPlant.category && (
+                          <span className="text-xs px-3 py-1 rounded-full bg-blue-500/20 text-blue-400">
+                            {romPlant.category}
+                          </span>
+                        )}
+                        {romPlant.growth_cycle && (
+                          <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400">
+                            {romPlant.growth_cycle}
+                          </span>
+                        )}
+                        {romPlant.growth_rate && (
+                          <span className="text-xs px-3 py-1 rounded-full bg-purple-500/20 text-purple-400">
+                            {romPlant.growth_rate}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Kc Coefficients Visual */}
+                    {hasKcData && (
+                      <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="material-symbols-outlined text-cyan-400 text-lg">water_drop</span>
+                          <p className="text-sm font-medium text-white">{t('mobilePacksSettings.plantDetails.cropCoefficients')}</p>
+                        </div>
+                        <div className="flex items-end justify-between gap-2 h-20 px-2">
+                          {[
+                            { label: 'Ini', value: romPlant.kc_ini, color: 'bg-cyan-400' },
+                            { label: 'Dev', value: romPlant.kc_dev, color: 'bg-cyan-500' },
+                            { label: 'Mid', value: romPlant.kc_mid, color: 'bg-cyan-600' },
+                            { label: 'End', value: romPlant.kc_end, color: 'bg-cyan-400' },
+                          ].map((stage, i) => (
+                            <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                              <span className="text-xs font-medium text-white">
+                                {stage.value != null ? stage.value.toFixed(2) : '-'}
+                              </span>
+                              <div 
+                                className={`w-full rounded-t-lg ${stage.color} transition-all`}
+                                style={{ height: stage.value != null ? `${Math.max(stage.value * 50, 8)}px` : '8px', opacity: stage.value != null ? 1 : 0.3 }}
+                              />
+                              <span className="text-[10px] text-mobile-text-muted uppercase">{stage.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
-                    {romPlant.kc_mid !== undefined && romPlant.kc_mid !== null && (
-                      <DetailRow label={t('mobilePacksSettings.plantDetails.kcMid')} value={romPlant.kc_mid.toFixed(2)} />
+                    
+                    {/* Growth Stages Timeline */}
+                    {hasStageData && totalDays > 0 && (
+                      <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="material-symbols-outlined text-green-400 text-lg">schedule</span>
+                          <p className="text-sm font-medium text-white">{t('mobilePacksSettings.plantDetails.growthStages')}</p>
+                          <span className="text-xs text-mobile-text-muted ml-auto">{totalDays} {t('common.days')}</span>
+                        </div>
+                        <div className="flex rounded-lg overflow-hidden h-6">
+                          {romPlant.stage_days_ini != null && romPlant.stage_days_ini > 0 && (
+                            <div 
+                              className="bg-yellow-500 flex items-center justify-center"
+                              style={{ width: `${(romPlant.stage_days_ini / totalDays) * 100}%` }}
+                            >
+                              <span className="text-[10px] text-black font-medium">{romPlant.stage_days_ini}</span>
+                            </div>
+                          )}
+                          {romPlant.stage_days_dev != null && romPlant.stage_days_dev > 0 && (
+                            <div 
+                              className="bg-lime-500 flex items-center justify-center"
+                              style={{ width: `${(romPlant.stage_days_dev / totalDays) * 100}%` }}
+                            >
+                              <span className="text-[10px] text-black font-medium">{romPlant.stage_days_dev}</span>
+                            </div>
+                          )}
+                          {romPlant.stage_days_mid != null && romPlant.stage_days_mid > 0 && (
+                            <div 
+                              className="bg-green-500 flex items-center justify-center"
+                              style={{ width: `${(romPlant.stage_days_mid / totalDays) * 100}%` }}
+                            >
+                              <span className="text-[10px] text-black font-medium">{romPlant.stage_days_mid}</span>
+                            </div>
+                          )}
+                          {romPlant.stage_days_end != null && romPlant.stage_days_end > 0 && (
+                            <div 
+                              className="bg-amber-500 flex items-center justify-center"
+                              style={{ width: `${(romPlant.stage_days_end / totalDays) * 100}%` }}
+                            >
+                              <span className="text-[10px] text-black font-medium">{romPlant.stage_days_end}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex justify-between mt-2 text-[10px] text-mobile-text-muted">
+                          <span>{t('mobilePacksSettings.plantDetails.stageIni')}</span>
+                          <span>{t('mobilePacksSettings.plantDetails.stageDev')}</span>
+                          <span>{t('mobilePacksSettings.plantDetails.stageMid')}</span>
+                          <span>{t('mobilePacksSettings.plantDetails.stageEnd')}</span>
+                        </div>
+                      </div>
                     )}
-                    {romPlant.kc_end !== undefined && romPlant.kc_end !== null && (
-                      <DetailRow label={t('mobilePacksSettings.plantDetails.kcEnd')} value={romPlant.kc_end.toFixed(2)} />
+                    
+                    {/* Root Depth & Depletion */}
+                    {(hasRootData || romPlant.depletion_fraction_p != null) && (
+                      <div className="grid grid-cols-2 gap-3">
+                        {hasRootData && (
+                          <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="material-symbols-outlined text-amber-400 text-lg">straighten</span>
+                              <p className="text-xs text-mobile-text-muted">{t('mobilePacksSettings.plantDetails.rootDepth')}</p>
+                            </div>
+                            <p className="text-lg font-bold text-white">
+                              {romPlant.root_depth_min_m != null && romPlant.root_depth_max_m != null
+                                ? `${(romPlant.root_depth_min_m * 100).toFixed(0)}-${(romPlant.root_depth_max_m * 100).toFixed(0)}`
+                                : romPlant.root_depth_max_m != null
+                                  ? (romPlant.root_depth_max_m * 100).toFixed(0)
+                                  : (romPlant.root_depth_min_m! * 100).toFixed(0)
+                              }
+                              <span className="text-sm font-normal text-mobile-text-muted ml-1">cm</span>
+                            </p>
+                          </div>
+                        )}
+                        {romPlant.depletion_fraction_p != null && (
+                          <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="material-symbols-outlined text-blue-400 text-lg">humidity_percentage</span>
+                              <p className="text-xs text-mobile-text-muted">{t('mobilePacksSettings.plantDetails.depletionFraction')}</p>
+                            </div>
+                            <p className="text-lg font-bold text-white">
+                              {(romPlant.depletion_fraction_p * 100).toFixed(0)}
+                              <span className="text-sm font-normal text-mobile-text-muted ml-1">%</span>
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     )}
-                    {romPlant.root_depth_max_m !== undefined && romPlant.root_depth_max_m !== null && (
-                      <DetailRow 
-                        label={t('mobilePacksSettings.plantDetails.rootingDepth')} 
-                        value={`${(romPlant.root_depth_max_m * 100).toFixed(0)} cm`} 
-                      />
+                    
+                    {/* Tolerances Visual */}
+                    {hasToleranceData && (
+                      <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="material-symbols-outlined text-orange-400 text-lg">shield</span>
+                          <p className="text-sm font-medium text-white">{t('mobilePacksSettings.plantDetails.tolerances')}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {romPlant.drought_tolerance && (
+                            <div className="flex items-center gap-2 bg-orange-500/10 rounded-xl px-3 py-2">
+                              <span className="material-symbols-outlined text-orange-400 text-sm">wb_sunny</span>
+                              <div>
+                                <p className="text-[10px] text-mobile-text-muted">{t('mobilePacksSettings.plantDetails.droughtTolerance')}</p>
+                                <p className="text-xs font-medium text-white">{romPlant.drought_tolerance}</p>
+                              </div>
+                            </div>
+                          )}
+                          {romPlant.shade_tolerance && (
+                            <div className="flex items-center gap-2 bg-slate-500/10 rounded-xl px-3 py-2">
+                              <span className="material-symbols-outlined text-slate-400 text-sm">partly_cloudy_day</span>
+                              <div>
+                                <p className="text-[10px] text-mobile-text-muted">{t('mobilePacksSettings.plantDetails.shadeTolerance')}</p>
+                                <p className="text-xs font-medium text-white">{romPlant.shade_tolerance}</p>
+                              </div>
+                            </div>
+                          )}
+                          {romPlant.salinity_tolerance && (
+                            <div className="flex items-center gap-2 bg-cyan-500/10 rounded-xl px-3 py-2">
+                              <span className="material-symbols-outlined text-cyan-400 text-sm">water</span>
+                              <div>
+                                <p className="text-[10px] text-mobile-text-muted">{t('mobilePacksSettings.plantDetails.salinityTolerance')}</p>
+                                <p className="text-xs font-medium text-white">{romPlant.salinity_tolerance}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Irrigation Method */}
+                    {romPlant.typ_irrig_method && (
+                      <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-2xl p-4 border border-blue-500/20">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                            <span className="material-symbols-outlined text-blue-400">water</span>
+                          </div>
+                          <div>
+                            <p className="text-xs text-mobile-text-muted">{t('mobilePacksSettings.plantDetails.recommendedMethod')}</p>
+                            <p className="text-sm font-medium text-white">{romPlant.typ_irrig_method}</p>
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
                 );
@@ -639,38 +853,72 @@ const MobilePacksSettings: React.FC = () => {
                   {t('mobilePacksSettings.packDetails.plantsInPack')}
                 </h3>
                 <div className="bg-white/5 rounded-2xl border border-white/5 divide-y divide-white/5 max-h-80 overflow-y-auto">
-                  {customPlants
-                    .filter(p => p.pack_id === selectedPack.pack_id)
-                    .map((plant) => {
-                      const romPlant = plantDb.find(p => p.id === plant.plant_id);
-                      return (
-                        <button
-                          key={plant.plant_id}
-                          onClick={() => {
-                            setSelectedPack(null);
-                            setSelectedPlant(plant);
-                          }}
-                          className="w-full flex items-center gap-3 p-3 hover:bg-white/5 transition-colors"
-                        >
-                          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-                            <span className="material-symbols-outlined">eco</span>
-                          </div>
-                          <div className="flex-1 text-left">
-                            <p className="text-sm font-medium text-white">{plant.name}</p>
-                            {romPlant && (
-                              <p className="text-xs text-mobile-text-muted">{romPlant.scientific_name}</p>
-                            )}
-                          </div>
-                          <span className="material-symbols-outlined text-mobile-text-muted text-sm">
-                            chevron_right
-                          </span>
-                        </button>
-                      );
-                    })}
-                  {customPlants.filter(p => p.pack_id === selectedPack.pack_id).length === 0 && (
-                    <div className="p-6 text-center">
-                      <p className="text-sm text-mobile-text-muted">{t('mobilePacksSettings.packDetails.noPlants')}</p>
-                    </div>
+                  {/* For ROM pack (pack_id=0), show plantDb; for custom packs, show customPlants */}
+                  {selectedPack.pack_id === 0 ? (
+                    // ROM pack - show all plantDb entries
+                    plantDb.map((plant) => (
+                      <button
+                        key={plant.id}
+                        onClick={() => {
+                          setSelectedPack(null);
+                          setSelectedPlant({
+                            plant_id: plant.id,
+                            pack_id: 0,
+                            version: 0,
+                            name: plant.common_name_en
+                          });
+                        }}
+                        className="w-full flex items-center gap-3 p-3 hover:bg-white/5 transition-colors"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                          <span className="material-symbols-outlined">grass</span>
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="text-sm font-medium text-white">{plant.common_name_en}</p>
+                          <p className="text-xs text-mobile-text-muted">{plant.scientific_name}</p>
+                        </div>
+                        <span className="material-symbols-outlined text-mobile-text-muted text-sm">
+                          chevron_right
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    // Custom pack - show customPlants filtered by pack_id
+                    <>
+                      {customPlants
+                        .filter(p => p.pack_id === selectedPack.pack_id)
+                        .map((plant) => {
+                          const romPlant = plantDb.find(p => p.id === plant.plant_id);
+                          return (
+                            <button
+                              key={plant.plant_id}
+                              onClick={() => {
+                                setSelectedPack(null);
+                                setSelectedPlant(plant);
+                              }}
+                              className="w-full flex items-center gap-3 p-3 hover:bg-white/5 transition-colors"
+                            >
+                              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                                <span className="material-symbols-outlined">eco</span>
+                              </div>
+                              <div className="flex-1 text-left">
+                                <p className="text-sm font-medium text-white">{plant.name}</p>
+                                {romPlant && (
+                                  <p className="text-xs text-mobile-text-muted">{romPlant.scientific_name}</p>
+                                )}
+                              </div>
+                              <span className="material-symbols-outlined text-mobile-text-muted text-sm">
+                                chevron_right
+                              </span>
+                            </button>
+                          );
+                        })}
+                      {customPlants.filter(p => p.pack_id === selectedPack.pack_id).length === 0 && (
+                        <div className="p-6 text-center">
+                          <p className="text-sm text-mobile-text-muted">{t('mobilePacksSettings.packDetails.noPlants')}</p>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

@@ -71,6 +71,68 @@ def stream_output(proc: subprocess.Popen, prefix: str, line_filter=None):
     return thread
 
 
+def _rmtree_onerror(func, path, exc_info):
+    try:
+        os.chmod(path, 0o666)
+    except OSError:
+        pass
+    try:
+        func(path)
+    except OSError:
+        pass
+
+
+def clean_android_public_assets(project_root: Path) -> None:
+    """Best-effort cleanup of generated Android web assets.
+
+    On Windows, Capacitor sync can fail with EPERM when rewriting
+    android/app/src/main/assets/public/cordova_plugins.js (file locks / AV scans).
+    Removing the generated output before sync reduces conflicts.
+    """
+    public_dir = project_root / "android" / "app" / "src" / "main" / "assets" / "public"
+    if not public_dir.exists():
+        return
+    try:
+        shutil.rmtree(public_dir, onerror=_rmtree_onerror)
+    except Exception as e:
+        print(f"Warning: Failed to clean {public_dir}: {e}", flush=True)
+
+
+def cap_sync_android_with_retries(npx_cmd: str, project_root: Path, attempts: int = 5) -> bool:
+    for i in range(1, attempts + 1):
+        clean_android_public_assets(project_root)
+        try:
+            res = subprocess.run(
+                [npx_cmd, "cap", "sync", "android"],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        except Exception as e:
+            print(f"Warning: cap sync android failed: {e}", flush=True)
+            return False
+
+        if res.stdout:
+            print(res.stdout.rstrip(), flush=True)
+        if res.stderr:
+            print(res.stderr.rstrip(), flush=True)
+
+        if res.returncode == 0:
+            return True
+
+        combined = f"{res.stdout or ''}\n{res.stderr or ''}"
+        # Transient Windows locks/AV scans sometimes unblock after a short delay.
+        if "EPERM" in combined and "cordova_plugins.js" in combined:
+            delay = min(2.0, 0.4 * i)
+            print(f"[cap] Detected EPERM on cordova_plugins.js; retrying in {delay:.1f}s...", flush=True)
+            time.sleep(delay)
+            continue
+
+        return False
+    return False
+
+
 def read_app_id(project_root: Path) -> Optional[str]:
     config_path = project_root / "capacitor.config.json"
     if not config_path.exists():
@@ -574,6 +636,7 @@ def run():
             "run",
             "android",
             "-l",
+            "--no-sync",
             "--host",
             cap_host,
             "--port",
@@ -587,17 +650,9 @@ def run():
         # Ensure native project has latest plugin registrations and config.
         # Without this, newly installed plugins (e.g. @capacitor/app for backButton)
         # may not be present in the Android build and hardware back will exit the app.
-        try:
-            print("Syncing Capacitor Android (cap sync android)...", flush=True)
-            subprocess.run(
-                [npx_cmd, "cap", "sync", "android"],
-                cwd=project_root,
-                check=False,
-                capture_output=False,
-                text=True,
-            )
-        except Exception as e:
-            print(f"Warning: cap sync android failed: {e}", flush=True)
+        print("Syncing Capacitor Android (cap sync android)...", flush=True)
+        if not cap_sync_android_with_retries(npx_cmd=npx_cmd, project_root=project_root):
+            print("Warning: cap sync android did not complete successfully; continuing to cap run.", flush=True)
 
         print("Starting Capacitor run...", flush=True)
         cap_proc = subprocess.Popen(
