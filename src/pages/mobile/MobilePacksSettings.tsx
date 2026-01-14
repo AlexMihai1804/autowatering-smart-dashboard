@@ -323,8 +323,25 @@ const MobilePacksSettings: React.FC = () => {
                   <span className="material-symbols-outlined text-3xl text-mobile-text-muted">eco</span>
                 </div>
                 <p className="text-base font-medium text-white mb-1">{t('mobilePacksSettings.customPlants.empty')}</p>
-                <p className="text-sm text-mobile-text-muted">{t('mobilePacksSettings.customPlants.emptyHint')}</p>
+                <p className="text-sm text-mobile-text-muted mb-4">{t('mobilePacksSettings.customPlants.emptyHint')}</p>
+                <button
+                  onClick={() => history.push('/device/create-plant')}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-lg">add</span>
+                  {t('mobilePacksSettings.customPlants.create')}
+                </button>
               </div>
+            )}
+
+            {/* Create Plant FAB when custom plants exist */}
+            {customPlants.length > 0 && (
+              <button
+                onClick={() => history.push('/device/create-plant')}
+                className="fixed bottom-24 right-4 w-14 h-14 bg-emerald-500 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-emerald-600 transition-colors z-40"
+              >
+                <span className="material-symbols-outlined text-2xl">add</span>
+              </button>
             )}
 
             {/* ROM Plants Section */}

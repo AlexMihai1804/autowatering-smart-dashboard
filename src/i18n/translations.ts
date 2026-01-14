@@ -1764,6 +1764,7 @@ export interface TranslationKeys {
             partial: string;
             installed: string;
             manageHint: string;
+            create: string;
         };
         romPlants: {
             title: string;
@@ -1835,6 +1836,83 @@ export interface TranslationKeys {
             id: string;
             version: string;
             pack: string;
+        };
+    };
+
+    mobileCreatePlant: {
+        title: string;
+        save: string;
+        steps: {
+            basic: { title: string; subtitle: string; };
+            growth: { title: string; subtitle: string; };
+            water: { title: string; subtitle: string; };
+            review: { title: string; subtitle: string; };
+        };
+        fields: {
+            name: string;
+            scientificName: string;
+            category: string;
+            growthCycle: string;
+            rootMin: string;
+            rootMax: string;
+        };
+        placeholders: {
+            name: string;
+            scientificName: string;
+        };
+        cycles: {
+            annual: string;
+            perennial: string;
+            biennial: string;
+        };
+        stages: {
+            initial: string;
+            development: string;
+            midSeason: string;
+            lateSeason: string;
+        };
+        hints: {
+            stageIni: string;
+            stageDev: string;
+            stageMid: string;
+            stageEnd: string;
+            kcIni: string;
+            kcMid: string;
+            kcEnd: string;
+            depletion: string;
+        };
+        kc: {
+            initial: string;
+            mid: string;
+            end: string;
+        };
+        growthTimeline: string;
+        kcPreview: string;
+        rootDepth: string;
+        depletionFraction: string;
+        irrigationMethod: string;
+        totalDays: string;
+        summary: {
+            basic: string;
+            growth: string;
+            water: string;
+        };
+        validation: {
+            nameRequired: string;
+            stagesTooShort: string;
+            stagesTooLong: string;
+            stageIniMin: string;
+            stageMidMin: string;
+            kcRange: string;
+            kcMidRange: string;
+            kcMidHigher: string;
+            rootRange: string;
+            rootMaxHigher: string;
+            rootMaxTooDeep: string;
+            depletionRange: string;
+            allValid: string;
+            readyToSave: string;
+            hasErrors: string;
         };
     };
 
@@ -4360,6 +4438,7 @@ export const en: TranslationKeys = {
             partial: 'Partial list',
             installed: 'custom plants installed',
             manageHint: 'Custom plants are managed via pack installation',
+            create: 'Create Plant',
         },
         romPlants: {
             title: 'Built-in Plants',
@@ -4431,6 +4510,82 @@ export const en: TranslationKeys = {
             id: 'ID',
             version: 'v',
             pack: 'Pack',
+        },
+    },
+    mobileCreatePlant: {
+        title: 'Create Custom Plant',
+        save: 'Save Plant',
+        steps: {
+            basic: { title: 'Basic Info', subtitle: 'Name and category of your plant' },
+            growth: { title: 'Growth Stages', subtitle: 'Define the growth cycle duration' },
+            water: { title: 'Water Needs', subtitle: 'Set irrigation parameters' },
+            review: { title: 'Review', subtitle: 'Verify all values before saving' },
+        },
+        fields: {
+            name: 'Plant Name',
+            scientificName: 'Scientific Name',
+            category: 'Category',
+            growthCycle: 'Growth Cycle',
+            rootMin: 'Minimum Depth',
+            rootMax: 'Maximum Depth',
+        },
+        placeholders: {
+            name: 'e.g. Cherry Tomato',
+            scientificName: 'e.g. Solanum lycopersicum',
+        },
+        cycles: {
+            annual: 'Annual',
+            perennial: 'Perennial',
+            biennial: 'Biennial',
+        },
+        stages: {
+            initial: 'Initial Stage',
+            development: 'Development',
+            midSeason: 'Mid-Season',
+            lateSeason: 'Late Season',
+        },
+        hints: {
+            stageIni: 'Seedling phase, low water needs',
+            stageDev: 'Rapid growth, increasing water demand',
+            stageMid: 'Peak growth, highest water needs',
+            stageEnd: 'Maturation, decreasing water needs',
+            kcIni: 'Low values (0.3-0.5) for young plants',
+            kcMid: 'Peak values (0.9-1.2) at full growth',
+            kcEnd: 'Moderate values (0.5-0.8) at maturity',
+            depletion: 'Higher = more drought tolerant, Lower = needs frequent watering',
+        },
+        kc: {
+            initial: 'Kc Initial (Seedling)',
+            mid: 'Kc Mid (Full Growth)',
+            end: 'Kc End (Maturity)',
+        },
+        growthTimeline: 'Growth Timeline',
+        kcPreview: 'Water Needs Preview',
+        rootDepth: 'Root Depth',
+        depletionFraction: 'Depletion Fraction',
+        irrigationMethod: 'Irrigation Method',
+        totalDays: 'Total Growth Cycle',
+        summary: {
+            basic: 'Basic Information',
+            growth: 'Growth Stages',
+            water: 'Water Parameters',
+        },
+        validation: {
+            nameRequired: 'Plant name is required',
+            stagesTooShort: 'Total growth cycle must be at least 30 days',
+            stagesTooLong: 'Total growth cycle cannot exceed 365 days',
+            stageIniMin: 'Initial stage should be at least 5 days',
+            stageMidMin: 'Mid-season stage should be at least 10 days',
+            kcRange: 'Kc values must be between 0.1 and 1.5',
+            kcMidRange: 'Kc Mid should be between 0.5 and 1.5',
+            kcMidHigher: 'Kc Mid should be higher than Kc Initial',
+            rootRange: 'Root depth must be between 5 and 200 cm',
+            rootMaxHigher: 'Maximum depth must be greater than minimum',
+            rootMaxTooDeep: 'Maximum root depth cannot exceed 300 cm',
+            depletionRange: 'Depletion fraction should be between 20% and 80%',
+            allValid: 'All values look good!',
+            readyToSave: 'Your plant is ready to be saved',
+            hasErrors: 'Please fix the following issues:',
         },
     },
     mobileFlowCalibration: {
@@ -6934,6 +7089,7 @@ export const ro: TranslationKeys = {
             partial: 'Lista partiala',
             installed: 'plante personalizate instalate',
             manageHint: 'Plantele custom se gestioneaza prin instalarea de pachete',
+            create: 'Creeaza Planta',
         },
         romPlants: {
             title: 'Plante integrate',
@@ -7005,6 +7161,82 @@ export const ro: TranslationKeys = {
             id: 'ID',
             version: 'v',
             pack: 'Pachet',
+        },
+    },
+    mobileCreatePlant: {
+        title: 'Creeaza Planta',
+        save: 'Salveaza Planta',
+        steps: {
+            basic: { title: 'Informatii de baza', subtitle: 'Numele si categoria plantei' },
+            growth: { title: 'Stadii de crestere', subtitle: 'Defineste durata ciclului de crestere' },
+            water: { title: 'Nevoi de apa', subtitle: 'Seteaza parametrii de irigare' },
+            review: { title: 'Verificare', subtitle: 'Verifica toate valorile inainte de salvare' },
+        },
+        fields: {
+            name: 'Nume planta',
+            scientificName: 'Nume stiintific',
+            category: 'Categorie',
+            growthCycle: 'Ciclu de crestere',
+            rootMin: 'Adancime minima',
+            rootMax: 'Adancime maxima',
+        },
+        placeholders: {
+            name: 'ex. Rosie Cherry',
+            scientificName: 'ex. Solanum lycopersicum',
+        },
+        cycles: {
+            annual: 'Anuala',
+            perennial: 'Perena',
+            biennial: 'Bienala',
+        },
+        stages: {
+            initial: 'Stadiu Initial',
+            development: 'Dezvoltare',
+            midSeason: 'Mijloc Sezon',
+            lateSeason: 'Final Sezon',
+        },
+        hints: {
+            stageIni: 'Faza de rasad, nevoi scazute de apa',
+            stageDev: 'Crestere rapida, nevoi crescande de apa',
+            stageMid: 'Crestere maxima, cele mai mari nevoi de apa',
+            stageEnd: 'Maturare, nevoi descrescatoare de apa',
+            kcIni: 'Valori mici (0.3-0.5) pentru plante tinere',
+            kcMid: 'Valori maxime (0.9-1.2) la crestere completa',
+            kcEnd: 'Valori moderate (0.5-0.8) la maturitate',
+            depletion: 'Mai mare = mai toleranta la seceta, Mai mic = necesita udare frecventa',
+        },
+        kc: {
+            initial: 'Kc Initial (Rasad)',
+            mid: 'Kc Mijloc (Crestere Completa)',
+            end: 'Kc Final (Maturitate)',
+        },
+        growthTimeline: 'Linie temporala crestere',
+        kcPreview: 'Previzualizare nevoi apa',
+        rootDepth: 'Adancime radacini',
+        depletionFraction: 'Fractie de epuizare',
+        irrigationMethod: 'Metoda de irigare',
+        totalDays: 'Ciclu total de crestere',
+        summary: {
+            basic: 'Informatii de baza',
+            growth: 'Stadii de crestere',
+            water: 'Parametri de apa',
+        },
+        validation: {
+            nameRequired: 'Numele plantei este obligatoriu',
+            stagesTooShort: 'Ciclul total trebuie sa fie de cel putin 30 zile',
+            stagesTooLong: 'Ciclul total nu poate depasi 365 zile',
+            stageIniMin: 'Stadiul initial trebuie sa fie de cel putin 5 zile',
+            stageMidMin: 'Stadiul de mijloc trebuie sa fie de cel putin 10 zile',
+            kcRange: 'Valorile Kc trebuie sa fie intre 0.1 si 1.5',
+            kcMidRange: 'Kc Mijloc trebuie sa fie intre 0.5 si 1.5',
+            kcMidHigher: 'Kc Mijloc trebuie sa fie mai mare decat Kc Initial',
+            rootRange: 'Adancimea radacinilor trebuie sa fie intre 5 si 200 cm',
+            rootMaxHigher: 'Adancimea maxima trebuie sa fie mai mare decat minima',
+            rootMaxTooDeep: 'Adancimea maxima nu poate depasi 300 cm',
+            depletionRange: 'Fractia de epuizare trebuie sa fie intre 20% si 80%',
+            allValid: 'Toate valorile sunt corecte!',
+            readyToSave: 'Planta ta este gata de salvare',
+            hasErrors: 'Te rugam sa corectezi urmatoarele probleme:',
         },
     },
     mobileFlowCalibration: {
