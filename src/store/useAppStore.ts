@@ -35,7 +35,11 @@ import {
     EnvHourlyEntry,
     EnvDailyEntry,
     BulkSyncSnapshot,
-    CustomSoilConfigData
+    CustomSoilConfigData,
+    // Pack types
+    PackStats,
+    PackPlantListEntry,
+    PackListEntry
 } from '../types/firmware_structs';
 import { PlantDBEntry, SoilDBEntry, IrrigationMethodEntry } from '../services/DatabaseService';
 import { Language, DEFAULT_LANGUAGE } from '../i18n/translations';
@@ -136,6 +140,13 @@ interface AppState {
     envHistoryHourly: EnvHourlyEntry[];
     envHistoryDaily: EnvDailyEntry[];
 
+    // Pack/Custom Plants cache (synced from device)
+    packStats: PackStats | null;
+    customPlants: PackPlantListEntry[];
+    installedPacks: PackListEntry[];
+    packChangeCounter: number;  // For cache invalidation
+    packSyncInProgress: boolean;
+
     systemStatus: {
         state: SystemStatus;
         nextRun?: string;
@@ -220,6 +231,16 @@ interface AppState {
     setEnvHistoryDaily: (entries: EnvDailyEntry[]) => void;
     clearHistoryCache: () => void;
 
+    // Pack/Custom Plants actions
+    setPackStats: (stats: PackStats | null) => void;
+    setCustomPlants: (plants: PackPlantListEntry[]) => void;
+    setInstalledPacks: (packs: PackListEntry[]) => void;
+    addCustomPlant: (plant: PackPlantListEntry) => void;
+    removeCustomPlant: (plantId: number) => void;
+    setPackChangeCounter: (counter: number) => void;
+    setPackSyncInProgress: (inProgress: boolean) => void;
+    clearPackCache: () => void;
+
     updateSystemStatus: (status: Partial<AppState['systemStatus']>) => void;
     setDatabase: (plants: PlantDBEntry[], soils: SoilDBEntry[], irrigationMethods: IrrigationMethodEntry[]) => void;
     setWizardState: (state: Partial<AppState['wizardState']>) => void;
@@ -303,6 +324,13 @@ export const useAppStore = create<AppState>((set) => ({
     envHistoryDetailed: [],
     envHistoryHourly: [],
     envHistoryDaily: [],
+
+    // Pack/Custom Plants cache
+    packStats: null,
+    customPlants: [],
+    installedPacks: [],
+    packChangeCounter: 0,
+    packSyncInProgress: false,
 
     systemStatus: {
         state: SystemStatus.OK,
@@ -488,6 +516,26 @@ export const useAppStore = create<AppState>((set) => ({
         envHistoryDetailed: [],
         envHistoryHourly: [],
         envHistoryDaily: []
+    }),
+
+    // Pack/Custom Plants actions
+    setPackStats: (stats) => set({ packStats: stats }),
+    setCustomPlants: (plants) => set({ customPlants: plants }),
+    setInstalledPacks: (packs) => set({ installedPacks: packs }),
+    addCustomPlant: (plant) => set((state) => ({
+        customPlants: [...state.customPlants.filter(p => p.plant_id !== plant.plant_id), plant]
+    })),
+    removeCustomPlant: (plantId) => set((state) => ({
+        customPlants: state.customPlants.filter(p => p.plant_id !== plantId)
+    })),
+    setPackChangeCounter: (counter) => set({ packChangeCounter: counter }),
+    setPackSyncInProgress: (inProgress) => set({ packSyncInProgress: inProgress }),
+    clearPackCache: () => set({
+        packStats: null,
+        customPlants: [],
+        installedPacks: [],
+        packChangeCounter: 0,
+        packSyncInProgress: false
     }),
 
     updateSystemStatus: (status) => set((state) => ({
@@ -693,6 +741,11 @@ export const useAppStore = create<AppState>((set) => ({
         envHistoryDetailed: [],
         envHistoryHourly: [],
         envHistoryDaily: [],
+        // Pack cache
+        packStats: null,
+        customPlants: [],
+        packChangeCounter: 0,
+        packSyncInProgress: false,
         systemStatus: { state: SystemStatus.OK },
         channelWizard: { ...DEFAULT_WIZARD_STATE }
     })

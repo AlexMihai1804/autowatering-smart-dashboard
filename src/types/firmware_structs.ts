@@ -1533,6 +1533,42 @@ export const PACK_TRANSFER_STATE = {
     ERROR: 3
 } as const;
 
+/**
+ * Pack List Entry - 30 bytes per entry (bt_pack_list_entry_t)
+ */
+export interface PackListEntry {
+    pack_id: number;           // u16: Pack ID (0=built-in)
+    version: number;           // u16: Pack version
+    plant_count: number;       // u16: Number of plants in pack
+    name: string;              // char[24]: Pack name (truncated)
+}
+
+/**
+ * Pack List Request - 4 bytes (bt_pack_list_req_t)
+ * Write to PACK_LIST characteristic to select operation
+ */
+export interface PackListRequest {
+    opcode: number;            // u8: 0x01=list packs, 0x02=get content
+    offset: number;            // u16: pagination offset (or pack_id for content)
+    reserved: number;          // u8: reserved
+}
+
+/**
+ * Pack List Response - after opcode 0x01
+ * Returns paginated list of packs (up to 4 per read)
+ */
+export interface PackListResponse {
+    total_count: number;       // u16: Total packs
+    returned_count: number;    // u8: Entries in this response
+    include_builtin: number;   // u8: 1 if builtin included
+    entries: PackListEntry[];  // Up to 4 entries
+}
+
+export const PACK_LIST_OPCODE = {
+    LIST_PACKS: 0x01,
+    GET_CONTENT: 0x02
+} as const;
+
 export const PACK_OPERATIONS = {
     IDLE: 0,
     WRITE: 1,
@@ -1572,4 +1608,17 @@ export function isCustomPlant(plantId: number): boolean {
  */
 export function isRomPlant(plantId: number): boolean {
     return plantId >= PLANT_ID_RANGES.ROM_MIN && plantId <= PLANT_ID_RANGES.ROM_MAX;
+}
+
+/**
+ * Pack Plant List Entry - Summary info from BLE list response
+ * This is what we get from bt_pack_plant_list_entry_t (20 bytes each)
+ * 
+ * Used for displaying custom plant info without needing full 156-byte profile.
+ */
+export interface PackPlantListEntry {
+    plant_id: number;              // u16: unique plant ID
+    pack_id: number;               // u8: 0=standalone, 1+=from pack
+    version: number;               // u8: plant data version
+    name: string;                  // char[16]: truncated name
 }

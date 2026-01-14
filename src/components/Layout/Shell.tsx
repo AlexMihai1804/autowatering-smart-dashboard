@@ -38,6 +38,7 @@ import MobileConnectionSuccess from '../../pages/mobile/MobileConnectionSuccess'
 import MobileManageDevices from '../../pages/mobile/MobileManageDevices';
 import MobileZoneAddWizard from '../../pages/mobile/MobileZoneAddWizard';
 import MobileAlarmHistory from '../../pages/mobile/MobileAlarmHistory';
+import MobilePacksSettings from '../../pages/mobile/MobilePacksSettings';
 
 import AndroidBackButtonHandler from '../AndroidBackButtonHandler';
 
@@ -135,6 +136,9 @@ const Shell: React.FC = () => {
               </Route>
               <Route exact path="/device/reset">
                 {isConnected ? <MobileDeviceReset /> : <Redirect to="/welcome" />}
+              </Route>
+              <Route exact path="/device/packs">
+                {isConnected ? <MobilePacksSettings /> : <Redirect to="/welcome" />}
               </Route>
               
               {/* App Settings */}

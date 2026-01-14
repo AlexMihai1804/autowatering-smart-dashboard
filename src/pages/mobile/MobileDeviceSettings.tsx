@@ -1,10 +1,17 @@
 import React from 'react';
 import { useHistory } from 'react-router-dom';
 import { useI18n } from '../../i18n';
+import { useAppStore } from '../../store/useAppStore';
 
 const MobileDeviceSettings: React.FC = () => {
   const history = useHistory();
   const { t } = useI18n();
+  const { packStats } = useAppStore();
+
+  // Dynamic subtitle for packs - shows custom plant count if available
+  const packsSubtitle = packStats
+    ? t('mobileDeviceSettings.items.packsPlants.subtitleWithCount').replace('{count}', String(packStats.plant_count))
+    : t('mobileDeviceSettings.items.packsPlants.subtitle');
 
   const settingsGroups = [
     {
@@ -41,6 +48,14 @@ const MobileDeviceSettings: React.FC = () => {
           label: t('mobileDeviceSettings.items.flowCalibration.label'),
           subtitle: t('mobileDeviceSettings.items.flowCalibration.subtitle'),
           route: '/device/flow-calibration',
+        },
+        {
+          icon: 'inventory_2',
+          iconBg: 'bg-emerald-500/10',
+          iconColor: 'text-emerald-400',
+          label: t('mobileDeviceSettings.items.packsPlants.label'),
+          subtitle: packsSubtitle,
+          route: '/device/packs',
         },
       ],
     },

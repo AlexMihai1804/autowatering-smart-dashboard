@@ -24,7 +24,7 @@ const LoadingScreen: React.FC = () => {
 
             {/* Loading text */}
             <h2 className="text-xl font-bold text-white mb-2">{t('mobileWelcome.appName')}</h2>
-            <p className="text-mobile-text-muted text-sm mb-6">{syncMessage}</p>
+            <p className="text-mobile-text-muted text-sm mb-6">{syncMessage ? t(syncMessage as any) : ''}</p>
 
             {/* Progress bar */}
             <div className="w-64 mb-4">

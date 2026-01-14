@@ -980,7 +980,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
                                                 >
                                                     <IonLabel>
                                                         <h2 className="text-white">{getPlantName(plant)}</h2>
-                                                        <p className="text-gray-400 text-sm">{plantCategoryLabels[plant.category] || plant.category}</p>
+                                                        <p className="text-gray-400 text-sm">{(plantCategoryLabels as Record<string, string>)[plant.category] || plant.category}</p>
                                                     </IonLabel>
                                                 </IonItem>
                                             ))}

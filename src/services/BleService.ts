@@ -49,10 +49,13 @@ import {
     ConfigStatusResponse,
     CONFIG_STATUS_COMMANDS,
     PackPlantV1,
+    PackPlantListEntry,
+    PackListEntry,
     PackStats,
     PackTransferStatus,
     PACK_OPERATIONS,
     PACK_RESULT,
+    PACK_LIST_OPCODE,
     PLANT_ID_RANGES,
     isAlarmCritical
 } from '../types/firmware_structs';
@@ -437,7 +440,9 @@ export class BleService {
             // We filter by namePrefix because 128-bit UUIDs are often not in the advertisement packet
             const device = await BleClient.requestDevice({
                 namePrefix: 'AutoWatering',
-                optionalServices: [SERVICE_UUID, CUSTOM_CONFIG_SERVICE_UUID]
+                // Web Bluetooth requires listing all services you want to access.
+                // Without PACK_SERVICE_UUID here, `getServices()` won't include it on web.
+                optionalServices: [SERVICE_UUID, CUSTOM_CONFIG_SERVICE_UUID, PACK_SERVICE_UUID]
             });
 
             console.log('Device selected:', device);
@@ -574,7 +579,7 @@ export class BleService {
             // This lets the UI know if we should go to dashboard or onboarding
             // ========================================
             console.log('[BLE] Phase 0: Reading Onboarding Status (fast routing)...');
-            useAppStore.getState().setSyncProgress(5, 'Checking setup...');
+            useAppStore.getState().setSyncProgress(5, 'loadingScreen.syncCheckingSetup');
             try {
                 const onboarding = await this.readOnboardingStatus();
                 console.log('[BLE] Got Onboarding Data (fast):', onboarding);
@@ -600,7 +605,7 @@ export class BleService {
                 // Show UI as soon as this completes
                 // ========================================
                 console.log('[BLE] Phase 1: Essential Dashboard Data...');
-                useAppStore.getState().setSyncProgress(10, 'Reading sensors...');
+                useAppStore.getState().setSyncProgress(10, 'loadingScreen.syncReadingSensors');
 
                 // Environmental Data - for temperature/humidity display
                 if (!bulkSnapshot?.env_valid) {
@@ -611,7 +616,7 @@ export class BleService {
                 } else {
                     console.log('[BLE] Using Bulk Sync Snapshot for Environmental Data');
                 }
-                useAppStore.getState().setSyncProgress(30, 'Reading rain data...');
+                useAppStore.getState().setSyncProgress(30, 'loadingScreen.syncReadingRain');
 
                 // Rain Data - for rainfall display
                 if (shouldReadRainData) {
@@ -620,7 +625,7 @@ export class BleService {
                     console.log('[BLE] Got Rain Data:', rain);
                     await this.delay(interReadDelay);
                 }
-                useAppStore.getState().setSyncProgress(50, 'Reading system status...');
+                useAppStore.getState().setSyncProgress(50, 'loadingScreen.syncReadingStatus');
 
                 // Current Task - for watering status on dashboard
                 if (shouldReadCurrentTask) {
@@ -629,7 +634,7 @@ export class BleService {
                     console.log('[BLE] Got Task Data:', task);
                     await this.delay(interReadDelay);
                 }
-                useAppStore.getState().setSyncProgress(65, 'Reading configuration...');
+                useAppStore.getState().setSyncProgress(65, 'loadingScreen.syncReadingConfig');
 
                 // System Config - need num_channels for zones
                 console.log('[BLE] Reading System Config...');
@@ -638,7 +643,7 @@ export class BleService {
                 await this.delay(interReadDelay);
 
                 // Global Soil Moisture Config - for dashboard moisture display
-                useAppStore.getState().setSyncProgress(80, 'Reading moisture...');
+                useAppStore.getState().setSyncProgress(80, 'loadingScreen.syncReadingMoisture');
                 try {
                     console.log('[BLE] Reading Global Soil Moisture Config...');
                     await this.readSoilMoistureConfig(0xFF);
@@ -650,7 +655,7 @@ export class BleService {
                 // ========================================
                 // PHASE 1 COMPLETE - SHOW UI NOW
                 // ========================================
-                useAppStore.getState().setSyncProgress(100, 'Ready!');
+                useAppStore.getState().setSyncProgress(100, 'loadingScreen.syncReady');
                 console.log('[BLE] Phase 1 Complete - Dashboard ready!');
                 useAppStore.getState().setInitialSyncComplete(true);
 
@@ -677,6 +682,16 @@ export class BleService {
                     const valve = await this.readValveControl();
                     console.log('[BLE] Got Valve Data:', valve);
                     await this.delay(interReadDelay);
+                }
+
+                // Timezone Config - read BEFORE RTC to know DST settings
+                console.log('[BLE] Reading Timezone Config (for DST settings)...');
+                try {
+                    const tzConfig = await this.readTimezoneConfig();
+                    console.log('[BLE] Got Timezone Config:', tzConfig);
+                    await this.delay(interReadDelay);
+                } catch (tzErr) {
+                    console.warn('[BLE] Timezone Config read failed:', tzErr);
                 }
 
                 // RTC Config
@@ -728,6 +743,11 @@ export class BleService {
                 } catch (soilErr) {
                     console.warn('[BLE] Soil Moisture Config read skipped/failed (likely unsupported firmware):', soilErr);
                 }
+
+                // Pack/Custom Plants: Skip sync at connect time to avoid BLE congestion.
+                // With 200+ plants, the paginated reads can timeout and interfere with
+                // deferred notification subscriptions. Sync happens on-demand when user
+                // opens the Packs settings page.
 
                 console.log('[BLE] Phase 2 Complete - All data synced!');
 
@@ -1835,7 +1855,18 @@ export class BleService {
 
     private async checkTimeDrift(rtcData: RtcData) {
         try {
-            const deviceTime = new Date(
+            // Get Timezone Config from store (should have been read before RTC)
+            const tzConfig = useAppStore.getState().timezoneConfig;
+            
+            console.log(`[BLE] Timezone Config from store: dst_enabled=${tzConfig?.dst_enabled}, dst_offset=${tzConfig?.dst_offset_minutes}min`);
+            
+            // Device reports LOCAL time. According to docs:
+            // - If dst_enabled=true in Timezone Config AND we're in DST period, 
+            //   firmware ADDS dst_offset_minutes to the time returned from RTC
+            // - utc_offset_minutes in RTC is the TOTAL offset (base + DST if active)
+            
+            // Create a Date from device's local time fields
+            const deviceLocalAsPhoneLocal = new Date(
                 2000 + rtcData.year,
                 rtcData.month - 1, // JS months are 0-11
                 rtcData.day,
@@ -1843,20 +1874,49 @@ export class BleService {
                 rtcData.minute,
                 rtcData.second
             );
-
+            
+            // Get phone's timezone offset (minutes, positive for east of UTC)
+            const phoneOffsetMinutes = -new Date().getTimezoneOffset();
+            
+            // Device's offset from RTC data - this is TOTAL offset including DST if active
+            const deviceOffsetMinutes = rtcData.utc_offset_minutes;
+            
+            // Convert device time to UTC epoch:
+            // deviceLocalAsPhoneLocal was created assuming phone's timezone, so its getTime() 
+            // gives us: (device_local_time interpreted as phone_local) -> UTC
+            // We need to correct for the fact that device local uses device offset, not phone offset.
+            const deviceUtcMs = deviceLocalAsPhoneLocal.getTime() + (phoneOffsetMinutes - deviceOffsetMinutes) * 60000;
+            
             const now = new Date();
-            const diffMs = Math.abs(now.getTime() - deviceTime.getTime());
-            const driftSeconds = diffMs / 1000;
+            const phoneUtcMs = now.getTime();
+            
+            const diffMs = phoneUtcMs - deviceUtcMs; // Signed difference (positive = device behind)
+            const driftSeconds = Math.abs(diffMs) / 1000;
 
-            console.log(`[BLE] Time Check: Device=${deviceTime.toLocaleString()}, Phone=${now.toLocaleString()}, Drift=${driftSeconds.toFixed(1)}s`);
+            console.log(`[BLE] Time Check Debug:`);
+            console.log(`  Device reports: ${rtcData.hour}:${rtcData.minute}:${rtcData.second} (offset=${deviceOffsetMinutes}min, dst_active=${rtcData.dst_active})`);
+            console.log(`  Phone time: ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()} (offset=${phoneOffsetMinutes}min)`);
+            console.log(`  Device UTC epoch: ${new Date(deviceUtcMs).toISOString()}`);
+            console.log(`  Phone UTC epoch: ${new Date(phoneUtcMs).toISOString()}`);
+            console.log(`  Drift: ${driftSeconds.toFixed(1)}s (${diffMs > 0 ? 'device behind' : 'device ahead'})`);
 
             if (driftSeconds > 60) {
                 console.log('[BLE] Time drift detected (>60s). Synchronizing...');
-                const offset = now.getTimezoneOffset() * -1;
-                // Preserve existing DST setting
-                await this.writeRtcConfig(now, offset, rtcData.dst_active);
-                console.log('[BLE] Time synchronized. Waiting for device confirmation via notification or re-read.');
-                // NOTE: Do NOT update store here - wait for notification or re-read to confirm
+                
+                // We send the phone's current local time with its offset
+                // The offset we send should match what the phone reports (includes DST if active)
+                const offset = phoneOffsetMinutes;
+                
+                // dst_active in RTC is informational only per docs
+                // We set it based on whether phone's offset differs from standard offset
+                // For simplicity: check if current month is in typical DST period
+                const month = now.getMonth(); // 0-11
+                const isDstPeriod = month >= 3 && month <= 9; // April through October
+                
+                console.log(`[BLE] Writing RTC: ${now.toLocaleString()}, offset=${offset}min, dst_active=${isDstPeriod}`);
+                
+                await this.writeRtcConfig(now, offset, isDstPeriod);
+                console.log('[BLE] Time synchronized.');
             }
         } catch (error) {
             console.error('[BLE] Failed to check/sync time:', error);
@@ -2103,6 +2163,11 @@ export class BleService {
             SERVICE_UUID,
             CHAR_UUIDS.RTC_CONFIG
         );
+        
+        // RAW OUTPUT DEBUG
+        const bytes = new Uint8Array(data.buffer);
+        console.log(`[BLE] RTC Config RAW bytes (${bytes.length}):`, Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' '));
+        
         const rtcData = {
             year: data.getUint8(0),
             month: data.getUint8(1),
@@ -2114,6 +2179,7 @@ export class BleService {
             utc_offset_minutes: data.getInt16(7, true),
             dst_active: data.getUint8(9) !== 0
         };
+        console.log('[BLE] Parsed RTC:', JSON.stringify(rtcData));
         // Update store with data READ from device (this is the source of truth)
         useAppStore.getState().setRtcConfig(rtcData);
 
@@ -2130,18 +2196,32 @@ export class BleService {
         const data = new Uint8Array(16);
         const view = new DataView(data.buffer);
 
-        view.setUint8(0, date.getFullYear() - 2000);
-        view.setUint8(1, date.getMonth() + 1);
-        view.setUint8(2, date.getDate());
-        view.setUint8(3, date.getHours());
-        view.setUint8(4, date.getMinutes());
-        view.setUint8(5, date.getSeconds());
+        const year = date.getFullYear() - 2000;
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        const hour = date.getHours();
+        const minute = date.getMinutes();
+        const second = date.getSeconds();
+
+        console.log(`[BLE] writeRtcConfig: Sending LOCAL time ${year + 2000}-${month}-${day} ${hour}:${minute}:${second}, offset=${utcOffsetMinutes}min, dst=${dstActive}`);
+
+        view.setUint8(0, year);
+        view.setUint8(1, month);
+        view.setUint8(2, day);
+        view.setUint8(3, hour);
+        view.setUint8(4, minute);
+        view.setUint8(5, second);
         view.setUint8(6, 0); // Day of week (ignored by FW)
         view.setInt16(7, utcOffsetMinutes, true); // Little Endian
         view.setUint8(9, dstActive ? 1 : 0);
         // Bytes 10-15 are reserved (0)
 
+        // RAW OUTPUT DEBUG
+        const bytes = new Uint8Array(data);
+        console.log(`[BLE] writeRtcConfig RAW bytes (${bytes.length}):`, Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' '));
+
         await this.writeWithRetry(SERVICE_UUID, CHAR_UUIDS.RTC_CONFIG, view);
+        console.log('[BLE] writeRtcConfig: Write completed successfully');
     }
 
     // --- Calibration ---
@@ -2317,7 +2397,18 @@ export class BleService {
                 CHAR_UUIDS.BULK_SYNC_SNAPSHOT
             );
 
+            // RAW OUTPUT DEBUG
+            const bytes = new Uint8Array(data.buffer);
+            console.log(`[BLE] Bulk Sync RAW bytes (${bytes.length}):`, Array.from(bytes.slice(0, 20)).map(b => b.toString(16).padStart(2, '0')).join(' ') + '...');
+            
             const snapshot = this.parseBulkSyncSnapshot(data);
+            
+            // Debug timestamp
+            console.log(`[BLE] Bulk Sync DEBUG: utc_timestamp=${snapshot.utc_timestamp}, timezone_offset=${snapshot.timezone_offset_min}min, dst_active=${snapshot.dst_active}`);
+            const deviceLocalTime = new Date((snapshot.utc_timestamp + snapshot.timezone_offset_min * 60) * 1000);
+            console.log(`[BLE] Bulk Sync DEBUG: Device thinks local time is: ${deviceLocalTime.toISOString()} (${deviceLocalTime.toLocaleTimeString()})`);
+            console.log(`[BLE] Bulk Sync DEBUG: Phone UTC now: ${new Date().toISOString()}`);
+            
             useAppStore.getState().setBulkSyncSnapshot(snapshot);
             await this.applyBulkSyncSnapshot(snapshot);
             console.log('[BLE] Bulk Sync Snapshot received');
@@ -2417,16 +2508,19 @@ export class BleService {
     }
 
     private buildRtcConfigFromSnapshot(snapshot: BulkSyncSnapshot): RtcData {
+        // Create a Date from UTC timestamp, then use getUTC* methods
+        // We add the offset to get local time components, but must use getUTC* 
+        // because getHours() would add the PHONE's offset again!
         const offsetSeconds = snapshot.timezone_offset_min * 60;
         const localDate = new Date((snapshot.utc_timestamp + offsetSeconds) * 1000);
         return {
-            year: localDate.getFullYear() % 100,
-            month: localDate.getMonth() + 1,
-            day: localDate.getDate(),
-            hour: localDate.getHours(),
-            minute: localDate.getMinutes(),
-            second: localDate.getSeconds(),
-            day_of_week: localDate.getDay(),
+            year: localDate.getUTCFullYear() % 100,
+            month: localDate.getUTCMonth() + 1,
+            day: localDate.getUTCDate(),
+            hour: localDate.getUTCHours(),
+            minute: localDate.getUTCMinutes(),
+            second: localDate.getUTCSeconds(),
+            day_of_week: localDate.getUTCDay(),
             utc_offset_minutes: snapshot.timezone_offset_min,
             dst_active: snapshot.dst_active
         };
@@ -3009,7 +3103,13 @@ export class BleService {
             SERVICE_UUID,
             CHAR_UUIDS.TIMEZONE_CONFIG
         );
+        
+        // RAW OUTPUT DEBUG
+        const bytes = new Uint8Array(data.buffer);
+        console.log(`[BLE] Timezone Config RAW bytes (${bytes.length}):`, Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' '));
+        
         const config = this.parseTimezoneConfig(data);
+        console.log('[BLE] Parsed Timezone Config:', JSON.stringify(config));
         // Update store with data READ from device
         useAppStore.getState().setTimezoneConfig(config);
         return config;
@@ -4950,19 +5050,38 @@ export class BleService {
 
     /**
      * Read Pack Stats - total custom plants, flash usage, change counter
+     * Structure: bt_pack_stats_resp_t (26 bytes per BLE_PACK_SERVICE.md)
      */
     async readPackStats(): Promise<PackStats> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
-        const result = await BleClient.read(
-            this.connectedDeviceId,
-            PACK_SERVICE_UUID,
-            CHAR_UUIDS.PACK_STATS
-        );
-        return this.parsePackStats(new DataView(result.buffer));
+        
+        console.log('[BLE] Reading Pack Stats from', CHAR_UUIDS.PACK_STATS);
+        
+        try {
+            const result = await BleClient.read(
+                this.connectedDeviceId,
+                PACK_SERVICE_UUID,
+                CHAR_UUIDS.PACK_STATS
+            );
+            
+            console.log(`[BLE] Pack Stats received: ${result.byteLength} bytes`);
+            
+            if (result.byteLength < 24) {
+                console.error(`[BLE] Pack Stats too short: ${result.byteLength} bytes, expected 24-26`);
+                throw new Error(`Invalid Pack Stats response: ${result.byteLength} bytes`);
+            }
+            
+            return this.parsePackStats(new DataView(result.buffer));
+        } catch (err) {
+            console.error('[BLE] Pack Stats read failed:', err);
+            throw err;
+        }
     }
 
     private parsePackStats(data: DataView): PackStats {
-        return {
+        // bt_pack_stats_resp_t - 26 bytes per BLE_PACK_SERVICE.md
+        // Note: Some firmware versions may still use 24-byte format
+        const stats: PackStats = {
             total_bytes: data.getUint32(0, true),
             used_bytes: data.getUint32(4, true),
             free_bytes: data.getUint32(8, true),
@@ -4973,6 +5092,87 @@ export class BleService {
             reserved: data.getUint8(19),
             change_counter: data.getUint32(20, true),
         };
+        
+        console.log('[BLE] Parsed Pack Stats:', {
+            total: stats.total_bytes,
+            used: stats.used_bytes,
+            plants: stats.plant_count,
+            builtin: stats.builtin_count,
+            packs: stats.pack_count,
+            status: stats.status,
+            counter: stats.change_counter
+        });
+        
+        return stats;
+    }
+
+    /**
+     * List installed packs
+     * Returns array of PackListEntry
+     */
+    async listPacks(): Promise<PackListEntry[]> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+        
+        const allPacks: PackListEntry[] = [];
+        let offset = 0;
+        let totalCount = 0;
+        
+        console.log('[BLE] Listing packs...');
+        
+        do {
+            // Write request: opcode=LIST_PACKS, offset, reserved
+            const reqData = new Uint8Array(4);
+            reqData[0] = 0x01; // LIST_PACKS opcode
+            reqData[1] = offset & 0xFF;        // offset low byte
+            reqData[2] = (offset >> 8) & 0xFF; // offset high byte
+            reqData[3] = 0x00; // reserved
+            
+            await BleClient.write(
+                this.connectedDeviceId,
+                PACK_SERVICE_UUID,
+                CHAR_UUIDS.PACK_LIST,
+                new DataView(reqData.buffer)
+            );
+            
+            // Small delay to ensure write completes
+            await new Promise(r => setTimeout(r, 50));
+            
+            // Read response
+            const result = await BleClient.read(
+                this.connectedDeviceId,
+                PACK_SERVICE_UUID,
+                CHAR_UUIDS.PACK_LIST
+            );
+            
+            const view = new DataView(result.buffer);
+            totalCount = view.getUint16(0, true);
+            const returnedCount = view.getUint8(2);
+            const includeBuiltin = view.getUint8(3);
+            
+            console.log(`[BLE] Pack list page: offset=${offset}, total=${totalCount}, returned=${returnedCount}, builtin=${includeBuiltin}`);
+            
+            // Parse entries (30 bytes each, starting at offset 4)
+            for (let i = 0; i < returnedCount; i++) {
+                const entryOffset = 4 + (i * 30);
+                const packId = view.getUint16(entryOffset, true);
+                const version = view.getUint16(entryOffset + 2, true);
+                const plantCount = view.getUint16(entryOffset + 4, true);
+                
+                // Parse name (24 bytes, null-terminated)
+                const nameBytes = new Uint8Array(result.buffer, entryOffset + 6, 24);
+                let nullIndex = nameBytes.indexOf(0);
+                if (nullIndex === -1) nullIndex = 24;
+                const name = new TextDecoder().decode(nameBytes.slice(0, nullIndex));
+                
+                allPacks.push({ pack_id: packId, version, plant_count: plantCount, name });
+            }
+            
+            offset += returnedCount;
+            
+        } while (offset < totalCount);
+        
+        console.log(`[BLE] Found ${allPacks.length} packs`);
+        return allPacks;
     }
 
     /**
@@ -5235,53 +5435,370 @@ export class BleService {
     }
 
     /**
-     * List all custom plant IDs in Pack Storage
+     * List all custom plant IDs in Pack Storage using pagination
+     * Uses PACK_PLANT characteristic with bt_pack_plant_list_req_t format
      * @returns Array of plant IDs
      */
     async listPackPlantIds(): Promise<number[]> {
         if (!this.connectedDeviceId) throw new Error('Not connected');
         
-        // Send list command
-        const cmdData = new Uint8Array([PACK_OPERATIONS.LIST]);
-        await BleClient.write(
-            this.connectedDeviceId,
-            PACK_SERVICE_UUID,
-            CHAR_UUIDS.PACK_TRANSFER,
-            new DataView(cmdData.buffer)
-        );
-        
-        // Read the result (array of uint16 plant IDs)
-        const result = await BleClient.read(
-            this.connectedDeviceId,
-            PACK_SERVICE_UUID,
-            CHAR_UUIDS.PACK_TRANSFER
-        );
-        
-        const view = new DataView(result.buffer);
         const plantIds: number[] = [];
+        let offset = 0;
+        const maxResults = 8; // Max entries per request
+        const allPacks = 0xFF; // Filter: all packs
         
-        // Skip first 2 bytes (operation + status), then read plant IDs
-        for (let i = 4; i + 1 < result.byteLength; i += 2) {
-            const id = view.getUint16(i, true);
-            if (id >= PLANT_ID_RANGES.CUSTOM_MIN) {
-                plantIds.push(id);
+        while (true) {
+            // Build bt_pack_plant_list_req_t (4 bytes):
+            // - uint16_t offset (little-endian)
+            // - uint8_t max_results
+            // - uint8_t filter_pack_id
+            const reqData = new Uint8Array(4);
+            const reqView = new DataView(reqData.buffer);
+            reqView.setUint16(0, offset, true);
+            reqData[2] = maxResults;
+            reqData[3] = allPacks;
+            
+            // Write list request to PACK_PLANT
+            await BleClient.write(
+                this.connectedDeviceId,
+                PACK_SERVICE_UUID,
+                CHAR_UUIDS.PACK_PLANT,
+                new DataView(reqData.buffer)
+            );
+            
+            // Read bt_pack_plant_list_resp_t:
+            // - uint16_t total_count
+            // - uint8_t returned_count
+            // - uint8_t reserved
+            // - bt_pack_plant_list_entry_t entries[8] (20 bytes each)
+            const result = await BleClient.read(
+                this.connectedDeviceId,
+                PACK_SERVICE_UUID,
+                CHAR_UUIDS.PACK_PLANT
+            );
+            
+            const view = new DataView(result.buffer);
+            const totalCount = view.getUint16(0, true);
+            const returnedCount = view.getUint8(2);
+            
+            console.log(`[BLE] Plant list page: offset=${offset}, total=${totalCount}, returned=${returnedCount}`);
+            
+            // Parse entries (20 bytes each): plant_id(2) + pack_id(1) + version(1) + name(16)
+            for (let i = 0; i < returnedCount; i++) {
+                const entryOffset = 4 + (i * 20); // Header is 4 bytes
+                const plantId = view.getUint16(entryOffset, true);
+                
+                // Only include custom plants (ID >= 224)
+                if (plantId >= PLANT_ID_RANGES.CUSTOM_MIN) {
+                    plantIds.push(plantId);
+                }
+            }
+            
+            // Check if we've received all plants
+            offset += returnedCount;
+            if (offset >= totalCount || returnedCount === 0) {
+                break;
             }
         }
         
-        console.log(`[BLE] Listed ${plantIds.length} custom plants`);
+        console.log(`[BLE] Listed ${plantIds.length} custom plants: [${plantIds.join(', ')}]`);
         return plantIds;
+    }
+
+    /**
+     * Stream plant list using notifications (new firmware protocol)
+     * 
+     * Protocol:
+     * 1. Enable notifications on PACK_PLANT
+     * 2. Write request [offset_low, offset_high, filter, 0x00] (max_count=0 = streaming mode)
+     * 3. Receive notifications with entries until FLAG_COMPLETE
+     * 
+     * Filter values:
+     *   0xFF = CUSTOM_ONLY (recommended - app has built-in CSV)
+     *   0xFE = ALL (built-in + custom)
+     *   0x00 = BUILTIN_ONLY
+     * 
+     * Notification format (4-byte header + 22-byte entries):
+     *   [total_count:u16][returned_count:u8][flags:u8][entries...]
+     * 
+     * Entry format (22 bytes):
+     *   [plant_id:u16][pack_id:u16][version:u16][name:char16]
+     * 
+     * Flags:
+     *   0x80 = STARTING (first notification)
+     *   0x00 = NORMAL (in progress)
+     *   0x01 = COMPLETE (last notification)
+     *   0x02 = ERROR
+     * 
+     * @param filter Filter mode (default: CUSTOM_ONLY)
+     * @param onProgress Optional progress callback (0.0 - 1.0)
+     * @returns Array of PackPlantListEntry
+     */
+    async streamPackPlants(
+        filter: 'CUSTOM_ONLY' | 'ALL' | 'BUILTIN_ONLY' = 'CUSTOM_ONLY',
+        onProgress?: (progress: number, count: number, total: number) => void
+    ): Promise<PackPlantListEntry[]> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+        
+        const plants: PackPlantListEntry[] = [];
+        let totalExpected = 0;
+        let isComplete = false;
+        let hasError = false;
+        
+        const FILTER_VALUES = {
+            CUSTOM_ONLY: 0xFF,
+            ALL: 0xFE,
+            BUILTIN_ONLY: 0x00
+        };
+        
+        const FLAG_STARTING = 0x80;
+        const FLAG_COMPLETE = 0x01;
+        const FLAG_ERROR = 0x02;
+        
+        const ENTRY_SIZE = 22; // New firmware: 22 bytes per entry
+        const TIMEOUT_MS = 30000; // Idle timeout (resets on each notification)
+        const FIRST_PACKET_TIMEOUT_MS = 2000; // If nothing arrives, retry request
+        const MAX_RETRIES = 3;
+        
+        return new Promise(async (resolve, reject) => {
+            let timeoutId: ReturnType<typeof setTimeout>;
+            let firstPacketTimeoutId: ReturnType<typeof setTimeout>;
+            let firstPacketReceived = false;
+            let settled = false;
+            let retryCount = 0;
+
+            const cleanupAndReject = (err: Error) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timeoutId);
+                clearTimeout(firstPacketTimeoutId);
+                BleClient.stopNotifications(
+                    this.connectedDeviceId!,
+                    PACK_SERVICE_UUID,
+                    CHAR_UUIDS.PACK_PLANT
+                ).catch(() => {});
+                reject(err);
+            };
+
+            const cleanupAndResolve = (result: PackPlantListEntry[]) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timeoutId);
+                clearTimeout(firstPacketTimeoutId);
+                BleClient.stopNotifications(
+                    this.connectedDeviceId!,
+                    PACK_SERVICE_UUID,
+                    CHAR_UUIDS.PACK_PLANT
+                ).catch(() => {});
+                resolve(result);
+            };
+
+            const armIdleTimeout = () => {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => {
+                    if (!isComplete && !hasError) {
+                        console.error('[BLE] Stream timeout');
+                        cleanupAndReject(new Error('Stream timeout'));
+                    }
+                }, TIMEOUT_MS);
+            };
+
+            const sendStreamRequest = async () => {
+                // bt_pack_plant_list_req_t: [offset:LE16][filter_pack_id:U8][max_count:U8]
+                // WORKAROUND: Firmware bug swaps bytes 2-3, so we swap them here
+                const reqData = new Uint8Array(4);
+                const view = new DataView(reqData.buffer);
+                
+                view.setUint16(0, 0, true);  // offset = 0 (little-endian)
+                // BUG WORKAROUND: Firmware swaps filter/max, so we swap them in request
+                view.setUint8(2, 0);  // max_count (swapped position)
+                view.setUint8(3, FILTER_VALUES[filter]);  // filter (swapped position)
+
+                console.log(
+                    `[BLE] Sending stream request (with firmware swap workaround): [${Array.from(reqData).map(b => b.toString(16).padStart(2, '0')).join(' ')}]` +
+                    ` (offset=${view.getUint16(0, true)}, filter@pos3=0x${FILTER_VALUES[filter].toString(16)}, max@pos2=0)` +
+                    (retryCount > 0 ? ` retry=${retryCount}` : '')
+                );
+
+                await BleClient.write(
+                    this.connectedDeviceId!,
+                    PACK_SERVICE_UUID,
+                    CHAR_UUIDS.PACK_PLANT,
+                    view
+                );
+            };
+
+            const armFirstPacketTimeout = () => {
+                clearTimeout(firstPacketTimeoutId);
+                firstPacketTimeoutId = setTimeout(async () => {
+                    if (settled || firstPacketReceived || isComplete || hasError) return;
+
+                    retryCount++;
+                    if (retryCount > MAX_RETRIES) {
+                        console.error('[BLE] No stream notifications received after retries');
+                        cleanupAndReject(new Error('Stream timeout (no notifications)'));
+                        return;
+                    }
+
+                    console.warn('[BLE] No stream notifications received yet; retrying request');
+                    try {
+                        // Docs recommend retry after a short delay
+                        await new Promise(r => setTimeout(r, 500));
+                        await sendStreamRequest();
+                        armFirstPacketTimeout();
+                    } catch (e) {
+                        cleanupAndReject(e instanceof Error ? e : new Error(String(e)));
+                    }
+                }, FIRST_PACKET_TIMEOUT_MS);
+            };
+            
+            // Notification handler
+            const handleNotification = (data: DataView) => {
+                try {
+                    if (settled) return;
+
+                    firstPacketReceived = true;
+                    armIdleTimeout();
+
+                    const bytes = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+                    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+                    
+                    const totalCount = view.getUint16(0, true);
+                    const returnedCount = view.getUint8(2);
+                    const flags = view.getUint8(3);
+                    
+                    // Debug log
+                    console.log(`[BLE] Stream notification: total=${totalCount}, returned=${returnedCount}, flags=0x${flags.toString(16).padStart(2, '0')}`);
+                    
+                    // Handle STARTING flag
+                    if (flags & FLAG_STARTING) {
+                        plants.length = 0; // Clear any previous
+                        totalExpected = totalCount;
+                        console.log(`[BLE] Stream starting: expecting ${totalExpected} plants`);
+                    }
+                    
+                    // Handle ERROR flag
+                    if (flags === FLAG_ERROR) {
+                        hasError = true;
+                        cleanupAndReject(new Error('Stream error from device'));
+                        return;
+                    }
+                    
+                    // Parse entries (22 bytes each):
+                    // plant_id:u16, pack_id:u16, version:u16, name:char16
+                    for (let i = 0; i < returnedCount; i++) {
+                        const entryOffset = 4 + (i * ENTRY_SIZE);
+                        
+                        if (entryOffset + ENTRY_SIZE > bytes.length) {
+                            console.warn(`[BLE] Entry ${i} exceeds buffer length, skipping`);
+                            break;
+                        }
+                        
+                        const plantId = view.getUint16(entryOffset, true);
+                        const packId = view.getUint16(entryOffset + 2, true);
+                        const version = view.getUint16(entryOffset + 4, true);
+                        
+                        // Parse name (16 bytes, null-terminated)
+                        const nameBytes = bytes.slice(entryOffset + 6, entryOffset + 6 + 16);
+                        let nullIndex = nameBytes.indexOf(0);
+                        if (nullIndex === -1) nullIndex = 16;
+                        const name = new TextDecoder().decode(nameBytes.slice(0, nullIndex));
+                        
+                        plants.push({ plant_id: plantId, pack_id: packId, version, name });
+                    }
+                    
+                    // Report progress
+                    if (onProgress && totalExpected > 0) {
+                        onProgress(plants.length / totalExpected, plants.length, totalExpected);
+                    }
+                    
+                    // Handle COMPLETE flag
+                    if (flags === FLAG_COMPLETE) {
+                        isComplete = true;
+                        console.log(`[BLE] Stream complete: received ${plants.length} plants`);
+
+                        cleanupAndResolve(plants);
+                    }
+                } catch (err) {
+                    console.error('[BLE] Error parsing stream notification:', err);
+                }
+            };
+            
+            try {
+                // Set idle timeout (resets on each notification)
+                armIdleTimeout();
+                
+                // Enable notifications
+                await BleClient.startNotifications(
+                    this.connectedDeviceId!,
+                    PACK_SERVICE_UUID,
+                    CHAR_UUIDS.PACK_PLANT,
+                    handleNotification
+                );
+                
+                // Small delay to ensure notifications are set up
+                await new Promise(r => setTimeout(r, 50));
+
+                // Send initial streaming request
+                await sendStreamRequest();
+
+                // If we don't see any notifications soon, retry the request
+                armFirstPacketTimeout();
+                
+            } catch (err) {
+                cleanupAndReject(err instanceof Error ? err : new Error(String(err)));
+            }
+        });
+    }
+
+    /**
+     * List all pack plants with details using streaming
+     * Wrapper around streamPackPlants for backwards compatibility
+     * @returns Array of PackPlantListEntry with plant_id, pack_id, version, name (custom only)
+     */
+    async listPackPlants(): Promise<PackPlantListEntry[]> {
+        const allPlants = await this.streamPackPlants('CUSTOM_ONLY');
+        
+        // Filter to only custom plants (ID >= 224)
+        const customPlants = allPlants.filter(p => p.plant_id >= PLANT_ID_RANGES.CUSTOM_MIN);
+        console.log(`[BLE] Listed ${customPlants.length} custom plants (filtered from ${allPlants.length} total)`);
+        
+        return customPlants;
     }
 
     /**
      * Check if Pack Service is available on the connected device
      */
     async isPackServiceAvailable(): Promise<boolean> {
-        if (!this.connectedDeviceId) return false;
+        if (!this.connectedDeviceId) {
+            console.log('[BLE] isPackServiceAvailable: Not connected');
+            return false;
+        }
         
         try {
             const services = await BleClient.getServices(this.connectedDeviceId);
-            return services.some(s => s.uuid.toLowerCase() === PACK_SERVICE_UUID.toLowerCase());
-        } catch {
+            const serviceUuids = services.map(s => s.uuid.toLowerCase());
+            console.log('[BLE] Available services:', serviceUuids);
+            
+            const hasPackService = serviceUuids.includes(PACK_SERVICE_UUID.toLowerCase());
+            console.log(`[BLE] Pack Service (${PACK_SERVICE_UUID}): ${hasPackService ? 'FOUND' : 'NOT FOUND'}`);
+            
+            if (hasPackService) {
+                // Also check if PACK_STATS characteristic exists
+                const packService = services.find(s => s.uuid.toLowerCase() === PACK_SERVICE_UUID.toLowerCase());
+                if (packService) {
+                    const charUuids = packService.characteristics?.map(c => c.uuid.toLowerCase()) || [];
+                    console.log('[BLE] Pack Service characteristics:', charUuids);
+                    
+                    const hasPackStats = charUuids.includes(CHAR_UUIDS.PACK_STATS.toLowerCase());
+                    const hasPackPlant = charUuids.includes(CHAR_UUIDS.PACK_PLANT.toLowerCase());
+                    console.log(`[BLE] PACK_STATS: ${hasPackStats}, PACK_PLANT: ${hasPackPlant}`);
+                }
+            }
+            
+            return hasPackService;
+        } catch (err) {
+            console.error('[BLE] isPackServiceAvailable error:', err);
             return false;
         }
     }
