@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /*
   Static i18n key checker.
-  - Extracts all translation key paths from `src/i18n/translations.ts` (const `en` object)
+  - Extracts all translation key paths from `src/i18n/translations.ts` (const `en` and `ro` objects)
   - Scans source TypeScript files under `src/` (excluding `src/test/`) for `t('...')` usages
   - Reports missing keys (used but not defined)
+  - Reports translation mismatches between languages (keys in EN but not in RO, and vice versa)
 
   Usage:
     node scripts/check_i18n_keys.js
@@ -41,7 +42,7 @@ function isTsLike(filePath) {
   return filePath.endsWith('.ts') || filePath.endsWith('.tsx');
 }
 
-function collectTranslationKeysFromEnObject() {
+function collectTranslationKeysFromObject(objectName) {
   if (!fs.existsSync(translationsPath)) {
     throw new Error(`translations.ts not found at ${translationsPath}`);
   }
@@ -49,24 +50,24 @@ function collectTranslationKeysFromEnObject() {
   const sourceText = fs.readFileSync(translationsPath, 'utf8');
   const sourceFile = ts.createSourceFile(translationsPath, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 
-  let enInitializer = null;
+  let targetInitializer = null;
 
-  function findEnInitializer(node) {
+  function findInitializer(node) {
     if (ts.isVariableStatement(node)) {
       for (const decl of node.declarationList.declarations) {
-        if (ts.isIdentifier(decl.name) && decl.name.text === 'en' && decl.initializer && ts.isObjectLiteralExpression(decl.initializer)) {
-          enInitializer = decl.initializer;
+        if (ts.isIdentifier(decl.name) && decl.name.text === objectName && decl.initializer && ts.isObjectLiteralExpression(decl.initializer)) {
+          targetInitializer = decl.initializer;
           return;
         }
       }
     }
-    ts.forEachChild(node, findEnInitializer);
+    ts.forEachChild(node, findInitializer);
   }
 
-  findEnInitializer(sourceFile);
+  findInitializer(sourceFile);
 
-  if (!enInitializer) {
-    throw new Error('Could not locate `const en = { ... }` object literal in translations.ts');
+  if (!targetInitializer) {
+    throw new Error(`Could not locate \`const ${objectName} = { ... }\` object literal in translations.ts`);
   }
 
   const keys = new Set();
@@ -101,7 +102,7 @@ function collectTranslationKeysFromEnObject() {
     }
   }
 
-  visitObjectLiteral(enInitializer, '');
+  visitObjectLiteral(targetInitializer, '');
   return keys;
 }
 
@@ -148,40 +149,104 @@ function collectUsedKeysFromSource() {
 }
 
 function main() {
-  const definedKeys = collectTranslationKeysFromEnObject();
+  console.log('🔍 Checking i18n translations...\n');
+
+  // Collect keys from all language objects
+  const enKeys = collectTranslationKeysFromObject('en');
+  const roKeys = collectTranslationKeysFromObject('ro');
+
+  console.log(`📊 Translation stats:`);
+  console.log(`   EN: ${enKeys.size} keys`);
+  console.log(`   RO: ${roKeys.size} keys\n`);
+
+  // Check for mismatches between languages
+  const missingInRo = [...enKeys].filter(k => !roKeys.has(k)).sort();
+  const extraInRo = [...roKeys].filter(k => !enKeys.has(k)).sort();
+
+  let hasErrors = false;
+
+  if (missingInRo.length > 0) {
+    console.log(`❌ Missing in RO (${missingInRo.length}):`);
+    for (const key of missingInRo.slice(0, 20)) {
+      console.log(`   - ${key}`);
+    }
+    if (missingInRo.length > 20) {
+      console.log(`   ...and ${missingInRo.length - 20} more`);
+    }
+    console.log();
+    hasErrors = true;
+  }
+
+  if (extraInRo.length > 0) {
+    console.log(`⚠️  Extra in RO (not in EN) (${extraInRo.length}):`);
+    for (const key of extraInRo.slice(0, 20)) {
+      console.log(`   - ${key}`);
+    }
+    if (extraInRo.length > 20) {
+      console.log(`   ...and ${extraInRo.length - 20} more`);
+    }
+    console.log();
+    hasErrors = true;
+  }
+
+  if (!hasErrors) {
+    console.log('✅ All languages have matching keys!\n');
+  }
+
+  // Check for usage in source code
   const { used, dynamic } = collectUsedKeysFromSource();
 
   const missing = [];
   for (const key of used.keys()) {
-    if (!definedKeys.has(key)) missing.push(key);
+    if (!enKeys.has(key)) missing.push(key);
   }
 
   missing.sort();
 
-  if (missing.length === 0) {
-    console.log(`OK: All static i18n keys exist (${definedKeys.size} defined, ${used.size} used)`);
-    if (dynamic.length) {
-      console.log(`Note: Found ${dynamic.length} dynamic template-literal t(\`...\`) usages (not statically validated).`);
-      for (const item of dynamic.slice(0, 10)) {
-        console.log(`  - ${item.file}`);
+  if (missing.length > 0) {
+    console.log(`❌ MISSING i18n KEYS (used in code but not defined) (${missing.length}):`);
+    for (const key of missing) {
+      console.log(`   - ${key}`);
+      const refs = used.get(key) || [];
+      for (const ref of refs.slice(0, 3)) {
+        console.log(`      ${ref.file}:${ref.line}`);
       }
-      if (dynamic.length > 10) console.log(`  ...and ${dynamic.length - 10} more`);
+      if (refs.length > 3) {
+        console.log(`      ...and ${refs.length - 3} more`);
+      }
     }
+    console.log();
+    hasErrors = true;
+  }
+
+  // Check for unused keys
+  const unusedKeys = [...enKeys].filter(k => !used.has(k) && !k.includes('.')).sort();
+  if (unusedKeys.length > 0 && unusedKeys.length < 50) {
+    console.log(`ℹ️  Potentially unused top-level keys (${unusedKeys.length}):`);
+    for (const key of unusedKeys.slice(0, 10)) {
+      console.log(`   - ${key}`);
+    }
+    if (unusedKeys.length > 10) {
+      console.log(`   ...and ${unusedKeys.length - 10} more`);
+    }
+    console.log();
+  }
+
+  if (dynamic.length) {
+    console.log(`ℹ️  Found ${dynamic.length} dynamic template-literal t(\`...\`) usages (not statically validated).`);
+    for (const item of dynamic.slice(0, 5)) {
+      console.log(`   - ${item.file}`);
+    }
+    if (dynamic.length > 5) console.log(`   ...and ${dynamic.length - 5} more`);
+    console.log();
+  }
+
+  if (!hasErrors) {
+    console.log(`✅ All checks passed! (${enKeys.size} defined, ${used.size} used)`);
     process.exit(0);
   }
 
-  console.log(`MISSING i18n KEYS (${missing.length}):`);
-  for (const key of missing) {
-    console.log(`- ${key}`);
-    const refs = used.get(key) || [];
-    for (const ref of refs.slice(0, 3)) {
-      console.log(`    ${ref.file}:${ref.line}`);
-    }
-    if (refs.length > 3) {
-      console.log(`    ...and ${refs.length - 3} more`);
-    }
-  }
-
+  console.log('❌ Translation check failed!');
   process.exit(1);
 }
 

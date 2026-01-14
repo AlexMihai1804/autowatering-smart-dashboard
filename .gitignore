@@ -63,6 +63,9 @@ errors.txt
 # Local analysis outputs
 *_output.txt
 
+# Generated i18n extraction output
+src/i18n/extracted/
+
 # GeoTiff test files
 *.tif
 *.tiff
