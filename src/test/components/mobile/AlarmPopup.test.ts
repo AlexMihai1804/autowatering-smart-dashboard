@@ -78,12 +78,12 @@ describe('AlarmPopup', () => {
 
         it('should return title for NO_FLOW', () => {
             const title = getAlarmTitle(AlarmCode.NO_FLOW);
-            expect(title).toBe('No Water Flow');
+            expect(title).toBe('No Flow');
         });
 
         it('should return title for HIGH_FLOW', () => {
             const title = getAlarmTitle(AlarmCode.HIGH_FLOW);
-            expect(title).toBe('High Flow Alert');
+            expect(title).toBe('High Flow');
         });
     });
 

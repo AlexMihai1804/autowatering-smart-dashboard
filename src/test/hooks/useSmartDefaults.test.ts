@@ -91,8 +91,8 @@ describe('getSuggestedZoneName', () => {
     });
 
     it('should return Romanian zone names', () => {
-        expect(getSuggestedZoneName(0, 'ro')).toBe('Zona 1');
-        expect(getSuggestedZoneName(2, 'ro')).toBe('Zona 3');
+        expect(getSuggestedZoneName(0, 'ro')).toBe('Zonă 1');
+        expect(getSuggestedZoneName(2, 'ro')).toBe('Zonă 3');
     });
 
     it('should handle out of bounds gracefully', () => {

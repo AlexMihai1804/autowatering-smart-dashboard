@@ -15,6 +15,8 @@ import { PlantDBEntry, IrrigationMethodEntry } from '../../services/DatabaseServ
 import { UnifiedZoneConfig } from '../../types/wizard';
 
 describe('onboardingHelpers', () => {
+    // Mock translator function
+    const mockT = (key: string) => key;
 
     describe('getPlantCategory', () => {
         it('should return correct category from mapping', () => {
@@ -61,7 +63,7 @@ describe('onboardingHelpers', () => {
                 coverageType: 'plants',
                 coverageValue: 5
             };
-            const warnings = getConfigurationWarnings(config);
+            const warnings = getConfigurationWarnings(mockT, config);
             const warning = warnings.find(w => w.field === 'irrigationMethod');
             expect(warning).toBeDefined();
             expect(warning?.type).toBe('suggestion');
@@ -72,7 +74,7 @@ describe('onboardingHelpers', () => {
                 soil: { texture: 'Clay', infiltration_rate_mm_h: 4 } as any,
                 enableCycleSoak: false
             };
-            const warnings = getConfigurationWarnings(config);
+            const warnings = getConfigurationWarnings(mockT, config);
             expect(warnings.find(w => w.field === 'enableCycleSoak')).toBeDefined();
         });
     });

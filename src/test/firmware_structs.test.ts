@@ -559,12 +559,12 @@ describe('firmware_structs - Alarm Helper Functions', () => {
     describe('getAlarmTitle', () => {
         it('should return correct title for each alarm code', () => {
             expect(getAlarmTitle(AlarmCode.NONE)).toBe('No Alarm');
-            expect(getAlarmTitle(AlarmCode.NO_FLOW)).toBe('No Water Flow');
-            expect(getAlarmTitle(AlarmCode.UNEXPECTED_FLOW)).toBe('Unexpected Flow Detected');
-            expect(getAlarmTitle(AlarmCode.FREEZE_LOCKOUT)).toBe('Freeze Protection Active');
-            expect(getAlarmTitle(AlarmCode.HIGH_FLOW)).toBe('High Flow Alert');
-            expect(getAlarmTitle(AlarmCode.LOW_FLOW)).toBe('Low Flow Warning');
-            expect(getAlarmTitle(AlarmCode.MAINLINE_LEAK)).toBe('Mainline Leak Detected');
+            expect(getAlarmTitle(AlarmCode.NO_FLOW)).toBe('No Flow');
+            expect(getAlarmTitle(AlarmCode.UNEXPECTED_FLOW)).toBe('Unexpected Flow');
+            expect(getAlarmTitle(AlarmCode.FREEZE_LOCKOUT)).toBe('Freeze Protection');
+            expect(getAlarmTitle(AlarmCode.HIGH_FLOW)).toBe('High Flow');
+            expect(getAlarmTitle(AlarmCode.LOW_FLOW)).toBe('Low Flow');
+            expect(getAlarmTitle(AlarmCode.MAINLINE_LEAK)).toBe('Mainline Leak');
             expect(getAlarmTitle(AlarmCode.CHANNEL_LOCK)).toBe('Zone Locked');
             expect(getAlarmTitle(AlarmCode.GLOBAL_LOCK)).toBe('System Locked');
         });

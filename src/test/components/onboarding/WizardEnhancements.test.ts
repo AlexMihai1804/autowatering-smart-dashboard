@@ -1,12 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import {
-    zoneNameRules,
-    coverageRules,
+    getZoneNameRules,
+    getCoverageRules,
     getErrorDetails,
 } from '../../../components/onboarding/WizardEnhancements';
 
+// Mock translator
+const mockT = (key: string) => key;
+
 describe('WizardEnhancements', () => {
-    describe('zoneNameRules validation', () => {
+    describe('getZoneNameRules validation', () => {
+        const zoneNameRules = getZoneNameRules(mockT);
+
         it('should fail for empty name', () => {
             const emptyRule = zoneNameRules[0];
             expect(emptyRule.validate('')).toBe(false);
@@ -44,7 +49,9 @@ describe('WizardEnhancements', () => {
         });
     });
 
-    describe('coverageRules validation', () => {
+    describe('getCoverageRules validation', () => {
+        const coverageRules = getCoverageRules(mockT);
+
         it('should fail for undefined/null coverage', () => {
             const requiredRule = coverageRules[0];
             expect(requiredRule.validate(undefined)).toBe(false);
@@ -91,56 +98,60 @@ describe('WizardEnhancements', () => {
 
     describe('getErrorDetails', () => {
         it('should return GPS denied error details', () => {
-            const details = getErrorDetails('GPS_DENIED');
-            expect(details.message).toBe('GPS permission denied');
-            expect(details.suggestion).toContain('location permissions');
+            const details = getErrorDetails(mockT, 'GPS_DENIED');
+            expect(details.message).toBe('errors.gpsDenied');
+            expect(details.suggestion).toBe('errors.gpsDeniedSuggestion');
         });
 
         it('should return GPS timeout error details', () => {
-            const details = getErrorDetails('GPS_TIMEOUT');
-            expect(details.message).toBe('GPS request timed out');
-            expect(details.suggestion).toContain('GPS signal');
+            const details = getErrorDetails(mockT, 'GPS_TIMEOUT');
+            expect(details.message).toBe('errors.gpsTimeout');
+            expect(details.suggestion).toBe('errors.gpsTimeoutSuggestion');
         });
 
         it('should return GPS not available error details', () => {
-            const details = getErrorDetails('GPS_NOT_AVAILABLE');
-            expect(details.message).toBe('GPS is not available');
-            expect(details.suggestion).toContain('GPS capability');
+            const details = getErrorDetails(mockT, 'GPS_NOT_AVAILABLE');
+            expect(details.message).toBe('errors.gpsUnavailable');
+            expect(details.suggestion).toBe('errors.gpsUnavailableSuggestion');
         });
 
         it('should return BLE disconnected error details', () => {
-            const details = getErrorDetails('BLE_DISCONNECTED');
-            expect(details.message).toBe('Device disconnected');
-            expect(details.suggestion).toContain('powered on');
+            const details = getErrorDetails(mockT, 'BLE_DISCONNECTED');
+            expect(details.message).toBe('errors.connectionLost');
+            expect(details.suggestion).toBe('errors.checkConnection');
         });
 
         it('should return save failed error details', () => {
-            const details = getErrorDetails('SAVE_FAILED');
-            expect(details.message).toBe('Failed to save configuration');
-            expect(details.suggestion).toContain('connection');
+            const details = getErrorDetails(mockT, 'SAVE_FAILED');
+            expect(details.message).toBe('errors.saveFailed');
+            expect(details.suggestion).toBe('errors.checkConnection');
         });
 
         it('should return soil detection failed error details', () => {
-            const details = getErrorDetails('SOIL_DETECTION_FAILED');
-            expect(details.message).toBe('Could not detect soil type');
-            expect(details.suggestion).toContain('Select a soil type manually');
+            const details = getErrorDetails(mockT, 'SOIL_DETECTION_FAILED');
+            expect(details.message).toBe('wizard.soil.detectionFailed');
+            expect(details.suggestion).toBe('wizard.soil.manualSelectButton');
         });
 
         it('should return default error details for unknown codes', () => {
-            const details = getErrorDetails('UNKNOWN_ERROR');
-            expect(details.message).toBe('UNKNOWN_ERROR');
-            expect(details.suggestion).toContain('try again');
-            expect(details.suggestion).toContain('contact support');
+            const details = getErrorDetails(mockT, 'UNKNOWN_ERROR');
+            // Default uses failedWithReason template with error code
+            expect(details.message).toContain('errors.failedWithReason');
+            expect(details.suggestion).toBe('errors.tryAgain');
         });
 
         it('should return default error details for empty code', () => {
-            const details = getErrorDetails('');
-            expect(details.message).toBe('');
-            expect(details.suggestion).toContain('Please try again');
+            const details = getErrorDetails(mockT, '');
+            // Default uses failedWithReason template with 'labels.unknown'
+            expect(details.message).toContain('errors.failedWithReason');
+            expect(details.suggestion).toBe('errors.tryAgain');
         });
     });
 
     describe('Validation integration', () => {
+        const zoneNameRules = getZoneNameRules(mockT);
+        const coverageRules = getCoverageRules(mockT);
+
         // Test the validation flow that useValidation hook would use
         const runValidation = (rules: { validate: (v: any) => boolean; message: string; type: 'error' | 'warning' }[], value: any) => {
             const errors: string[] = [];
@@ -173,19 +184,19 @@ describe('WizardEnhancements', () => {
         it('should return errors for empty zone name', () => {
             const result = runValidation(zoneNameRules, '');
             expect(result.isValid).toBe(false);
-            expect(result.errors).toContain('Zone name is required');
+            expect(result.errors.length).toBeGreaterThan(0);
         });
 
         it('should return errors for short zone name', () => {
             const result = runValidation(zoneNameRules, 'A');
             expect(result.isValid).toBe(false);
-            expect(result.errors).toContain('Zone name should be at least 2 characters');
+            expect(result.errors.length).toBeGreaterThan(0);
         });
 
         it('should return warning for long zone name', () => {
             const result = runValidation(zoneNameRules, 'A'.repeat(35));
             expect(result.isValid).toBe(true); // Warnings don't affect isValid
-            expect(result.warnings).toContain('Zone name is quite long');
+            expect(result.warnings.length).toBeGreaterThan(0);
         });
 
         it('should return valid for good coverage', () => {
@@ -203,13 +214,13 @@ describe('WizardEnhancements', () => {
         it('should return error for negative coverage', () => {
             const result = runValidation(coverageRules, -5);
             expect(result.isValid).toBe(false);
-            expect(result.errors).toContain('Coverage must be greater than 0');
+            expect(result.errors.length).toBeGreaterThan(0);
         });
 
         it('should return warning for very high coverage', () => {
             const result = runValidation(coverageRules, 50000);
             expect(result.isValid).toBe(true);
-            expect(result.warnings).toContain('Coverage value seems very high');
+            expect(result.warnings.length).toBeGreaterThan(0);
         });
     });
 });

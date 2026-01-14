@@ -138,6 +138,6 @@ describe('Settings Page', () => {
         it('should export Settings as default', async () => {
             const module = await import('../../pages/Settings');
             expect(module.default).toBeDefined();
-        });
+        }, 15000); // Extended timeout for dynamic import
     });
 });

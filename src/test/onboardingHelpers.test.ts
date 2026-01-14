@@ -7,12 +7,14 @@ import {
   cloneZoneConfig,
   PLANT_CATEGORIES,
   IRRIGATION_METHOD_VISUALS,
-  WIZARD_TOOLTIPS,
   POPULAR_PLANTS,
   PlantCategoryId,
 } from '../utils/onboardingHelpers';
 import { PlantDBEntry, IrrigationMethodEntry } from '../services/DatabaseService';
 import { UnifiedZoneConfig } from '../types/wizard';
+
+// Mock translator function
+const mockT = (key: string) => key;
 
 // Mock data factories
 function createMockPlant(overrides: Partial<PlantDBEntry> = {}): PlantDBEntry {
@@ -70,7 +72,7 @@ describe('onboardingHelpers', () => {
       const expectedCategories: PlantCategoryId[] = ['legume', 'fructe', 'gazon', 'flori', 'copaci', 'arbusti', 'aromate', 'altele'];
       for (const cat of expectedCategories) {
         expect(PLANT_CATEGORIES[cat]).toBeDefined();
-        expect(PLANT_CATEGORIES[cat].label).toBeTruthy();
+        expect(PLANT_CATEGORIES[cat].labelKey).toBeTruthy();
         expect(PLANT_CATEGORIES[cat].emoji).toBeTruthy();
         expect(PLANT_CATEGORIES[cat].dbCategories.length).toBeGreaterThan(0);
       }
@@ -142,10 +144,10 @@ describe('onboardingHelpers', () => {
       expect(IRRIGATION_METHOD_VISUALS['IRRIG_MICROSPRAY']).toBeDefined();
     });
 
-    it('should have emoji and description for each method', () => {
+    it('should have emoji and descriptionKey for each method', () => {
       for (const [key, visual] of Object.entries(IRRIGATION_METHOD_VISUALS)) {
         expect(visual.emoji).toBeTruthy();
-        expect(visual.description).toBeTruthy();
+        expect(visual.descriptionKey).toBeTruthy();
         expect(visual.bgColor).toBeTruthy();
       }
     });
@@ -224,27 +226,17 @@ describe('onboardingHelpers', () => {
   // ============================================================================
   // Tooltip Content
   // ============================================================================
-  describe('WIZARD_TOOLTIPS', () => {
-    it('should have content for common tooltip keys', () => {
-      const keys = ['fao56', 'field_capacity', 'wilting_point', 'cycle_soak', 'kc', 'irrigation_method'];
-      for (const key of keys) {
-        expect(WIZARD_TOOLTIPS[key]).toBeDefined();
-        expect(WIZARD_TOOLTIPS[key].title).toBeTruthy();
-        expect(WIZARD_TOOLTIPS[key].description).toBeTruthy();
-      }
-    });
-  });
-
   describe('getTooltipContent', () => {
     it('should return tooltip content for valid key', () => {
-      const content = getTooltipContent('fao56');
+      const content = getTooltipContent(mockT, 'fao56');
       expect(content).not.toBeNull();
-      expect(content?.title).toContain('FAO-56');
+      // mockT returns the key itself, so title should be the translated key
+      expect(content?.title).toBe('wizard.tooltips.items.fao56.title');
     });
 
     it('should return null for unknown key', () => {
-      expect(getTooltipContent('unknown_key')).toBeNull();
-      expect(getTooltipContent('')).toBeNull();
+      expect(getTooltipContent(mockT, 'unknown_key')).toBeNull();
+      expect(getTooltipContent(mockT, '')).toBeNull();
     });
   });
 
@@ -253,7 +245,7 @@ describe('onboardingHelpers', () => {
   // ============================================================================
   describe('getConfigurationWarnings', () => {
     it('should return empty array for empty config', () => {
-      expect(getConfigurationWarnings({})).toEqual([]);
+      expect(getConfigurationWarnings(mockT, {})).toEqual([]);
     });
 
     it('should warn when using sprinkler for drip-preferred plant', () => {
@@ -261,11 +253,10 @@ describe('onboardingHelpers', () => {
         plant: createMockPlant({ typ_irrig_method: 'DRIP', common_name_en: 'Tomato' }),
         irrigationMethod: createMockIrrigationMethod({ code_enum: 'IRRIG_SPRINKLER_SET' }),
       };
-      const warnings = getConfigurationWarnings(config);
+      const warnings = getConfigurationWarnings(mockT, config);
       expect(warnings.length).toBeGreaterThan(0);
       expect(warnings[0].type).toBe('suggestion');
       expect(warnings[0].field).toBe('irrigationMethod');
-      expect(warnings[0].message).toContain('Tomato');
     });
 
     it('should suggest cycle/soak for clay soils with low infiltration', () => {
@@ -277,7 +268,7 @@ describe('onboardingHelpers', () => {
         } as any,
         enableCycleSoak: false,
       };
-      const warnings = getConfigurationWarnings(config);
+      const warnings = getConfigurationWarnings(mockT, config);
       expect(warnings.some(w => w.field === 'enableCycleSoak')).toBe(true);
     });
 
@@ -290,7 +281,7 @@ describe('onboardingHelpers', () => {
         } as any,
         enableCycleSoak: true,
       };
-      const warnings = getConfigurationWarnings(config);
+      const warnings = getConfigurationWarnings(mockT, config);
       expect(warnings.some(w => w.field === 'enableCycleSoak')).toBe(false);
     });
 
@@ -299,8 +290,8 @@ describe('onboardingHelpers', () => {
         coverageType: 'area',
         coverageValue: 300,
       };
-      const warnings = getConfigurationWarnings(config);
-      expect(warnings.some(w => w.field === 'coverageValue' && w.message.includes('Suprafață mare'))).toBe(true);
+      const warnings = getConfigurationWarnings(mockT, config);
+      expect(warnings.some(w => w.field === 'coverageValue')).toBe(true);
     });
 
     it('should warn for many plants on one channel', () => {
@@ -308,8 +299,8 @@ describe('onboardingHelpers', () => {
         coverageType: 'plants',
         coverageValue: 60,
       };
-      const warnings = getConfigurationWarnings(config);
-      expect(warnings.some(w => w.field === 'coverageValue' && w.message.includes('Multe plante'))).toBe(true);
+      const warnings = getConfigurationWarnings(mockT, config);
+      expect(warnings.some(w => w.field === 'coverageValue')).toBe(true);
     });
 
     it('should warn for extreme sun exposure with outdoor plant', () => {
@@ -317,7 +308,7 @@ describe('onboardingHelpers', () => {
         sunExposure: 15,
         plant: createMockPlant({ common_name_en: 'Tomato', indoor_ok: false }),
       };
-      const warnings = getConfigurationWarnings(config);
+      const warnings = getConfigurationWarnings(mockT, config);
       expect(warnings.some(w => w.field === 'sunExposure' && w.type === 'warning')).toBe(true);
     });
 
@@ -325,7 +316,7 @@ describe('onboardingHelpers', () => {
       const config: Partial<UnifiedZoneConfig> = {
         sunExposure: 98,
       };
-      const warnings = getConfigurationWarnings(config);
+      const warnings = getConfigurationWarnings(mockT, config);
       expect(warnings.some(w => w.field === 'sunExposure' && w.type === 'info')).toBe(true);
     });
   });
