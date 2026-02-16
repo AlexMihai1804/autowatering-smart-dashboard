@@ -2,6 +2,7 @@ import React from 'react';
 import { useHistory } from 'react-router-dom';
 import { useI18n } from '../../i18n';
 import { useAppStore } from '../../store/useAppStore';
+import AdvancedSection from '../../components/mobile/AdvancedSection';
 
 const MobileDeviceSettings: React.FC = () => {
   const history = useHistory();
@@ -16,6 +17,7 @@ const MobileDeviceSettings: React.FC = () => {
   const settingsGroups = [
     {
       title: t('mobileDeviceSettings.groups.deviceConfiguration'),
+      isAdvanced: false,
       items: [
         {
           icon: 'info',
@@ -32,6 +34,14 @@ const MobileDeviceSettings: React.FC = () => {
           label: t('mobileDeviceSettings.items.timeLocation.label'),
           subtitle: t('mobileDeviceSettings.items.timeLocation.subtitle'),
           route: '/device/time',
+        },
+        {
+          icon: 'rainy',
+          iconBg: 'bg-sky-500/10',
+          iconColor: 'text-sky-400',
+          label: t('mobileDeviceSettings.items.rainSensor.label'),
+          subtitle: t('mobileDeviceSettings.items.rainSensor.subtitle'),
+          route: '/device/rain-sensor',
         },
         {
           icon: 'valve',
@@ -61,6 +71,7 @@ const MobileDeviceSettings: React.FC = () => {
     },
     {
       title: t('mobileDeviceSettings.groups.powerPerformance'),
+      isAdvanced: true,
       items: [
         {
           icon: 'battery_charging_full',
@@ -74,7 +85,24 @@ const MobileDeviceSettings: React.FC = () => {
     },
     {
       title: t('mobileDeviceSettings.groups.maintenance'),
+      isAdvanced: true,
       items: [
+        {
+          icon: 'monitor_heart',
+          iconBg: 'bg-emerald-500/10',
+          iconColor: 'text-emerald-400',
+          label: t('healthHub.deviceHealthCta'),
+          subtitle: t('healthHub.deviceHealthCtaHint'),
+          route: '/health/device',
+        },
+        {
+          icon: 'support_agent',
+          iconBg: 'bg-teal-500/10',
+          iconColor: 'text-teal-300',
+          label: t('healthHub.troubleshootingCta'),
+          subtitle: t('healthHub.troubleshootingCtaHint'),
+          route: '/health/troubleshooting',
+        },
         {
           icon: 'restart_alt',
           iconBg: 'bg-red-500/10',
@@ -104,7 +132,7 @@ const MobileDeviceSettings: React.FC = () => {
 
       {/* Content */}
       <main className="flex-1 flex flex-col px-4 gap-6 pb-8">
-        {settingsGroups.map((group, groupIdx) => (
+        {settingsGroups.filter(group => !group.isAdvanced).map((group, groupIdx) => (
           <div key={groupIdx} className="flex flex-col gap-2">
             <h3 className="px-2 text-sm font-medium text-mobile-text-muted uppercase tracking-wider">
               {group.title}
@@ -133,6 +161,40 @@ const MobileDeviceSettings: React.FC = () => {
             </div>
           </div>
         ))}
+
+        <AdvancedSection title={t('common.advanced')} defaultOpen={false}>
+          <div className="flex flex-col gap-4">
+            {settingsGroups.filter(group => group.isAdvanced).map((group, groupIdx) => (
+              <div key={`${group.title}-${groupIdx}`} className="flex flex-col gap-2">
+                <h3 className="px-2 text-xs font-medium text-mobile-text-muted uppercase tracking-wider">
+                  {group.title}
+                </h3>
+                <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
+                  {group.items.map((item, itemIdx) => (
+                    <button
+                      key={itemIdx}
+                      onClick={() => history.push(item.route)}
+                      className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl ${item.iconBg} flex items-center justify-center ${item.iconColor}`}>
+                          <span className="material-symbols-outlined">{item.icon}</span>
+                        </div>
+                        <div className="flex flex-col items-start">
+                          <span className="text-base font-medium text-white">{item.label}</span>
+                          <span className="text-xs text-mobile-text-muted">{item.subtitle}</span>
+                        </div>
+                      </div>
+                      <span className="material-symbols-outlined text-mobile-text-muted group-hover:text-white transition-colors">
+                        chevron_right
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </AdvancedSection>
       </main>
     </div>
   );

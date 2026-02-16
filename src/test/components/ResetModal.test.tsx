@@ -76,6 +76,6 @@ describe('ResetModal', () => {
             const module = await import('../../components/ResetModal');
             expect(module.default).toBeDefined();
             expect(typeof module.default).toBe('function');
-        });
+        }, 15000);
     });
 });

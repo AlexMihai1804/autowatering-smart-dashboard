@@ -29,6 +29,7 @@ export interface TranslationKeys {
         no: string;
         ok: string;
         retry: string;
+        refresh: string;
         continue: string;
         finish: string;
         change: string;
@@ -44,6 +45,7 @@ export interface TranslationKeys {
         edit: string;
         apply: string;
         fix: string;
+        view: string;
         set: string;
         minutes: string;
         minutesShort: string;
@@ -114,6 +116,13 @@ export interface TranslationKeys {
         last: string;
         lastActive: string;
         efficiency: string;
+    };
+
+    // Soil moisture status labels
+    soilMoisture: {
+        optimal: string;
+        fair: string;
+        low: string;
     };
 
     // Onboarding Wizard
@@ -793,6 +802,108 @@ export interface TranslationKeys {
             rtcError: string;
             lowPower: string;
             unknown: string;
+        };
+    };
+
+    // Health & Setup hub
+    healthHub: {
+        bannerTitle: string;
+        title: string;
+        subtitle: string;
+        systemStatusTitle: string;
+        setupScore: string;
+        setupScoreHint: string;
+        onboardingComplete: string;
+        onboardingIncomplete: string;
+        validateConfig: string;
+        validating: string;
+        validationStarted: string;
+        zoneMask: string;
+        scheduleMask: string;
+        missingItems: string;
+        missingZones: string;
+        missingSchedules: string;
+        deviceFlags: string;
+        flagNeedsSync: string;
+        flagNvsError: string;
+        flagValidationError: string;
+        activeIssues: string;
+        allGoodTitle: string;
+        allGoodDesc: string;
+        noActiveAlarms: string;
+        deviceHealthCta: string;
+        deviceHealthCtaHint: string;
+        troubleshootingCta: string;
+        troubleshootingCtaHint: string;
+        deviceHealth: {
+            title: string;
+            subtitle: string;
+            diagnostics: string;
+            environment: string;
+            runtime: string;
+            support: string;
+            supportHint: string;
+            bmeStatus: string;
+            bmeMeasurementInterval: string;
+            lastSensorReading: string;
+            alarmState: string;
+            lockState: string;
+            lastErrorCode: string;
+            copyDebugBundle: string;
+            debugBundleCopied: string;
+            debugBundleCopyFailed: string;
+            refreshFailed: string;
+            activeAlarmNone: string;
+            lockNone: string;
+            bmeMissing: string;
+            bmeOk: string;
+            bmeError: string;
+            bmeDisabled: string;
+            bmeUnknown: string;
+        };
+        troubleshooting: {
+            title: string;
+            subtitle: string;
+            activeAlarmBanner: string;
+            activeAlarmNone: string;
+            openAlarmHistory: string;
+            shareSteps: string;
+            stepsCopied: string;
+            shareUnsupported: string;
+            noGuideTitle: string;
+            noGuideDesc: string;
+            guides: {
+                noFlow: {
+                    symptom: string;
+                    step1: string;
+                    step2: string;
+                    step3: string;
+                };
+                unexpectedFlow: {
+                    symptom: string;
+                    step1: string;
+                    step2: string;
+                    step3: string;
+                };
+                highFlow: {
+                    symptom: string;
+                    step1: string;
+                    step2: string;
+                    step3: string;
+                };
+                mainlineLeak: {
+                    symptom: string;
+                    step1: string;
+                    step2: string;
+                    step3: string;
+                };
+                freezeLockout: {
+                    symptom: string;
+                    step1: string;
+                    step2: string;
+                    step3: string;
+                };
+            };
         };
     };
 
@@ -1504,6 +1615,7 @@ export interface TranslationKeys {
     navigation: {
         home: string;
         zones: string;
+        aiDoctor: string;
         history: string;
         settings: string;
     };
@@ -1603,6 +1715,16 @@ export interface TranslationKeys {
         active: string;
         cleared: string;
         clearedAt: string;
+        clearAlarm: string;
+        clearAll: string;
+        clearAllTitle: string;
+        clearAllConfirmMessage: string;
+        clearAllConfirmWord: string;
+        testZone30s: string;
+        testZoneRunningTitle: string;
+        testZoneRunningMessage: string;
+        emergencyStop: string;
+        testZoneCompleted: string;
         time: {
             unknown: string;
             justNow: string;
@@ -1654,6 +1776,7 @@ export interface TranslationKeys {
         rebootTitle: string;
         rebootMessage: string;
         rebootConfirm: string;
+        rebootNotAvailable: string;
     };
 
     mobileDeviceReset: {
@@ -1729,6 +1852,7 @@ export interface TranslationKeys {
             deviceInfo: { label: string; subtitle: string; };
             flowCalibration: { label: string; subtitle: string; };
             masterValve: { label: string; subtitle: string; };
+            rainSensor: { label: string; subtitle: string; };
             powerMode: { label: string; subtitle: string; };
             resetOptions: { label: string; subtitle: string; };
             timeLocation: { label: string; subtitle: string; };
@@ -2268,6 +2392,9 @@ export interface TranslationKeys {
         statusOnline: string;
         statusOffline: string;
         switchDevice: string;
+        sectionAccount: string;
+        profile: string;
+        guest: string;
         deviceSettings: string;
         zoneConfiguration: string;
         wateringSchedules: string;
@@ -2277,6 +2404,9 @@ export interface TranslationKeys {
         helpCenter: string;
         firmware: string;
         about: string;
+        account: string;
+        premium: string;
+        aiDoctor: string;
         sectionDeviceConfiguration: string;
         sectionAppPreferences: string;
         sectionCustomization: string;
@@ -2294,11 +2424,182 @@ export interface TranslationKeys {
         appVersion: string;
     };
 
+    mobileAuth: {
+        titleAccount: string;
+        titleLogin: string;
+        titleSignup: string;
+        titleConfirm: string;
+        signedInUserFallback: string;
+        firebaseNotConfiguredTitle: string;
+        firebaseNotConfiguredSubtitle: string;
+        loading: string;
+        planLabel: string;
+        planPremium: string;
+        planFree: string;
+        openProfile: string;
+        manageSubscription: string;
+        continueTo: string;
+        signOut: string;
+        accessTitle: string;
+        accessSubtitle: string;
+        tabLogin: string;
+        tabSignup: string;
+        continueWithGoogle: string;
+        emailLabel: string;
+        emailPlaceholder: string;
+        passwordLabel: string;
+        passwordPlaceholder: string;
+        passwordPolicyHint: string;
+        confirmPasswordLabel: string;
+        confirmPasswordPlaceholder: string;
+        submitLogin: string;
+        submitSignup: string;
+        submitConfirm: string;
+        errorEmailPasswordRequired: string;
+        errorEmailInvalid: string;
+        errorPasswordsDontMatch: string;
+        errorPasswordPolicy: string;
+        errorConfirmationCodeRequired: string;
+        errorAuthFailed: string;
+        confirmCodeTitle: string;
+        confirmCodeSubtitle: string;
+        confirmationCodeLabel: string;
+        confirmationCodePlaceholder: string;
+        confirmCodeSentHint: string;
+        confirmCodeResentHint: string;
+        resendCode: string;
+        backToLogin: string;
+        guestTitle: string;
+        guestTitleActive: string;
+        continueAsGuest: string;
+        exitGuestMode: string;
+    };
+
+    mobilePremium: {
+        title: string;
+        cardTitle: string;
+        cardSubtitle: string;
+        checkoutSuccess: string;
+        checkoutCancelled: string;
+        errorCheckoutFailed: string;
+        errorBillingPortalFailed: string;
+        backendNotConfiguredTitle: string;
+        backendNotConfiguredSubtitle: string;
+        loginRequired: string;
+        goToLogin: string;
+        statusPremiumActive: string;
+        statusFreePlan: string;
+        statusLabel: string;
+        statusUnknown: string;
+        planLabel: string;
+        renewsLabel: string;
+        syncing: string;
+        manageSubscription: string;
+        upgradeMonthly: string;
+        refreshStatus: string;
+        working: string;
+        includedTitle: string;
+        includedResetNote: string;
+        featurePlantId: string;
+        featurePlantIdDescription: string;
+        featureAiDoctor: string;
+        featureAiDoctorDescription: string;
+        perDay: string;
+        perMonth: string;
+    };
+
+    mobileUpsell: {
+        title: string;
+        subtitle: string;
+        loginToUpgrade: string;
+        upgradeNow: string;
+        buyPremium: string;
+        back: string;
+        notNow: string;
+        disclaimer: string;
+    };
+
+    mobileProfile: {
+        title: string;
+        emailStatus: string;
+        emailVerified: string;
+        emailNotVerified: string;
+        loading: string;
+        messageProfileUpdated: string;
+        messageVerificationSent: string;
+        messagePasswordUpdated: string;
+        errorProfileUpdateFailed: string;
+        errorVerificationFailed: string;
+        errorPasswordMismatch: string;
+        errorPasswordChangeFailed: string;
+        errorDeleteTypeDelete: string;
+        errorDeleteFailed: string;
+        sectionProfileDetails: string;
+        placeholderDisplayName: string;
+        placeholderPhone: string;
+        placeholderCompany: string;
+        placeholderCountry: string;
+        saveProfile: string;
+        saving: string;
+        sectionSecurity: string;
+        sendVerificationEmail: string;
+        placeholderCurrentPassword: string;
+        placeholderNewPassword: string;
+        placeholderConfirmNewPassword: string;
+        changePassword: string;
+        sectionAccountActions: string;
+        signOut: string;
+        deleteAccountTitle: string;
+        deleteAccountHint: string;
+        placeholderDeletePassword: string;
+        placeholderTypeDelete: string;
+        deleteAccountButton: string;
+        deleting: string;
+        working: string;
+    };
+
+    mobileAiDoctor: {
+        title: string;
+        cardTitle: string;
+        cardSubtitle: string;
+        notConfiguredTitle: string;
+        notConfiguredSubtitle: string;
+        premiumOnlyTitle: string;
+        upgradeToPremium: string;
+        checkingSubscription: string;
+        chooseLeafPhoto: string;
+        symptomsLabel: string;
+        symptomsPlaceholder: string;
+        analyzing: string;
+        analyzeButton: string;
+        diagnosisFailedTitle: string;
+        unknownPlant: string;
+        confidenceLabel: string;
+        healthStatusLabel: string;
+        healthLikelyHealthy: string;
+        healthPossibleDisease: string;
+        healthUnknown: string;
+        diseaseCandidatesTitle: string;
+        diseaseCandidatesEmpty: string;
+        followUpQuestionTitle: string;
+        aiTreatmentGuidanceTitle: string;
+        disclaimer: string;
+    };
+
+    mobilePlantId: {
+        loginRequired: string;
+        checkingSubscription: string;
+        premiumOnly: string;
+        noLocalMatch: string;
+        identificationFailed: string;
+    };
+
     mobileTimeLocation: {
         title: string;
         deviceTime: string;
         syncing: string;
         syncNow: string;
+        syncSuccess: string;
         syncFailed: string;
         timezone: string;
         timezones: {
@@ -2307,8 +2608,25 @@ export interface TranslationKeys {
             berlin: string;
             newYork: string;
             losAngeles: string;
+            custom: string;
         };
         utcOffset: string;
+        dst: {
+            sectionTitle: string;
+            toggleTitle: string;
+            disabledHint: string;
+            summary: string;
+            weekNth: string;
+            weekLast: string;
+        };
+        advancedTitle: string;
+        advancedSubtitle: string;
+        advanced: {
+            utcOffsetMinutes: string;
+            dstOffsetMinutes: string;
+            dstStart: string;
+            dstEnd: string;
+        };
         locationCoordinates: string;
         latitude: string;
         longitude: string;
@@ -2318,7 +2636,40 @@ export interface TranslationKeys {
         locationFailed: string;
         saving: string;
         saveSettings: string;
+        saveSuccess: string;
         saveFailed: string;
+    };
+
+    mobileRainSensor: {
+        title: string;
+        updated: string;
+        loadFailed: string;
+        statusTitle: string;
+        sensorActive: string;
+        sensorInactive: string;
+        lastPulse: string;
+        never: string;
+        rainLast24h: string;
+        rainLastHour: string;
+        enableTitle: string;
+        enableSubtitle: string;
+        integrationTitle: string;
+        integrationSubtitle: string;
+        calibrationTitle: string;
+        calibrationHint: string;
+        calibrate: string;
+        mmPerPulse: string;
+        debounceMs: string;
+        advancedTitle: string;
+        sensitivityPct: string;
+        skipThresholdMm: string;
+        advancedHint: string;
+        saving: string;
+        save: string;
+        saveSuccess: string;
+        saveFailed: string;
+        calibrationRequested: string;
+        calibrationFailed: string;
     };
 
     mobileWeatherDetails: {
@@ -2330,6 +2681,26 @@ export interface TranslationKeys {
             wateringSkipped: string;
             sufficient: string;
             consider: string;
+        };
+        soilMoistureOverride: {
+            title: string;
+            subtitle: string;
+            enabledLabel: string;
+            valueLabel: string;
+            scopeGlobal: string;
+            globalDerived: string;
+            modelTitle: string;
+            modelValue: string;
+            modelNoLocation: string;
+            modelNoSoilParams: string;
+            modelFailed: string;
+            modelSetLocation: string;
+            modelSetSoil: string;
+            hint: string;
+            reset: string;
+            notConnected: string;
+            loadFailed: string;
+            saveFailed: string;
         };
         zoneOverview: string;
         temperature: string;
@@ -2443,6 +2814,9 @@ export interface TranslationKeys {
         rainBenefit: string;
         waterDeficit: string;
         waterManagement: string;
+        savedToDevice: string;
+        intervalModeLoadFailed: string;
+        intervalModeUnsupported: string;
         manualControl: string;
         tapToStartCycle: string;
         resetConfirmBody: string;
@@ -2740,6 +3114,7 @@ export const en: TranslationKeys = {
         no: 'No',
         ok: 'OK',
         retry: 'Retry',
+        refresh: 'Refresh',
         continue: 'Continue',
         finish: 'Finish',
         change: 'Change',
@@ -2755,6 +3130,7 @@ export const en: TranslationKeys = {
         edit: 'Edit',
         apply: 'Apply',
         fix: 'Fix',
+        view: 'View',
         set: 'Set',
         minutes: 'minutes',
         minutesShort: 'min',
@@ -2824,6 +3200,12 @@ export const en: TranslationKeys = {
         last: 'Last',
         lastActive: 'Last Active',
         efficiency: 'Efficiency',
+    },
+
+    soilMoisture: {
+        optimal: 'Optimal',
+        fair: 'Fair',
+        low: 'Low',
     },
 
     wizard: {
@@ -3537,6 +3919,107 @@ export const en: TranslationKeys = {
         },
     },
 
+    healthHub: {
+        bannerTitle: 'Health & Setup',
+        title: 'Health & Setup',
+        subtitle: 'Setup score, locks, alarms, and quick fixes',
+        systemStatusTitle: 'System status',
+        setupScore: 'Setup score',
+        setupScoreHint: 'Reading from device...',
+        onboardingComplete: 'Setup complete',
+        onboardingIncomplete: 'Setup not finished',
+        validateConfig: 'Validate',
+        validating: 'Validating...',
+        validationStarted: 'Validation started',
+        zoneMask: 'Zones mask',
+        scheduleMask: 'Schedules mask',
+        missingItems: 'Missing items',
+        missingZones: '{count} zone(s) missing',
+        missingSchedules: '{count} schedule(s) missing',
+        deviceFlags: 'Device flags',
+        flagNeedsSync: 'Needs sync (device requests a full sync).',
+        flagNvsError: 'Storage error (NVS). Settings may not persist.',
+        flagValidationError: 'Validation error. Some settings are invalid or inconsistent.',
+        activeIssues: 'Active issues',
+        allGoodTitle: 'All good',
+        allGoodDesc: 'No active alarms or locks detected.',
+        noActiveAlarms: 'No active alarms',
+        deviceHealthCta: 'Device Health',
+        deviceHealthCtaHint: 'Diagnostics snapshot and debug bundle',
+        troubleshootingCta: 'Troubleshooting',
+        troubleshootingCtaHint: 'Step-by-step fixes for common alarms',
+        deviceHealth: {
+            title: 'Device Health',
+            subtitle: 'Diagnostics and support bundle',
+            diagnostics: 'Diagnostics snapshot',
+            environment: 'Sensor health',
+            runtime: 'Runtime state',
+            support: 'Support',
+            supportHint: 'Copy this bundle and share it with support or firmware dev.',
+            bmeStatus: 'BME280 status',
+            bmeMeasurementInterval: 'BME280 interval',
+            lastSensorReading: 'Last sensor reading',
+            alarmState: 'Active alarm',
+            lockState: 'Global lock',
+            lastErrorCode: 'Last error code',
+            copyDebugBundle: 'Copy debug bundle',
+            debugBundleCopied: 'Debug bundle copied',
+            debugBundleCopyFailed: 'Failed to copy debug bundle',
+            refreshFailed: 'Some data could not be refreshed',
+            activeAlarmNone: 'No active alarm',
+            lockNone: 'No lock',
+            bmeMissing: 'Missing',
+            bmeOk: 'OK',
+            bmeError: 'Error',
+            bmeDisabled: 'Disabled',
+            bmeUnknown: 'Unknown',
+        },
+        troubleshooting: {
+            title: 'Troubleshooting',
+            subtitle: 'Common alarm fixes',
+            activeAlarmBanner: 'Current alarm focus',
+            activeAlarmNone: 'No active alarm',
+            openAlarmHistory: 'Open alarm history',
+            shareSteps: 'Share steps',
+            stepsCopied: 'Steps copied to clipboard',
+            shareUnsupported: 'Unable to share steps',
+            noGuideTitle: 'No guide available',
+            noGuideDesc: 'There is no troubleshooting guide for this alarm yet.',
+            guides: {
+                noFlow: {
+                    symptom: 'Valve opened but no flow pulses were detected.',
+                    step1: 'Check water supply and make sure the valve is actually opening.',
+                    step2: 'Check flow sensor wiring and verify flow calibration is greater than 0.',
+                    step3: 'Run Test Zone 30s, then clear the alarm after flow is confirmed.',
+                },
+                unexpectedFlow: {
+                    symptom: 'Flow pulses detected while all valves should be closed.',
+                    step1: 'Inspect for leaks or a stuck valve that does not fully close.',
+                    step2: 'Close water supply briefly and confirm pulses stop.',
+                    step3: 'After fixing the cause, clear the alarm and monitor the next cycle.',
+                },
+                highFlow: {
+                    symptom: 'Flow exceeded learned safe limits for the system.',
+                    step1: 'Stop watering immediately and inspect for burst pipe or broken sprinkler.',
+                    step2: 'Check zone hardware and fix leak before restarting watering.',
+                    step3: 'Run a short manual test and clear the alarm only after flow is stable.',
+                },
+                mainlineLeak: {
+                    symptom: 'Static leak test detected flow with all zones off.',
+                    step1: 'Inspect mainline and master valve for leaks or bypass flow.',
+                    step2: 'Confirm no zone is running and watch flow pulses for 30-60 seconds.',
+                    step3: 'Fix leakage path, then clear alarm and validate again.',
+                },
+                freezeLockout: {
+                    symptom: 'Freeze protection paused watering due to low or stale temperature data.',
+                    step1: 'Wait until temperature rises above freeze threshold.',
+                    step2: 'Refresh environmental data and verify BME280 status is OK.',
+                    step3: 'Resume watering after lockout clears or use manual test for verification.',
+                },
+            },
+        },
+    },
+
     analytics: {
         title: 'Analytics',
         liveData: 'LIVE DATA',
@@ -4230,6 +4713,7 @@ export const en: TranslationKeys = {
     navigation: {
         home: 'Home',
         zones: 'Zones',
+        aiDoctor: 'AI Doctor',
         history: 'History',
         settings: 'Settings',
     },
@@ -4324,6 +4808,16 @@ export const en: TranslationKeys = {
         active: 'Active',
         cleared: 'Cleared',
         clearedAt: 'Cleared {time}',
+        clearAlarm: 'Clear Alarm',
+        clearAll: 'Clear All Alarms',
+        clearAllTitle: 'Clear All Alarms',
+        clearAllConfirmMessage: 'This clears all active alarms on the controller. Only do this after fixing the underlying issue.',
+        clearAllConfirmWord: 'CLEAR',
+        testZone30s: 'Test Zone (30s)',
+        testZoneRunningTitle: 'Testing {zone}',
+        testZoneRunningMessage: 'Auto-stopping in {seconds}s. Tap Emergency Stop if needed.',
+        emergencyStop: 'Emergency Stop',
+        testZoneCompleted: 'Zone test completed.',
         time: {
             unknown: 'Unknown',
             justNow: 'Just now',
@@ -4371,6 +4865,7 @@ export const en: TranslationKeys = {
         rebootTitle: 'Reboot Device?',
         rebootMessage: 'This will restart the controller and may take a minute.',
         rebootConfirm: 'Reboot',
+        rebootNotAvailable: 'Reboot command is not available in current firmware BLE API.',
     },
     mobileDeviceReset: {
         title: 'Reset Options',
@@ -4443,6 +4938,7 @@ export const en: TranslationKeys = {
             deviceInfo: { label: 'Device Info', subtitle: 'System details and status' },
             flowCalibration: { label: 'Flow Calibration', subtitle: 'Calibrate the flow sensor' },
             masterValve: { label: 'Master Valve', subtitle: 'Configure master valve timing' },
+            rainSensor: { label: 'Rain Sensor', subtitle: 'Calibration and rain integration' },
             powerMode: { label: 'Power Mode', subtitle: 'Battery and performance settings' },
             resetOptions: { label: 'Reset Options', subtitle: 'Clear settings or data' },
             timeLocation: { label: 'Time & Location', subtitle: 'Sync time and GPS' },
@@ -4969,6 +5465,9 @@ export const en: TranslationKeys = {
         statusOnline: 'Online',
         statusOffline: 'Offline',
         switchDevice: 'Switch Device',
+        sectionAccount: 'Account',
+        profile: 'Profile',
+        guest: 'Guest',
         deviceSettings: 'Device Settings',
         zoneConfiguration: 'Zone Configuration',
         wateringSchedules: 'Watering Schedules',
@@ -4978,6 +5477,9 @@ export const en: TranslationKeys = {
         helpCenter: 'Help Center',
         firmware: 'Firmware',
         about: 'About',
+        account: 'Account',
+        premium: 'Premium',
+        aiDoctor: 'AI Doctor',
         sectionDeviceConfiguration: 'Device',
         sectionAppPreferences: 'App Preferences',
         sectionCustomization: 'Customization',
@@ -4994,11 +5496,176 @@ export const en: TranslationKeys = {
         disconnectDevice: 'Disconnect Device',
         appVersion: 'App Version',
     },
+    mobileAuth: {
+        titleAccount: 'Account',
+        titleLogin: 'Login',
+        titleSignup: 'Create account',
+        titleConfirm: 'Confirm email',
+        signedInUserFallback: 'Signed in user',
+        firebaseNotConfiguredTitle: 'AWS Cognito is not configured.',
+        firebaseNotConfiguredSubtitle: 'Add `VITE_AWS_REGION`, `VITE_COGNITO_USER_POOL_ID`, `VITE_COGNITO_APP_CLIENT_ID` in `.env`.',
+        loading: 'Loading account state...',
+        planLabel: 'Plan: {plan}',
+        planPremium: 'Premium',
+        planFree: 'Free',
+        openProfile: 'Open profile',
+        manageSubscription: 'Manage subscription',
+        continueTo: 'Continue',
+        signOut: 'Sign out',
+        accessTitle: 'Account access',
+        accessSubtitle: 'Login for sync, premium and AI Doctor access.',
+        tabLogin: 'Login',
+        tabSignup: 'Sign up',
+        continueWithGoogle: 'Continue with Google',
+        emailLabel: 'Email',
+        emailPlaceholder: 'name@email.com',
+        passwordLabel: 'Password',
+        passwordPlaceholder: 'Min 8 chars (upper, lower, number, symbol)',
+        passwordPolicyHint: 'At least 8 characters, with uppercase, lowercase, number and symbol.',
+        confirmPasswordLabel: 'Confirm password',
+        confirmPasswordPlaceholder: 'Repeat password',
+        submitLogin: 'Login',
+        submitSignup: 'Create account',
+        submitConfirm: 'Confirm',
+        errorEmailPasswordRequired: 'Email and password are required.',
+        errorEmailInvalid: 'Enter a valid email address.',
+        errorPasswordsDontMatch: 'Passwords do not match.',
+        errorPasswordPolicy: 'Password must be at least 8 characters and include uppercase, lowercase, number and symbol.',
+        errorConfirmationCodeRequired: 'Confirmation code is required.',
+        errorAuthFailed: 'Authentication failed.',
+        confirmCodeTitle: 'Confirm your email',
+        confirmCodeSubtitle: 'Enter the code sent to {email}.',
+        confirmationCodeLabel: 'Confirmation code',
+        confirmationCodePlaceholder: '123456',
+        confirmCodeSentHint: 'Code sent. Check your email (and spam).',
+        confirmCodeResentHint: 'Code resent. Check your email (and spam).',
+        resendCode: 'Resend code',
+        backToLogin: 'Back to login',
+        guestTitle: 'Continue without account.',
+        guestTitleActive: 'You are using guest mode.',
+        continueAsGuest: 'Continue as guest',
+        exitGuestMode: 'Exit guest mode',
+    },
+    mobilePremium: {
+        title: 'Premium',
+        cardTitle: 'AutoWatering Premium',
+        cardSubtitle: 'Unlock AI Doctor diagnosis and camera plant identification. Start with a 7-day free trial.',
+        checkoutSuccess: 'Checkout completed. Refreshing subscription...',
+        checkoutCancelled: 'Checkout was cancelled.',
+        errorCheckoutFailed: 'Failed to open checkout.',
+        errorBillingPortalFailed: 'Failed to open billing portal.',
+        backendNotConfiguredTitle: 'Billing backend is not configured.',
+        backendNotConfiguredSubtitle: 'Add Cognito + subscription backend environment variables.',
+        loginRequired: 'Login is required to manage premium subscription.',
+        goToLogin: 'Go to login',
+        statusPremiumActive: 'Premium active',
+        statusFreePlan: 'Free plan',
+        statusLabel: 'Status: {status}',
+        statusUnknown: 'Unknown',
+        planLabel: 'Plan: {plan}',
+        renewsLabel: 'Renews: {date}',
+        syncing: 'Syncing subscription status...',
+        manageSubscription: 'Manage subscription',
+        upgradeMonthly: 'Upgrade monthly',
+        refreshStatus: 'Refresh status',
+        working: 'Working...',
+        includedTitle: 'Included usage',
+        includedResetNote: 'Limits reset daily and monthly (UTC).',
+        featurePlantId: 'Camera Plant ID',
+        featurePlantIdDescription: 'Identify plants from a camera photo and auto-fill your zone plant type.',
+        featureAiDoctor: 'AI Doctor',
+        featureAiDoctorDescription: 'Detect common leaf diseases and get clear treatment guidance.',
+        perDay: '{count}/day',
+        perMonth: '{count}/month',
+    },
+    mobileUpsell: {
+        title: 'Unlock Premium',
+        subtitle: 'AI Doctor diagnosis and camera plant identification. Start with a 7-day free trial.',
+        loginToUpgrade: 'Login to unlock',
+        upgradeNow: 'Upgrade to Premium',
+        buyPremium: 'Buy Premium',
+        back: 'Back',
+        notNow: 'Not now',
+        disclaimer: 'Premium is linked to your account. You can manage or cancel anytime.',
+    },
+    mobileProfile: {
+        title: 'Profile',
+        emailStatus: 'Email status: {status}',
+        emailVerified: 'Verified',
+        emailNotVerified: 'Not verified',
+        loading: 'Loading profile...',
+        messageProfileUpdated: 'Profile updated.',
+        messageVerificationSent: 'Verification email sent.',
+        messagePasswordUpdated: 'Password updated.',
+        errorProfileUpdateFailed: 'Profile update failed.',
+        errorVerificationFailed: 'Failed to send verification email.',
+        errorPasswordMismatch: 'New password and confirmation do not match.',
+        errorPasswordChangeFailed: 'Failed to change password.',
+        errorDeleteTypeDelete: 'Type DELETE to confirm account removal.',
+        errorDeleteFailed: 'Failed to delete account.',
+        sectionProfileDetails: 'Profile details',
+        placeholderDisplayName: 'Display name',
+        placeholderPhone: 'Phone',
+        placeholderCompany: 'Company',
+        placeholderCountry: 'Country',
+        saveProfile: 'Save profile',
+        saving: 'Saving...',
+        sectionSecurity: 'Security',
+        sendVerificationEmail: 'Send verification email',
+        placeholderCurrentPassword: 'Current password',
+        placeholderNewPassword: 'New password',
+        placeholderConfirmNewPassword: 'Confirm new password',
+        changePassword: 'Change password',
+        sectionAccountActions: 'Account actions',
+        signOut: 'Sign out',
+        deleteAccountTitle: 'Delete account',
+        deleteAccountHint: 'This removes your account record and cloud data. Type DELETE to confirm.',
+        placeholderDeletePassword: 'Current password',
+        placeholderTypeDelete: 'Type DELETE',
+        deleteAccountButton: 'Delete account',
+        deleting: 'Deleting...',
+        working: 'Working...',
+    },
+    mobileAiDoctor: {
+        title: 'AI Doctor',
+        cardTitle: 'Plant disease assistant',
+        cardSubtitle: 'Upload a clear leaf photo, then add symptoms for better diagnosis.',
+        notConfiguredTitle: 'AI Doctor is not configured.',
+        notConfiguredSubtitle: 'Set VITE_AI_DOCTOR_API_URL.',
+        premiumOnlyTitle: 'AI Doctor is available only on Premium.',
+        upgradeToPremium: 'Upgrade to premium',
+        checkingSubscription: 'Checking subscription status...',
+        chooseLeafPhoto: 'Choose leaf photo',
+        symptomsLabel: 'Symptoms (optional)',
+        symptomsPlaceholder: 'Example: yellow spots, curling leaves, white powder, stem rot...',
+        analyzing: 'Analyzing...',
+        analyzeButton: 'Analyze disease risk',
+        diagnosisFailedTitle: 'Diagnosis failed',
+        unknownPlant: 'Unknown plant',
+        confidenceLabel: 'Confidence: {value}',
+        healthStatusLabel: 'Health status:',
+        healthLikelyHealthy: 'Likely healthy',
+        healthPossibleDisease: 'Possible disease detected',
+        healthUnknown: 'Unknown',
+        diseaseCandidatesTitle: 'Disease candidates',
+        diseaseCandidatesEmpty: 'No disease candidates reported.',
+        followUpQuestionTitle: 'Follow-up question',
+        aiTreatmentGuidanceTitle: 'AI treatment guidance',
+        disclaimer: 'AI guidance is advisory only. Confirm severe diseases with an agronomist before applying high-risk treatments.',
+    },
+    mobilePlantId: {
+        loginRequired: 'Login required for camera plant identification.',
+        checkingSubscription: 'Checking subscription status...',
+        premiumOnly: 'Camera plant identification is available only on Premium.',
+        noLocalMatch: 'Plant was identified by API, but no matching plant exists in local database.',
+        identificationFailed: 'Plant identification failed.',
+    },
     mobileTimeLocation: {
         title: 'Time & Location',
         deviceTime: 'Device Time',
         syncing: 'Syncing...',
         syncNow: 'Sync Now',
+        syncSuccess: 'Time synced',
         syncFailed: 'Failed to sync time',
         timezone: 'Timezone',
         timezones: {
@@ -5007,8 +5674,25 @@ export const en: TranslationKeys = {
             berlin: 'Berlin',
             newYork: 'New York',
             losAngeles: 'Los Angeles',
+            custom: 'Custom',
         },
         utcOffset: 'UTC Offset {offset}',
+        dst: {
+            sectionTitle: 'Daylight Saving Time (DST)',
+            toggleTitle: 'DST enabled',
+            disabledHint: 'Disabled. Enable DST if your timezone observes seasonal clock changes.',
+            summary: 'Starts {startWeek} {startDow} of {startMonth}, ends {endWeek} {endDow} of {endMonth} ({offset} min)',
+            weekNth: '{n}th',
+            weekLast: 'last',
+        },
+        advancedTitle: 'Advanced settings',
+        advancedSubtitle: 'Offsets and DST rules',
+        advanced: {
+            utcOffsetMinutes: 'UTC offset (minutes)',
+            dstOffsetMinutes: 'DST offset (minutes)',
+            dstStart: 'DST start rule',
+            dstEnd: 'DST end rule',
+        },
         locationCoordinates: 'Location Coordinates',
         latitude: 'Latitude',
         longitude: 'Longitude',
@@ -5018,7 +5702,39 @@ export const en: TranslationKeys = {
         locationFailed: 'Failed to get location',
         saving: 'Saving...',
         saveSettings: 'Save Settings',
+        saveSuccess: 'Settings saved',
         saveFailed: 'Failed to save settings',
+    },
+    mobileRainSensor: {
+        title: 'Rain Sensor',
+        updated: 'Updated {minutes} min ago',
+        loadFailed: 'Failed to load from device',
+        statusTitle: 'Status',
+        sensorActive: 'Sensor active',
+        sensorInactive: 'Sensor inactive',
+        lastPulse: 'Last pulse',
+        never: 'Never',
+        rainLast24h: 'Last 24h',
+        rainLastHour: 'Last hour',
+        enableTitle: 'Rain sensor',
+        enableSubtitle: 'Enable tipping-bucket input',
+        integrationTitle: 'Rain integration',
+        integrationSubtitle: 'Use rain for skip/reduction decisions',
+        calibrationTitle: 'Calibration',
+        calibrationHint: 'Set mm/pulse and debounce to match your sensor.',
+        calibrate: 'Calibrate',
+        mmPerPulse: 'mm per pulse',
+        debounceMs: 'Debounce (ms)',
+        advancedTitle: 'Advanced',
+        sensitivityPct: 'Sensitivity (%)',
+        skipThresholdMm: 'Skip threshold (mm)',
+        advancedHint: 'Note: per-zone thresholds take precedence. FAO-56 auto modes already incorporate rainfall.',
+        saving: 'Saving...',
+        save: 'Save',
+        saveSuccess: 'Saved',
+        saveFailed: 'Failed to save',
+        calibrationRequested: 'Calibration requested',
+        calibrationFailed: 'Calibration failed',
     },
     mobileWeatherDetails: {
         title: 'Weather',
@@ -5029,6 +5745,26 @@ export const en: TranslationKeys = {
             wateringSkipped: 'Watering skipped',
             sufficient: 'Sufficient',
             consider: 'Consider watering',
+        },
+        soilMoistureOverride: {
+            title: 'Soil moisture override',
+            subtitle: 'Calibrate the estimate used for rain effectiveness and FAO-56 calculations.',
+            enabledLabel: 'Override enabled',
+            valueLabel: 'Soil moisture',
+            scopeGlobal: 'Global',
+            globalDerived: 'Global is derived from per-zone overrides and cannot be set.',
+            modelTitle: 'Suggested by weather model',
+            modelValue: 'Open-Meteo (0-9cm) at {time}: {value} (VWC {vwc})',
+            modelNoLocation: 'Set your location to enable suggestions.',
+            modelNoSoilParams: 'Soil parameters missing for this selection (FC/WP).',
+            modelFailed: 'Could not load model estimate.',
+            modelSetLocation: 'Set location',
+            modelSetSoil: 'Set soil type',
+            hint: 'Per-zone overrides (if enabled) take precedence over the global fallback.',
+            reset: 'Reset to default',
+            notConnected: 'Connect to the device to change this setting.',
+            loadFailed: 'Failed to load from device. Showing last known value.',
+            saveFailed: 'Failed to save to device.',
         },
         zoneOverview: 'Zone Overview',
         temperature: 'Temperature',
@@ -5139,6 +5875,9 @@ export const en: TranslationKeys = {
         rainBenefit: 'Rain benefit',
         waterDeficit: 'Water deficit',
         waterManagement: 'Water Management',
+        savedToDevice: 'Saved to device',
+        intervalModeLoadFailed: 'Cycle & Soak timing could not be loaded. Durations were not saved.',
+        intervalModeUnsupported: 'Cycle & Soak timing is not supported by your firmware.',
         manualControl: 'Manual Control',
         tapToStartCycle: 'Tap to start {minutes} min cycle',
         resetConfirmBody: 'Reset zone settings to defaults?',
@@ -5444,6 +6183,8 @@ export const ro: TranslationKeys = {
         edit: 'Editeaz?',
         apply: 'Aplic?',
         fix: 'Rezolva',
+        refresh: 'Refresh',
+        view: 'Vezi',
         set: 'Seteaza',
         minutes: 'minute',
         minutesShort: 'min',
@@ -5513,6 +6254,12 @@ export const ro: TranslationKeys = {
         last: 'Ultima',
         lastActive: 'Ultima activitate',
         efficiency: 'Eficiență',
+    },
+
+    soilMoisture: {
+        optimal: 'Optim',
+        fair: 'Mediu',
+        low: 'Scazut',
     },
 
     wizard: {
@@ -6226,6 +6973,107 @@ export const ro: TranslationKeys = {
             unknown: 'NECUNOSCUT',
         },
     },
+
+    healthHub: {
+        bannerTitle: 'Health & Setup',
+        title: 'Health & Setup',
+        subtitle: 'Scor setup, lock-uri, alarme si fix-uri rapide',
+        systemStatusTitle: 'Stare sistem',
+        setupScore: 'Scor setup',
+        setupScoreHint: 'Citesc de pe device...',
+        onboardingComplete: 'Setup complet',
+        onboardingIncomplete: 'Setup incomplet',
+        validateConfig: 'Valideaza',
+        validating: 'Validez...',
+        validationStarted: 'Validare pornita',
+        zoneMask: 'Masca zone',
+        scheduleMask: 'Masca programe',
+        missingItems: 'Lipsuri',
+        missingZones: 'Lipsesc {count} zone',
+        missingSchedules: 'Lipsesc {count} programe',
+        deviceFlags: 'Flag-uri device',
+        flagNeedsSync: 'Necesita sync (device-ul cere resincronizare).',
+        flagNvsError: 'Eroare storage (NVS). Setarile pot sa nu se salveze.',
+        flagValidationError: 'Eroare validare. Unele setari sunt invalide sau inconsistente.',
+        activeIssues: 'Probleme active',
+        allGoodTitle: 'Totul e OK',
+        allGoodDesc: 'Nu exista alarme sau lock-uri active.',
+        noActiveAlarms: 'Fara alarme active',
+        deviceHealthCta: 'Sanatate device',
+        deviceHealthCtaHint: 'Diagnoza rapida si pachet debug',
+        troubleshootingCta: 'Troubleshooting',
+        troubleshootingCtaHint: 'Pasi clari pentru alarme comune',
+        deviceHealth: {
+            title: 'Sanatate device',
+            subtitle: 'Diagnoza si pachet suport',
+            diagnostics: 'Snapshot diagnostic',
+            environment: 'Stare senzori',
+            runtime: 'Stare runtime',
+            support: 'Suport',
+            supportHint: 'Copiaza pachetul si trimite-l la suport sau la dev-ul de firmware.',
+            bmeStatus: 'Status BME280',
+            bmeMeasurementInterval: 'Interval BME280',
+            lastSensorReading: 'Ultima citire senzor',
+            alarmState: 'Alarma activa',
+            lockState: 'Lock global',
+            lastErrorCode: 'Ultimul cod eroare',
+            copyDebugBundle: 'Copiaza pachet debug',
+            debugBundleCopied: 'Pachet debug copiat',
+            debugBundleCopyFailed: 'Nu am putut copia pachetul debug',
+            refreshFailed: 'Unele date nu au putut fi actualizate',
+            activeAlarmNone: 'Fara alarma activa',
+            lockNone: 'Fara lock',
+            bmeMissing: 'Lipsa',
+            bmeOk: 'OK',
+            bmeError: 'Eroare',
+            bmeDisabled: 'Dezactivat',
+            bmeUnknown: 'Necunoscut',
+        },
+        troubleshooting: {
+            title: 'Troubleshooting',
+            subtitle: 'Fix rapid pentru alarme comune',
+            activeAlarmBanner: 'Focus pe alarma curenta',
+            activeAlarmNone: 'Nu exista alarma activa',
+            openAlarmHistory: 'Deschide istoricul alarmelor',
+            shareSteps: 'Distribuie pasii',
+            stepsCopied: 'Pasii au fost copiati',
+            shareUnsupported: 'Nu am putut distribui pasii',
+            noGuideTitle: 'Nu exista ghid',
+            noGuideDesc: 'Nu exista inca un ghid pentru aceasta alarma.',
+            guides: {
+                noFlow: {
+                    symptom: 'Valva a pornit, dar nu s-au detectat impulsuri de debit.',
+                    step1: 'Verifica alimentarea cu apa si confirma ca valva chiar se deschide.',
+                    step2: 'Verifica legaturile senzorului de debit si calibrarea (>0).',
+                    step3: 'Ruleaza Test zona 30s, apoi sterge alarma dupa ce debitul e confirmat.',
+                },
+                unexpectedFlow: {
+                    symptom: 'Sunt impulsuri de debit desi toate valvele ar trebui sa fie inchise.',
+                    step1: 'Cauta scurgeri sau o valva blocata care nu se inchide complet.',
+                    step2: 'Inchide temporar apa si verifica daca impulsurile dispar.',
+                    step3: 'Dupa remediere, sterge alarma si monitorizeaza urmatorul ciclu.',
+                },
+                highFlow: {
+                    symptom: 'Debitul a depasit limita sigura invatata de sistem.',
+                    step1: 'Opreste udarea si verifica daca exista conducta sparta sau aspersor rupt.',
+                    step2: 'Repara problema hardware inainte sa repornesti udarea.',
+                    step3: 'Ruleaza un test scurt manual si sterge alarma doar cand debitul e stabil.',
+                },
+                mainlineLeak: {
+                    symptom: 'Testul static a detectat debit cu toate zonele oprite.',
+                    step1: 'Verifica conducta principala si supapa master pentru scurgeri.',
+                    step2: 'Confirma ca nicio zona nu ruleaza si urmareste impulsurile 30-60 secunde.',
+                    step3: 'Repara sursa de pierdere, apoi sterge alarma si valideaza din nou.',
+                },
+                freezeLockout: {
+                    symptom: 'Protectia la inghet a oprit udarea din cauza temperaturii mici sau datelor vechi.',
+                    step1: 'Asteapta pana cand temperatura urca peste pragul de inghet.',
+                    step2: 'Actualizeaza datele de mediu si verifica statusul BME280 (OK).',
+                    step3: 'Reia udarea dupa ce lockout-ul dispare sau foloseste test manual pentru verificare.',
+                },
+            },
+        },
+    },
     analytics: {
         title: 'Analiz?',
         liveData: 'DATE LIVE',
@@ -6920,6 +7768,7 @@ export const ro: TranslationKeys = {
     navigation: {
         home: 'Acasa',
         zones: 'Zone',
+        aiDoctor: 'AI Doctor',
         history: 'Istoric',
         settings: 'Setari',
     },
@@ -7014,6 +7863,16 @@ export const ro: TranslationKeys = {
         active: 'Activa',
         cleared: 'Stearsa',
         clearedAt: 'Stearsa {time}',
+        clearAlarm: 'Sterge alarma',
+        clearAll: 'Sterge toate alarmele',
+        clearAllTitle: 'Sterge toate alarmele',
+        clearAllConfirmMessage: 'Aceasta actiune sterge toate alarmele active de pe controler. Fa asta doar dupa ce ai rezolvat cauza problemei.',
+        clearAllConfirmWord: 'STERGE',
+        testZone30s: 'Testeaza zona (30s)',
+        testZoneRunningTitle: 'Testam {zone}',
+        testZoneRunningMessage: 'Se opreste automat in {seconds}s. Apasa Oprire de urgenta daca e nevoie.',
+        emergencyStop: 'Oprire de urgenta',
+        testZoneCompleted: 'Testul zonei s-a incheiat.',
         time: {
             unknown: 'Necunoscut',
             justNow: 'Chiar acum',
@@ -7061,6 +7920,7 @@ export const ro: TranslationKeys = {
         rebootTitle: 'Repornire dispozitiv',
         rebootMessage: 'Dispozitivul se va reporni si poate dura un minut.',
         rebootConfirm: 'Reporneste',
+        rebootNotAvailable: 'Comanda de repornire nu este disponibila in acest firmware.',
     },
     mobileDeviceReset: {
         title: 'Optiuni resetare',
@@ -7133,6 +7993,7 @@ export const ro: TranslationKeys = {
             deviceInfo: { label: 'Info dispozitiv', subtitle: 'Detalii si status' },
             flowCalibration: { label: 'Calibrare debit', subtitle: 'Calibreaza senzorul de debit' },
             masterValve: { label: 'Supapa principala', subtitle: 'Configureaza timpii supapei' },
+            rainSensor: { label: 'Senzor ploaie', subtitle: 'Calibrare si integrare ploaie' },
             powerMode: { label: 'Mod energie', subtitle: 'Setari baterie si performanta' },
             resetOptions: { label: 'Optiuni resetare', subtitle: 'Sterge setari sau date' },
             timeLocation: { label: 'Timp si locatie', subtitle: 'Sincronizare timp si GPS' },
@@ -7659,6 +8520,9 @@ export const ro: TranslationKeys = {
         statusOnline: 'Online',
         statusOffline: 'Offline',
         switchDevice: 'Schimba dispozitiv',
+        sectionAccount: 'Cont',
+        profile: 'Profil',
+        guest: 'Guest',
         deviceSettings: 'Setari dispozitiv',
         zoneConfiguration: 'Configurare zone',
         wateringSchedules: 'Programe udare',
@@ -7668,6 +8532,9 @@ export const ro: TranslationKeys = {
         helpCenter: 'Centru ajutor',
         firmware: 'Firmware',
         about: 'Despre',
+        account: 'Cont',
+        premium: 'Premium',
+        aiDoctor: 'AI Doctor',
         sectionDeviceConfiguration: 'Dispozitiv',
         sectionAppPreferences: 'Preferinte aplicatie',
         sectionCustomization: 'Personalizare',
@@ -7684,11 +8551,176 @@ export const ro: TranslationKeys = {
         disconnectDevice: 'Deconecteaza dispozitiv',
         appVersion: 'Versiune aplicatie',
     },
+    mobileAuth: {
+        titleAccount: 'Cont',
+        titleLogin: 'Autentificare',
+        titleSignup: 'Creeaza cont',
+        titleConfirm: 'Confirma email-ul',
+        signedInUserFallback: 'Utilizator conectat',
+        firebaseNotConfiguredTitle: 'AWS Cognito nu este configurat.',
+        firebaseNotConfiguredSubtitle: 'Adauga `VITE_AWS_REGION`, `VITE_COGNITO_USER_POOL_ID`, `VITE_COGNITO_APP_CLIENT_ID` in `.env`.',
+        loading: 'Se incarca starea contului...',
+        planLabel: 'Plan: {plan}',
+        planPremium: 'Premium',
+        planFree: 'Gratuit',
+        openProfile: 'Deschide profil',
+        manageSubscription: 'Gestioneaza abonamentul',
+        continueTo: 'Continua',
+        signOut: 'Deconectare',
+        accessTitle: 'Acces cont',
+        accessSubtitle: 'Autentifica-te pentru sincronizare, premium si acces la AI Doctor.',
+        tabLogin: 'Autentificare',
+        tabSignup: 'Inregistrare',
+        continueWithGoogle: 'Continua cu Google',
+        emailLabel: 'Email',
+        emailPlaceholder: 'nume@email.com',
+        passwordLabel: 'Parola',
+        passwordPlaceholder: 'Minim 8 caractere (mare, mica, cifra, simbol)',
+        passwordPolicyHint: 'Minim 8 caractere, cu litera mare, litera mica, cifra si simbol.',
+        confirmPasswordLabel: 'Confirma parola',
+        confirmPasswordPlaceholder: 'Repeta parola',
+        submitLogin: 'Autentificare',
+        submitSignup: 'Creeaza cont',
+        submitConfirm: 'Confirma',
+        errorEmailPasswordRequired: 'Email-ul si parola sunt obligatorii.',
+        errorEmailInvalid: 'Introdu un email valid.',
+        errorPasswordsDontMatch: 'Parolele nu se potrivesc.',
+        errorPasswordPolicy: 'Parola trebuie sa aiba minim 8 caractere si sa contina litera mare, litera mica, cifra si simbol.',
+        errorConfirmationCodeRequired: 'Codul de confirmare este obligatoriu.',
+        errorAuthFailed: 'Autentificarea a esuat.',
+        confirmCodeTitle: 'Confirma-ti email-ul',
+        confirmCodeSubtitle: 'Introdu codul trimis la {email}.',
+        confirmationCodeLabel: 'Cod confirmare',
+        confirmationCodePlaceholder: '123456',
+        confirmCodeSentHint: 'Cod trimis. Verifica email-ul (si spam).',
+        confirmCodeResentHint: 'Cod retrimis. Verifica email-ul (si spam).',
+        resendCode: 'Retrimite codul',
+        backToLogin: 'Inapoi la autentificare',
+        guestTitle: 'Continua fara cont.',
+        guestTitleActive: 'Folosesti modul guest.',
+        continueAsGuest: 'Continua ca guest',
+        exitGuestMode: 'Iesi din modul guest',
+    },
+    mobilePremium: {
+        title: 'Premium',
+        cardTitle: 'AutoWatering Premium',
+        cardSubtitle: 'Deblocheaza AI Doctor si identificarea plantei cu camera. Incepe cu 7 zile trial gratuit.',
+        checkoutSuccess: 'Plata finalizata. Se actualizeaza abonamentul...',
+        checkoutCancelled: 'Plata a fost anulata.',
+        errorCheckoutFailed: 'Nu s-a putut deschide pagina de plata.',
+        errorBillingPortalFailed: 'Nu s-a putut deschide portalul de facturare.',
+        backendNotConfiguredTitle: 'Backend-ul de plata nu este configurat.',
+        backendNotConfiguredSubtitle: 'Adauga variabilele de mediu pentru Cognito + abonament.',
+        loginRequired: 'Trebuie sa te autentifici pentru a gestiona abonamentul premium.',
+        goToLogin: 'Mergi la autentificare',
+        statusPremiumActive: 'Premium activ',
+        statusFreePlan: 'Plan gratuit',
+        statusLabel: 'Status: {status}',
+        statusUnknown: 'Necunoscut',
+        planLabel: 'Plan: {plan}',
+        renewsLabel: 'Reinnoieste: {date}',
+        syncing: 'Se sincronizeaza statusul abonamentului...',
+        manageSubscription: 'Gestioneaza abonamentul',
+        upgradeMonthly: 'Activeaza lunar',
+        refreshStatus: 'Reimprospateaza status',
+        working: 'Se lucreaza...',
+        includedTitle: 'Utilizare inclusa',
+        includedResetNote: 'Limitele se reseteaza zilnic si lunar (UTC).',
+        featurePlantId: 'Identificare planta (camera)',
+        featurePlantIdDescription: 'Identifica plantele din poza si completeaza automat tipul de planta pentru zona.',
+        featureAiDoctor: 'AI Doctor',
+        featureAiDoctorDescription: 'Detecteaza boli comune ale frunzelor si ofera ghid clar de tratament.',
+        perDay: '{count}/zi',
+        perMonth: '{count}/luna',
+    },
+    mobileUpsell: {
+        title: 'Deblocheaza Premium',
+        subtitle: 'AI Doctor si identificarea plantei cu camera. Incepe cu 7 zile trial gratuit.',
+        loginToUpgrade: 'Autentifica-te pentru deblocare',
+        upgradeNow: 'Treci la Premium',
+        buyPremium: 'Cumpara Premium',
+        back: 'Inapoi',
+        notNow: 'Nu acum',
+        disclaimer: 'Premium este legat de cont. Poti gestiona sau anula oricand.',
+    },
+    mobileProfile: {
+        title: 'Profil',
+        emailStatus: 'Status email: {status}',
+        emailVerified: 'Verificat',
+        emailNotVerified: 'Neverificat',
+        loading: 'Se incarca profilul...',
+        messageProfileUpdated: 'Profil actualizat.',
+        messageVerificationSent: 'Email de verificare trimis.',
+        messagePasswordUpdated: 'Parola actualizata.',
+        errorProfileUpdateFailed: 'Actualizarea profilului a esuat.',
+        errorVerificationFailed: 'Trimiterea emailului de verificare a esuat.',
+        errorPasswordMismatch: 'Parola noua si confirmarea nu se potrivesc.',
+        errorPasswordChangeFailed: 'Schimbarea parolei a esuat.',
+        errorDeleteTypeDelete: 'Scrie DELETE pentru a confirma stergerea contului.',
+        errorDeleteFailed: 'Stergerea contului a esuat.',
+        sectionProfileDetails: 'Detalii profil',
+        placeholderDisplayName: 'Nume afisat',
+        placeholderPhone: 'Telefon',
+        placeholderCompany: 'Companie',
+        placeholderCountry: 'Tara',
+        saveProfile: 'Salveaza profil',
+        saving: 'Se salveaza...',
+        sectionSecurity: 'Securitate',
+        sendVerificationEmail: 'Trimite email de verificare',
+        placeholderCurrentPassword: 'Parola curenta',
+        placeholderNewPassword: 'Parola noua',
+        placeholderConfirmNewPassword: 'Confirma parola noua',
+        changePassword: 'Schimba parola',
+        sectionAccountActions: 'Actiuni cont',
+        signOut: 'Deconectare',
+        deleteAccountTitle: 'Sterge cont',
+        deleteAccountHint: 'Sterge contul si datele din cloud. Scrie DELETE pentru confirmare.',
+        placeholderDeletePassword: 'Parola curenta',
+        placeholderTypeDelete: 'Scrie DELETE',
+        deleteAccountButton: 'Sterge cont',
+        deleting: 'Se sterge...',
+        working: 'Se lucreaza...',
+    },
+    mobileAiDoctor: {
+        title: 'AI Doctor',
+        cardTitle: 'Asistent boli plante',
+        cardSubtitle: 'Incarca o poza clara cu frunza, apoi adauga simptome pentru diagnostic mai bun.',
+        notConfiguredTitle: 'AI Doctor nu este configurat.',
+        notConfiguredSubtitle: 'Seteaza VITE_AI_DOCTOR_API_URL.',
+        premiumOnlyTitle: 'AI Doctor este disponibil doar pe Premium.',
+        upgradeToPremium: 'Treci la premium',
+        checkingSubscription: 'Se verifica abonamentul...',
+        chooseLeafPhoto: 'Alege poza frunzei',
+        symptomsLabel: 'Simptome (optional)',
+        symptomsPlaceholder: 'Ex: pete galbene, frunze rasucite, praf alb, putregai...',
+        analyzing: 'Se analizeaza...',
+        analyzeButton: 'Analizeaza riscul de boala',
+        diagnosisFailedTitle: 'Diagnosticul a esuat',
+        unknownPlant: 'Planta necunoscuta',
+        confidenceLabel: 'Incredere: {value}',
+        healthStatusLabel: 'Status sanatate:',
+        healthLikelyHealthy: 'Probabil sanatoasa',
+        healthPossibleDisease: 'Posibila boala detectata',
+        healthUnknown: 'Necunoscut',
+        diseaseCandidatesTitle: 'Boli posibile',
+        diseaseCandidatesEmpty: 'Nu au fost raportate boli.',
+        followUpQuestionTitle: 'Intrebare de clarificare',
+        aiTreatmentGuidanceTitle: 'Ghid tratament AI',
+        disclaimer: 'Ghidul AI este informativ. Confirma bolile grave cu un agronom inainte de tratamente cu risc.',
+    },
+    mobilePlantId: {
+        loginRequired: 'Trebuie sa te autentifici pentru identificarea cu camera.',
+        checkingSubscription: 'Se verifica abonamentul...',
+        premiumOnly: 'Identificarea cu camera este disponibila doar pe Premium.',
+        noLocalMatch: 'Planta a fost identificata de API, dar nu exista in baza de date locala.',
+        identificationFailed: 'Identificarea plantei a esuat.',
+    },
     mobileTimeLocation: {
         title: 'Timp si locatie',
         deviceTime: 'Timp dispozitiv',
         syncing: 'Se sincronizeaza...',
         syncNow: 'Sincronizeaza acum',
+        syncSuccess: 'Timp sincronizat',
         syncFailed: 'Sincronizarea a esuat',
         timezone: 'Fus orar',
         timezones: {
@@ -7697,8 +8729,25 @@ export const ro: TranslationKeys = {
             berlin: 'Berlin',
             newYork: 'New York',
             losAngeles: 'Los Angeles',
+            custom: 'Personalizat',
         },
         utcOffset: 'UTC offset {offset}',
+        dst: {
+            sectionTitle: 'Ora de vara (DST)',
+            toggleTitle: 'DST activ',
+            disabledHint: 'Dezactivat. Activeaza DST daca fusul tau orar schimba ora sezonier.',
+            summary: 'Incepe {startWeek} {startDow} din {startMonth}, se termina {endWeek} {endDow} din {endMonth} ({offset} min)',
+            weekNth: 'sapt. {n}',
+            weekLast: 'ultima',
+        },
+        advancedTitle: 'Setari avansate',
+        advancedSubtitle: 'Offset si reguli DST',
+        advanced: {
+            utcOffsetMinutes: 'UTC offset (minute)',
+            dstOffsetMinutes: 'Offset DST (minute)',
+            dstStart: 'Regula inceput DST',
+            dstEnd: 'Regula final DST',
+        },
         locationCoordinates: 'Coordonate locatie',
         latitude: 'Latitudine',
         longitude: 'Longitudine',
@@ -7708,7 +8757,39 @@ export const ro: TranslationKeys = {
         locationFailed: 'Nu s-a putut obtine locatia',
         saving: 'Se salveaza...',
         saveSettings: 'Salveaza setarile',
+        saveSuccess: 'Setari salvate',
         saveFailed: 'Salvarea a esuat',
+    },
+    mobileRainSensor: {
+        title: 'Senzor ploaie',
+        updated: 'Actualizat acum {minutes} min',
+        loadFailed: 'Nu am putut citi din dispozitiv',
+        statusTitle: 'Status',
+        sensorActive: 'Senzor activ',
+        sensorInactive: 'Senzor inactiv',
+        lastPulse: 'Ultimul impuls',
+        never: 'Niciodata',
+        rainLast24h: 'Ultimele 24h',
+        rainLastHour: 'Ultima ora',
+        enableTitle: 'Senzor ploaie',
+        enableSubtitle: 'Activeaza intrarea pentru tipping-bucket',
+        integrationTitle: 'Integrare ploaie',
+        integrationSubtitle: 'Foloseste ploaia pentru skip/reducere',
+        calibrationTitle: 'Calibrare',
+        calibrationHint: 'Seteaza mm/impuls si debounce conform senzorului.',
+        calibrate: 'Calibreaza',
+        mmPerPulse: 'mm per impuls',
+        debounceMs: 'Debounce (ms)',
+        advancedTitle: 'Avansat',
+        sensitivityPct: 'Sensibilitate (%)',
+        skipThresholdMm: 'Prag skip (mm)',
+        advancedHint: 'Nota: setarile pe zona au prioritate. Modurile FAO-56 includ deja ploaia.',
+        saving: 'Se salveaza...',
+        save: 'Salveaza',
+        saveSuccess: 'Salvat',
+        saveFailed: 'Salvarea a esuat',
+        calibrationRequested: 'Calibrarea a fost pornita',
+        calibrationFailed: 'Calibrarea a esuat',
     },
     mobileWeatherDetails: {
         title: 'Vreme',
@@ -7719,6 +8800,26 @@ export const ro: TranslationKeys = {
             wateringSkipped: 'Udare sarita',
             sufficient: 'Suficient',
             consider: 'Ia in calcul udarea',
+        },
+        soilMoistureOverride: {
+            title: 'Override umiditate sol',
+            subtitle: 'Calibreaza estimarea folosita la eficienta ploii si calculele FAO-56.',
+            enabledLabel: 'Override activ',
+            valueLabel: 'Umiditate sol',
+            scopeGlobal: 'Global',
+            globalDerived: 'Global este derivat din override-urile pe zona si nu poate fi setat.',
+            modelTitle: 'Sugestie din model meteo',
+            modelValue: 'Open-Meteo (0-9cm) la {time}: {value} (VWC {vwc})',
+            modelNoLocation: 'Seteaza locatia ca sa activam sugestiile.',
+            modelNoSoilParams: 'Lipsesc parametrii solului pentru selectia curenta (FC/WP).',
+            modelFailed: 'Nu am putut incarca estimarea.',
+            modelSetLocation: 'Seteaza locatia',
+            modelSetSoil: 'Seteaza tipul de sol',
+            hint: 'Override-urile pe zona (daca sunt activate) au prioritate fata de fallback-ul global.',
+            reset: 'Revino la implicit',
+            notConnected: 'Conecteaza-te la dispozitiv ca sa schimbi setarea.',
+            loadFailed: 'Nu am putut citi din dispozitiv. Afisez ultima valoare cunoscuta.',
+            saveFailed: 'Nu am putut salva in dispozitiv.',
         },
         zoneOverview: 'Prezentare zona',
         temperature: 'Temperatura',
@@ -7829,6 +8930,9 @@ export const ro: TranslationKeys = {
         rainBenefit: 'Beneficiu ploaie',
         waterDeficit: 'Deficit de apa',
         waterManagement: 'Management apa',
+        savedToDevice: 'Salvat pe dispozitiv',
+        intervalModeLoadFailed: 'Nu am putut citi timpii Cycle & Soak. Duratele nu au fost salvate.',
+        intervalModeUnsupported: 'Timpii Cycle & Soak nu sunt suportati de firmware-ul tau.',
         manualControl: 'Control manual',
         tapToStartCycle: 'Apasa pentru ciclu de {minutes} min',
         resetConfirmBody: 'Resetezi setarile zonei?',

@@ -2,6 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { useHistory } from 'react-router-dom';
 import { useI18n } from '../../i18n';
 import { useAppStore } from '../../store/useAppStore';
+import { BleService } from '../../services/BleService';
+import { PackSyncService } from '../../services/packSyncService';
+import { GROWTH_CYCLE, PLANT_ID_RANGES, PackPlantV1 } from '../../types/firmware_structs';
 
 type Step = 'basic' | 'growth' | 'water' | 'review';
 
@@ -139,6 +142,9 @@ const DEFAULT_FORM: PlantFormData = {
 const MobileCreatePlant: React.FC = () => {
   const history = useHistory();
   const { t } = useI18n();
+  const { customPlants, addCustomPlant } = useAppStore();
+  const bleService = BleService.getInstance();
+  const packSyncService = PackSyncService.getInstance();
   
   const [currentStep, setCurrentStep] = useState<Step>('basic');
   const [formData, setFormData] = useState<PlantFormData>(DEFAULT_FORM);
@@ -266,12 +272,83 @@ const MobileCreatePlant: React.FC = () => {
     
     setSaving(true);
     try {
-      // TODO: Implement actual save via BLE/pack system
-      // For now, just simulate success
-      await new Promise(r => setTimeout(r, 1000));
+      const packAvailable = await bleService.isPackServiceAvailable();
+      if (!packAvailable) {
+        throw new Error('Pack service not available on connected device');
+      }
+
+      const nextPlantId =
+        Math.max(PLANT_ID_RANGES.CUSTOM_MIN, ...customPlants.map((plant) => plant.plant_id + 1));
+      if (nextPlantId > 65534) {
+        throw new Error('No free custom plant IDs available');
+      }
+
+      const growthCycleMap: Record<PlantFormData['growthCycle'], number> = {
+        annual: GROWTH_CYCLE.ANNUAL,
+        perennial: GROWTH_CYCLE.PERENNIAL,
+        // Firmware schema supports 0/1; map biennial to perennial behavior.
+        biennial: GROWTH_CYCLE.PERENNIAL
+      };
+
+      const irrigationMethodMap: Record<string, number> = {
+        drip: 0,
+        sprinkler: 1,
+        manual: 2,
+        soaker: 3,
+        surface: 4
+      };
+
+      const payload: PackPlantV1 = {
+        plant_id: nextPlantId,
+        pack_id: 0,
+        version: 1,
+        reserved: 0,
+        common_name: formData.name.trim(),
+        scientific_name: formData.scientificName.trim(),
+        kc_ini_x1000: Math.max(100, Math.round(formData.kcIni * 1000)),
+        kc_dev_x1000: Math.max(100, Math.round(((formData.kcIni + formData.kcMid) / 2) * 1000)),
+        kc_mid_x1000: Math.max(100, Math.round(formData.kcMid * 1000)),
+        kc_end_x1000: Math.max(100, Math.round(formData.kcEnd * 1000)),
+        root_depth_min_mm: Math.max(10, Math.round(formData.rootDepthMin * 10)),
+        root_depth_max_mm: Math.max(20, Math.round(formData.rootDepthMax * 10)),
+        stage_days_ini: Math.max(1, Math.min(255, Math.round(formData.stageIni))),
+        stage_days_dev: Math.max(1, Math.min(255, Math.round(formData.stageDev))),
+        stage_days_mid: Math.max(1, Math.min(65535, Math.round(formData.stageMid))),
+        stage_days_end: Math.max(1, Math.min(255, Math.round(formData.stageEnd))),
+        growth_cycle: growthCycleMap[formData.growthCycle],
+        depletion_fraction_p_x1000: Math.max(1, Math.min(1000, Math.round((formData.depletionFraction / 100) * 1000))),
+        spacing_row_mm: 300,
+        spacing_plant_mm: 300,
+        density_x100: 100,
+        canopy_max_x1000: 800,
+        frost_tolerance_c: 0,
+        temp_opt_min_c: 10,
+        temp_opt_max_c: 30,
+        typ_irrig_method_id: irrigationMethodMap[formData.irrigationMethod.toLowerCase()] ?? 0,
+        water_need_factor_x100: 100,
+        irrigation_freq_days: 1,
+        prefer_area_based: 1
+      };
+
+      await bleService.writePackPlant(payload);
+
+      // Optimistic update for immediate UI feedback (sync below will reconcile).
+      addCustomPlant({
+        plant_id: payload.plant_id,
+        pack_id: payload.pack_id,
+        version: payload.version,
+        name: payload.common_name.slice(0, 16)
+      });
+
+      await packSyncService.syncCustomPlantsFromDevice(true).catch((syncError) => {
+        console.warn('[MobileCreatePlant] Post-save sync failed, keeping optimistic cache:', syncError);
+      });
+
       history.goBack();
     } catch (err) {
       console.error('[MobileCreatePlant] Save failed:', err);
+      const reason = err instanceof Error ? err.message : String(err);
+      alert(`${t('common.error')}: ${reason}`);
     } finally {
       setSaving(false);
     }

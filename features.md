@@ -1,8 +1,10 @@
 # AutoWatering App - Detailed Features and Settings (code-based)
 
-Last code analysis: 2026-01-18 22:17 (local).
+Last code analysis: 2026-02-06 23:05 (local).
 Source of truth: code in /src and routes in src/components/Layout/Shell.tsx.
-Note: tests/build not run for this analysis.
+Note: `npx vite build` passed on 2026-02-06. Full `npm run build` may still fail from pre-existing typing issues in `src/test/*`.
+
+Related: `docs/APP_UX_GAP_AUDIT.md` (gap audit vs embedded + UX vision + implementation backlog).
 
 ## Overview
 AutoWatering is a mobile-first (Ionic React + Capacitor) app with a desktop layout at larger widths. It connects to an irrigation controller over BLE, synchronizes device state, and lets you configure zones, schedules, and system settings. The app stores state in a single Zustand store and persists some local preferences in localStorage/IndexedDB.
@@ -11,6 +13,7 @@ AutoWatering is a mobile-first (Ionic React + Capacitor) app with a desktop layo
 - Desktop UI is used at width >= 1024px. Mobile UI is used below that.
 - The Shell routes and guards are in src/components/Layout/Shell.tsx.
 - Main app routes are protected and require a BLE connection.
+- Account and subscription screens (`/auth`, `/premium`) are available independently of BLE connection state.
 
 ## Core services and data sources
 - BLE: connect, bonding, GATT queue, fragmentation, notifications, initial sync phases.
@@ -19,6 +22,29 @@ AutoWatering is a mobile-first (Ionic React + Capacitor) app with a desktop layo
 - SoilGrids: GPS-based soil detection with REST + WCS fallback and local cache.
 - History: BLE history fetch with IndexedDB caching and aggregation (day/week/month).
 - Packs: pack stats, custom plant streaming, and installed packs list.
+- Auth: AWS Cognito (email/password + Hosted UI Google) + guest mode persisted in localStorage.
+- Premium/Billing: Stripe subscription endpoints via AWS Lambda (`createSubscriptionCheckout`, `createBillingPortalSession`, `subscriptionStatus`, `stripeWebhook`).
+  - First-time premium checkout includes a 7-day free trial (once per account; enforced in backend).
+- AI Doctor: disease detection via backend proxy (`VITE_AI_DOCTOR_API_URL`).
+  - AWS backend proxy lives in `backend/aws-autowatering-backend` (Kindwise API key stays server-side).
+  - Premium-only enforcement enabled in backend via `REQUIRE_PREMIUM_FOR_AI=true`.
+  - Backend enforces Cognito-authenticated access + per-account daily/monthly usage limits (configured in backend env).
+- Plant ID: camera-based plant identification via backend proxy `POST /plantId` (Kindwise).
+  - Configured via `VITE_PLANT_ID_API_URL` or auto-derived from `VITE_AI_DOCTOR_API_URL` when it ends with `/aiDoctor`.
+  - Premium-only enforcement enabled in backend via `REQUIRE_PREMIUM_FOR_PLANT_ID=true`.
+  - Backend enforces Cognito-authenticated access + per-account daily/monthly usage limits (configured in backend env).
+
+## Plant identification + AI Doctor provider decision (2026-02-06)
+- Recommended API: Kindwise (`plant.id` + `plant.health`) as primary provider.
+- Why:
+  - Single vendor covers both plant identification and disease detection.
+  - Has conversation endpoint usable as an "AI doctor" explanation layer.
+  - Fits current mobile flow (image upload + optional symptom text).
+- Fallback provider:
+  - Pl@ntNet for plant-only identification fallback if Kindwise is unavailable.
+- App architecture decision:
+  - Prefer backend proxy (`VITE_AI_DOCTOR_API_URL`) for API key safety, request normalization, and provider failover.
+  - No direct client-side Kindwise API key support (backend-only).
 
 ## Navigation and flows
 ### Mobile connection flow
@@ -26,7 +52,8 @@ AutoWatering is a mobile-first (Ionic React + Capacitor) app with a desktop layo
   - Auto-connect to lastDevice (useKnownDevices) and list saved devices.
   - Redirect to /onboarding if setup incomplete; otherwise /dashboard.
 - /permissions (MobilePermissions)
-  - UI only: simulates grant/skip; no native permission calls.
+  - Requests/checks BLE, location, and notification permissions.
+  - Persists permission state locally.
 - /scan (MobileDeviceScan)
   - BleService.scan + connect to discovered device.
   - Saves device to known list; redirects to /dashboard or /onboarding.
@@ -35,14 +62,15 @@ AutoWatering is a mobile-first (Ionic React + Capacitor) app with a desktop layo
 - /no-devices (MobileNoDevices)
   - CTA to /scan and /help.
 - /manage-devices (MobileManageDevices)
-  - Mock list only; switch is console.log.
+  - Uses known devices + discovered RSSI and supports real device switching via BLE reconnect.
 
 ### Mobile main tabs
 - /dashboard (MobileDashboard)
   - Device selector + rename (local only).
   - Live telemetry (env/rain/auto-calc) + soil moisture estimate.
   - Manual watering (BLE), emergency stop (BLE).
-  - Placeholder: Pause schedule, mini rain chart.
+  - Pause/resume current watering task via BLE.
+  - Mini rain chart is still static UI.
 - /zones (MobileZones)
   - Configured zones list and quick watering.
   - Placeholder: status labels, weather summary, last run text.
@@ -59,10 +87,12 @@ AutoWatering is a mobile-first (Ionic React + Capacitor) app with a desktop layo
   - Multi-step zone creation (mode-dependent).
   - Writes ChannelConfig + GrowingEnv + ScheduleConfig.
   - GPS soil detection + custom soil creation.
-  - Placeholder: camera plant ID; weather adjustments are UI only.
+  - Camera plant identification is wired via `VITE_PLANT_ID_API_URL` (or derived from `VITE_AI_DOCTOR_API_URL`) and selects best local DB match by ID/scientific name.
+  - Weather adjustments are still UI-only.
 - /zones/:channelId (MobileZoneDetailsFull)
   - Tabs: overview, schedule, compensation, history.
   - Edits: watering mode, schedule, plant, soil, irrigation, coverage, sun, compensation, water management.
+  - Camera plant identification is wired via `VITE_PLANT_ID_API_URL` (or derived from `VITE_AI_DOCTOR_API_URL`).
 - /zones/:channelId/config (MobileZoneConfig)
   - UI-only, uses local JSON; Save does not write to BLE.
 - MobileZoneDetails (legacy)
@@ -79,7 +109,7 @@ AutoWatering is a mobile-first (Ionic React + Capacitor) app with a desktop layo
 - /device/master-valve (MobileMasterValve)
   - Enable master valve and set pre/post delays.
 - /device/flow-calibration (MobileFlowCalibration)
-  - Full UI flow; BLE start/stop/calc/apply are stubs.
+  - Full UI flow wired to BLE start/stop/calc/apply.
   - Manual override writes flow_calibration in SystemConfig.
 - /device/power-mode (MobilePowerMode)
   - Switch power mode (performance/balanced/eco) -> SystemConfig.
@@ -88,24 +118,45 @@ AutoWatering is a mobile-first (Ionic React + Capacitor) app with a desktop layo
 - /device/packs (MobilePacksSettings)
   - Sync custom plants + pack stats; check updates placeholder.
 - /device/create-plant (MobileCreatePlant)
-  - Custom plant wizard; save is TODO.
+  - Custom plant wizard; save writes custom plant to BLE (`writePackPlant`) and refreshes pack cache.
 
 ### Weather and alerts
 - /weather (MobileWeatherDetails)
   - Uses env/rain + soil moisture calc.
-  - Placeholder: wind speed, forecast chart, updated timestamp.
+  - Loads hourly rain/environment history for chart and computes real "last updated" timestamp.
 - /notifications (MobileNotifications)
-  - Fully mock list.
+  - Aggregates alarm history + current alarm + watering events + connection-loss state.
 - /alarms (MobileAlarmHistory)
   - Reads alarm history + current active alarm; refresh via BLE.
 
 ### App settings and help
 - /app-settings (MobileAppSettings)
   - Theme, language, units (real).
-  - Notifications toggle local only.
-  - Placeholder: Export Data / Clear App Data.
+  - Notifications toggle persisted in localStorage and requests browser notification permission.
+  - Export Data and Clear App Data are wired (`useConfigExport`, history/offline cache reset).
 - /help (MobileHelpAbout)
   - Static content; buttons have no real navigation.
+- /auth (MobileAuth)
+  - AWS Cognito email/password login + signup.
+  - Optional Google sign-in via Cognito Hosted UI (PKCE) when configured.
+  - Guest mode toggle persisted locally.
+  - Shows current account and basic plan state.
+- /profile (MobileProfile)
+  - Editable profile fields (display name, phone, company, country).
+  - Email verification trigger.
+  - Password change flow (reauth + update).
+  - Account delete flow (reauth + backend delete endpoint).
+- /premium (MobilePremium)
+  - Reads subscription status from backend.
+  - Starts Stripe checkout session for monthly premium.
+  - Opens Stripe billing portal for subscription management.
+  - 7-day free trial applies automatically for first-time accounts (backend-enforced).
+- /ai-doctor (MobileAiDoctor)
+  - Upload/capture plant image + optional symptom notes.
+  - Runs disease diagnosis through `AiDoctorService`.
+  - Uses backend proxy endpoint (`VITE_AI_DOCTOR_API_URL`) (Kindwise key stays server-side).
+  - Access is gated: login + premium required in UI.
+  - Shows plant guess, health status, disease candidates, follow-up question, and LLM guidance text.
 
 ### Desktop pages
 - /dashboard
@@ -128,8 +179,21 @@ AutoWatering is a mobile-first (Ionic React + Capacitor) app with a desktop layo
 - Units:
   - Temperature unit: deg C or deg F (useSettings).
   - System: metric (L, m2) or imperial (gal, ft2).
-- Notifications toggle in MobileAppSettings (local state only).
-- Export/Clear App Data buttons exist but are placeholders.
+- Notifications toggle in MobileAppSettings (persisted in localStorage + permission prompt).
+- Export/Clear App Data are wired (config export + cache/store cleanup).
+- Account mode:
+  - Guest mode (local-only).
+  - Cognito account login/signup (email/password).
+- Premium:
+  - Monthly Stripe checkout flow.
+  - Billing portal management.
+  - Premium status sync from backend.
+- Profile management:
+  - Profile stored in DynamoDB via backend (`getProfile` / `updateProfile`).
+  - Cognito token claims supply email/name/picture; editable profile fields live server-side.
+  - Email verification + password change + delete account.
+- Cloud account backup:
+  - Backup/restore of important local app preferences (settings/theme/language/known devices/permissions/notification toggle) in DynamoDB (`getUserState` / `saveUserState`).
 
 ### Known devices and connection behavior
 - Save and auto-connect to last known device (MobileWelcome, MobileDeviceScan).
@@ -151,7 +215,7 @@ AutoWatering is a mobile-first (Ionic React + Capacitor) app with a desktop layo
   - Accessible in OnboardingWizard and MobilePowerMode.
 - Flow calibration:
   - Manual pulses-per-liter entry (OnboardingWizard, MobileFlowCalibration manual override).
-  - Full calibration workflow exists, but BLE start/stop/calc/apply are stubbed.
+  - Full calibration workflow is wired to BLE start/stop/calc/apply actions.
 - Time and timezone:
   - Sync device time now.
   - Choose timezone from presets (writes UTC offset).
@@ -252,35 +316,29 @@ Editable in desktop OnboardingWizard and MobileZoneDetailsFull (compensation tab
   - Root depth (min/max).
   - Depletion fraction.
   - Irrigation method.
-  - Save is TODO (not written to BLE yet).
+  - Save writes plant to BLE pack service (`writePackPlant`) and refreshes custom-plant cache.
 
 ## Placeholders and not wired (important limitations)
-- MobilePermissions: no native permission requests.
-- MobileManageDevices: mock list only.
-- MobileDeviceInfo: mock data; update/reboot are placeholders.
-- MobileNotifications: mock list.
-- MobileWeatherDetails: wind, forecast, updated time are static.
-- MobileDashboard: Pause schedule placeholder; mini rain chart static.
+- MobileDeviceInfo: update/reboot actions are not exposed in current firmware BLE API.
+- MobileWeatherDetails: wind source is missing; chart is built from recent history (not true forecast).
+- MobileDashboard: mini rain chart is static.
 - MobileZones: status labels, weather summary, last run text are placeholders.
 - MobileZoneConfig: save is UI-only.
-- MobileZoneAddWizard: camera plant ID TODO; weather adjustments do not write to BLE.
+- MobileZoneAddWizard: weather adjustments do not write to BLE.
 - MobileSettings: Schedules/Rain Delay/Help/Firmware/About placeholders.
-- MobileAppSettings: Export/Clear data placeholders.
-- MobileCreatePlant: save TODO.
-- Flow calibration BLE methods are stubbed in BleService (start/stop/calc/apply).
-- BLE history parsing TODO for daily/monthly/annual and env trends.
-- ConfigWizard/ConfigWizardNew and QRCodeSharing exist but are not routed.
-- useConfigExport, useVoiceInput, useSmartDefaults, useHaptics, useOfflineMode are not integrated into UI.
+- MobileZoneDetailsFull: skip-next-watering command is missing from current firmware BLE API.
+- AI Doctor premium gate depends on backend deployment + Stripe/AWS secrets.
+- Cloud backup currently syncs preferences/device-list keys (not full BLE zone config snapshot yet).
+- ConfigWizard/ConfigWizardNew and QRCodeSharing are implemented but not routed in Shell.
+- useVoiceInput, useSmartDefaults, useHaptics are not integrated into core UI.
 - mapOffline utility exists but is not used.
 
 ## What is next (directly from the gaps above)
-1) Implement real BLE flow calibration + wire MobileFlowCalibration to final methods.
-2) Wire schedule pause / skip next watering (mobile dashboard / zone details).
-3) Replace mock data in MobileDeviceInfo, MobileNotifications, MobileManageDevices.
-4) Weather: real wind + forecast + real timestamp (data source).
-5) MobileSettings: real screens for Schedules, Rain Delay, Help/Firmware/About.
-6) MobileAppSettings: Export/Clear Data (use useConfigExport + clear cache).
-7) Packs: wire MobileCreatePlant to BleService.writePackPlant + update packs (server/backend).
-8) Native permissions on /permissions (Capacitor) + persist notifications toggle.
-9) Offline mode + map tile cache integrated in UI.
-10) Real QR code sharing (generator + import).
+1) Configure Stripe webhook endpoint in Stripe dashboard and verify DynamoDB premium sync in production.
+2) Add automatic cloud sync triggers (on settings/profile changes) and optional multi-device conflict resolution.
+3) Add firmware command for skip-next-watering and wire it in MobileZoneDetailsFull.
+4) Wire MobileZoneConfig save to BLE writes.
+5) Integrate real weather forecast + wind data source in MobileWeatherDetails.
+6) Add dedicated mobile screens for Schedules and Rain Delay (instead of generic redirects).
+7) Route QRCodeSharing (generator/import UI) from settings/help.
+8) Integrate offline map tile cache flow (`mapOffline`) into location picker.

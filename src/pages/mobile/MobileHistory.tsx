@@ -615,11 +615,11 @@ const MobileHistory: React.FC = () => {
     <div className="flex flex-col h-screen bg-mobile-bg-dark text-white overflow-hidden">
       {/* Top App Bar */}
       <header className="sticky top-0 z-50 bg-mobile-bg-dark/90 backdrop-blur-md transition-colors safe-area-top shrink-0">
-        <div className="flex items-center justify-between px-4 py-4">
-          <h1 className="text-2xl font-extrabold tracking-tight">{t('mobileHistory.title')}</h1>
+        <div className="flex items-center justify-between px-4 py-3">
+          <h1 className="text-xl font-extrabold tracking-tight">{t('mobileHistory.title')}</h1>
           <button
             onClick={() => bleService.queryWateringHistory()}
-            className="flex items-center justify-center w-10 h-10 rounded-full bg-mobile-surface-dark text-gray-300 hover:bg-white/10 transition-colors"
+            className="flex items-center justify-center w-9 h-9 rounded-full bg-mobile-surface-dark text-gray-300 hover:bg-white/10 transition-colors"
           >
             <span className={`material-symbols-outlined ${loading ? 'animate-spin' : ''}`}>
               {loading ? 'progress_activity' : 'refresh'}
@@ -628,7 +628,7 @@ const MobileHistory: React.FC = () => {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex px-4 gap-2 pb-3">
+        <div className="flex px-4 gap-2 pb-2 overflow-x-auto no-scrollbar">
           {([
             { id: 'watering' as HistoryTab, label: t('mobileHistory.tabs.watering'), icon: 'water_drop' },
             { id: 'rain' as HistoryTab, label: t('mobileHistory.tabs.rain'), icon: 'rainy' },
@@ -637,12 +637,12 @@ const MobileHistory: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => selectTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === tab.id
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs whitespace-nowrap font-semibold transition-all ${activeTab === tab.id
                   ? 'bg-mobile-primary text-mobile-bg-dark'
                   : 'bg-mobile-surface-dark text-gray-400 hover:bg-white/10'
                 }`}
             >
-              <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
+              <span className="material-symbols-outlined text-[16px]">{tab.icon}</span>
               <span>{tab.label}</span>
             </button>
           ))}
@@ -653,61 +653,56 @@ const MobileHistory: React.FC = () => {
       <div className="flex-1 overflow-y-auto pb-28 overscroll-contain">
 
         {/* Shared Controls - TimeFrame & Date Navigation */}
-        <section className="px-4 py-4 space-y-3">
-          {/* Segmented Control for Day/Week/Month */}
-          <div className="bg-mobile-surface-dark p-1 rounded-full flex relative shadow-sm">
-            {(['day', 'week', 'month'] as TimeFrame[]).map((tf) => (
-              <button
-                key={tf}
-                onClick={() => setTimeFrame(tf)}
-                className={`flex-1 py-2 px-4 rounded-full text-sm font-semibold transition-all capitalize ${timeFrame === tf
-                    ? 'bg-mobile-border-dark text-white shadow-md'
-                    : 'text-gray-500'
-                  }`}
-              >
-                {t(`mobileHistory.timeFrames.${tf}`)}
-              </button>
-            ))}
-          </div>
-
-          {/* Date Navigation */}
-          <div className="flex items-center justify-between bg-mobile-surface-dark rounded-2xl p-3 border border-mobile-border-dark">
-            <button
-              onClick={navigatePrev}
-              className="w-10 h-10 rounded-full bg-mobile-bg-dark flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-            >
-              <span className="material-symbols-outlined">chevron_left</span>
-            </button>
-
-            <div className="text-center">
-              <p className="text-white font-bold text-lg">{dateRangeLabel}</p>
-              <p className="text-mobile-text-muted text-xs">
-                {timeFrame === 'day'
-                  ? t('mobileHistory.timeFrameRanges.day')
-                  : timeFrame === 'week'
-                    ? t('mobileHistory.timeFrameRanges.week')
-                    : t('mobileHistory.timeFrameRanges.month')}
-              </p>
+        <section className="px-4 py-3 space-y-2">
+          <div className="bg-mobile-surface-dark rounded-2xl border border-mobile-border-dark p-2 space-y-2">
+            {/* Segmented Control for Day/Week/Month */}
+            <div className="bg-mobile-bg-dark/70 p-1 rounded-xl grid grid-cols-3 gap-1">
+              {(['day', 'week', 'month'] as TimeFrame[]).map((tf) => (
+                <button
+                  key={tf}
+                  onClick={() => setTimeFrame(tf)}
+                  className={`py-1.5 rounded-lg text-xs font-semibold transition-all capitalize ${timeFrame === tf
+                      ? 'bg-mobile-border-dark text-white'
+                      : 'text-gray-500'
+                    }`}
+                >
+                  {t(`mobileHistory.timeFrames.${tf}`)}
+                </button>
+              ))}
             </div>
 
-            <button
-              onClick={navigateNext}
-              disabled={!canNavigateNext}
-              className={`w-10 h-10 rounded-full bg-mobile-bg-dark flex items-center justify-center transition-colors ${canNavigateNext
-                  ? 'text-gray-400 hover:text-white hover:bg-white/10'
-                  : 'text-gray-700 cursor-not-allowed'
-                }`}
-            >
-              <span className="material-symbols-outlined">chevron_right</span>
-            </button>
+            {/* Date Navigation */}
+            <div className="flex items-center justify-between rounded-xl px-2 py-1.5 bg-mobile-bg-dark/55">
+              <button
+                onClick={navigatePrev}
+                className="w-8 h-8 rounded-full bg-mobile-bg-dark flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+              </button>
+
+              <div className="text-center px-2 min-w-0">
+                <p className="text-white font-semibold text-sm truncate">{dateRangeLabel}</p>
+              </div>
+
+              <button
+                onClick={navigateNext}
+                disabled={!canNavigateNext}
+                className={`w-8 h-8 rounded-full bg-mobile-bg-dark flex items-center justify-center transition-colors ${canNavigateNext
+                    ? 'text-gray-400 hover:text-white hover:bg-white/10'
+                    : 'text-gray-700 cursor-not-allowed'
+                  }`}
+              >
+                <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+              </button>
+            </div>
           </div>
 
           {/* Zone Filter - only for watering */}
           {activeTab === 'watering' && (
-            <div className="flex gap-2 overflow-x-auto no-scrollbar">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pt-1">
               <button
                 onClick={() => setSelectedZone(null)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${selectedZone === null
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors ${selectedZone === null
                     ? 'bg-mobile-primary text-mobile-bg-dark font-bold'
                     : 'bg-mobile-surface-dark border border-mobile-border-dark text-gray-400 font-medium'
                   }`}
@@ -718,7 +713,7 @@ const MobileHistory: React.FC = () => {
                 <button
                   key={zone.channel_id}
                   onClick={() => setSelectedZone(zone.channel_id)}
-                  className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${selectedZone === zone.channel_id
+                  className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors ${selectedZone === zone.channel_id
                       ? 'bg-mobile-primary text-mobile-bg-dark font-bold'
                       : 'bg-mobile-surface-dark border border-mobile-border-dark text-gray-400 font-medium hover:bg-white/5'
                     }`}

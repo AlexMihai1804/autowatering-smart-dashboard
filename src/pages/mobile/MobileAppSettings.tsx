@@ -5,12 +5,48 @@ import { useTheme } from '../../hooks/useTheme';
 import { useI18n } from '../../i18n';
 import { Button } from '../../components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
+import { useConfigExport } from '../../hooks/useConfigExport';
+import { useOfflineMode } from '../../hooks/useOfflineMode';
+import { useAppStore } from '../../store/useAppStore';
+import { createInitialZones } from '../../types/wizard';
+import { getHistoryService } from '../../services/HistoryService';
+import { useAuth } from '../../auth';
+import MobileConfirmModal from '../../components/mobile/MobileConfirmModal';
+
+const NOTIFICATIONS_KEY = 'autowater_notifications_enabled';
+const CLOUD_STATE_VERSION = 'v1';
+const CLOUD_LOCAL_KEYS = [
+  'autowater_known_devices',
+  'autowater_last_device',
+  'autowater_permissions_state',
+  NOTIFICATIONS_KEY,
+  'autowatering_settings',
+  'app_theme',
+  'app_language'
+] as const;
 
 const MobileAppSettings: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
-  const { settings, updateSetting, useCelsius, useMetric, resetToDefaults } = useSettings();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const { settings, updateSetting, useMetric } = useSettings();
+  const { zones, channelWizard, connectedDeviceId, resetStore } = useAppStore();
+  const { exportConfig, isExporting } = useConfigExport();
+  const { clearCache } = useOfflineMode();
+  const { user, saveCloudState, loadCloudState } = useAuth();
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem(NOTIFICATIONS_KEY);
+      if (stored === 'true') return true;
+      if (stored === 'false') return false;
+    } catch {
+      // Ignore storage parsing errors and fallback below.
+    }
+    return typeof Notification !== 'undefined' && Notification.permission === 'granted';
+  });
+  const [isClearing, setIsClearing] = useState(false);
+  const [isBackupBusy, setIsBackupBusy] = useState(false);
+  const [isRestoreBusy, setIsRestoreBusy] = useState(false);
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
 
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
@@ -46,6 +82,208 @@ const MobileAppSettings: React.FC = () => {
   const handleUnitChange = (metric: boolean) => {
     updateSetting('useCelsius', metric);
     updateSetting('useMetric', metric);
+  };
+
+  const persistNotificationsEnabled = (enabled: boolean) => {
+    try {
+      localStorage.setItem(NOTIFICATIONS_KEY, enabled ? 'true' : 'false');
+    } catch (error) {
+      console.warn('[MobileAppSettings] Failed to persist notifications setting:', error);
+    }
+  };
+
+  const handleNotificationsToggle = async (enabled: boolean) => {
+    let nextValue = enabled;
+    if (enabled && typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
+      const result = await Notification.requestPermission();
+      nextValue = result === 'granted';
+    }
+    setNotificationsEnabled(nextValue);
+    persistNotificationsEnabled(nextValue);
+  };
+
+  const exportZones = useMemo(() => {
+    if (channelWizard.zones.length > 0) {
+      return channelWizard.zones;
+    }
+
+    const initial = createInitialZones(Math.max(8, zones.length || 8), language);
+    return initial.map((wizardZone) => {
+      const channel = zones.find((zone) => zone.channel_id === wizardZone.channelId);
+      if (!channel) return wizardZone;
+
+      return {
+        ...wizardZone,
+        enabled: true,
+        skipped: false,
+        name: channel.name || wizardZone.name,
+        coverageType: channel.coverage_type === 1 ? 'plants' as const : 'area' as const,
+        coverageValue: channel.coverage_type === 1
+          ? channel.coverage.plant_count ?? wizardZone.coverageValue
+          : channel.coverage.area_m2 ?? wizardZone.coverageValue,
+        sunExposure: channel.sun_percentage
+      };
+    });
+  }, [channelWizard.zones, zones, language]);
+
+  const handleExportData = async () => {
+    try {
+      await exportConfig(exportZones, {
+        deviceName: connectedDeviceId || undefined
+      });
+    } catch (error) {
+      console.error('[MobileAppSettings] Export failed:', error);
+      const reason = error instanceof Error ? error.message : String(error);
+      await showToast(`${t('common.error')}: ${reason}`);
+    }
+  };
+
+  const showToast = async (text: string) => {
+    try {
+      const { Toast } = await import('@capacitor/toast');
+      await Toast.show({ text, duration: 'short', position: 'bottom' });
+    } catch {
+      // Ignore (web / plugin unavailable)
+    }
+  };
+
+  const executeClearAppData = async () => {
+    if (isClearing) return;
+
+    setIsClearing(true);
+    try {
+      await getHistoryService().clearCache();
+      clearCache();
+
+      const keysToRemove = [
+        'autowater_known_devices',
+        'autowater_last_device',
+        'autowater_permissions_state',
+        NOTIFICATIONS_KEY,
+        'autowatering_settings',
+        'app_theme',
+        'app_language'
+      ];
+      keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+      setNotificationsEnabled(false);
+      resetStore();
+      await showToast(t('common.success'));
+    } catch (error) {
+      console.error('[MobileAppSettings] Clear data failed:', error);
+      const reason = error instanceof Error ? error.message : String(error);
+      await showToast(`${t('common.error')}: ${reason}`);
+    } finally {
+      setIsClearing(false);
+      setConfirmClearOpen(false);
+    }
+  };
+
+  const handleClearAppData = () => {
+    if (isClearing) return;
+    setConfirmClearOpen(true);
+  };
+
+  const buildCloudSnapshot = () => {
+    const storage: Record<string, string | null> = {};
+    for (const key of CLOUD_LOCAL_KEYS) {
+      storage[key] = localStorage.getItem(key);
+    }
+
+    return {
+      schema: CLOUD_STATE_VERSION,
+      savedAt: new Date().toISOString(),
+      storage
+    };
+  };
+
+  const applyCloudSnapshot = (snapshot: Record<string, unknown>) => {
+    const storage = snapshot.storage;
+    if (!storage || typeof storage !== 'object') {
+      throw new Error('Invalid cloud state payload.');
+    }
+
+    for (const key of CLOUD_LOCAL_KEYS) {
+      const value = (storage as Record<string, unknown>)[key];
+      if (typeof value === 'string') {
+        localStorage.setItem(key, value);
+      } else {
+        localStorage.removeItem(key);
+      }
+    }
+
+    const restoredTheme = localStorage.getItem('app_theme');
+    if (restoredTheme === 'dark' || restoredTheme === 'light' || restoredTheme === 'system') {
+      setTheme(restoredTheme);
+    }
+
+    const restoredLanguage = localStorage.getItem('app_language');
+    if (restoredLanguage === 'en' || restoredLanguage === 'ro') {
+      setLanguage(restoredLanguage);
+    }
+
+    try {
+      const restoredSettingsRaw = localStorage.getItem('autowatering_settings');
+      if (restoredSettingsRaw) {
+        const restoredSettings = JSON.parse(restoredSettingsRaw) as Record<string, unknown>;
+        if (typeof restoredSettings.useCelsius === 'boolean') {
+          updateSetting('useCelsius', restoredSettings.useCelsius);
+        }
+        if (typeof restoredSettings.useMetric === 'boolean') {
+          updateSetting('useMetric', restoredSettings.useMetric);
+        }
+      }
+    } catch (error) {
+      console.warn('[MobileAppSettings] Failed to apply restored settings:', error);
+    }
+
+    const restoredNotifications = localStorage.getItem(NOTIFICATIONS_KEY);
+    setNotificationsEnabled(restoredNotifications === 'true');
+  };
+
+  const handleBackupToAccount = async () => {
+    if (!user) {
+      history.push('/auth');
+      return;
+    }
+
+    setIsBackupBusy(true);
+    try {
+      const snapshot = buildCloudSnapshot();
+      await saveCloudState(snapshot, CLOUD_STATE_VERSION);
+      await showToast('Backup saved to your account.');
+    } catch (error) {
+      console.error('[MobileAppSettings] Backup failed:', error);
+      const reason = error instanceof Error ? error.message : String(error);
+      await showToast(`${t('common.error')}: ${reason}`);
+    } finally {
+      setIsBackupBusy(false);
+    }
+  };
+
+  const handleRestoreFromAccount = async () => {
+    if (!user) {
+      history.push('/auth');
+      return;
+    }
+
+    setIsRestoreBusy(true);
+    try {
+      const cloudState = await loadCloudState();
+      if (!cloudState) {
+        await showToast('No cloud backup found for this account.');
+        return;
+      }
+
+      applyCloudSnapshot(cloudState);
+      await showToast('Backup restored from account.');
+    } catch (error) {
+      console.error('[MobileAppSettings] Restore failed:', error);
+      const reason = error instanceof Error ? error.message : String(error);
+      await showToast(`${t('common.error')}: ${reason}`);
+    } finally {
+      setIsRestoreBusy(false);
+    }
   };
 
   const Toggle: React.FC<{ enabled: boolean; onChange: (v: boolean) => void }> = ({ enabled, onChange }) => (
@@ -96,7 +334,7 @@ const MobileAppSettings: React.FC = () => {
                   <span className="text-xs text-mobile-text-muted">{t('appSettings.alertsUpdates')}</span>
                 </div>
               </div>
-              <Toggle enabled={notificationsEnabled} onChange={setNotificationsEnabled} />
+              <Toggle enabled={notificationsEnabled} onChange={(next) => void handleNotificationsToggle(next)} />
             </div>
           </div>
         </div>
@@ -220,10 +458,52 @@ const MobileAppSettings: React.FC = () => {
             {t('appSettings.dataPrivacy')}
           </h3>
           <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
-            <button className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group">
+            <button
+              onClick={() => void handleBackupToAccount()}
+              disabled={isBackupBusy}
+              className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group disabled:opacity-60"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                  <span className="material-symbols-outlined">{isBackupBusy ? 'sync' : 'backup'}</span>
+                </div>
+                <div className="flex flex-col items-start">
+                  <span className="text-base font-medium text-white">Backup To Account</span>
+                  <span className="text-xs text-mobile-text-muted">Save app preferences and device list to cloud.</span>
+                </div>
+              </div>
+              <span className="material-symbols-outlined text-mobile-text-muted group-hover:text-white transition-colors">
+                chevron_right
+              </span>
+            </button>
+
+            <button
+              onClick={() => void handleRestoreFromAccount()}
+              disabled={isRestoreBusy}
+              className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group disabled:opacity-60"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400">
+                  <span className="material-symbols-outlined">{isRestoreBusy ? 'sync' : 'restore'}</span>
+                </div>
+                <div className="flex flex-col items-start">
+                  <span className="text-base font-medium text-white">Restore From Account</span>
+                  <span className="text-xs text-mobile-text-muted">Load saved app preferences from cloud backup.</span>
+                </div>
+              </div>
+              <span className="material-symbols-outlined text-mobile-text-muted group-hover:text-white transition-colors">
+                chevron_right
+              </span>
+            </button>
+
+            <button
+              onClick={() => void handleExportData()}
+              disabled={isExporting}
+              className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group disabled:opacity-60"
+            >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400">
-                  <span className="material-symbols-outlined">download</span>
+                  <span className="material-symbols-outlined">{isExporting ? 'sync' : 'download'}</span>
                 </div>
                 <div className="flex flex-col items-start">
                   <span className="text-base font-medium text-white">{t('appSettings.exportData')}</span>
@@ -235,10 +515,14 @@ const MobileAppSettings: React.FC = () => {
               </span>
             </button>
 
-            <button className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group">
+            <button
+              onClick={() => void handleClearAppData()}
+              disabled={isClearing}
+              className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group disabled:opacity-60"
+            >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-400">
-                  <span className="material-symbols-outlined">delete_forever</span>
+                  <span className="material-symbols-outlined">{isClearing ? 'sync' : 'delete_forever'}</span>
                 </div>
                 <div className="flex flex-col items-start">
                   <span className="text-base font-medium text-white">{t('appSettings.clearAppData')}</span>
@@ -252,6 +536,18 @@ const MobileAppSettings: React.FC = () => {
           </div>
         </div>
       </main>
+
+      <MobileConfirmModal
+        isOpen={confirmClearOpen}
+        onClose={() => setConfirmClearOpen(false)}
+        onConfirm={() => { void executeClearAppData(); }}
+        title={`${t('appSettings.clearAppData')}?`}
+        message={t('appSettings.clearAppDesc')}
+        confirmText={t('common.confirm')}
+        cancelText={t('common.cancel')}
+        icon="delete_forever"
+        variant="danger"
+      />
     </div>
   );
 };

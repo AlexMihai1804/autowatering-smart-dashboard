@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useHistory, useParams } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import MobileBottomSheet from '../../components/mobile/MobileBottomSheet';
-import plantDb from '../../assets/plant_full_db.json';
-import soilDb from '../../assets/soil_enhanced_db.json';
+import { BleService } from '../../services/BleService';
 import { useI18n } from '../../i18n';
 
 type PlantInfo = { id: number; name: string; kc?: number; category?: string };
@@ -12,18 +11,22 @@ type SoilInfo = { id: number; name: string; description?: string };
 const MobileZoneConfig: React.FC = () => {
   const history = useHistory();
   const { channelId } = useParams<{ channelId: string }>();
-  const { zones } = useAppStore();
+  const { zones, plantDb, soilDb, growingEnv } = useAppStore();
+  const bleService = BleService.getInstance();
   const { t } = useI18n();
 
   const channelIdNum = parseInt(channelId, 10);
   const zone = zones.find(z => z.channel_id === channelIdNum);
+  const zoneGrowingEnv = growingEnv.get(channelIdNum);
 
   // Form state
-  const [zoneName, setZoneName] = useState(zone?.name || `${t('zones.zone')} 1`);
+  const [zoneName, setZoneName] = useState(zone?.name || `${t('zones.zone')} ${channelIdNum + 1}`);
   const [selectedPlant, setSelectedPlant] = useState<PlantInfo | null>(null);
   const [selectedSoil, setSelectedSoil] = useState<SoilInfo | null>(null);
   const [sunExposure, setSunExposure] = useState<'full' | 'partial' | 'shade'>('full');
   const [areaSize, setAreaSize] = useState(50);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formInitialized, setFormInitialized] = useState(false);
 
   // Bottom sheet states
   const [showPlantSheet, setShowPlantSheet] = useState(false);
@@ -31,9 +34,51 @@ const MobileZoneConfig: React.FC = () => {
   const [plantSearch, setPlantSearch] = useState('');
   const [soilSearch, setSoilSearch] = useState('');
 
-  // Parse databases
-  const plants: PlantInfo[] = Array.isArray(plantDb) ? plantDb.slice(0, 100) : [];
-  const soils: SoilInfo[] = Array.isArray(soilDb) ? soilDb : [];
+  const plants: PlantInfo[] = useMemo(
+    () => (Array.isArray(plantDb)
+      ? plantDb.map((plant) => ({
+        id: plant.id,
+        name: plant.common_name_en,
+        kc: plant.kc_mid ?? undefined,
+        category: plant.category
+      }))
+      : []),
+    [plantDb]
+  );
+
+  const soils: SoilInfo[] = useMemo(
+    () => (Array.isArray(soilDb)
+      ? soilDb.map((soil) => ({
+        id: soil.id,
+        name: soil.soil_type,
+        description: soil.texture
+      }))
+      : []),
+    [soilDb]
+  );
+
+  useEffect(() => {
+    if (!zone || formInitialized) return;
+
+    setZoneName(zone.name || `${t('zones.zone')} ${zone.channel_id + 1}`);
+    setAreaSize(zone.coverage.area_m2 ? Math.max(1, Math.round(zone.coverage.area_m2)) : 50);
+
+    if (zone.sun_percentage >= 70) setSunExposure('full');
+    else if (zone.sun_percentage >= 40) setSunExposure('partial');
+    else setSunExposure('shade');
+
+    const plantId = zoneGrowingEnv?.plant_db_index ?? zone.plant_type;
+    const soilId = zoneGrowingEnv?.soil_db_index ?? zone.soil_type;
+    const initialPlant = plants.find((plant) => plant.id === plantId) ?? null;
+    const initialSoil = soils.find((soil) => soil.id === soilId) ?? null;
+    setSelectedPlant(initialPlant);
+    setSelectedSoil(initialSoil);
+    setFormInitialized(true);
+  }, [zone, zoneGrowingEnv, plants, soils, t, formInitialized]);
+
+  useEffect(() => {
+    setFormInitialized(false);
+  }, [channelIdNum]);
 
   const filteredPlants = plants.filter(p => 
     p.name?.toLowerCase().includes(plantSearch.toLowerCase())
@@ -48,16 +93,62 @@ const MobileZoneConfig: React.FC = () => {
     { value: 'shade', label: t('mobileZoneConfig.sun.shade'), icon: 'cloud', desc: t('mobileZoneConfig.sun.shadeDesc') },
   ];
 
-  const handleSave = () => {
-    // In real app, would save to BLE device / store
-    console.log('Saving zone config:', {
-      zoneName,
-      selectedPlant,
-      selectedSoil,
-      sunExposure,
-      areaSize,
-    });
-    history.goBack();
+  const handleSave = async () => {
+    if (!zone) return;
+    if (isSaving) return;
+
+    const sunPercentageMap: Record<typeof sunExposure, number> = {
+      full: 100,
+      partial: 60,
+      shade: 30
+    };
+
+    const sanitizedName = zoneName.trim() || `${t('zones.zone')} ${channelIdNum + 1}`;
+    const selectedPlantId = selectedPlant?.id ?? zoneGrowingEnv?.plant_db_index ?? zone.plant_type;
+    const selectedSoilId = selectedSoil?.id ?? zoneGrowingEnv?.soil_db_index ?? zone.soil_type;
+    const firmwarePlantType = Math.min(Math.max(selectedPlantId, 0), 7);
+    const firmwareSoilType = Math.min(Math.max(selectedSoilId, 0), 7);
+    const sunPercentage = sunPercentageMap[sunExposure] ?? 100;
+
+    setIsSaving(true);
+    try {
+      await bleService.writeChannelConfigObject({
+        ...zone,
+        name: sanitizedName,
+        name_len: sanitizedName.length,
+        plant_type: firmwarePlantType,
+        soil_type: firmwareSoilType,
+        coverage_type: 0,
+        coverage: { area_m2: areaSize },
+        sun_percentage: sunPercentage
+      });
+
+      const baseGrowingEnv = zoneGrowingEnv ?? await bleService.readGrowingEnvironment(channelIdNum).catch(() => null);
+      if (baseGrowingEnv) {
+        await bleService.writeGrowingEnvironment({
+          ...baseGrowingEnv,
+          plant_db_index: selectedPlantId,
+          soil_db_index: firmwareSoilType,
+          use_area_based: true,
+          coverage: { area_m2: areaSize },
+          sun_exposure_pct: sunPercentage,
+          sun_percentage: sunPercentage,
+          custom_name: sanitizedName,
+          plant_type: firmwarePlantType,
+          soil_type: firmwareSoilType
+        });
+      }
+
+      await bleService.readChannelConfig(channelIdNum);
+      await bleService.readGrowingEnvironment(channelIdNum).catch(() => undefined);
+      history.goBack();
+    } catch (error) {
+      console.error('[MobileZoneConfig] Failed to save zone config:', error);
+      const reason = error instanceof Error ? error.message : String(error);
+      alert(`${t('common.error')}: ${reason}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (!zone) {
@@ -82,7 +173,8 @@ const MobileZoneConfig: React.FC = () => {
           {t('mobileZoneConfig.title')}
         </h2>
         <button 
-          onClick={handleSave}
+          onClick={() => void handleSave()}
+          disabled={isSaving}
           className="text-mobile-primary flex size-12 items-center justify-center rounded-full hover:bg-mobile-primary/10 transition-colors font-bold"
         >
           <span className="material-symbols-outlined">check</span>
@@ -231,7 +323,10 @@ const MobileZoneConfig: React.FC = () => {
         </div>
 
         {/* Advanced Settings Link */}
-        <button className="w-full flex items-center justify-between gap-4 p-4 rounded-xl bg-mobile-surface-dark border border-mobile-border-dark hover:border-mobile-primary/50 transition-colors">
+        <button
+          onClick={() => history.push(`/zones/${channelIdNum}`)}
+          className="w-full flex items-center justify-between gap-4 p-4 rounded-xl bg-mobile-surface-dark border border-mobile-border-dark hover:border-mobile-primary/50 transition-colors"
+        >
           <div className="flex items-center gap-3">
             <span className="material-symbols-outlined text-mobile-text-muted">tune</span>
             <span className="text-white font-semibold">{t('mobileZoneConfig.advancedSettings')}</span>
@@ -243,11 +338,12 @@ const MobileZoneConfig: React.FC = () => {
       {/* Save Button - Fixed */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-mobile-bg-dark via-mobile-bg-dark to-transparent pt-12">
         <button
-          onClick={handleSave}
-          className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          onClick={() => void handleSave()}
+          disabled={isSaving}
+          className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60"
         >
-          <span className="material-symbols-outlined">save</span>
-          {t('mobileZoneConfig.save')}
+          <span className="material-symbols-outlined">{isSaving ? 'sync' : 'save'}</span>
+          {isSaving ? t('common.loading') : t('mobileZoneConfig.save')}
         </button>
       </div>
 

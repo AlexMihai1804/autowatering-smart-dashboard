@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { BleService } from '../../services/BleService';
 import MobileHeader from '../../components/mobile/MobileHeader';
+import MobileConfirmModal from '../../components/mobile/MobileConfirmModal';
 import { useI18n } from '../../i18n';
 import {
   AlarmCode,
@@ -12,6 +13,12 @@ import {
   getAlarmTitle,
   getAffectedChannelFromAlarmData
 } from '../../types/firmware_structs';
+
+type ZoneTestState = {
+  channelId: number;
+  zoneName: string;
+  endsAtMs: number;
+};
 
 const MobileAlarmHistory: React.FC = () => {
   const history = useHistory();
@@ -26,11 +33,28 @@ const MobileAlarmHistory: React.FC = () => {
   } = useAppStore();
   
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const [showClearActiveModal, setShowClearActiveModal] = useState(false);
+  const [showClearAllModal, setShowClearAllModal] = useState(false);
+
+  const [zoneTest, setZoneTest] = useState<ZoneTestState | null>(null);
+  const [zoneTestSecondsLeft, setZoneTestSecondsLeft] = useState(0);
+  const zoneTestIntervalRef = useRef<number | null>(null);
+  const zoneTestTimeoutRef = useRef<number | null>(null);
   
   const isConnected = connectionState === 'connected';
+
+  const showToast = useCallback(async (text: string) => {
+    try {
+      const { Toast } = await import('@capacitor/toast');
+      await Toast.show({ text, duration: 'short', position: 'bottom' });
+    } catch {
+      // no-op on web / missing plugin
+    }
+  }, []);
   
   // Combine current alarm with history, sorted by timestamp descending
-  const allAlarms = React.useMemo(() => {
+  const allAlarms = useMemo(() => {
     const entries: AlarmHistoryEntry[] = [...alarmHistory];
     
     // Add current active alarm if it exists and isn't already in history
@@ -48,6 +72,13 @@ const MobileAlarmHistory: React.FC = () => {
     // Sort by timestamp descending (newest first)
     return entries.sort((a, b) => b.timestamp - a.timestamp);
   }, [alarmHistory, alarmStatus]);
+
+  const activeAlarm = alarmStatus && alarmStatus.alarm_code !== AlarmCode.NONE ? alarmStatus : null;
+  const activeAlarmTitle = activeAlarm ? getAlarmTitle(activeAlarm.alarm_code, t) : null;
+  const activeChannelId = activeAlarm
+    ? getAffectedChannelFromAlarmData(activeAlarm.alarm_code, activeAlarm.alarm_data)
+    : undefined;
+  const activeChannelValid = activeChannelId !== undefined && activeChannelId >= 0 && activeChannelId <= 7;
   
   const handleRefresh = useCallback(async () => {
     if (!isConnected) return;
@@ -67,6 +98,11 @@ const MobileAlarmHistory: React.FC = () => {
     const zone = zones.find(z => z.channel_id === channelId);
     return zone?.name || `${t('zones.zone')} ${channelId + 1}`;
   };
+
+  const activeZoneName = useMemo(() => {
+    if (activeChannelId === undefined) return null;
+    return getZoneName(activeChannelId);
+  }, [activeChannelId, zones, t]);
   
   const formatTimestamp = (ts: number): string => {
     if (!ts) return t('alarmHistory.time.unknown');
@@ -118,6 +154,122 @@ const MobileAlarmHistory: React.FC = () => {
     }
   };
 
+  const clearZoneTestTimers = useCallback(() => {
+    if (zoneTestIntervalRef.current !== null) {
+      window.clearInterval(zoneTestIntervalRef.current);
+      zoneTestIntervalRef.current = null;
+    }
+    if (zoneTestTimeoutRef.current !== null) {
+      window.clearTimeout(zoneTestTimeoutRef.current);
+      zoneTestTimeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    clearZoneTestTimers();
+    if (!zoneTest) return;
+
+    const update = () => {
+      const secondsLeft = Math.max(0, Math.ceil((zoneTest.endsAtMs - Date.now()) / 1000));
+      setZoneTestSecondsLeft(secondsLeft);
+    };
+
+    update();
+    zoneTestIntervalRef.current = window.setInterval(update, 250);
+
+    const timeoutMs = Math.max(0, zoneTest.endsAtMs - Date.now());
+    zoneTestTimeoutRef.current = window.setTimeout(async () => {
+      clearZoneTestTimers();
+      try {
+        await bleService.stopCurrentWatering();
+      } catch (error) {
+        console.error('Failed to auto-stop zone test:', error);
+      } finally {
+        setZoneTest(null);
+        await showToast(t('alarmHistory.testZoneCompleted'));
+      }
+    }, timeoutMs);
+
+    return () => {
+      clearZoneTestTimers();
+    };
+  }, [zoneTest, bleService, clearZoneTestTimers, showToast, t]);
+
+  const stopZoneTestNow = useCallback(async () => {
+    clearZoneTestTimers();
+    try {
+      await bleService.stopCurrentWatering();
+      await showToast(t('dashboard.emergencyStopSuccess'));
+    } catch (error) {
+      console.error('Emergency stop failed:', error);
+      await showToast(t('dashboard.emergencyStopFailed'));
+    } finally {
+      setZoneTest(null);
+    }
+  }, [bleService, clearZoneTestTimers, showToast, t]);
+
+  const handleTestZone30s = useCallback(async () => {
+    if (!isConnected) {
+      await showToast(t('errors.notConnected'));
+      return;
+    }
+    if (zoneTest) return;
+    if (activeChannelId === undefined || activeChannelId < 0 || activeChannelId > 7) return;
+
+    const zoneName = activeZoneName ?? `${t('zones.zone')} ${activeChannelId + 1}`;
+    const endsAtMs = Date.now() + 30_000;
+
+    setZoneTest({ channelId: activeChannelId, zoneName, endsAtMs });
+
+    try {
+      // Firmware supports minutes only; we start a 1-minute task and stop it after 30s.
+      await bleService.writeValveControl(activeChannelId, 0, 1);
+    } catch (error) {
+      console.error('Failed to start zone test:', error);
+      setZoneTest(null);
+      const reason = error instanceof Error ? error.message : String(error);
+      await showToast(t('errors.failedWithReason').replace('{error}', reason));
+    }
+  }, [activeChannelId, activeZoneName, bleService, isConnected, showToast, t, zoneTest]);
+
+  const handleClearActiveAlarm = useCallback(async () => {
+    if (!isConnected || !activeAlarm) return;
+
+    setIsClearing(true);
+    try {
+      await showToast(t('alarmPopup.clearing'));
+      await bleService.acknowledgeAlarm(activeAlarm.alarm_code);
+      await bleService.readAlarmStatus();
+      await showToast(t('alarmPopup.cleared'));
+    } catch (error) {
+      console.error('Failed to clear active alarm:', error);
+      const reason = error instanceof Error ? error.message : String(error);
+      await showToast(t('errors.failedWithReason').replace('{error}', reason));
+    } finally {
+      setIsClearing(false);
+      setShowClearActiveModal(false);
+    }
+  }, [activeAlarm, bleService, isConnected, showToast, t]);
+
+  const handleClearAllAlarms = useCallback(async () => {
+    if (!isConnected) return;
+
+    setIsClearing(true);
+    try {
+      await showToast(t('alarmPopup.clearing'));
+      await bleService.clearAllAlarms();
+      await bleService.readAlarmStatus();
+      await showToast(t('alarmPopup.cleared'));
+    } catch (error) {
+      console.error('Failed to clear all alarms:', error);
+      const reason = error instanceof Error ? error.message : String(error);
+      await showToast(t('errors.failedWithReason').replace('{error}', reason));
+    } finally {
+      setIsClearing(false);
+      setShowClearAllModal(false);
+    }
+  }, [bleService, isConnected, showToast, t]);
+
   return (
     <div className="min-h-screen bg-mobile-bg flex flex-col">
       <MobileHeader
@@ -138,6 +290,73 @@ const MobileAlarmHistory: React.FC = () => {
       />
       
       <div className="flex-1 px-4 py-4 overflow-y-auto">
+        {/* Active alarm actions */}
+        {activeAlarm && (
+          <div className="mb-4 rounded-2xl border border-mobile-border-dark bg-mobile-card-dark p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-white/60 text-xs font-semibold uppercase tracking-wider">
+                  {t('alarmHistory.active')}
+                </p>
+                <p className="text-white text-sm font-semibold leading-tight mt-1 truncate">
+                  {activeAlarmTitle}
+                </p>
+                {activeZoneName && (
+                  <p className="text-white/50 text-xs mt-1 truncate">
+                    {activeZoneName}
+                  </p>
+                )}
+              </div>
+              <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-red-500/20 border border-red-500/30 text-red-200 text-xs font-semibold">
+                <span className="material-symbols-outlined text-[16px]">warning</span>
+                {t('alarmHistory.active')}
+              </span>
+            </div>
+
+            {activeChannelValid ? (
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <button
+                  onClick={handleTestZone30s}
+                  disabled={!isConnected || isClearing || !!zoneTest}
+                  className="h-12 rounded-xl bg-white/10 hover:bg-white/15 transition-colors text-white text-sm font-semibold disabled:opacity-40"
+                >
+                  {t('alarmHistory.testZone30s')}
+                </button>
+                <button
+                  onClick={() => setShowClearActiveModal(true)}
+                  disabled={!isConnected || isClearing}
+                  className="h-12 rounded-xl bg-amber-500/20 hover:bg-amber-500/25 transition-colors text-amber-100 text-sm font-semibold disabled:opacity-40"
+                >
+                  {t('alarmHistory.clearAlarm')}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowClearActiveModal(true)}
+                disabled={!isConnected || isClearing}
+                className="mt-4 w-full h-12 rounded-xl bg-amber-500/20 hover:bg-amber-500/25 transition-colors text-amber-100 text-sm font-semibold disabled:opacity-40"
+              >
+                {t('alarmHistory.clearAlarm')}
+              </button>
+            )}
+
+            <button
+              onClick={() => setShowClearAllModal(true)}
+              disabled={!isConnected || isClearing}
+              className="mt-3 w-full h-12 rounded-xl bg-red-500/20 hover:bg-red-500/25 transition-colors text-red-100 text-sm font-semibold disabled:opacity-40"
+            >
+              {t('alarmHistory.clearAll')}
+            </button>
+
+            <button
+              onClick={() => history.push(`/health/troubleshooting?alarm=${activeAlarm.alarm_code}`)}
+              className="mt-3 w-full h-12 rounded-xl bg-mobile-primary/15 hover:bg-mobile-primary/20 transition-colors border border-mobile-primary/25 text-mobile-primary text-sm font-semibold"
+            >
+              {t('healthHub.troubleshootingCta')}
+            </button>
+          </div>
+        )}
+
         {allAlarms.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
             <div className="w-16 h-16 rounded-full bg-cyber-emerald/20 flex items-center justify-center mb-4">
@@ -214,6 +433,69 @@ const MobileAlarmHistory: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Clear active alarm confirm */}
+      <MobileConfirmModal
+        isOpen={showClearActiveModal}
+        onClose={() => setShowClearActiveModal(false)}
+        onConfirm={handleClearActiveAlarm}
+        title={t('alarmCard.clearTitle')}
+        message={t('alarmCard.clearConfirmMessage').replace('{alarm}', activeAlarmTitle ?? '')}
+        confirmText={t('alarmHistory.clearAlarm')}
+        variant="warning"
+        icon="warning"
+      />
+
+      {/* Clear all alarms confirm */}
+      <MobileConfirmModal
+        isOpen={showClearAllModal}
+        onClose={() => setShowClearAllModal(false)}
+        onConfirm={handleClearAllAlarms}
+        title={t('alarmHistory.clearAllTitle')}
+        message={t('alarmHistory.clearAllConfirmMessage')}
+        confirmText={t('alarmHistory.clearAll')}
+        variant="danger"
+        icon="delete_forever"
+        requireConfirmation={t('alarmHistory.clearAllConfirmWord')}
+      />
+
+      {/* Zone test modal */}
+      {zoneTest && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+          onClick={(e) => {
+            // Don't stop on outside click; force explicit emergency stop.
+            e.stopPropagation();
+          }}
+        >
+          <div
+            className="relative w-full max-w-[360px] bg-mobile-card-dark rounded-2xl shadow-2xl overflow-hidden border border-mobile-border-dark"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 text-center">
+              <div className="mx-auto w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mb-4">
+                <span className="material-symbols-outlined text-[32px] text-blue-400">timer</span>
+              </div>
+
+              <h2 className="text-white tracking-tight text-2xl font-bold leading-tight">
+                {t('alarmHistory.testZoneRunningTitle').replace('{zone}', zoneTest.zoneName)}
+              </h2>
+              <p className="mt-2 text-mobile-text-muted text-base font-normal leading-relaxed">
+                {t('alarmHistory.testZoneRunningMessage')
+                  .replace('{seconds}', String(zoneTestSecondsLeft))
+                  .replace('{zone}', zoneTest.zoneName)}
+              </p>
+
+              <button
+                onClick={stopZoneTestNow}
+                className="mt-6 w-full h-12 rounded-lg font-bold text-base transition-all bg-red-500 hover:bg-red-600 text-white shadow-[0_0_20px_-5px_rgba(239,68,68,0.3)]"
+              >
+                {t('alarmHistory.emergencyStop')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

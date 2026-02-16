@@ -1,0 +1,290 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AutoWatering backend on AWS Lambda + API Gateway + DynamoDB + Cognito
+
+Parameters:
+  AppEnvironment:
+    Type: String
+    Default: dev
+  CognitoUserPoolId:
+    Type: String
+  CognitoAppClientId:
+    Type: String
+  CognitoUserPoolArn:
+    Type: String
+  AllowedOrigins:
+    Type: String
+    Default: "*"
+  AppBaseUrl:
+    Type: String
+    Default: ""
+  ReturnUrlAllowedSchemes:
+    Type: String
+    Default: "http,https,autowatering,com.autowatering.smartdashboard"
+  ReturnUrlAllowedOrigins:
+    Type: String
+    Default: "http://localhost:5173,http://localhost,https://localhost"
+  KindwiseBaseUrl:
+    Type: String
+    Default: "https://plant.id/api/v3"
+  StripeMonthlyPriceId:
+    Type: String
+    Default: ""
+  RequirePremiumForAi:
+    Type: String
+    Default: "true"
+  RequirePremiumForPlantId:
+    Type: String
+    Default: "true"
+  EnableConversation:
+    Type: String
+    Default: "true"
+  FactoryProvisionToken:
+    Type: String
+    Default: ""
+
+Resources:
+  AppRegistryApplication:
+    Type: AWS::ServiceCatalogAppRegistry::Application
+    Properties:
+      Name: !Sub "autowatering-${AppEnvironment}"
+      Description: !Sub "AutoWatering backend (${AppEnvironment})"
+
+  AppRegistryStackAssociation:
+    Type: AWS::ServiceCatalogAppRegistry::ResourceAssociation
+    Properties:
+      Application: !GetAtt AppRegistryApplication.Id
+      Resource: !Ref AWS::StackId
+      ResourceType: CFN_STACK
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+      CorsConfiguration:
+        AllowOrigins: !Split [",", !Ref AllowedOrigins]
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Api-Key
+          - Stripe-Signature
+          - X-Requested-With
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        MaxAge: 3600
+
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: uid
+          AttributeType: S
+      KeySchema:
+        - AttributeName: uid
+          KeyType: HASH
+      TableName: !Sub "autowatering-users-${AppEnvironment}"
+
+  RateLimitsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      TableName: !Sub "autowatering-rate-limits-${AppEnvironment}"
+
+  ProvisioningTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: hw_id
+          AttributeType: S
+        - AttributeName: serial
+          AttributeType: S
+      KeySchema:
+        - AttributeName: hw_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: serial-index
+          KeySchema:
+            - AttributeName: serial
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      TableName: !Sub "autowatering-provisioning-${AppEnvironment}"
+
+  BackendFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: dist/handler.main
+      Runtime: nodejs20.x
+      MemorySize: 512
+      Timeout: 60
+      Environment:
+        Variables:
+          APP_ENVIRONMENT: !Ref AppEnvironment
+          USERS_TABLE: !Ref UsersTable
+          RATE_LIMITS_TABLE: !Ref RateLimitsTable
+          PROVISIONING_TABLE: !Ref ProvisioningTable
+          SERIAL_COUNTER_KEY: "serial_counter"
+          FACTORY_PROVISION_TOKEN: !Ref FactoryProvisionToken
+          COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
+          COGNITO_APP_CLIENT_ID: !Ref CognitoAppClientId
+          ALLOWED_ORIGINS: !Ref AllowedOrigins
+          APP_BASE_URL: !Ref AppBaseUrl
+          RETURN_URL_ALLOWED_SCHEMES: !Ref ReturnUrlAllowedSchemes
+          RETURN_URL_ALLOWED_ORIGINS: !Ref ReturnUrlAllowedOrigins
+          # Stored in Secrets Manager to avoid accidental reset on SAM/CFN redeploys.
+          # Secret name convention: autowatering/{AppEnvironment}/kindwise_api_key
+          KINDWISE_API_KEY: !Sub "{{resolve:secretsmanager:autowatering/${AppEnvironment}/kindwise_api_key:SecretString}}"
+          KINDWISE_BASE_URL: !Ref KindwiseBaseUrl
+          # Secret name convention: autowatering/{AppEnvironment}/stripe_secret_key
+          STRIPE_SECRET_KEY: !Sub "{{resolve:secretsmanager:autowatering/${AppEnvironment}/stripe_secret_key:SecretString}}"
+          # Secret name convention: autowatering/{AppEnvironment}/stripe_webhook_secret
+          STRIPE_WEBHOOK_SECRET: !Sub "{{resolve:secretsmanager:autowatering/${AppEnvironment}/stripe_webhook_secret:SecretString}}"
+          STRIPE_MONTHLY_PRICE_ID: !Ref StripeMonthlyPriceId
+          REQUIRE_PREMIUM_FOR_AI: !Ref RequirePremiumForAi
+          REQUIRE_PREMIUM_FOR_PLANT_ID: !Ref RequirePremiumForPlantId
+          ENABLE_CONVERSATION: !Ref EnableConversation
+          # Secret name convention: autowatering/{AppEnvironment}/rate_limit_salt
+          RATE_LIMIT_SALT: !Sub "{{resolve:secretsmanager:autowatering/${AppEnvironment}/rate_limit_salt:SecretString}}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RateLimitsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProvisioningTable
+        - Statement:
+            Effect: Allow
+            Action:
+              - cognito-idp:AdminGetUser
+              - cognito-idp:AdminUpdateUserAttributes
+              - cognito-idp:AdminDeleteUser
+            Resource: !Ref CognitoUserPoolArn
+      Events:
+        AiDoctorPost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /aiDoctor
+            Method: POST
+        AiDoctorHealthGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /aiDoctorHealth
+            Method: GET
+        PlantIdPost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /plantId
+            Method: POST
+        PlantIdHealthGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /plantIdHealth
+            Method: GET
+        SubscriptionStatusGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /subscriptionStatus
+            Method: GET
+        CreateSubscriptionCheckoutPost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /createSubscriptionCheckout
+            Method: POST
+        CreateBillingPortalSessionPost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /createBillingPortalSession
+            Method: POST
+        StripeWebhookPost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /stripeWebhook
+            Method: POST
+        GetProfileGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /getProfile
+            Method: GET
+        UpdateProfilePost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /updateProfile
+            Method: POST
+        GetUserStateGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /getUserState
+            Method: GET
+        SaveUserStatePost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /saveUserState
+            Method: POST
+        DeleteMyAccountPost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /deleteMyAccount
+            Method: POST
+        ProvisionPost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /provision
+            Method: POST
+        ClaimDevicePost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /claimDevice
+            Method: POST
+        MyDevicesGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /myDevices
+            Method: GET
+        AppReturnGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /appReturn
+            Method: GET
+        OptionsProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /{proxy+}
+            Method: OPTIONS
+
+Outputs:
+  AppRegistryApplicationArn:
+    Description: AppRegistry application ARN
+    Value: !GetAtt AppRegistryApplication.Arn
+
+  ApiBaseUrl:
+    Description: Base URL for the HTTP API
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"

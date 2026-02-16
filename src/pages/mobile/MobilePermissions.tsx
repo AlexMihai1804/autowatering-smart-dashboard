@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Capacitor } from '@capacitor/core';
+import { BleClient } from '@capacitor-community/bluetooth-le';
+import { Geolocation } from '@capacitor/geolocation';
 import { useI18n } from '../../i18n';
 
 interface Permission {
@@ -10,30 +13,48 @@ interface Permission {
   granted: boolean;
 }
 
+const PERMISSIONS_STORAGE_KEY = 'autowater_permissions_state';
+
+const defaultPermissions: Permission[] = [
+  {
+    id: 'bluetooth',
+    icon: 'bluetooth',
+    required: true,
+    granted: false,
+  },
+  {
+    id: 'location',
+    icon: 'location_on',
+    required: true,
+    granted: false,
+  },
+  {
+    id: 'notifications',
+    icon: 'notifications',
+    required: false,
+    granted: false,
+  },
+];
+
+const loadPersistedPermissions = (): Permission[] => {
+  try {
+    const saved = localStorage.getItem(PERMISSIONS_STORAGE_KEY);
+    if (!saved) return defaultPermissions;
+    const parsed = JSON.parse(saved) as Array<{ id: string; granted: boolean }>;
+    return defaultPermissions.map((permission) => ({
+      ...permission,
+      granted: parsed.find((entry) => entry.id === permission.id)?.granted ?? false
+    }));
+  } catch {
+    return defaultPermissions;
+  }
+};
+
 const MobilePermissions: React.FC = () => {
   const history = useHistory();
   const { t } = useI18n();
 
-  const [permissions, setPermissions] = useState<Permission[]>([
-    {
-      id: 'bluetooth',
-      icon: 'bluetooth',
-      required: true,
-      granted: false,
-    },
-    {
-      id: 'location',
-      icon: 'location_on',
-      required: true,
-      granted: false,
-    },
-    {
-      id: 'notifications',
-      icon: 'notifications',
-      required: false,
-      granted: false,
-    },
-  ]);
+  const [permissions, setPermissions] = useState<Permission[]>(loadPersistedPermissions);
 
   const permissionText: Record<string, { name: string; description: string }> = {
     bluetooth: {
@@ -54,15 +75,129 @@ const MobilePermissions: React.FC = () => {
   const currentPermission = permissions[currentIndex];
   const allRequiredGranted = permissions.filter(p => p.required).every(p => p.granted);
 
-  const handleGrant = () => {
-    // In a real app, this would trigger the native permission request
-    setPermissions(prev => prev.map((p, i) => 
-      i === currentIndex ? { ...p, granted: true } : p
-    ));
-
-    if (currentIndex < permissions.length - 1) {
-      setCurrentIndex(prev => prev + 1);
+  const persistPermissions = (next: Permission[]) => {
+    try {
+      localStorage.setItem(
+        PERMISSIONS_STORAGE_KEY,
+        JSON.stringify(next.map((permission) => ({ id: permission.id, granted: permission.granted })))
+      );
+    } catch (err) {
+      console.warn('[MobilePermissions] Failed to persist permission state:', err);
     }
+  };
+
+  const checkPermissionStatus = async (permissionId: string): Promise<boolean> => {
+    try {
+      switch (permissionId) {
+        case 'bluetooth': {
+          const isEnabled = await BleClient.isEnabled();
+          return isEnabled;
+        }
+        case 'location': {
+          const platform = Capacitor.getPlatform();
+          if (platform === 'web') {
+            if (navigator.permissions?.query) {
+              const status = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+              return status.state === 'granted';
+            }
+            return false;
+          }
+          const status = await Geolocation.checkPermissions();
+          return status.location === 'granted';
+        }
+        case 'notifications':
+          return typeof Notification !== 'undefined' && Notification.permission === 'granted';
+        default:
+          return false;
+      }
+    } catch {
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    const refreshStatuses = async () => {
+      const statuses = await Promise.all(
+        defaultPermissions.map(async (permission) => ({
+          id: permission.id,
+          granted: await checkPermissionStatus(permission.id)
+        }))
+      );
+
+      if (!mounted) return;
+      setPermissions((prev) => {
+        const next = prev.map((permission) => ({
+          ...permission,
+          granted: statuses.find((status) => status.id === permission.id)?.granted ?? permission.granted
+        }));
+        persistPermissions(next);
+        return next;
+      });
+    };
+
+    void refreshStatuses();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleGrant = () => {
+    const requestPermission = async () => {
+      let granted = false;
+
+      try {
+        switch (currentPermission.id) {
+          case 'bluetooth': {
+            await BleClient.initialize();
+            const platform = Capacitor.getPlatform();
+            let enabled = await BleClient.isEnabled();
+            if (!enabled && platform === 'android') {
+              await BleClient.requestEnable();
+              enabled = await BleClient.isEnabled();
+            }
+            granted = enabled || platform === 'web' || platform === 'ios';
+            break;
+          }
+          case 'location': {
+            const status = await Geolocation.checkPermissions();
+            if (status.location !== 'granted') {
+              const requested = await Geolocation.requestPermissions();
+              granted = requested.location === 'granted';
+            } else {
+              granted = true;
+            }
+            break;
+          }
+          case 'notifications': {
+            if (typeof Notification !== 'undefined') {
+              const result = await Notification.requestPermission();
+              granted = result === 'granted';
+            }
+            break;
+          }
+          default:
+            granted = false;
+        }
+      } catch (err) {
+        console.error('[MobilePermissions] Failed to request permission:', currentPermission.id, err);
+        granted = false;
+      }
+
+      setPermissions((prev) => {
+        const next = prev.map((permission, index) =>
+          index === currentIndex ? { ...permission, granted } : permission
+        );
+        persistPermissions(next);
+        return next;
+      });
+
+      if (currentIndex < permissions.length - 1) {
+        setCurrentIndex((prev) => prev + 1);
+      }
+    };
+
+    void requestPermission();
   };
 
   const handleSkip = () => {
@@ -72,6 +207,13 @@ const MobilePermissions: React.FC = () => {
   };
 
   const handleContinue = () => {
+    if (!allRequiredGranted) {
+      const firstMissingRequired = permissions.findIndex((permission) => permission.required && !permission.granted);
+      if (firstMissingRequired >= 0) {
+        setCurrentIndex(firstMissingRequired);
+      }
+      return;
+    }
     history.push('/scan');
   };
 
@@ -206,6 +348,7 @@ const MobilePermissions: React.FC = () => {
           ) : (
             <button
               onClick={handleContinue}
+              disabled={!allRequiredGranted}
               className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined">rocket_launch</span>

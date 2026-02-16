@@ -91,7 +91,7 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, channelNames }
             if (result.success) {
                 setStep('complete');
             } else {
-                setError(result.error || t('reset.resetFailed').replace('{reason}', ''));
+                setError(result.error || t('mobileDeviceReset.resetFailed').replace('{reason}', ''));
                 setStep('error');
             }
         } catch (e: any) {

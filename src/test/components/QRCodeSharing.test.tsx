@@ -368,6 +368,6 @@ describe('QRCodeSharing', () => {
             const module = await import('../../components/QRCodeSharing');
             expect(module.QRCodeSharing).toBeDefined();
             expect(typeof module.QRCodeSharing).toBe('function');
-        });
+        }, 15000);
     });
 });

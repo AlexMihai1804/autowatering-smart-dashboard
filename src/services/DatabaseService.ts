@@ -28,6 +28,8 @@ export interface PlantDBEntry {
     common_name_ro: string;       // Romanian name
     common_name_en: string;       // English name
     scientific_name: string;      // Latin name
+    gbif_key?: number | null;     // Optional stable taxonomy key (GBIF speciesKey/usageKey)
+    canonical_name?: string | null; // Optional canonical taxon name (from resolver)
     indoor_ok: boolean;
     toxic_flag: boolean;
     edible_part: string;

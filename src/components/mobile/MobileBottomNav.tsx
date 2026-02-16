@@ -11,6 +11,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { path: '/dashboard', icon: 'home', labelKey: 'navigation.home' },
   { path: '/zones', icon: 'yard', labelKey: 'navigation.zones' },
+  { path: '/ai-doctor', icon: 'ecg_heart', labelKey: 'navigation.aiDoctor' },
   { path: '/history', icon: 'history', labelKey: 'navigation.history' },
   { path: '/settings', icon: 'settings', labelKey: 'navigation.settings' },
 ];

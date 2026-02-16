@@ -21,6 +21,7 @@ const MobilePacksSettings: React.FC = () => {
   const { t } = useI18n();
   const {
     packStats,
+    packChangeCounter,
     packSyncInProgress,
     plantDb,
     customPlants,
@@ -100,17 +101,16 @@ const MobilePacksSettings: React.FC = () => {
     });
   };
 
-  // Check for updates handler (placeholder - would call a server API)
+  // Check for device-side updates by forcing a sync and comparing change counters.
   const handleCheckUpdates = async () => {
     setCheckingUpdates(true);
     setUpdateStatus('checking');
     
     try {
-      // Simulate checking for updates (in real app, this would call a server)
-      await new Promise(r => setTimeout(r, 2000));
-      
-      // For now, always say up to date
-      setUpdateStatus('uptodate');
+      const previousCounter = packStats?.change_counter ?? packChangeCounter;
+      await packSyncService.syncCustomPlantsFromDevice(true, handleProgress);
+      const latestCounter = useAppStore.getState().packStats?.change_counter ?? useAppStore.getState().packChangeCounter;
+      setUpdateStatus(latestCounter !== previousCounter ? 'available' : 'uptodate');
     } catch (err) {
       console.error('[MobilePacksSettings] Check updates failed:', err);
       setUpdateStatus('idle');
@@ -512,26 +512,7 @@ const MobilePacksSettings: React.FC = () => {
               </div>
             )}
 
-            {/* Available Packs (placeholder for future) */}
-            {installedPacks.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <h3 className="px-2 text-sm font-medium text-mobile-text-muted uppercase tracking-wider">
-                  {t('mobilePacksSettings.packs.available')}
-                </h3>
-                
-                <div className="bg-white/5 rounded-2xl p-4 border border-white/5 border-dashed">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-mobile-text-muted">
-                      <span className="material-symbols-outlined">cloud_download</span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-mobile-text-muted font-medium">{t('mobilePacksSettings.packs.comingSoon')}</p>
-                      <p className="text-xs text-mobile-text-muted">{t('mobilePacksSettings.packs.comingSoonHint')}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Remote pack catalog is not exposed by firmware; this screen focuses on installed packs. */}
           </>
         )}
 

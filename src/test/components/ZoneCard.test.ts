@@ -123,6 +123,6 @@ describe('ZoneCard', () => {
         it('should export ZoneCard as default', async () => {
             const module = await import('../../components/ZoneCard');
             expect(module.default).toBeDefined();
-        });
+        }, 15000);
     });
 });

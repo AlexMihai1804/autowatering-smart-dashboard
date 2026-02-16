@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { BleService } from '../../services/BleService';
-import { CalibrationData } from '../../types/firmware_structs';
 import { useI18n } from '../../i18n';
 
 const MobileFlowCalibration: React.FC = () => {
@@ -43,28 +42,6 @@ const MobileFlowCalibration: React.FC = () => {
       return;
     }
     try {
-      // Ensure zone is selected/configured if needed? 
-      // Firmware doc says "START ... Resets pulse counter ... schedules progress work".
-      // But water needs to flow! app must open the valve?
-      // "Interactive flow sensor calibration... Hardware calibration is stored...".
-      // The doc doesn't explicitly say "OPEN VALVE". 
-      // Usually calibration implies running water. 
-      // Does 'START' open the valve? No. "START Begin measurement".
-      // So checking "Select a zone" implies we might need to open it.
-      // Or maybe the user manually opens it?
-      // "Running zone {selectedZone + 1}..." in mock UI implies we open it.
-      // I should probably fire a manual run command OR ask user to open valve.
-      // Implementation Plan: 
-      // 1. Select Zone
-      // 2. Start Calibration (Action 0x01)
-      // 3. Open Valve (Manual Run or Test) - Wait, if I open valve, `CurrentTask` changes.
-      // Let's assume we trigger a manual run on that zone concurrently.
-      // BLE Service has `runManualStation`? (Mock UIs used it?).
-      // I'll use `BleService.writeValveControl` or similar? 
-      // `writeValveControl` (Action 1 = Start, Action 0 = Stop).
-
-      // Let's Open Valve THEN Start Calibration? Or simultaneously?
-      // Pulse counting depends on flow.
       await bleService.selectChannel(selectedZone);
       await bleService.writeValveControl(selectedZone, 1, 600); // Run for 10 mins (safety)
       await bleService.startFlowCalibration();
@@ -92,7 +69,12 @@ const MobileFlowCalibration: React.FC = () => {
 
   const handleCalculate = async () => {
     try {
-      await bleService.calculateFlowCalibration(testVolume);
+      if (!Number.isFinite(testVolume) || testVolume <= 0) {
+        alert(t('mobileFlowCalibration.calculateFailed'));
+        return;
+      }
+      const testVolumeMl = Math.round(testVolume * 1000);
+      await bleService.calculateFlowCalibration(testVolumeMl);
       // Firmware will update calibrationData with new pulses_per_liter
     } catch (e) {
       console.error('Failed to calculate:', e);
@@ -103,12 +85,13 @@ const MobileFlowCalibration: React.FC = () => {
   const handleSave = async () => {
     setSaveLoading(true);
     try {
-      // If we are in 'complete' step and logic was "Calc then Save":
-      // Verify we have a value.
-      // If we used wizard:
-      await handleCalculate();
-      // Wait for update?
-      await new Promise(r => setTimeout(r, 500));
+      if (!Number.isFinite(testVolume) || testVolume <= 0) {
+        alert(t('mobileFlowCalibration.calculateFailed'));
+        return;
+      }
+      const testVolumeMl = Math.max(1, Math.round(testVolume * 1000));
+      await bleService.calculateFlowCalibration(testVolumeMl);
+      await new Promise(r => setTimeout(r, 300));
       await bleService.applyFlowCalibration();
 
       history.goBack();
@@ -123,22 +106,18 @@ const MobileFlowCalibration: React.FC = () => {
   const handleManualSave = async () => {
     setSaveLoading(true);
     try {
-      console.log('Saving manual calibration:', pulsesPerLiter);
-      // To save manual value:
-      // We can't direct write pulses_per_liter easily if we don't cheat.
-      // But `writeSystemConfig` has `flow_calibration`.
-      // System Config is "flow_calibration" (global?).
-      // Yes, `SystemConfigData` has `flow_calibration`.
-      // So for manual entry, we use `writeSystemConfig`.
-      // NOTE: this overrides whatever `Calibration` service sees until next reset/read.
-      const { systemConfig } = useAppStore.getState();
-      if (systemConfig) {
-        await bleService.writeSystemConfigObject({
-          ...systemConfig,
-          flow_calibration: pulsesPerLiter
-        });
-        await bleService.readSystemConfig();
+      if (!Number.isFinite(pulsesPerLiter) || pulsesPerLiter <= 0) {
+        alert(t('mobileFlowCalibration.saveManualFailed'));
+        return;
       }
+      const flowCalibration = Math.max(1, Math.round(pulsesPerLiter));
+      const state = useAppStore.getState();
+      const config = state.systemConfig ?? await bleService.readSystemConfig();
+      await bleService.writeSystemConfigObject({
+        ...config,
+        flow_calibration: flowCalibration
+      });
+      await bleService.readSystemConfig();
       history.goBack();
     } catch (e) {
       console.error("Failed to save manual settings", e);
@@ -213,7 +192,7 @@ const MobileFlowCalibration: React.FC = () => {
                 {t('mobileFlowCalibration.selectZone')}
               </label>
               <div className="grid grid-cols-2 gap-3">
-                {zones.slice(0, 4).map((zone, idx) => (
+                {zones.map((zone) => (
                   <button
                     key={zone.channel_id}
                     onClick={() => setSelectedZone(zone.channel_id)}
@@ -228,7 +207,7 @@ const MobileFlowCalibration: React.FC = () => {
                     </span>
                     <span className={`text-sm font-bold ${selectedZone === zone.channel_id ? 'text-white' : 'text-mobile-text-muted'
                       }`}>
-                      {zone.name}
+                      {zone.name || `${t('zones.zone')} ${zone.channel_id + 1}`}
                     </span>
                   </button>
                 ))}

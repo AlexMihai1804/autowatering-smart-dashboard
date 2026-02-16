@@ -2,22 +2,54 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useHistory, useParams } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { BleService } from '../../services/BleService';
-import { TaskStatus, ResetOpcode, ScheduleConfigData, GrowingEnvData, isChannelConfigComplete, ChannelCompensationConfigData } from '../../types/firmware_structs';
+import { plantIdService } from '../../services/PlantIdService';
+import type { PlantIdCandidate } from '../../services/PlantIdService';
+import { TaskStatus, ResetOpcode, ScheduleConfigData, GrowingEnvData, isChannelConfigComplete, ChannelCompensationConfigData, IntervalModeConfigData } from '../../types/firmware_structs';
 import { PlantDBEntry, SoilDBEntry, IrrigationMethodEntry, PLANT_CATEGORIES } from '../../services/DatabaseService';
 import { LocationData } from '../../types/wizard';
 import SoilGridsServiceInstance, { estimateSoilParametersFromTexture } from '../../services/SoilGridsService';
 import { registerBackInterceptor } from '../../lib/backInterceptors';
+import { buildPlantDbIndex, resolvePlantDbEntryFromCandidate } from '../../utils/plantIdMapping';
+import {
+  aliasLookupMap,
+  loadLocalPlantIdAliases,
+  mergePlantIdAliasMaps,
+  normalizePlantIdAliasMap,
+  PlantIdAliasMap,
+  PLANT_ID_ALIASES_CLOUD_KEY,
+  saveLocalPlantIdAliases,
+  upsertPlantIdAlias
+} from '../../utils/plantIdAliases';
 import { useI18n } from '../../i18n';
+import { useAuth } from '../../auth';
+import MobilePremiumUpsellModal from '../../components/mobile/MobilePremiumUpsellModal';
+import MobilePlantIdReviewSheet from '../../components/mobile/MobilePlantIdReviewSheet';
+import MobileConfirmModal from '../../components/mobile/MobileConfirmModal';
+import AdvancedSection from '../../components/mobile/AdvancedSection';
 
 type TabType = 'overview' | 'schedule' | 'compensation' | 'history';
-type EditSheetType = 'schedule' | 'watering-mode' | 'plant' | 'soil' | 'irrigation' | 'coverage' | 'sun' | 'rain-compensation' | 'temp-compensation' | 'water-management' | null;
+type EditSheetType =
+  | 'schedule'
+  | 'watering-mode'
+  | 'plant'
+  | 'soil'
+  | 'irrigation'
+  | 'coverage'
+  | 'sun'
+  | 'rain-compensation'
+  | 'temp-compensation'
+  | 'water-management'
+  | 'zone-name'
+  | 'planting-date'
+  | 'location'
+  | null;
 type WateringModeType = 'fao56_auto' | 'fao56_eco' | 'duration' | 'volume';
 
 import HydraulicDetailsCard from '../../components/HydraulicDetailsCard';
-import { SoilTankWidget } from '../../components/SoilTankWidget';
 
 const MobileZoneDetailsFull: React.FC = () => {
   const history = useHistory();
+  const { isAuthenticated, premium, premiumLoading, user, loadCloudState, saveCloudState } = useAuth();
   const { channelId } = useParams<{ channelId: string }>();
   const {
     zones,
@@ -42,6 +74,88 @@ const MobileZoneDetailsFull: React.FC = () => {
   const channelIdNum = parseInt(channelId, 10);
   const bleService = BleService.getInstance();
   const { t, language } = useI18n();
+  const plantDbIndex = useMemo(() => buildPlantDbIndex(plantDb), [plantDb]);
+
+  const showToast = useCallback(async (text: string) => {
+    try {
+      const { Toast } = await import('@capacitor/toast');
+      await Toast.show({ text, duration: 'short', position: 'bottom' });
+    } catch {
+      // Ignore (web / plugin unavailable)
+    }
+  }, []);
+  const [plantAliases, setPlantAliases] = useState<PlantIdAliasMap>(() => loadLocalPlantIdAliases());
+  const [pendingAliasCandidate, setPendingAliasCandidate] = useState<PlantIdCandidate | null>(null);
+  const [plantReview, setPlantReview] = useState<{
+    candidate: PlantIdCandidate;
+    reason: 'ambiguous' | 'not_found';
+    suggestedPlant: PlantDBEntry | null;
+    prefilledQuery: string;
+  } | null>(null);
+
+  const syncAliasesToCloud = useCallback(async (nextAliases: PlantIdAliasMap) => {
+    if (!user) return;
+    try {
+      const cloudState = await loadCloudState();
+      const baseState = (cloudState && typeof cloudState === 'object')
+        ? cloudState
+        : {};
+      const cloudAliases = normalizePlantIdAliasMap((baseState as Record<string, unknown>)[PLANT_ID_ALIASES_CLOUD_KEY]);
+      const mergedAliases = mergePlantIdAliasMaps(cloudAliases, nextAliases);
+      await saveCloudState(
+        {
+          ...(baseState as Record<string, unknown>),
+          [PLANT_ID_ALIASES_CLOUD_KEY]: mergedAliases
+        },
+        'plant_id_aliases_v1'
+      );
+    } catch (error) {
+      console.warn('[ZoneDetails] Failed syncing Plant ID aliases to cloud:', error);
+    }
+  }, [loadCloudState, saveCloudState, user]);
+
+  useEffect(() => {
+    const localAliases = loadLocalPlantIdAliases();
+    setPlantAliases(localAliases);
+
+    let cancelled = false;
+    if (!user) return;
+
+    void (async () => {
+      try {
+        const cloudState = await loadCloudState();
+        const cloudAliases = normalizePlantIdAliasMap(
+          cloudState && typeof cloudState === 'object'
+            ? (cloudState as Record<string, unknown>)[PLANT_ID_ALIASES_CLOUD_KEY]
+            : null
+        );
+        const merged = mergePlantIdAliasMaps(localAliases, cloudAliases);
+        if (cancelled) return;
+        setPlantAliases(merged);
+        saveLocalPlantIdAliases(merged);
+      } catch (error) {
+        console.warn('[ZoneDetails] Failed loading Plant ID aliases:', error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadCloudState, user]);
+
+  const persistAliasForCandidate = useCallback((
+    candidate: PlantIdCandidate | null,
+    plant: PlantDBEntry,
+    source: 'camera_auto' | 'camera_review' | 'camera_manual'
+  ) => {
+    if (!candidate) return;
+    const upserted = upsertPlantIdAlias(plantAliases, candidate, plant.id, source);
+    if (!upserted.changed) return;
+
+    setPlantAliases(upserted.aliases);
+    saveLocalPlantIdAliases(upserted.aliases);
+    void syncAliasesToCloud(upserted.aliases);
+  }, [plantAliases, syncAliasesToCloud]);
   const plantCategoryLabels: Record<string, string> = useMemo(() => ({
     Agriculture: t('plantCategories.agriculture'),
     Gardening: t('plantCategories.gardening'),
@@ -86,6 +200,9 @@ const MobileZoneDetailsFull: React.FC = () => {
   const [resetPending, setResetPending] = useState(false);
   const [editSheet, setEditSheet] = useState<EditSheetType>(null);
   const [saving, setSaving] = useState(false);
+  const [detectingPlant, setDetectingPlant] = useState(false);
+  const [premiumUpsellOpen, setPremiumUpsellOpen] = useState(false);
+  const [premiumUpsellMode, setPremiumUpsellMode] = useState<'login' | 'premium'>('premium');
 
   // Note: "Press back again to exit" is handled ONLY by AndroidBackButtonHandler on Dashboard
   // In zone details, back navigates through tabs then back to zones list
@@ -199,6 +316,10 @@ const MobileZoneDetailsFull: React.FC = () => {
   const [selectedIrrigation, setSelectedIrrigation] = useState<IrrigationMethodEntry | null>(null);
   const [growingForm, setGrowingForm] = useState<GrowingEnvData | null>(null);
   const [sunLevel, setSunLevel] = useState<'shade' | 'partial' | 'full'>('full');
+  const [zoneNameForm, setZoneNameForm] = useState('');
+  const [plantingDateForm, setPlantingDateForm] = useState('');
+  const [locationLatitudeForm, setLocationLatitudeForm] = useState('');
+  const [detectingLocation, setDetectingLocation] = useState(false);
 
   // Plant search state
   const [plantSearchTerm, setPlantSearchTerm] = useState('');
@@ -236,11 +357,18 @@ const MobileZoneDetailsFull: React.FC = () => {
   const [waterManagementForm, setWaterManagementForm] = useState<{
     enableCycleSoak: boolean;
     cycleMinutes: number;
+    cycleSeconds: number;
     soakMinutes: number;
+    soakSeconds: number;
     maxVolumeLimitL: number;
   } | null>(null);
+  const [intervalModeOriginal, setIntervalModeOriginal] = useState<IntervalModeConfigData | null>(null);
+  const [intervalModeLoading, setIntervalModeLoading] = useState(false);
+  const [intervalModeUnsupported, setIntervalModeUnsupported] = useState(false);
+  const [intervalModeError, setIntervalModeError] = useState<string | null>(null);
 
   const zoneFetchInFlightRef = useRef<Promise<void> | null>(null);
+  const plantCameraInputRef = useRef<HTMLInputElement | null>(null);
 
   // Fetch zone data on mount and connection changes
   useEffect(() => {
@@ -357,6 +485,7 @@ const MobileZoneDetailsFull: React.FC = () => {
 
   // Is FAO-56 auto mode (schedule type 2 or growing auto_mode > 0)
   const isFao56 = schedule?.schedule_type === 2 || (growing?.auto_mode ?? 0) > 0;
+  const canConfigureCompensation = !isFao56;
 
   // Schedule type label
   const scheduleTypeLabel = useMemo(() => {
@@ -419,6 +548,18 @@ const MobileZoneDetailsFull: React.FC = () => {
     return `${h}:${m} ${ampm}`;
   }, [schedule, t]);
 
+  const plantingDateLabel = useMemo(() => {
+    if (!growing?.planting_date_unix) return t('zoneDetails.notConfigured');
+    const d = new Date(growing.planting_date_unix * 1000);
+    if (Number.isNaN(d.getTime())) return t('zoneDetails.notConfigured');
+    return d.toLocaleDateString();
+  }, [growing?.planting_date_unix, t]);
+
+  const latitudeLabel = useMemo(() => {
+    if (!growing?.latitude_deg) return t('zoneDetails.notConfigured');
+    return `${growing.latitude_deg.toFixed(5)}°`;
+  }, [growing?.latitude_deg, t]);
+
   // Compensation helpers
   const totalCompensationFactor = useMemo(() => {
     if (!compensation) return 100;
@@ -436,7 +577,9 @@ const MobileZoneDetailsFull: React.FC = () => {
   const isWatering = currentTask?.channel_id === channelIdNum && currentTask?.status === TaskStatus.RUNNING;
   // Calculate remaining time from current_value (elapsed) and target_value (total)
   const remainingTimeSec = currentTask ? Math.max(0, currentTask.target_value - currentTask.current_value) : 0;
-  const totalDuration = currentTask?.target_value ?? 1;
+  const wateringProgressPercent = isWatering && currentTask
+    ? Math.round((currentTask.current_value / Math.max(1, currentTask.target_value)) * 100)
+    : 0;
 
   const tabs: { key: TabType; label: string; icon: string }[] = [
     { key: 'overview', label: t('zoneDetails.overview'), icon: 'dashboard' },
@@ -449,7 +592,6 @@ const MobileZoneDetailsFull: React.FC = () => {
     { label: t('zoneDetails.quick'), value: 5 },
     { label: t('zoneDetails.standard'), value: 10 },
     { label: t('zoneDetails.deep'), value: 20 },
-    { label: t('zoneDetails.custom'), value: 0 },
   ];
 
   const handleStartWatering = async () => {
@@ -467,6 +609,82 @@ const MobileZoneDetailsFull: React.FC = () => {
       await bleService.stopCurrentWatering();
     } catch (err) {
       console.error('Failed to stop watering:', err);
+    }
+  };
+
+  const handleCameraPlantPick = () => {
+    if (!isAuthenticated) {
+      setPremiumUpsellMode('login');
+      setPremiumUpsellOpen(true);
+      return;
+    }
+    if (premiumLoading) {
+      void (async () => {
+        try {
+          const { Toast } = await import('@capacitor/toast');
+          await Toast.show({ text: t('mobilePlantId.checkingSubscription'), duration: 'short' });
+        } catch {
+          // ignore
+        }
+      })();
+      return;
+    }
+    if (!premium.isPremium) {
+      setPremiumUpsellMode('premium');
+      setPremiumUpsellOpen(true);
+      return;
+    }
+    plantCameraInputRef.current?.click();
+  };
+
+  const handleCameraPlantSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setDetectingPlant(true);
+    try {
+      const data = await plantIdService.identify({ image: file });
+      const candidate: PlantIdCandidate | null =
+        (data?.best_match ?? data?.match ?? data?.suggestions?.[0] ?? null);
+
+      if (!candidate) {
+        await showToast(t('mobilePlantId.identificationFailed'));
+        return;
+      }
+
+      const resolved = resolvePlantDbEntryFromCandidate(candidate, plantDbIndex, {
+        aliasPlantIdByLookupKey: aliasLookupMap(plantAliases)
+      });
+      if (resolved.status === 'match') {
+        setSelectedPlant(resolved.plant);
+        persistAliasForCandidate(candidate, resolved.plant, 'camera_auto');
+        setPendingAliasCandidate(null);
+        setPlantReview(null);
+        await showToast(t('mobilePlantId.matchSaved'));
+        return;
+      }
+
+      if (resolved.status === 'ambiguous' || resolved.status === 'not_found') {
+        const query = resolved.query.canonicalName || resolved.query.canonical || resolved.query.normalized || '';
+        setPendingAliasCandidate(candidate);
+        setPlantReview({
+          candidate,
+          reason: resolved.status,
+          suggestedPlant: resolved.status === 'ambiguous' ? (resolved.candidates[0] || null) : null,
+          prefilledQuery: query
+        });
+        await showToast(t('mobilePlantId.noLocalMatch'));
+        return;
+      }
+
+      await showToast(t('mobilePlantId.identificationFailed'));
+    } catch (error) {
+      console.error('[ZoneDetails] Camera plant identification failed:', error);
+      const message = error instanceof Error ? error.message : t('mobilePlantId.identificationFailed');
+      await showToast(message);
+    } finally {
+      setDetectingPlant(false);
     }
   };
 
@@ -506,6 +724,14 @@ const MobileZoneDetailsFull: React.FC = () => {
     return schedule?.watering_mode === 1 ? 'volume' : 'duration';
   }, [schedule, growing]);
 
+  const currentWateringModeLabel = useMemo(() => {
+    if (currentWateringMode === 'fao56_auto') return t('mobileZoneDetails.modeLabels.fao56Auto');
+    if (currentWateringMode === 'fao56_eco') return t('mobileZoneDetails.modeLabels.fao56Eco');
+    if (currentWateringMode === 'duration') return t('zoneDetails.fixedDuration');
+    return t('zoneDetails.fixedVolume');
+  }, [currentWateringMode, t]);
+  const isCurrentWateringModeFao = currentWateringMode === 'fao56_auto' || currentWateringMode === 'fao56_eco';
+
   // Sun level from percentage
   const currentSunLevel = useMemo((): 'shade' | 'partial' | 'full' => {
     const pct = growing?.sun_exposure_pct ?? 100;
@@ -540,6 +766,26 @@ const MobileZoneDetailsFull: React.FC = () => {
     return irrigationMethodDb.find(m => m.id === growing.irrigation_method_index) || null;
   }, [growing, irrigationMethodDb]);
 
+  const handleChoosePlantManuallyFromReview = useCallback(() => {
+    if (plantReview?.prefilledQuery) {
+      setPlantSearchTerm(plantReview.prefilledQuery);
+    }
+    setPlantCategory(null);
+    setSelectedPlant(currentPlant);
+    setPlantReview(null);
+    setEditSheet('plant');
+  }, [currentPlant, plantReview]);
+
+  const handleUseSuggestedPlantFromReview = useCallback(() => {
+    if (!plantReview?.suggestedPlant) return;
+    setSelectedPlant(plantReview.suggestedPlant);
+    persistAliasForCandidate(plantReview.candidate, plantReview.suggestedPlant, 'camera_review');
+    setPendingAliasCandidate(null);
+    setPlantReview(null);
+    setEditSheet('plant');
+    void showToast(t('mobilePlantId.matchSaved'));
+  }, [persistAliasForCandidate, plantReview, showToast, t]);
+
   // Open edit sheets with current values
   const openWateringModeEdit = useCallback(() => {
     setSelectedWateringMode(currentWateringMode);
@@ -566,6 +812,77 @@ const MobileZoneDetailsFull: React.FC = () => {
     }
     setEditSheet('schedule');
   }, [schedule, channelIdNum]);
+
+  const openWaterManagementEdit = useCallback(async () => {
+    if (!growing) return;
+
+    setIntervalModeLoading(true);
+    setIntervalModeUnsupported(false);
+    setIntervalModeError(null);
+    setIntervalModeOriginal(null);
+
+    setWaterManagementForm({
+      enableCycleSoak: growing.enable_cycle_soak ?? false,
+      cycleMinutes: 0,
+      cycleSeconds: 0,
+      soakMinutes: 0,
+      soakSeconds: 0,
+      maxVolumeLimitL: growing.max_volume_limit_l ?? 50,
+    });
+    setEditSheet('water-management');
+
+    try {
+      const interval = await bleService.readIntervalModeConfig(channelIdNum);
+      setIntervalModeOriginal(interval);
+      setWaterManagementForm((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          enableCycleSoak: interval.enabled,
+          cycleMinutes: Math.max(0, interval.watering_minutes ?? 0),
+          cycleSeconds: Math.min(59, Math.max(0, interval.watering_seconds ?? 0)),
+          soakMinutes: Math.max(0, interval.pause_minutes ?? 0),
+          soakSeconds: Math.min(59, Math.max(0, interval.pause_seconds ?? 0)),
+        };
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const lower = (message || '').toLowerCase();
+      if (lower.includes('characteristic not found') || lower.includes('service not found') || lower.includes('not supported')) {
+        setIntervalModeUnsupported(true);
+      } else {
+        setIntervalModeError(t('errors.loadFailed'));
+        void showToast(t('errors.loadFailed'));
+      }
+      console.warn('[ZoneDetails] Failed reading interval mode config:', error);
+    } finally {
+      setIntervalModeLoading(false);
+    }
+  }, [bleService, channelIdNum, growing, showToast, t]);
+
+  const openZoneNameEdit = useCallback(() => {
+    setZoneNameForm(zone?.name || '');
+    setEditSheet('zone-name');
+  }, [zone?.name]);
+
+  const openPlantingDateEdit = useCallback(() => {
+    if (!growing?.planting_date_unix) {
+      setPlantingDateForm('');
+    } else {
+      const date = new Date(growing.planting_date_unix * 1000);
+      if (Number.isNaN(date.getTime())) {
+        setPlantingDateForm('');
+      } else {
+        setPlantingDateForm(date.toISOString().slice(0, 10));
+      }
+    }
+    setEditSheet('planting-date');
+  }, [growing?.planting_date_unix]);
+
+  const openLocationEdit = useCallback(() => {
+    setLocationLatitudeForm(growing?.latitude_deg ? String(growing.latitude_deg) : '');
+    setEditSheet('location');
+  }, [growing?.latitude_deg]);
 
   const openPlantEdit = useCallback(() => {
     setSelectedPlant(currentPlant);
@@ -669,40 +986,61 @@ const MobileZoneDetailsFull: React.FC = () => {
     return () => stopCoverageHold();
   }, [editSheet, stopCoverageHold]);
 
+  const getCurrentPosition = useCallback(async (): Promise<{ lat: number; lon: number }> => {
+    try {
+      const { Geolocation } = await import('@capacitor/geolocation');
+      const permission = await Geolocation.checkPermissions();
+      if (permission.location === 'denied') throw new Error('GPS_DENIED');
+      if (permission.location === 'prompt' || permission.location === 'prompt-with-rationale') {
+        const requested = await Geolocation.requestPermissions();
+        if (requested.location === 'denied') throw new Error('GPS_DENIED');
+      }
+      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
+      return { lat: position.coords.latitude, lon: position.coords.longitude };
+    } catch (_capErr) {
+      if (!navigator.geolocation) throw new Error('GPS_NOT_AVAILABLE');
+      return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => resolve({ lat: position.coords.latitude, lon: position.coords.longitude }),
+          (error) => {
+            if (error.code === error.PERMISSION_DENIED) reject(new Error('GPS_DENIED'));
+            else if (error.code === error.POSITION_UNAVAILABLE) reject(new Error('GPS_NOT_AVAILABLE'));
+            else reject(new Error('GPS_TIMEOUT'));
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      });
+    }
+  }, []);
+
+  const detectCurrentLocation = useCallback(async () => {
+    if (detectingLocation) return;
+    setDetectingLocation(true);
+    try {
+      const { lat, lon } = await getCurrentPosition();
+      setLocationLatitudeForm(lat.toFixed(6));
+      setZoneLocation({ latitude: lat, longitude: lon, source: 'gps' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message === 'GPS_DENIED') {
+        await showToast(t('mobileZoneDetails.soilDetectGpsDenied'));
+      } else if (message === 'GPS_NOT_AVAILABLE') {
+        await showToast(t('mobileZoneDetails.soilDetectNotAvailable'));
+      } else {
+        await showToast(t('mobileTimeLocation.locationFailed'));
+      }
+    } finally {
+      setDetectingLocation(false);
+    }
+  }, [detectingLocation, getCurrentPosition, showToast, t]);
+
   const detectSoilFromGPS = useCallback(async () => {
     if (detectingSoil) return;
     setDetectingSoil(true);
     setSoilDetectError(null);
 
-    const getPosition = async (): Promise<{ lat: number; lon: number }> => {
-      try {
-        const { Geolocation } = await import('@capacitor/geolocation');
-        const permission = await Geolocation.checkPermissions();
-        if (permission.location === 'denied') throw new Error('GPS_DENIED');
-        if (permission.location === 'prompt' || permission.location === 'prompt-with-rationale') {
-          const requested = await Geolocation.requestPermissions();
-          if (requested.location === 'denied') throw new Error('GPS_DENIED');
-        }
-        const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
-        return { lat: position.coords.latitude, lon: position.coords.longitude };
-      } catch (_capErr) {
-        if (!navigator.geolocation) throw new Error('GPS_NOT_AVAILABLE');
-        return new Promise((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(
-            (position) => resolve({ lat: position.coords.latitude, lon: position.coords.longitude }),
-            (error) => {
-              if (error.code === error.PERMISSION_DENIED) reject(new Error('GPS_DENIED'));
-              else if (error.code === error.POSITION_UNAVAILABLE) reject(new Error('GPS_NOT_AVAILABLE'));
-              else reject(new Error('GPS_TIMEOUT'));
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-          );
-        });
-      }
-    };
-
     try {
-      const { lat, lon } = await getPosition();
+      const { lat, lon } = await getCurrentPosition();
       setZoneLocation({ latitude: lat, longitude: lon, source: 'gps' });
 
       const plantForRootDepth = selectedPlant || currentPlant;
@@ -748,7 +1086,7 @@ const MobileZoneDetailsFull: React.FC = () => {
     } finally {
       setDetectingSoil(false);
     }
-  }, [detectingSoil, selectedPlant, currentPlant, soilDb, t]);
+  }, [detectingSoil, selectedPlant, currentPlant, soilDb, t, getCurrentPosition, language]);
 
   const openSunEdit = useCallback(() => {
     setSunLevel(currentSunLevel);
@@ -763,17 +1101,25 @@ const MobileZoneDetailsFull: React.FC = () => {
       const newAutoMode = selectedWateringMode === 'fao56_auto' ? 1 :
         selectedWateringMode === 'fao56_eco' ? 2 : 0;
       const isFao56 = selectedWateringMode.startsWith('fao56');
+      const currentManualScheduleType = schedule?.schedule_type === 1 ? 1 : 0;
+      const currentScheduleType = schedule?.schedule_type ?? 0;
+      const normalizedCurrentScheduleType = currentScheduleType === 1 ? 1 : currentScheduleType === 2 ? 2 : 0;
+      const nextScheduleType = isFao56
+        ? normalizedCurrentScheduleType
+        : (normalizedCurrentScheduleType === 2 ? currentManualScheduleType : normalizedCurrentScheduleType);
 
       // Build schedule update
       const newSchedule: ScheduleConfigData = {
         channel_id: channelIdNum,
-        schedule_type: isFao56 ? 2 : 0, // 2 = Auto/FAO-56
-        days_mask: schedule?.days_mask ?? 0b1111111,
+        schedule_type: nextScheduleType,
+        days_mask: nextScheduleType === 1
+          ? Math.max(1, schedule?.days_mask ?? 2)
+          : Math.max(1, schedule?.days_mask ?? 0b1111111),
         hour: schedule?.hour ?? 6,
         minute: schedule?.minute ?? 0,
         watering_mode: selectedWateringMode === 'volume' ? 1 : 0,
-        value: schedule?.value ?? 10,
-        auto_enabled: true,
+        value: nextScheduleType === 2 ? 0 : Math.max(1, schedule?.value ?? 10),
+        auto_enabled: schedule?.auto_enabled ?? true,
         use_solar_timing: schedule?.use_solar_timing ?? false,
         solar_event: schedule?.solar_event ?? 0,
         solar_offset_minutes: schedule?.solar_offset_minutes ?? 0,
@@ -806,7 +1152,27 @@ const MobileZoneDetailsFull: React.FC = () => {
     if (!scheduleForm) return;
     setSaving(true);
     try {
-      await bleService.writeScheduleConfig(scheduleForm);
+      const isSelectedModeFao56 = currentWateringMode === 'fao56_auto' || currentWateringMode === 'fao56_eco';
+      const selectedScheduleType = scheduleForm.schedule_type === 1 ? 1 : scheduleForm.schedule_type === 2 ? 2 : 0;
+      const normalizedScheduleType = isSelectedModeFao56
+        ? selectedScheduleType
+        : (selectedScheduleType === 1 ? 1 : 0);
+      const normalized: ScheduleConfigData = {
+        ...scheduleForm,
+        schedule_type: normalizedScheduleType,
+        days_mask: normalizedScheduleType === 1
+            ? Math.max(1, scheduleForm.days_mask || 2)
+            : Math.max(1, scheduleForm.days_mask || 0b1111111),
+        hour: Math.max(0, Math.min(23, scheduleForm.hour)),
+        minute: Math.max(0, Math.min(59, scheduleForm.minute)),
+        value: normalizedScheduleType === 2 ? 0 : Math.max(1, scheduleForm.value),
+        auto_enabled: !!scheduleForm.auto_enabled,
+        use_solar_timing: !!scheduleForm.use_solar_timing,
+        solar_event: scheduleForm.solar_event === 1 ? 1 : 0,
+        solar_offset_minutes: Math.max(-120, Math.min(120, Math.round(scheduleForm.solar_offset_minutes || 0))),
+      };
+
+      await bleService.writeScheduleConfig(normalized);
       await bleService.readScheduleConfig(channelIdNum);
       await bleService.readAutoCalcStatus(channelIdNum);
       setEditSheet(null);
@@ -830,6 +1196,10 @@ const MobileZoneDetailsFull: React.FC = () => {
       await bleService.writeGrowingEnvironment(newGrowing);
       await bleService.readGrowingEnvironment(channelIdNum);
       await bleService.readAutoCalcStatus(channelIdNum);
+      if (pendingAliasCandidate) {
+        persistAliasForCandidate(pendingAliasCandidate, selectedPlant, 'camera_manual');
+        setPendingAliasCandidate(null);
+      }
       setEditSheet(null);
     } catch (err) {
       console.error('Failed to save plant:', err);
@@ -968,8 +1338,84 @@ const MobileZoneDetailsFull: React.FC = () => {
     }
   };
 
+  const handleSaveZoneName = async () => {
+    if (!zone) return;
+    const nextName = zoneNameForm.trim();
+    if (!nextName) return;
+
+    setSaving(true);
+    try {
+      await bleService.writeChannelConfigObject({
+        ...zone,
+        name: nextName,
+        name_len: Math.min(nextName.length, 63),
+      });
+
+      if (growing) {
+        await bleService.writeGrowingEnvironment({
+          ...growing,
+          custom_name: nextName,
+        });
+      }
+
+      await bleService.readChannelConfig(channelIdNum);
+      await bleService.readGrowingEnvironment(channelIdNum);
+      setEditSheet(null);
+    } catch (err) {
+      console.error('Failed to save zone name:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSavePlantingDate = async () => {
+    if (!growing || !plantingDateForm) return;
+    const parsed = new Date(`${plantingDateForm}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return;
+
+    setSaving(true);
+    try {
+      await bleService.writeGrowingEnvironment({
+        ...growing,
+        planting_date_unix: Math.floor(parsed.getTime() / 1000),
+      });
+      await bleService.readGrowingEnvironment(channelIdNum);
+      await bleService.readAutoCalcStatus(channelIdNum);
+      setEditSheet(null);
+    } catch (err) {
+      console.error('Failed to save planting date:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveLocation = async () => {
+    if (!growing) return;
+    const latitude = Number(locationLatitudeForm);
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+      await showToast(t('locationPicker.latitudeRange'));
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await bleService.writeGrowingEnvironment({
+        ...growing,
+        latitude_deg: latitude,
+      });
+      await bleService.readGrowingEnvironment(channelIdNum);
+      await bleService.readAutoCalcStatus(channelIdNum);
+      setEditSheet(null);
+    } catch (err) {
+      console.error('Failed to save location:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Open rain compensation edit
   const openRainCompEdit = () => {
+    if (!canConfigureCompensation) return;
     const current = compConfig?.rain ?? {
       enabled: false,
       sensitivity: 0.5,
@@ -983,6 +1429,7 @@ const MobileZoneDetailsFull: React.FC = () => {
 
   // Open temp compensation edit
   const openTempCompEdit = () => {
+    if (!canConfigureCompensation) return;
     const current = compConfig?.temp ?? {
       enabled: false,
       base_temperature: 25,
@@ -1031,6 +1478,7 @@ const MobileZoneDetailsFull: React.FC = () => {
 
   // Save rain compensation
   const handleSaveRainComp = async () => {
+    if (!canConfigureCompensation) return;
     if (!rainCompForm) return;
     setSaving(true);
     try {
@@ -1060,6 +1508,7 @@ const MobileZoneDetailsFull: React.FC = () => {
 
   // Save temp compensation
   const handleSaveTempComp = async () => {
+    if (!canConfigureCompensation) return;
     if (!tempCompForm) return;
     setSaving(true);
     try {
@@ -1090,35 +1539,77 @@ const MobileZoneDetailsFull: React.FC = () => {
   // Save water management (Cycle & Soak + Max Volume)
   const handleSaveWaterManagement = async () => {
     if (!waterManagementForm || !growing) return;
+    if (intervalModeLoading) return;
     setSaving(true);
     try {
-      // Update enable_cycle_soak and max_volume_limit_l in Growing Environment
-      const updatedGrowing: GrowingEnvData = {
-        ...growing,
-        enable_cycle_soak: waterManagementForm.enableCycleSoak,
-        max_volume_limit_l: waterManagementForm.maxVolumeLimitL,
-      };
-      await bleService.writeGrowingEnvironment(updatedGrowing);
+      const enableCycleSoak = !!waterManagementForm.enableCycleSoak;
+      const maxVolume = Math.max(0, Math.round(waterManagementForm.maxVolumeLimitL));
 
-      // Write Interval Mode Config for cycle/soak durations (Characteristic #32)
-      await bleService.writeIntervalModeConfig({
-        channel_id: channelIdNum,
-        enabled: waterManagementForm.enableCycleSoak,
-        watering_minutes: waterManagementForm.cycleMinutes,
-        watering_seconds: 0,
-        pause_minutes: waterManagementForm.soakMinutes,
-        pause_seconds: 0,
-        configured: true,
-        last_update: 0,
-      });
+      // Write Growing Environment only if it actually changed.
+      const currentEnableCycleSoak = !!growing.enable_cycle_soak;
+      const currentMaxVolume = Math.round(growing.max_volume_limit_l ?? 0);
+      const needsGrowingWrite =
+        currentEnableCycleSoak !== enableCycleSoak || currentMaxVolume !== maxVolume;
 
-      await bleService.readGrowingEnvironment(channelIdNum);
+      if (needsGrowingWrite) {
+        const updatedGrowing: GrowingEnvData = {
+          ...growing,
+          enable_cycle_soak: enableCycleSoak,
+          max_volume_limit_l: maxVolume,
+        };
+        await bleService.writeGrowingEnvironment(updatedGrowing);
+      }
+
+      // Write Interval Mode Config only if supported and changed.
+      if (!intervalModeUnsupported && intervalModeOriginal) {
+        const next: IntervalModeConfigData = {
+          ...intervalModeOriginal,
+          channel_id: channelIdNum,
+          enabled: enableCycleSoak,
+          watering_minutes: Math.max(0, Math.round(waterManagementForm.cycleMinutes)),
+          watering_seconds: Math.min(59, Math.max(0, Math.round(waterManagementForm.cycleSeconds))),
+          pause_minutes: Math.max(0, Math.round(waterManagementForm.soakMinutes)),
+          pause_seconds: Math.min(59, Math.max(0, Math.round(waterManagementForm.soakSeconds))),
+        };
+
+        const intervalChanged =
+          next.enabled !== intervalModeOriginal.enabled ||
+          next.watering_minutes !== intervalModeOriginal.watering_minutes ||
+          next.watering_seconds !== intervalModeOriginal.watering_seconds ||
+          next.pause_minutes !== intervalModeOriginal.pause_minutes ||
+          next.pause_seconds !== intervalModeOriginal.pause_seconds;
+
+        if (intervalChanged) {
+          await bleService.writeIntervalModeConfig({
+            channel_id: channelIdNum,
+            enabled: next.enabled,
+            watering_minutes: next.watering_minutes,
+            watering_seconds: next.watering_seconds,
+            pause_minutes: next.pause_minutes,
+            pause_seconds: next.pause_seconds,
+            configured: true,
+            last_update: 0,
+          });
+        }
+      } else if (!intervalModeUnsupported && !intervalModeOriginal) {
+        // Don't block saving max-volume / enable flag, but tell the user timings weren't saved.
+        await showToast(t('mobileZoneDetails.intervalModeLoadFailed'));
+      }
+
+      await bleService.readGrowingEnvironment(channelIdNum).catch(() => undefined);
+      if (!intervalModeUnsupported) {
+        await bleService.readIntervalModeConfig(channelIdNum).catch(() => undefined);
+      }
       setEditSheet(null);
+      await showToast(t('mobileZoneDetails.savedToDevice'));
       console.log(`[ZoneDetails] Saved Water Management: cycleSoak=${waterManagementForm.enableCycleSoak}, ` +
-        `cycle=${waterManagementForm.cycleMinutes}min, soak=${waterManagementForm.soakMinutes}min, ` +
+        `cycle=${waterManagementForm.cycleMinutes}min${waterManagementForm.cycleSeconds}s, ` +
+        `soak=${waterManagementForm.soakMinutes}min${waterManagementForm.soakSeconds}s, ` +
         `maxVolume=${waterManagementForm.maxVolumeLimitL}L`);
     } catch (err) {
       console.error('Failed to save water management:', err);
+      const reason = err instanceof Error ? err.message : String(err);
+      await showToast(t('errors.failedWithReason').replace('{error}', reason));
     } finally {
       setSaving(false);
     }
@@ -1166,448 +1657,228 @@ const MobileZoneDetailsFull: React.FC = () => {
 
       {/* Tab Navigation */}
       <div className="px-4 mb-4 shrink-0">
-        <div className="flex gap-1 bg-mobile-surface-dark rounded-full p-1">
+        <div className="flex gap-1 bg-mobile-surface-dark rounded-xl p-1">
           {tabs.map(tab => (
             <button
               key={tab.key}
               onClick={() => selectTab(tab.key)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-full text-sm font-semibold transition-all ${activeTab === tab.key
+              className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-[11px] font-semibold transition-all ${activeTab === tab.key
                 ? 'bg-mobile-primary text-mobile-bg-dark'
                 : 'text-mobile-text-muted hover:text-white'
                 }`}
             >
-              <span className="material-symbols-outlined text-lg">{tab.icon}</span>
-              <span className="hidden sm:inline">{tab.label}</span>
+              <span className="material-symbols-outlined text-base">{tab.icon}</span>
+              <span>{tab.label}</span>
             </button>
           ))}
         </div>
       </div>
 
       {/* Tab Content - Scrollable */}
-      <div className="flex-1 overflow-y-auto px-4 pb-24">
+      <div className="app-scrollbar flex-1 overflow-y-auto px-4 pb-24">
         {/* Overview Tab */}
         {activeTab === 'overview' && (
-          <div className="flex flex-col gap-6">
-            {/* Status Card */}
-            <div className="relative overflow-hidden rounded-3xl bg-mobile-surface-dark border border-mobile-border-dark">
-              <div className="relative flex flex-col items-center justify-center p-8 z-10">
-                {/* Status Badge */}
-                <div className={`mb-6 flex items-center gap-2 rounded-full px-4 py-1.5 backdrop-blur-sm border ${isWatering
-                  ? 'bg-mobile-primary/20 border-mobile-primary/30'
-                  : 'bg-white/10 border-white/20'
+          <div className="flex flex-col gap-4">
+            <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] uppercase tracking-wide text-mobile-text-muted">
+                    {isWatering ? t('zoneDetails.wateringActive') : t('zoneDetails.nextWatering')}
+                  </p>
+                  <h3 className="text-3xl font-black tracking-tight text-white mt-0.5">
+                    {isWatering ? formatTime(remainingTimeSec) : nextWateringDisplay.time}
+                  </h3>
+                  <p className="text-xs text-mobile-text-muted mt-1 truncate">
+                    {isWatering
+                      ? t('mobileZoneDetails.remainingLabel')
+                      : nextWateringDisplay.date}
+                  </p>
+                </div>
+                <div className={`rounded-full px-3 py-1.5 border text-xs font-bold uppercase tracking-wide ${isWatering
+                  ? 'bg-mobile-primary/15 text-mobile-primary border-mobile-primary/40'
+                  : 'bg-white/5 text-white border-white/10'
                   }`}>
-                  {isWatering && (
-                    <span className="relative flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-mobile-primary opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-mobile-primary" />
+                  {isWatering ? t('zoneDetails.wateringActive') : t('zoneDetails.idle')}
+                </div>
+              </div>
+
+              {isWatering && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs text-mobile-text-muted">
+                    <span>{t('dashboard.progress')}</span>
+                    <span className="text-mobile-primary font-semibold">
+                      {wateringProgressPercent}{t('common.percent')}
                     </span>
-                  )}
-                  <span className={`text-sm font-bold tracking-wide uppercase ${isWatering ? 'text-mobile-primary' : 'text-white'
-                    }`}>
-                    {isWatering ? t('zoneDetails.wateringActive') : t('zoneDetails.idle')}
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-mobile-border-dark overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-mobile-primary/70 to-mobile-primary transition-all duration-700"
+                      style={{ width: `${wateringProgressPercent}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={openScheduleEdit}
+                  className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5 text-left"
+                >
+                  <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('zoneDetails.schedule')}</p>
+                  <p className="text-sm font-bold text-white mt-1 truncate">
+                    {schedule?.auto_enabled
+                      ? `${scheduleDaysLabel}${t('mobileZoneDetails.inlineSeparator')}${scheduleTimeLabel}`
+                      : t('zoneDetails.notScheduled')}
+                  </p>
+                </button>
+                <button
+                  onClick={openWateringModeEdit}
+                  className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5 text-left"
+                >
+                  <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.wateringModeTitle')}</p>
+                  <p className="text-sm font-bold text-white mt-1 truncate">{currentWateringModeLabel}</p>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    void openWaterManagementEdit();
+                  }}
+                  className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5 text-left"
+                >
+                  <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.waterManagement')}</p>
+                  <p className="text-sm font-bold text-white mt-1 truncate">
+                    {growing?.enable_cycle_soak ? t('labels.active') : t('labels.inactive')}
+                  </p>
+                </button>
+                <button
+                  onClick={() => selectTab('compensation')}
+                  className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5 text-left"
+                >
+                  <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('zoneDetails.adjust')}</p>
+                  <p className="text-sm font-bold text-white mt-1 truncate">
+                    {totalCompensationFactor}{t('common.percent')}
+                  </p>
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-white">{t('mobileZoneDetails.manualControl')}</h3>
+                {!isWatering && (
+                  <span className="text-xs text-mobile-text-muted">
+                    {selectedDuration}{t('common.minutesShort')}
                   </span>
-                </div>
-
-                {/* Timer Ring */}
-                <div className="relative mb-4 flex items-center justify-center">
-                  <div className="size-48 rounded-full border-[6px] border-mobile-border-dark flex items-center justify-center relative">
-                    {isWatering && (
-                      <svg className="absolute inset-0 size-full -rotate-90 transform" viewBox="0 0 100 100">
-                        <circle
-                          cx="50" cy="50" r="46"
-                          fill="transparent"
-                          stroke="#13ec37"
-                          strokeWidth="6"
-                          strokeLinecap="round"
-                          strokeDasharray="290"
-                          strokeDashoffset={290 * (1 - remainingTimeSec / totalDuration)}
-                        />
-                      </svg>
-                    )}
-                    <div className="flex flex-col items-center">
-                      <span className="material-symbols-outlined text-mobile-primary text-4xl mb-1">
-                        water_drop
-                      </span>
-                      <span className="text-5xl font-black text-white tracking-tighter font-manrope">
-                        {isWatering ? formatTime(remainingTimeSec) : '--:--'}
-                      </span>
-                      <span className="text-mobile-text-muted text-sm font-medium mt-1">
-                        {isWatering ? t('mobileZoneDetails.remainingLabel') : t('mobileZoneDetails.idleLabel')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Next Watering Info Card */}
-                <div className="mt-6 mb-2">
-                  <div className="relative overflow-hidden rounded-2xl bg-white/5 border border-white/10 p-5 min-h-[72px]">
-                    <div className="absolute inset-0 bg-gradient-to-r from-mobile-primary/10 to-transparent opacity-50" />
-                    <div className="relative flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-mobile-primary/20 text-mobile-primary">
-                          <span className="material-symbols-outlined text-2xl">event</span>
-                        </div>
-                        <div>
-                          <h3 className="text-white font-semibold text-sm">
-                            {autoCalc?.next_irrigation_time ? t('zoneDetails.nextWatering') : t('zoneDetails.schedule')}
-                          </h3>
-                          <div className="flex items-center gap-2">
-                            <span className="text-mobile-primary/80 text-xs">
-                              {autoCalc?.next_irrigation_time
-                                ? `${nextWateringDisplay.date}${t('mobileZoneDetails.inlineSeparator')}${nextWateringDisplay.time}`
-                                : schedule?.auto_enabled
-                                  ? `${scheduleDaysLabel}${t('mobileZoneDetails.inlineSeparator')}${scheduleTimeLabel}`
-                                  : t('zoneDetails.notScheduled')}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Decoration Icon */}
-                      {(autoCalc?.next_irrigation_time || schedule?.auto_enabled) && (
-                        <div className="text-white/10">
-                          <span className="material-symbols-outlined text-3xl">schedule</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
-            </div>
 
-            {/* Hydraulic Status Card */}
-            {hydraulic && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
-                <HydraulicDetailsCard data={hydraulic} />
-              </div>
-            )}
+              {!isWatering && (
+                <div className="grid grid-cols-3 gap-2">
+                  {durations.map((d) => (
+                    <button
+                      key={d.value}
+                      onClick={() => setSelectedDuration(d.value)}
+                      className={`rounded-xl py-2 text-sm font-semibold transition-colors ${selectedDuration === d.value
+                        ? 'bg-mobile-primary/15 text-mobile-primary border border-mobile-primary/40'
+                        : 'bg-mobile-bg-dark/50 text-white border border-mobile-border-dark'
+                        }`}
+                    >
+                      {d.value}{t('common.minutesShort')}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-            {/* Soil Tank Widget */}
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
-              <SoilTankWidget channelId={channelIdNum} />
-            </div>
-
-            {/* Quick Actions */}
-            <div>
-              <h3 className="text-white text-base font-bold mb-4 px-1">{t('dashboard.quickActions')}</h3>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={handleStopWatering}
-                  className="group flex flex-col items-center justify-center gap-2 rounded-2xl bg-mobile-surface-dark p-4 hover:bg-red-500/10 transition-all active:scale-95 border border-mobile-border-dark"
+                  onClick={isWatering ? handleStopWatering : handleStartWatering}
+                  className={`rounded-xl py-3 font-bold transition-colors active:scale-[0.98] ${isWatering
+                    ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                    : 'bg-mobile-primary text-mobile-bg-dark'
+                    }`}
                 >
-                  <div className="flex size-12 items-center justify-center rounded-full bg-red-500/10 text-red-500 group-hover:bg-red-500 group-hover:text-white transition-colors">
-                    <span className="material-symbols-outlined text-[28px]">stop_circle</span>
-                  </div>
-                  <span className="text-mobile-text-muted text-xs font-bold group-hover:text-white">{t('zoneDetails.stopWatering')}</span>
+                  {isWatering ? t('zoneDetails.stopWatering') : t('zoneDetails.startWatering')}
                 </button>
-
-                <button className="group flex flex-col items-center justify-center gap-2 rounded-2xl bg-mobile-surface-dark p-4 hover:bg-mobile-primary/10 transition-all active:scale-95 border border-mobile-border-dark">
-                  <div className="flex size-12 items-center justify-center rounded-full bg-mobile-primary/10 text-mobile-primary group-hover:bg-mobile-primary group-hover:text-mobile-bg-dark transition-colors">
-                    <span className="material-symbols-outlined text-[28px]">skip_next</span>
-                  </div>
-                  <span className="text-mobile-text-muted text-xs font-bold group-hover:text-white">{t('common.skip')}</span>
-                </button>
-
                 <button
-                  onClick={() => selectTab('schedule')}
-                  className="group flex flex-col items-center justify-center gap-2 rounded-2xl bg-mobile-surface-dark p-4 hover:bg-white/10 transition-all active:scale-95 border border-mobile-border-dark"
+                  onClick={openScheduleEdit}
+                  className="rounded-xl py-3 font-semibold text-white border border-mobile-border-dark bg-mobile-bg-dark/50"
                 >
-                  <div className="flex size-12 items-center justify-center rounded-full bg-white/5 text-white group-hover:bg-white group-hover:text-mobile-bg-dark transition-colors">
-                    <span className="material-symbols-outlined text-[28px]">calendar_clock</span>
-                  </div>
-                  <span className="text-mobile-text-muted text-xs font-bold group-hover:text-white">{t('zoneDetails.schedule')}</span>
+                  {t('zoneDetails.schedule')}
                 </button>
               </div>
             </div>
 
-            {/* Stats Grid - FAO-56 mode only */}
             {isFao56 && (
-              <div>
-                <h3 className="text-white text-base font-bold mb-4 px-1">{t('mobileZoneDetails.smartStatsTitle')}</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Water Loss (ET0) */}
-                  <div className="flex flex-col rounded-2xl bg-mobile-surface-dark p-5 border border-mobile-border-dark">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex size-10 items-center justify-center rounded-full bg-orange-500/20 text-orange-400">
-                        <span className="material-symbols-outlined">wb_sunny</span>
-                      </div>
-                      {autoCalc?.calculation_active && (
-                        <span className="text-xs font-medium text-mobile-primary bg-mobile-primary/10 px-2 py-1 rounded-full">{t('labels.active')}</span>
-                      )}
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-3xl font-bold text-white">
-                        {autoCalc?.et0_mm_day?.toFixed(1) ?? '--'}
-                        <span className="text-lg font-medium text-mobile-text-muted ml-1">{t('mobileZoneDetails.units.mm')}</span>
-                      </span>
-                      <span className="text-sm text-mobile-text-muted">{t('mobileZoneDetails.waterLossPerDay')}</span>
-                    </div>
+              <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4">
+                <h3 className="text-sm font-bold text-white mb-3">{t('mobileZoneDetails.smartStatsTitle')}</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.waterLossPerDay')}</p>
+                    <p className="text-lg font-bold text-white mt-1">
+                      {autoCalc?.et0_mm_day?.toFixed(1) ?? '--'} <span className="text-xs text-mobile-text-muted">{t('mobileZoneDetails.units.mm')}</span>
+                    </p>
                   </div>
-
-                  {/* Plant Needs (ETc) */}
-                  <div className="flex flex-col rounded-2xl bg-mobile-surface-dark p-5 border border-mobile-border-dark">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex size-10 items-center justify-center rounded-full bg-green-500/20 text-green-400">
-                        <span className="material-symbols-outlined">eco</span>
-                      </div>
-                      <span className="text-xs font-medium text-gray-400 bg-white/5 px-2 py-1 rounded-full">
-                        Kc={autoCalc?.crop_coefficient?.toFixed(2) ?? '--'}
-                      </span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-3xl font-bold text-white">
-                        {autoCalc?.etc_mm_day?.toFixed(1) ?? '--'}
-                        <span className="text-lg font-medium text-mobile-text-muted ml-1">{t('mobileZoneDetails.units.mm')}</span>
-                      </span>
-                      <span className="text-sm text-mobile-text-muted">{t('mobileZoneDetails.plantNeedsPerDay')}</span>
-                    </div>
+                  <div className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.plantNeedsPerDay')}</p>
+                    <p className="text-lg font-bold text-white mt-1">
+                      {autoCalc?.etc_mm_day?.toFixed(1) ?? '--'} <span className="text-xs text-mobile-text-muted">{t('mobileZoneDetails.units.mm')}</span>
+                    </p>
                   </div>
-
-                  {/* Water Deficit */}
-                  <div className="flex flex-col rounded-2xl bg-mobile-surface-dark p-5 border border-mobile-border-dark">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex size-10 items-center justify-center rounded-full bg-red-500/20 text-red-400">
-                        <span className="material-symbols-outlined">trending_down</span>
-                      </div>
-                      {autoCalc?.irrigation_needed && (
-                        <span className="text-xs font-medium text-red-400 bg-red-500/10 px-2 py-1 rounded-full">{t('mobileZoneDetails.needBadge')}</span>
-                      )}
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-3xl font-bold text-white">
-                        {autoCalc?.current_deficit_mm?.toFixed(1) ?? '--'}
-                        <span className="text-lg font-medium text-mobile-text-muted ml-1">{t('mobileZoneDetails.units.mm')}</span>
-                      </span>
-                      <span className="text-sm text-mobile-text-muted">{t('mobileZoneDetails.waterDeficit')}</span>
-                    </div>
+                  <div className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.waterDeficit')}</p>
+                    <p className="text-lg font-bold text-white mt-1">
+                      {autoCalc?.current_deficit_mm?.toFixed(1) ?? '--'} <span className="text-xs text-mobile-text-muted">{t('mobileZoneDetails.units.mm')}</span>
+                    </p>
                   </div>
-
-                  {/* Volume */}
-                  <div className="flex flex-col rounded-2xl bg-mobile-surface-dark p-5 border border-mobile-border-dark">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex size-10 items-center justify-center rounded-full bg-mobile-primary/20 text-mobile-primary">
-                        <span className="material-symbols-outlined">water_drop</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-3xl font-bold text-white">
-                        {autoCalc?.calculated_volume_l?.toFixed(1) ?? zoneStats?.total_volume?.toFixed(0) ?? '--'}
-                        <span className="text-lg font-medium text-mobile-text-muted ml-1">{t('common.litersShort')}</span>
-                      </span>
-                      <span className="text-sm text-mobile-text-muted">{t('mobileZoneDetails.calculatedVolume')}</span>
-                    </div>
-                  </div>
-
-                  {/* Days After Planting */}
-                  <div className="flex flex-col rounded-2xl bg-mobile-surface-dark p-5 border border-mobile-border-dark">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex size-10 items-center justify-center rounded-full bg-purple-500/20 text-purple-400">
-                        <span className="material-symbols-outlined">calendar_today</span>
-                      </div>
-                      <span className="text-xs font-medium text-gray-400 bg-white/5 px-2 py-1 rounded-full">
-                        {t('mobileZoneDetails.stageLabel').replace('{stage}', String(autoCalc?.phenological_stage ?? '--'))}
-                      </span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-3xl font-bold text-white">
-                        {autoCalc?.days_after_planting ?? growing?.days_after_planting ?? '--'}
-                        <span className="text-lg font-medium text-mobile-text-muted ml-1">{t('mobileZoneDetails.units.days')}</span>
-                      </span>
-                      <span className="text-sm text-mobile-text-muted">{t('mobileZoneDetails.afterPlanting')}</span>
-                    </div>
-                  </div>
-
-                  {/* Effective Rain */}
-                  <div className="flex flex-col rounded-2xl bg-mobile-surface-dark p-5 border border-mobile-border-dark">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex size-10 items-center justify-center rounded-full bg-blue-500/20 text-blue-400">
-                        <span className="material-symbols-outlined">rainy</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-3xl font-bold text-white">
-                        {autoCalc?.effective_rain_mm?.toFixed(1) ?? '--'}
-                        <span className="text-lg font-medium text-mobile-text-muted ml-1">{t('mobileZoneDetails.units.mm')}</span>
-                      </span>
-                      <span className="text-sm text-mobile-text-muted">{t('mobileZoneDetails.rainBenefit')}</span>
-                    </div>
+                  <div className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.rainBenefit')}</p>
+                    <p className="text-lg font-bold text-white mt-1">
+                      {autoCalc?.effective_rain_mm?.toFixed(1) ?? '--'} <span className="text-xs text-mobile-text-muted">{t('mobileZoneDetails.units.mm')}</span>
+                    </p>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Cycle & Soak Status (FAO-56 only) - CLICKABLE */}
-            {isFao56 && growing && (
-              <div>
-                <div className="flex items-center justify-between mb-4 px-1">
-                  <h3 className="text-white text-base font-bold">{t('mobileZoneDetails.waterManagement')}</h3>
+            <AdvancedSection
+              title={t('common.advanced')}
+              subtitle={t('mobileZoneDetails.advancedZoneControls')}
+              defaultOpen={false}
+            >
+              <div className="flex flex-col gap-3">
+                {hydraulic && <HydraulicDetailsCard data={hydraulic} />}
+                <div className="rounded-2xl border border-mobile-border-dark bg-mobile-bg-dark/40 p-3">
                   <button
-                    onClick={() => {
-                      setWaterManagementForm({
-                        enableCycleSoak: growing.enable_cycle_soak ?? false,
-                        cycleMinutes: 5,  // Default - firmware doesn't store this yet
-                        soakMinutes: 10,  // Default - firmware doesn't store this yet
-                        maxVolumeLimitL: growing.max_volume_limit_l ?? 50,
-                      });
-                      setEditSheet('water-management');
-                    }}
-                    className="text-mobile-primary text-sm font-medium flex items-center gap-1"
+                    onClick={() => setShowResetConfirm(true)}
+                    className="w-full flex items-center justify-center gap-2 py-2 text-red-400 hover:text-red-300 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-lg">edit</span>
-                    {t('common.edit')}
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Cycle & Soak - Clickable */}
-                  <button
-                    onClick={() => {
-                      setWaterManagementForm({
-                        enableCycleSoak: growing.enable_cycle_soak ?? false,
-                        cycleMinutes: 5,
-                        soakMinutes: 10,
-                        maxVolumeLimitL: growing.max_volume_limit_l ?? 50,
-                      });
-                      setEditSheet('water-management');
-                    }}
-                    className="flex flex-col rounded-2xl bg-mobile-surface-dark p-5 border border-mobile-border-dark hover:border-mobile-primary/50 transition-all text-left"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className={`flex size-10 items-center justify-center rounded-full ${growing.enable_cycle_soak ? 'bg-cyan-500/20 text-cyan-400' : 'bg-gray-500/20 text-gray-400'}`}>
-                        <span className="material-symbols-outlined">waves</span>
-                      </div>
-                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${growing.enable_cycle_soak ? 'text-cyan-400 bg-cyan-500/10' : 'text-gray-400 bg-white/5'}`}>
-                        {growing.enable_cycle_soak ? t('labels.active') : t('common.off')}
-                      </span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-lg font-bold text-white">
-                        {t('cycleSoak.title')}
-                      </span>
-                      <span className="text-sm text-mobile-text-muted">
-                        {growing.enable_cycle_soak ? t('zoneDetails.preventsRunoff') : t('labels.inactive')}
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Max Volume Limit - Clickable */}
-                  <button
-                    onClick={() => {
-                      setWaterManagementForm({
-                        enableCycleSoak: growing.enable_cycle_soak ?? false,
-                        cycleMinutes: 5,
-                        soakMinutes: 10,
-                        maxVolumeLimitL: growing.max_volume_limit_l ?? 50,
-                      });
-                      setEditSheet('water-management');
-                    }}
-                    className="flex flex-col rounded-2xl bg-mobile-surface-dark p-5 border border-mobile-border-dark hover:border-mobile-primary/50 transition-all text-left"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex size-10 items-center justify-center rounded-full bg-purple-500/20 text-purple-400">
-                        <span className="material-symbols-outlined">water_full</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-3xl font-bold text-white">
-                        {growing.max_volume_limit_l?.toFixed(0) ?? '50'}
-                        <span className="text-lg font-medium text-mobile-text-muted ml-1">{t('common.litersShort')}</span>
-                      </span>
-                      <span className="text-sm text-mobile-text-muted">{t('mobileZoneDetails.maxVolumePerWatering')}</span>
-                    </div>
+                    <span className="material-symbols-outlined text-[18px]">restart_alt</span>
+                    <span className="font-semibold text-sm">{t('zoneDetails.resetZone')}</span>
                   </button>
                 </div>
               </div>
-            )}
-
-            {/* Manual Start */}
-            <div>
-              <h3 className="text-white text-base font-bold mb-4 px-1">{t('mobileZoneDetails.manualControl')}</h3>
-              <div className="flex gap-3 mb-4 overflow-x-auto pb-2">
-                {durations.map(d => (
-                  <button
-                    key={d.value}
-                    onClick={() => d.value > 0 && setSelectedDuration(d.value)}
-                    className={`flex-1 min-w-[80px] py-3 rounded-xl text-sm transition-all active:scale-95 ${selectedDuration === d.value
-                      ? 'bg-mobile-primary/20 border-2 border-mobile-primary text-mobile-primary font-bold'
-                      : 'bg-white/5 border border-transparent hover:border-mobile-primary/50 text-white font-semibold'
-                      }`}
-                  >
-                    <span className="block text-xs text-mobile-text-muted mb-0.5">{d.label}</span>
-                    {d.value > 0 ? `${d.value}${t('common.minutesShort')}` : '...'}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                onClick={handleStartWatering}
-                disabled={isWatering}
-                className={`w-full h-16 rounded-full font-extrabold text-lg transition-all active:scale-[0.98] flex items-center justify-center gap-3 ${isWatering
-                  ? 'bg-white/10 text-white/30 cursor-not-allowed'
-                  : 'bg-mobile-primary text-mobile-bg-dark shadow-[0_0_20px_rgba(19,236,55,0.3)] hover:shadow-[0_0_30px_rgba(19,236,55,0.4)]'
-                  }`}
-              >
-                <span className="material-symbols-outlined text-[28px]">water_drop</span>
-                <span className="uppercase tracking-wide">{t('zoneDetails.startWatering')}</span>
-              </button>
-              <p className="text-center text-white/30 text-xs mt-4">
-                {t('mobileZoneDetails.tapToStartCycle').replace('{minutes}', String(selectedDuration))}
-              </p>
-            </div>
-
-            {/* Reset Zone Section */}
-            <div className="mt-8 pt-6 border-t border-white/10">
-              <button
-                onClick={() => setShowResetConfirm(true)}
-                className="w-full flex items-center justify-center gap-2 py-3 text-red-400 hover:text-red-300 transition-colors"
-              >
-                <span className="material-symbols-outlined">restart_alt</span>
-                <span className="font-medium">{t('zoneDetails.resetZone')}</span>
-              </button>
-            </div>
+            </AdvancedSection>
           </div>
         )}
 
-        {/* Reset Confirmation Modal */}
-        {showResetConfirm && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-mobile-card-dark rounded-2xl p-6 max-w-sm w-full border border-white/10">
-              <div className="flex items-center justify-center mb-4">
-                <div className="size-16 rounded-full bg-red-500/20 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-red-400 text-3xl">warning</span>
-                </div>
-              </div>
-              <h3 className="text-white text-lg font-bold text-center mb-2">{t('zoneDetails.resetZone')}?</h3>
-              <p className="text-mobile-text-muted text-sm text-center mb-6">
-                {t('mobileZoneDetails.resetConfirmBody')
-                  .replace('{zone}', String(zone.channel_id + 1))
-                  .replace('{name}', zone.name)}
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowResetConfirm(false)}
-                  disabled={resetPending}
-                  className="flex-1 py-3 rounded-xl bg-white/10 text-white font-bold hover:bg-white/20 transition-colors"
-                >
-                  {t('common.cancel')}
-                </button>
-                <button
-                  onClick={handleResetZone}
-                  disabled={resetPending}
-                  className="flex-1 py-3 rounded-xl bg-red-500 text-white font-bold hover:bg-red-400 transition-colors flex items-center justify-center gap-2"
-                >
-                  {resetPending ? (
-                    <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined text-lg">restart_alt</span>
-                      {t('common.confirm')}
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <MobileConfirmModal
+          isOpen={showResetConfirm}
+          onClose={() => setShowResetConfirm(false)}
+          onConfirm={handleResetZone}
+          title={`${t('zoneDetails.resetZone')}?`}
+          message={zone
+            ? t('mobileZoneDetails.resetConfirmBody')
+              .replace('{zone}', String(zone.channel_id + 1))
+              .replace('{name}', zone.name)
+            : t('zoneDetails.resetZone')}
+          confirmText={t('common.confirm')}
+          cancelText={t('common.cancel')}
+          icon="restart_alt"
+          variant="danger"
+          loading={resetPending}
+        />
 
         {/* Watering Mode Edit Sheet */}
         {editSheet === 'watering-mode' && (
@@ -1763,8 +2034,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                 {saving ? <span className="material-symbols-outlined animate-spin">progress_activity</span> : t('common.save')}
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
-              {/* Schedule Enabled Toggle */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
               <div className="flex items-center justify-between p-4 bg-mobile-surface-dark rounded-2xl border border-mobile-border-dark">
                 <div>
                   <p className="text-white font-bold">{t('mobileZoneDetails.scheduleActiveTitle')}</p>
@@ -1780,154 +2050,444 @@ const MobileZoneDetailsFull: React.FC = () => {
                 </button>
               </div>
 
-              {/* Days Selection */}
-              {scheduleForm.schedule_type !== 2 && (
-                <div>
-                  <label className="text-white font-bold mb-3 block">{t('mobileZoneDetails.wateringDaysLabel')}</label>
-                  <div className="grid grid-cols-7 gap-2">
-                    {[
-                      t('mobileZoneDetails.days.sun'),
-                      t('mobileZoneDetails.days.mon'),
-                      t('mobileZoneDetails.days.tue'),
-                      t('mobileZoneDetails.days.wed'),
-                      t('mobileZoneDetails.days.thu'),
-                      t('mobileZoneDetails.days.fri'),
-                      t('mobileZoneDetails.days.sat'),
-                    ].map((day, i) => (
-                      <button
-                        key={i}
-                        onClick={() => toggleDay(i)}
-                        className={`flex flex-col items-center p-3 rounded-xl transition-all ${(scheduleForm.days_mask >> i) & 1
-                          ? 'bg-mobile-primary text-black'
-                          : 'bg-mobile-surface-dark text-mobile-text-muted border border-mobile-border-dark hover:bg-white/10'
-                          }`}
-                      >
-                        <span className="text-xs font-bold">{day}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Time Picker */}
-              {scheduleForm.schedule_type !== 2 && (
-                <div>
-                  <label className="text-white font-bold mb-3 block">{t('mobileZoneDetails.startTimeLabel')}</label>
-                  <div className="flex items-center justify-center gap-4 bg-mobile-surface-dark rounded-2xl p-6 border border-mobile-border-dark">
-                    <div className="flex flex-col items-center">
-                      <button
-                        onClick={() => setScheduleForm({ ...scheduleForm, hour: (scheduleForm.hour + 1) % 24 })}
-                        className="size-12 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center"
-                      >
-                        <span className="material-symbols-outlined">expand_less</span>
-                      </button>
-                      <span className="text-5xl font-bold text-white my-2 w-20 text-center">
-                        {String(scheduleForm.hour).padStart(2, '0')}
-                      </span>
-                      <button
-                        onClick={() => setScheduleForm({ ...scheduleForm, hour: (scheduleForm.hour - 1 + 24) % 24 })}
-                        className="size-12 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center"
-                      >
-                        <span className="material-symbols-outlined">expand_more</span>
-                      </button>
-                    </div>
-                    <span className="text-4xl font-bold text-white">:</span>
-                    <div className="flex flex-col items-center">
-                      <button
-                        onClick={() => setScheduleForm({ ...scheduleForm, minute: (scheduleForm.minute + 5) % 60 })}
-                        className="size-12 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center"
-                      >
-                        <span className="material-symbols-outlined">expand_less</span>
-                      </button>
-                      <span className="text-5xl font-bold text-white my-2 w-20 text-center">
-                        {String(scheduleForm.minute).padStart(2, '0')}
-                      </span>
-                      <button
-                        onClick={() => setScheduleForm({ ...scheduleForm, minute: (scheduleForm.minute - 5 + 60) % 60 })}
-                        className="size-12 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center"
-                      >
-                        <span className="material-symbols-outlined">expand_more</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Duration/Volume Value */}
-              {scheduleForm.schedule_type !== 2 && (
-                <div>
-                  <label className="text-white font-bold mb-3 block">
-                    {scheduleForm.watering_mode === 0 ? t('zoneDetails.duration') : t('zoneDetails.volume')}
-                  </label>
-                  <div className="flex items-center gap-4 bg-mobile-surface-dark rounded-2xl p-6 border border-mobile-border-dark">
-                    <button
-                      onClick={() => setScheduleForm({ ...scheduleForm, value: Math.max(1, scheduleForm.value - (scheduleForm.watering_mode === 0 ? 1 : 5)) })}
-                      className="size-14 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center"
-                    >
-                      <span className="material-symbols-outlined text-2xl">remove</span>
-                    </button>
-                    <div className="flex-1 text-center">
-                      <span className="text-5xl font-bold text-white">{scheduleForm.value}</span>
-                      <span className="text-mobile-text-muted ml-2 text-lg">
-                        {scheduleForm.watering_mode === 0 ? t('common.minutesShort') : t('common.litersShort')}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => setScheduleForm({ ...scheduleForm, value: Math.min(500, scheduleForm.value + (scheduleForm.watering_mode === 0 ? 1 : 5)) })}
-                      className="size-14 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center"
-                    >
-                      <span className="material-symbols-outlined text-2xl">add</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Solar Timing */}
-              {scheduleForm.schedule_type !== 2 && (
+              {isCurrentWateringModeFao ? (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-mobile-surface-dark rounded-2xl border border-mobile-border-dark">
-                    <div className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-orange-400">wb_sunny</span>
-                      <div>
-                        <p className="text-white font-bold">{t('mobileZoneDetails.solarTimingTitle')}</p>
-                        <p className="text-mobile-text-muted text-sm">{t('mobileZoneDetails.solarTimingSubtitle')}</p>
-                      </div>
+                  <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4">
+                    <p className="text-sm font-bold text-white mb-3">{t('wizard.schedule.scheduleType')}</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => setScheduleForm({ ...scheduleForm, schedule_type: 2, days_mask: Math.max(1, scheduleForm.days_mask || 0b1111111) })}
+                        className={`rounded-xl py-2.5 text-sm font-semibold transition-colors ${scheduleForm.schedule_type === 2
+                          ? 'bg-mobile-primary text-mobile-bg-dark'
+                          : 'bg-mobile-bg-dark/50 text-white border border-mobile-border-dark'
+                          }`}
+                      >
+                        {t('zoneDetails.autoFao56')}
+                      </button>
+                      <button
+                        onClick={() => setScheduleForm({ ...scheduleForm, schedule_type: 0, days_mask: Math.max(1, scheduleForm.days_mask || 0b1111111) })}
+                        className={`rounded-xl py-2.5 text-sm font-semibold transition-colors ${scheduleForm.schedule_type === 0
+                          ? 'bg-mobile-primary text-mobile-bg-dark'
+                          : 'bg-mobile-bg-dark/50 text-white border border-mobile-border-dark'
+                          }`}
+                      >
+                        {t('zoneDetails.daily')}
+                      </button>
+                      <button
+                        onClick={() => setScheduleForm({ ...scheduleForm, schedule_type: 1, days_mask: Math.max(1, scheduleForm.days_mask || 2) })}
+                        className={`rounded-xl py-2.5 text-sm font-semibold transition-colors ${scheduleForm.schedule_type === 1
+                          ? 'bg-mobile-primary text-mobile-bg-dark'
+                          : 'bg-mobile-bg-dark/50 text-white border border-mobile-border-dark'
+                          }`}
+                      >
+                        {t('zoneDetails.periodic')}
+                      </button>
                     </div>
-                    <button
-                      onClick={() => setScheduleForm({ ...scheduleForm, use_solar_timing: !scheduleForm.use_solar_timing })}
-                      className={`w-14 h-8 rounded-full relative transition-colors ${scheduleForm.use_solar_timing ? 'bg-mobile-primary' : 'bg-white/20'
-                        }`}
-                    >
-                      <span className={`absolute top-1 size-6 rounded-full bg-white transition-all ${scheduleForm.use_solar_timing ? 'left-7' : 'left-1'
-                        }`} />
-                    </button>
                   </div>
 
-                  {scheduleForm.use_solar_timing && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        onClick={() => setScheduleForm({ ...scheduleForm, solar_event: 1 })}
-                        className={`flex flex-col items-center gap-3 p-5 rounded-2xl border transition-all ${scheduleForm.solar_event === 1
-                          ? 'bg-orange-500/20 border-orange-500'
-                          : 'bg-mobile-surface-dark border-mobile-border-dark'
-                          }`}
-                      >
-                        <span className="material-symbols-outlined text-4xl">wb_sunny</span>
-                        <span className={`font-bold ${scheduleForm.solar_event === 1 ? 'text-orange-400' : 'text-white'}`}>{t('wizard.schedule.sunrise')}</span>
-                      </button>
-                      <button
-                        onClick={() => setScheduleForm({ ...scheduleForm, solar_event: 0 })}
-                        className={`flex flex-col items-center gap-3 p-5 rounded-2xl border transition-all ${scheduleForm.solar_event === 0
-                          ? 'bg-purple-500/20 border-purple-500'
-                          : 'bg-mobile-surface-dark border-mobile-border-dark'
-                          }`}
-                      >
-                        <span className="material-symbols-outlined text-4xl">dark_mode</span>
-                        <span className={`font-bold ${scheduleForm.solar_event === 0 ? 'text-purple-400' : 'text-white'}`}>{t('wizard.schedule.sunset')}</span>
-                      </button>
+                  {scheduleForm.schedule_type === 2 && (
+                    <div className="rounded-2xl border border-mobile-primary/30 bg-mobile-primary/10 p-4">
+                      <p className="text-sm font-bold text-white">{t('mobileZoneDetails.scheduleAutomatic')}</p>
+                      <p className="text-xs text-mobile-text-muted mt-1">{t('mobileZoneDetails.scheduleAutoNote')}</p>
                     </div>
                   )}
+
+                  {scheduleForm.schedule_type === 0 && (
+                    <div>
+                      <label className="text-white font-bold mb-2 block">{t('mobileZoneDetails.wateringDaysLabel')}</label>
+                      <div className="grid grid-cols-7 gap-1.5">
+                        {[
+                          t('mobileZoneDetails.days.sun'),
+                          t('mobileZoneDetails.days.mon'),
+                          t('mobileZoneDetails.days.tue'),
+                          t('mobileZoneDetails.days.wed'),
+                          t('mobileZoneDetails.days.thu'),
+                          t('mobileZoneDetails.days.fri'),
+                          t('mobileZoneDetails.days.sat'),
+                        ].map((day, i) => (
+                          <button
+                            key={i}
+                            onClick={() => toggleDay(i)}
+                            className={`flex flex-col items-center py-2 rounded-lg transition-all ${(scheduleForm.days_mask >> i) & 1
+                              ? 'bg-mobile-primary text-black'
+                              : 'bg-mobile-surface-dark text-mobile-text-muted border border-mobile-border-dark hover:bg-white/10'
+                              }`}
+                          >
+                            <span className="text-[11px] font-bold">{day}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {scheduleForm.schedule_type === 1 && (
+                    <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4">
+                      <p className="text-white font-bold mb-2">{t('wizard.schedule.intervalDays')}</p>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setScheduleForm({ ...scheduleForm, days_mask: Math.max(1, scheduleForm.days_mask - 1) })}
+                          className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                        >
+                          <span className="material-symbols-outlined">remove</span>
+                        </button>
+                        <div className="flex-1 text-center">
+                          <span className="text-3xl font-black text-white">{Math.max(1, scheduleForm.days_mask)}</span>
+                          <span className="text-mobile-text-muted ml-2">{t('mobileZoneDetails.units.days')}</span>
+                        </div>
+                        <button
+                          onClick={() => setScheduleForm({ ...scheduleForm, days_mask: Math.min(255, scheduleForm.days_mask + 1) })}
+                          className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                        >
+                          <span className="material-symbols-outlined">add</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {!scheduleForm.use_solar_timing && (
+                    <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4">
+                      <label className="text-white font-bold mb-3 block">{t('mobileZoneDetails.startTimeLabel')}</label>
+                      <div className="flex items-center justify-center gap-4">
+                        <div className="flex flex-col items-center">
+                          <button
+                            onClick={() => setScheduleForm({ ...scheduleForm, hour: (scheduleForm.hour + 1) % 24 })}
+                            className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                          >
+                            <span className="material-symbols-outlined">expand_less</span>
+                          </button>
+                          <span className="text-4xl font-black text-white my-1 w-14 text-center">
+                            {String(scheduleForm.hour).padStart(2, '0')}
+                          </span>
+                          <button
+                            onClick={() => setScheduleForm({ ...scheduleForm, hour: (scheduleForm.hour - 1 + 24) % 24 })}
+                            className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                          >
+                            <span className="material-symbols-outlined">expand_more</span>
+                          </button>
+                        </div>
+                        <span className="text-3xl font-bold text-white">:</span>
+                        <div className="flex flex-col items-center">
+                          <button
+                            onClick={() => setScheduleForm({ ...scheduleForm, minute: (scheduleForm.minute + 5) % 60 })}
+                            className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                          >
+                            <span className="material-symbols-outlined">expand_less</span>
+                          </button>
+                          <span className="text-4xl font-black text-white my-1 w-14 text-center">
+                            {String(scheduleForm.minute).padStart(2, '0')}
+                          </span>
+                          <button
+                            onClick={() => setScheduleForm({ ...scheduleForm, minute: (scheduleForm.minute - 5 + 60) % 60 })}
+                            className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                          >
+                            <span className="material-symbols-outlined">expand_more</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-3 rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="material-symbols-outlined text-orange-400">wb_sunny</span>
+                        <div>
+                          <p className="text-white font-bold">{t('mobileZoneDetails.solarTimingTitle')}</p>
+                          <p className="text-mobile-text-muted text-sm">{t('mobileZoneDetails.solarTimingSubtitle')}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setScheduleForm({ ...scheduleForm, use_solar_timing: !scheduleForm.use_solar_timing })}
+                        className={`w-14 h-8 rounded-full relative transition-colors ${scheduleForm.use_solar_timing ? 'bg-mobile-primary' : 'bg-white/20'
+                          }`}
+                      >
+                        <span className={`absolute top-1 size-6 rounded-full bg-white transition-all ${scheduleForm.use_solar_timing ? 'left-7' : 'left-1'
+                          }`} />
+                      </button>
+                    </div>
+
+                    {scheduleForm.use_solar_timing && (
+                      <>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => setScheduleForm({ ...scheduleForm, solar_event: 1 })}
+                            className={`rounded-xl py-2.5 text-sm font-semibold transition-colors ${scheduleForm.solar_event === 1
+                              ? 'bg-orange-500/20 border border-orange-500 text-orange-200'
+                              : 'bg-mobile-bg-dark/50 border border-mobile-border-dark text-white'
+                              }`}
+                          >
+                            {t('zoneWizard.schedule.solarEvents.sunrise')}
+                          </button>
+                          <button
+                            onClick={() => setScheduleForm({ ...scheduleForm, solar_event: 0 })}
+                            className={`rounded-xl py-2.5 text-sm font-semibold transition-colors ${scheduleForm.solar_event === 0
+                              ? 'bg-purple-500/20 border border-purple-500 text-purple-200'
+                              : 'bg-mobile-bg-dark/50 border border-mobile-border-dark text-white'
+                              }`}
+                          >
+                            {t('zoneWizard.schedule.solarEvents.sunset')}
+                          </button>
+                        </div>
+
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-mobile-text-muted mb-2">{t('zoneWizard.schedule.solarOffset')}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {[-60, -30, -15, 0, 15, 30, 60].map((offset) => (
+                              <button
+                                key={offset}
+                                onClick={() => setScheduleForm({ ...scheduleForm, solar_offset_minutes: offset })}
+                                className={`px-2.5 py-1.5 rounded-full text-xs font-bold ${scheduleForm.solar_offset_minutes === offset
+                                  ? 'bg-mobile-primary text-mobile-bg-dark'
+                                  : 'bg-mobile-bg-dark/50 border border-mobile-border-dark text-white'
+                                  }`}
+                              >
+                                {offset > 0 ? `+${offset}` : offset}m
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
+              ) : (
+                <>
+                  {/* Schedule Type */}
+                  <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4">
+                    <p className="text-sm font-bold text-white mb-3">{t('wizard.schedule.scheduleType')}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setScheduleForm({ ...scheduleForm, schedule_type: 0, days_mask: scheduleForm.days_mask || 0b1111111 })}
+                        className={`rounded-xl py-2.5 text-sm font-semibold transition-colors ${scheduleForm.schedule_type === 0
+                          ? 'bg-mobile-primary text-mobile-bg-dark'
+                          : 'bg-mobile-bg-dark/50 text-white border border-mobile-border-dark'
+                          }`}
+                      >
+                        {t('zoneWizard.schedule.daily')}
+                      </button>
+                      <button
+                        onClick={() => setScheduleForm({ ...scheduleForm, schedule_type: 1, days_mask: Math.max(1, scheduleForm.days_mask || 2) })}
+                        className={`rounded-xl py-2.5 text-sm font-semibold transition-colors ${scheduleForm.schedule_type === 1
+                          ? 'bg-mobile-primary text-mobile-bg-dark'
+                          : 'bg-mobile-bg-dark/50 text-white border border-mobile-border-dark'
+                          }`}
+                      >
+                        {t('wizard.schedule.periodic')}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Daily/Periodic Details */}
+                  {scheduleForm.schedule_type === 0 && (
+                    <div>
+                      <label className="text-white font-bold mb-2 block">{t('mobileZoneDetails.wateringDaysLabel')}</label>
+                      <div className="grid grid-cols-7 gap-1.5">
+                        {[
+                          t('mobileZoneDetails.days.sun'),
+                          t('mobileZoneDetails.days.mon'),
+                          t('mobileZoneDetails.days.tue'),
+                          t('mobileZoneDetails.days.wed'),
+                          t('mobileZoneDetails.days.thu'),
+                          t('mobileZoneDetails.days.fri'),
+                          t('mobileZoneDetails.days.sat'),
+                        ].map((day, i) => (
+                          <button
+                            key={i}
+                            onClick={() => toggleDay(i)}
+                            className={`flex flex-col items-center py-2 rounded-lg transition-all ${(scheduleForm.days_mask >> i) & 1
+                              ? 'bg-mobile-primary text-black'
+                              : 'bg-mobile-surface-dark text-mobile-text-muted border border-mobile-border-dark hover:bg-white/10'
+                              }`}
+                          >
+                            <span className="text-[11px] font-bold">{day}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {scheduleForm.schedule_type === 1 && (
+                    <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4">
+                      <p className="text-white font-bold mb-2">{t('wizard.schedule.intervalDays')}</p>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setScheduleForm({ ...scheduleForm, days_mask: Math.max(1, scheduleForm.days_mask - 1) })}
+                          className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                        >
+                          <span className="material-symbols-outlined">remove</span>
+                        </button>
+                        <div className="flex-1 text-center">
+                          <span className="text-3xl font-black text-white">{Math.max(1, scheduleForm.days_mask)}</span>
+                          <span className="text-mobile-text-muted ml-2">{t('mobileZoneDetails.units.days')}</span>
+                        </div>
+                        <button
+                          onClick={() => setScheduleForm({ ...scheduleForm, days_mask: Math.min(255, scheduleForm.days_mask + 1) })}
+                          className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                        >
+                          <span className="material-symbols-outlined">add</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Watering mode for manual schedules */}
+                  <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4">
+                    <p className="text-sm font-bold text-white mb-3">{t('mobileZoneDetails.wateringModeTitle')}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setScheduleForm({ ...scheduleForm, watering_mode: 0 })}
+                        className={`rounded-xl py-2.5 text-sm font-semibold transition-colors ${scheduleForm.watering_mode === 0
+                          ? 'bg-mobile-primary text-mobile-bg-dark'
+                          : 'bg-mobile-bg-dark/50 text-white border border-mobile-border-dark'
+                          }`}
+                      >
+                        {t('zoneDetails.duration')}
+                      </button>
+                      <button
+                        onClick={() => setScheduleForm({ ...scheduleForm, watering_mode: 1 })}
+                        className={`rounded-xl py-2.5 text-sm font-semibold transition-colors ${scheduleForm.watering_mode === 1
+                          ? 'bg-mobile-primary text-mobile-bg-dark'
+                          : 'bg-mobile-bg-dark/50 text-white border border-mobile-border-dark'
+                          }`}
+                      >
+                        {t('zoneDetails.volume')}
+                      </button>
+                    </div>
+                  </div>
+
+                  {!scheduleForm.use_solar_timing && (
+                    <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4">
+                      <label className="text-white font-bold mb-3 block">{t('mobileZoneDetails.startTimeLabel')}</label>
+                      <div className="flex items-center justify-center gap-4">
+                        <div className="flex flex-col items-center">
+                          <button
+                            onClick={() => setScheduleForm({ ...scheduleForm, hour: (scheduleForm.hour + 1) % 24 })}
+                            className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                          >
+                            <span className="material-symbols-outlined">expand_less</span>
+                          </button>
+                          <span className="text-4xl font-black text-white my-1 w-14 text-center">
+                            {String(scheduleForm.hour).padStart(2, '0')}
+                          </span>
+                          <button
+                            onClick={() => setScheduleForm({ ...scheduleForm, hour: (scheduleForm.hour - 1 + 24) % 24 })}
+                            className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                          >
+                            <span className="material-symbols-outlined">expand_more</span>
+                          </button>
+                        </div>
+                        <span className="text-3xl font-bold text-white">:</span>
+                        <div className="flex flex-col items-center">
+                          <button
+                            onClick={() => setScheduleForm({ ...scheduleForm, minute: (scheduleForm.minute + 5) % 60 })}
+                            className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                          >
+                            <span className="material-symbols-outlined">expand_less</span>
+                          </button>
+                          <span className="text-4xl font-black text-white my-1 w-14 text-center">
+                            {String(scheduleForm.minute).padStart(2, '0')}
+                          </span>
+                          <button
+                            onClick={() => setScheduleForm({ ...scheduleForm, minute: (scheduleForm.minute - 5 + 60) % 60 })}
+                            className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                          >
+                            <span className="material-symbols-outlined">expand_more</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4">
+                    <label className="text-white font-bold mb-3 block">
+                      {scheduleForm.watering_mode === 0 ? t('zoneDetails.duration') : t('zoneDetails.volume')}
+                    </label>
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => setScheduleForm({ ...scheduleForm, value: Math.max(1, scheduleForm.value - (scheduleForm.watering_mode === 0 ? 1 : 5)) })}
+                        className="size-12 rounded-full bg-white/10 text-white flex items-center justify-center"
+                      >
+                        <span className="material-symbols-outlined text-xl">remove</span>
+                      </button>
+                      <div className="flex-1 text-center">
+                        <span className="text-4xl font-black text-white">{scheduleForm.value}</span>
+                        <span className="text-mobile-text-muted ml-2">
+                          {scheduleForm.watering_mode === 0 ? t('common.minutesShort') : t('common.litersShort')}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setScheduleForm({ ...scheduleForm, value: Math.min(500, scheduleForm.value + (scheduleForm.watering_mode === 0 ? 1 : 5)) })}
+                        className="size-12 rounded-full bg-white/10 text-white flex items-center justify-center"
+                      >
+                        <span className="material-symbols-outlined text-xl">add</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Solar timing */}
+                  <div className="space-y-3 rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="material-symbols-outlined text-orange-400">wb_sunny</span>
+                        <div>
+                          <p className="text-white font-bold">{t('mobileZoneDetails.solarTimingTitle')}</p>
+                          <p className="text-mobile-text-muted text-sm">{t('mobileZoneDetails.solarTimingSubtitle')}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setScheduleForm({ ...scheduleForm, use_solar_timing: !scheduleForm.use_solar_timing })}
+                        className={`w-14 h-8 rounded-full relative transition-colors ${scheduleForm.use_solar_timing ? 'bg-mobile-primary' : 'bg-white/20'
+                          }`}
+                      >
+                        <span className={`absolute top-1 size-6 rounded-full bg-white transition-all ${scheduleForm.use_solar_timing ? 'left-7' : 'left-1'
+                          }`} />
+                      </button>
+                    </div>
+
+                    {scheduleForm.use_solar_timing && (
+                      <>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => setScheduleForm({ ...scheduleForm, solar_event: 1 })}
+                            className={`rounded-xl py-2.5 text-sm font-semibold transition-colors ${scheduleForm.solar_event === 1
+                              ? 'bg-orange-500/20 border border-orange-500 text-orange-200'
+                              : 'bg-mobile-bg-dark/50 border border-mobile-border-dark text-white'
+                              }`}
+                          >
+                            {t('zoneWizard.schedule.solarEvents.sunrise')}
+                          </button>
+                          <button
+                            onClick={() => setScheduleForm({ ...scheduleForm, solar_event: 0 })}
+                            className={`rounded-xl py-2.5 text-sm font-semibold transition-colors ${scheduleForm.solar_event === 0
+                              ? 'bg-purple-500/20 border border-purple-500 text-purple-200'
+                              : 'bg-mobile-bg-dark/50 border border-mobile-border-dark text-white'
+                              }`}
+                          >
+                            {t('zoneWizard.schedule.solarEvents.sunset')}
+                          </button>
+                        </div>
+
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-mobile-text-muted mb-2">{t('zoneWizard.schedule.solarOffset')}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {[-60, -30, -15, 0, 15, 30, 60].map((offset) => (
+                              <button
+                                key={offset}
+                                onClick={() => setScheduleForm({ ...scheduleForm, solar_offset_minutes: offset })}
+                                className={`px-2.5 py-1.5 rounded-full text-xs font-bold ${scheduleForm.solar_offset_minutes === offset
+                                  ? 'bg-mobile-primary text-mobile-bg-dark'
+                                  : 'bg-mobile-bg-dark/50 border border-mobile-border-dark text-white'
+                                  }`}
+                              >
+                                {offset > 0 ? `+${offset}` : offset}m
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -1971,13 +2531,14 @@ const MobileZoneDetailsFull: React.FC = () => {
               <div className="flex-1 overflow-y-auto p-4 space-y-5">
                 {/* Camera Option */}
                 <button
-                  onClick={() => {
-                    alert(t('mobileZoneDetails.cameraComingSoon'));
-                  }}
+                  onClick={handleCameraPlantPick}
+                  disabled={detectingPlant}
                   className="w-full flex items-center gap-4 p-5 rounded-[2rem] border-2 border-transparent bg-mobile-surface-dark hover:border-mobile-border-dark transition-all"
                 >
                   <div className="size-16 rounded-full flex items-center justify-center bg-white/5 text-mobile-text-muted">
-                    <span className="material-symbols-outlined text-[32px]">photo_camera</span>
+                    <span className="material-symbols-outlined text-[32px]">
+                      {detectingPlant ? 'progress_activity' : 'photo_camera'}
+                    </span>
                   </div>
                   <div className="text-left flex-1">
                     <h3 className="text-lg font-bold text-white">{t('mobileZoneDetails.cameraTitle')}</h3>
@@ -1985,6 +2546,16 @@ const MobileZoneDetailsFull: React.FC = () => {
                   </div>
                   <span className="material-symbols-outlined text-mobile-text-muted">chevron_right</span>
                 </button>
+                <input
+                  ref={plantCameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(event) => {
+                    void handleCameraPlantSelected(event);
+                  }}
+                />
 
                 {/* Divider */}
                 <div className="flex items-center gap-3">
@@ -2784,6 +3355,117 @@ const MobileZoneDetailsFull: React.FC = () => {
           </div>
         )}
 
+        {editSheet === 'zone-name' && (
+          <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm">
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <button
+                onClick={() => setEditSheet(null)}
+                disabled={saving}
+                className="text-mobile-text-muted hover:text-white transition-colors"
+              >
+                {t('common.cancel')}
+              </button>
+              <h3 className="text-white font-bold text-lg">{t('mobileZoneConfig.zoneName')}</h3>
+              <button
+                onClick={handleSaveZoneName}
+                disabled={saving || zoneNameForm.trim().length < 2}
+                className="text-mobile-primary font-bold hover:text-green-400 transition-colors flex items-center gap-1 disabled:opacity-50"
+              >
+                {saving ? <span className="material-symbols-outlined animate-spin">progress_activity</span> : t('common.save')}
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4">
+                <input
+                  value={zoneNameForm}
+                  onChange={(e) => setZoneNameForm(e.target.value)}
+                  maxLength={63}
+                  placeholder={t('mobileZoneConfig.zoneNamePlaceholder')}
+                  className="w-full h-12 bg-mobile-bg-dark/60 rounded-xl border border-mobile-border-dark px-3 text-white placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {editSheet === 'planting-date' && (
+          <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm">
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <button
+                onClick={() => setEditSheet(null)}
+                disabled={saving}
+                className="text-mobile-text-muted hover:text-white transition-colors"
+              >
+                {t('common.cancel')}
+              </button>
+              <h3 className="text-white font-bold text-lg">{t('zoneDetails.selectPlantingDate')}</h3>
+              <button
+                onClick={handleSavePlantingDate}
+                disabled={saving || !plantingDateForm}
+                className="text-mobile-primary font-bold hover:text-green-400 transition-colors flex items-center gap-1 disabled:opacity-50"
+              >
+                {saving ? <span className="material-symbols-outlined animate-spin">progress_activity</span> : t('common.save')}
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4">
+                <input
+                  type="date"
+                  value={plantingDateForm}
+                  onChange={(e) => setPlantingDateForm(e.target.value)}
+                  className="w-full h-12 bg-mobile-bg-dark/60 rounded-xl border border-mobile-border-dark px-3 text-white focus:outline-none focus:border-mobile-primary"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {editSheet === 'location' && (
+          <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm">
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <button
+                onClick={() => setEditSheet(null)}
+                disabled={saving}
+                className="text-mobile-text-muted hover:text-white transition-colors"
+              >
+                {t('common.cancel')}
+              </button>
+              <h3 className="text-white font-bold text-lg">{t('zoneWizard.locationSetup.title')}</h3>
+              <button
+                onClick={handleSaveLocation}
+                disabled={saving || locationLatitudeForm.trim().length === 0}
+                className="text-mobile-primary font-bold hover:text-green-400 transition-colors flex items-center gap-1 disabled:opacity-50"
+              >
+                {saving ? <span className="material-symbols-outlined animate-spin">progress_activity</span> : t('common.save')}
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4">
+                <label className="text-sm text-mobile-text-muted">{t('locationPicker.latitude')}</label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.000001"
+                  min={-90}
+                  max={90}
+                  value={locationLatitudeForm}
+                  onChange={(e) => setLocationLatitudeForm(e.target.value)}
+                  className="mt-2 w-full h-12 bg-mobile-bg-dark/60 rounded-xl border border-mobile-border-dark px-3 text-white focus:outline-none focus:border-mobile-primary"
+                />
+                <p className="text-xs text-mobile-text-muted mt-2">{t('mobileTimeLocation.locationHint')}</p>
+              </div>
+
+              <button
+                onClick={detectCurrentLocation}
+                disabled={detectingLocation}
+                className="w-full rounded-xl bg-mobile-primary py-3 font-bold text-mobile-bg-dark disabled:opacity-60"
+              >
+                {detectingLocation ? t('zoneWizard.locationSetup.detecting') : t('zoneWizard.locationSetup.startDetection')}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Water Management Edit Sheet (Cycle & Soak + Max Volume) */}
         {editSheet === 'water-management' && waterManagementForm && (
           <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm">
@@ -2798,13 +3480,36 @@ const MobileZoneDetailsFull: React.FC = () => {
               <h3 className="text-white font-bold text-lg">{t('mobileZoneDetails.waterManagement')}</h3>
               <button
                 onClick={handleSaveWaterManagement}
-                disabled={saving}
+                disabled={saving || intervalModeLoading}
                 className="text-mobile-primary font-bold hover:text-green-400 transition-colors flex items-center gap-1"
               >
-                {saving ? <span className="material-symbols-outlined animate-spin">progress_activity</span> : t('common.save')}
+                {saving || intervalModeLoading ? (
+                  <span className="material-symbols-outlined animate-spin">progress_activity</span>
+                ) : (
+                  t('common.save')
+                )}
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
+              {intervalModeLoading && (
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 flex items-center gap-2">
+                  <span className="material-symbols-outlined animate-spin text-white/70">progress_activity</span>
+                  <p className="text-white/80 text-sm">{t('common.loading')}</p>
+                </div>
+              )}
+
+              {intervalModeError && (
+                <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4">
+                  <p className="text-red-200 text-sm">{intervalModeError}</p>
+                </div>
+              )}
+
+              {intervalModeUnsupported && (
+                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+                  <p className="text-amber-200 text-sm">{t('mobileZoneDetails.intervalModeUnsupported')}</p>
+                </div>
+              )}
+
               {/* Cycle & Soak Toggle */}
               <button
                 onClick={() => setWaterManagementForm({ ...waterManagementForm, enableCycleSoak: !waterManagementForm.enableCycleSoak })}
@@ -2836,7 +3541,7 @@ const MobileZoneDetailsFull: React.FC = () => {
               </button>
 
               {/* Cycle & Soak Duration Settings - shown when enabled */}
-              {waterManagementForm.enableCycleSoak && (
+              {waterManagementForm.enableCycleSoak && !intervalModeUnsupported && intervalModeOriginal && (
                 <div className="space-y-4">
                   {/* Info */}
                   <div className="bg-cyan-500/10 rounded-xl p-4">
@@ -2848,23 +3553,59 @@ const MobileZoneDetailsFull: React.FC = () => {
                   {/* Cycle Duration (Watering) */}
                   <div>
                     <label className="text-white font-bold mb-3 block">{t('mobileZoneDetails.cycleDurationLabel')}</label>
-                    <div className="flex items-center gap-4 bg-mobile-surface-dark rounded-2xl p-4 border border-mobile-border-dark">
-                      <button
-                        onClick={() => setWaterManagementForm({ ...waterManagementForm, cycleMinutes: Math.max(2, waterManagementForm.cycleMinutes - 1) })}
-                        className="size-12 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center"
-                      >
-                        <span className="material-symbols-outlined text-xl">remove</span>
-                      </button>
-                      <div className="flex-1 text-center">
-                        <span className="text-4xl font-bold text-white">{waterManagementForm.cycleMinutes}</span>
-                        <span className="text-mobile-text-muted ml-2 text-lg">{t('common.minutesShort')}</span>
+                    <div className="grid grid-cols-2 gap-3 bg-mobile-surface-dark rounded-2xl p-4 border border-mobile-border-dark">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setWaterManagementForm({
+                            ...waterManagementForm,
+                            cycleMinutes: Math.max(0, waterManagementForm.cycleMinutes - 1)
+                          })}
+                          disabled={saving || intervalModeLoading}
+                          className="size-11 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center disabled:opacity-50"
+                        >
+                          <span className="material-symbols-outlined text-xl">remove</span>
+                        </button>
+                        <div className="flex-1 text-center">
+                          <span className="text-3xl font-bold text-white">{waterManagementForm.cycleMinutes}</span>
+                          <span className="text-mobile-text-muted ml-1 text-base">{t('common.minutesShort')}</span>
+                        </div>
+                        <button
+                          onClick={() => setWaterManagementForm({
+                            ...waterManagementForm,
+                            cycleMinutes: Math.min(60, waterManagementForm.cycleMinutes + 1)
+                          })}
+                          disabled={saving || intervalModeLoading}
+                          className="size-11 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center disabled:opacity-50"
+                        >
+                          <span className="material-symbols-outlined text-xl">add</span>
+                        </button>
                       </div>
-                      <button
-                        onClick={() => setWaterManagementForm({ ...waterManagementForm, cycleMinutes: Math.min(15, waterManagementForm.cycleMinutes + 1) })}
-                        className="size-12 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center"
-                      >
-                        <span className="material-symbols-outlined text-xl">add</span>
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setWaterManagementForm({
+                            ...waterManagementForm,
+                            cycleSeconds: Math.max(0, waterManagementForm.cycleSeconds - 5)
+                          })}
+                          disabled={saving || intervalModeLoading}
+                          className="size-11 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center disabled:opacity-50"
+                        >
+                          <span className="material-symbols-outlined text-xl">remove</span>
+                        </button>
+                        <div className="flex-1 text-center">
+                          <span className="text-3xl font-bold text-white">{waterManagementForm.cycleSeconds}</span>
+                          <span className="text-mobile-text-muted ml-1 text-base">{t('common.secondsShort')}</span>
+                        </div>
+                        <button
+                          onClick={() => setWaterManagementForm({
+                            ...waterManagementForm,
+                            cycleSeconds: Math.min(59, waterManagementForm.cycleSeconds + 5)
+                          })}
+                          disabled={saving || intervalModeLoading}
+                          className="size-11 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center disabled:opacity-50"
+                        >
+                          <span className="material-symbols-outlined text-xl">add</span>
+                        </button>
+                      </div>
                     </div>
                     <p className="text-mobile-text-muted text-xs text-center mt-1">{t('mobileZoneDetails.cycleDurationHint')}</p>
                   </div>
@@ -2872,23 +3613,59 @@ const MobileZoneDetailsFull: React.FC = () => {
                   {/* Soak Duration (Pause) */}
                   <div>
                     <label className="text-white font-bold mb-3 block">{t('mobileZoneDetails.soakDurationLabel')}</label>
-                    <div className="flex items-center gap-4 bg-mobile-surface-dark rounded-2xl p-4 border border-mobile-border-dark">
-                      <button
-                        onClick={() => setWaterManagementForm({ ...waterManagementForm, soakMinutes: Math.max(5, waterManagementForm.soakMinutes - 5) })}
-                        className="size-12 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center"
-                      >
-                        <span className="material-symbols-outlined text-xl">remove</span>
-                      </button>
-                      <div className="flex-1 text-center">
-                        <span className="text-4xl font-bold text-white">{waterManagementForm.soakMinutes}</span>
-                        <span className="text-mobile-text-muted ml-2 text-lg">{t('common.minutesShort')}</span>
+                    <div className="grid grid-cols-2 gap-3 bg-mobile-surface-dark rounded-2xl p-4 border border-mobile-border-dark">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setWaterManagementForm({
+                            ...waterManagementForm,
+                            soakMinutes: Math.max(0, waterManagementForm.soakMinutes - 1)
+                          })}
+                          disabled={saving || intervalModeLoading}
+                          className="size-11 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center disabled:opacity-50"
+                        >
+                          <span className="material-symbols-outlined text-xl">remove</span>
+                        </button>
+                        <div className="flex-1 text-center">
+                          <span className="text-3xl font-bold text-white">{waterManagementForm.soakMinutes}</span>
+                          <span className="text-mobile-text-muted ml-1 text-base">{t('common.minutesShort')}</span>
+                        </div>
+                        <button
+                          onClick={() => setWaterManagementForm({
+                            ...waterManagementForm,
+                            soakMinutes: Math.min(60, waterManagementForm.soakMinutes + 1)
+                          })}
+                          disabled={saving || intervalModeLoading}
+                          className="size-11 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center disabled:opacity-50"
+                        >
+                          <span className="material-symbols-outlined text-xl">add</span>
+                        </button>
                       </div>
-                      <button
-                        onClick={() => setWaterManagementForm({ ...waterManagementForm, soakMinutes: Math.min(30, waterManagementForm.soakMinutes + 5) })}
-                        className="size-12 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center"
-                      >
-                        <span className="material-symbols-outlined text-xl">add</span>
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setWaterManagementForm({
+                            ...waterManagementForm,
+                            soakSeconds: Math.max(0, waterManagementForm.soakSeconds - 5)
+                          })}
+                          disabled={saving || intervalModeLoading}
+                          className="size-11 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center disabled:opacity-50"
+                        >
+                          <span className="material-symbols-outlined text-xl">remove</span>
+                        </button>
+                        <div className="flex-1 text-center">
+                          <span className="text-3xl font-bold text-white">{waterManagementForm.soakSeconds}</span>
+                          <span className="text-mobile-text-muted ml-1 text-base">{t('common.secondsShort')}</span>
+                        </div>
+                        <button
+                          onClick={() => setWaterManagementForm({
+                            ...waterManagementForm,
+                            soakSeconds: Math.min(59, waterManagementForm.soakSeconds + 5)
+                          })}
+                          disabled={saving || intervalModeLoading}
+                          className="size-11 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center disabled:opacity-50"
+                        >
+                          <span className="material-symbols-outlined text-xl">add</span>
+                        </button>
+                      </div>
                     </div>
                     <p className="text-mobile-text-muted text-xs text-center mt-1">{t('mobileZoneDetails.soakDurationHint')}</p>
                   </div>
@@ -2946,198 +3723,168 @@ const MobileZoneDetailsFull: React.FC = () => {
         {/* Schedule Tab */}
         {activeTab === 'schedule' && (
           <div className="flex flex-col gap-4">
-            {/* Watering Mode Card - Tappable */}
-            <button
-              onClick={openWateringModeEdit}
-              className="bg-mobile-surface-dark rounded-2xl p-5 border border-mobile-border-dark text-left w-full hover:border-mobile-primary/50 transition-colors"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="size-12 rounded-full bg-mobile-primary/20 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-mobile-primary text-2xl">
-                      {currentWateringMode.startsWith('fao56') ? 'eco' : currentWateringMode === 'volume' ? 'water_drop' : 'timer'}
-                    </span>
+            <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4 space-y-2">
+              <button
+                onClick={openWateringModeEdit}
+                className="w-full rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5 text-left"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.wateringModeTitle')}</p>
+                    <p className="text-sm font-bold text-white mt-1 truncate">{currentWateringModeLabel}</p>
                   </div>
-                  <div>
-                    <p className="text-white font-bold">{t('mobileZoneDetails.wateringModeTitle')}</p>
-                    <p className="text-mobile-primary font-bold">
-                      {currentWateringMode === 'fao56_auto' ? t('mobileZoneDetails.modeLabels.fao56Auto') :
-                        currentWateringMode === 'fao56_eco' ? t('mobileZoneDetails.modeLabels.fao56Eco') :
-                          currentWateringMode === 'duration' ? t('zoneDetails.fixedDuration') : t('zoneDetails.fixedVolume')}
-                    </p>
-                  </div>
+                  <span className="material-symbols-outlined text-mobile-text-muted">chevron_right</span>
                 </div>
-                <span className="material-symbols-outlined text-mobile-text-muted">chevron_right</span>
-              </div>
-              <p className="text-mobile-text-muted text-sm">
-                {currentWateringMode.startsWith('fao56')
-                  ? t('mobileZoneDetails.wateringModeSmartDesc')
-                  : t('mobileZoneDetails.wateringModeManualDesc')}
-              </p>
-            </button>
+              </button>
 
-            {/* Schedule Settings - Only show if not full FAO-56 auto */}
-            <button
-              onClick={openScheduleEdit}
-              className="bg-mobile-surface-dark rounded-2xl p-5 border border-mobile-border-dark text-left w-full hover:border-mobile-primary/50 transition-colors"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="size-12 rounded-full bg-blue-500/20 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-blue-400 text-2xl">calendar_month</span>
-                  </div>
-                  <div>
-                    <p className="text-white font-bold">{t('zoneDetails.schedule')}</p>
-                    <p className="text-blue-400 font-bold">
+              <button
+                onClick={openScheduleEdit}
+                className="w-full rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5 text-left"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('zoneDetails.schedule')}</p>
+                    <p className="text-sm font-bold text-white mt-1 truncate">
                       {isFao56 ? t('mobileZoneDetails.scheduleAutomatic') : scheduleTypeLabel}
-                      {t('mobileZoneDetails.inlineSeparator')}
-                      {schedule?.auto_enabled ? t('labels.active') : t('labels.inactive')}
+                    </p>
+                    <p className="text-xs text-mobile-text-muted mt-0.5 truncate">
+                      {schedule?.auto_enabled
+                        ? `${scheduleDaysLabel}${t('mobileZoneDetails.inlineSeparator')}${scheduleTimeLabel}`
+                        : t('zoneDetails.notScheduled')}
                     </p>
                   </div>
+                  <span className="material-symbols-outlined text-mobile-text-muted">chevron_right</span>
                 </div>
-                <span className="material-symbols-outlined text-mobile-text-muted">chevron_right</span>
-              </div>
-              {!isFao56 && (
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <span className="bg-white/10 px-2 py-1 rounded-full text-white">{scheduleDaysLabel || t('zoneDetails.everyDay')}</span>
-                  <span className="bg-white/10 px-2 py-1 rounded-full text-white">{scheduleTimeLabel}</span>
-                  {schedule?.use_solar_timing && (
-                    <span className="bg-orange-500/20 px-2 py-1 rounded-full text-orange-400">
-                      {schedule.solar_event === 1 ? t('wizard.schedule.sunrise') : t('wizard.schedule.sunset')}
-                    </span>
+              </button>
+
+              <div className="rounded-xl border border-mobile-primary/30 bg-mobile-primary/10 px-3 py-2.5">
+                <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('zoneDetails.nextWatering')}</p>
+                <div className="flex items-end justify-between mt-1">
+                  <p className="text-xl font-black text-white">{nextWateringDisplay.time}</p>
+                  {isFao56 && autoCalc?.calculated_volume_l && (
+                    <p className="text-xs text-mobile-primary">
+                      {autoCalc.calculated_volume_l.toFixed(1)} {t('common.litersShort')}
+                    </p>
                   )}
                 </div>
-              )}
-              {isFao56 && (
-                <p className="text-mobile-text-muted text-sm">
-                  {t('mobileZoneDetails.scheduleAutoNote')}
-                </p>
-              )}
-            </button>
-
-            {/* Growing Environment Section Header */}
-            <h3 className="text-mobile-text-muted text-xs font-bold uppercase tracking-wider mt-4 px-1">
-              {t('mobileZoneDetails.growingEnvironmentTitle')}
-            </h3>
-
-            {/* Plant */}
-            <button
-              onClick={openPlantEdit}
-              className="bg-mobile-surface-dark rounded-2xl p-4 border border-mobile-border-dark text-left w-full hover:border-mobile-primary/50 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-2xl">potted_plant</span>
-                  <div>
-                    <p className="text-mobile-text-muted text-xs">{t('zones.plant')}</p>
-                    <p className="text-white font-bold">{plantName}</p>
-                  </div>
-                </div>
-                <span className="material-symbols-outlined text-mobile-text-muted">chevron_right</span>
+                <p className="text-xs text-mobile-text-muted mt-1">{nextWateringDisplay.date}</p>
               </div>
-            </button>
+            </div>
 
-            {/* Soil */}
-            <button
-              onClick={openSoilEdit}
-              className="bg-mobile-surface-dark rounded-2xl p-4 border border-mobile-border-dark text-left w-full hover:border-mobile-primary/50 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-2xl">landscape</span>
-                  <div>
-                    <p className="text-mobile-text-muted text-xs">{t('zones.soilType')}</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-white font-bold">{soilName}</p>
-                      {isCustomSoil && (
-                        <span className="inline-flex items-center gap-1 bg-mobile-primary/20 text-mobile-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                          <span className="material-symbols-outlined text-xs">satellite_alt</span>
-                          GPS
-                        </span>
-                      )}
+            <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4">
+              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-mobile-text-muted mb-3">
+                {t('mobileZoneDetails.growingEnvironmentTitle')}
+              </h3>
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={openZoneNameEdit}
+                    className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5 text-left"
+                  >
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneConfig.zoneName')}</p>
+                    <p className="text-sm font-bold text-white mt-1 truncate">{zone.name}</p>
+                  </button>
+
+                  <button
+                    onClick={openPlantingDateEdit}
+                    className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5 text-left"
+                  >
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('zoneDetails.selectPlantingDate')}</p>
+                    <p className="text-sm font-bold text-white mt-1 truncate">{plantingDateLabel}</p>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={openLocationEdit}
+                    className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5 text-left"
+                  >
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('zoneWizard.locationSetup.title')}</p>
+                    <p className="text-sm font-bold text-white mt-1 truncate">{latitudeLabel}</p>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      void openWaterManagementEdit();
+                    }}
+                    className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5 text-left"
+                  >
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.waterManagement')}</p>
+                    <p className="text-sm font-bold text-white mt-1 truncate">
+                      {growing?.enable_cycle_soak ? t('labels.active') : t('labels.inactive')}
+                    </p>
+                  </button>
+                </div>
+
+                <button
+                  onClick={openPlantEdit}
+                  className="w-full rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5 text-left"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('zones.plant')}</p>
+                      <p className="text-sm font-bold text-white mt-1 truncate">{plantName}</p>
                     </div>
+                    <span className="material-symbols-outlined text-mobile-text-muted">chevron_right</span>
                   </div>
-                </div>
-                <span className="material-symbols-outlined text-mobile-text-muted">chevron_right</span>
-              </div>
-            </button>
+                </button>
 
-            {/* Irrigation Method */}
-            <button
-              onClick={openIrrigationEdit}
-              className="bg-mobile-surface-dark rounded-2xl p-4 border border-mobile-border-dark text-left w-full hover:border-mobile-primary/50 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-2xl">water_drop</span>
-                  <div>
-                    <p className="text-mobile-text-muted text-xs">{t('zones.irrigationMethod')}</p>
-                    <p className="text-white font-bold">{irrigationMethodName}</p>
+                <button
+                  onClick={openSoilEdit}
+                  className="w-full rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5 text-left"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('zones.soilType')}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-sm font-bold text-white truncate">{soilName}</p>
+                        {isCustomSoil && (
+                          <span className="inline-flex items-center rounded-full bg-mobile-primary/20 px-1.5 py-0.5 text-[10px] font-bold text-mobile-primary">
+                            GPS
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className="material-symbols-outlined text-mobile-text-muted">chevron_right</span>
                   </div>
-                </div>
-                <span className="material-symbols-outlined text-mobile-text-muted">chevron_right</span>
-              </div>
-            </button>
+                </button>
 
-            {/* Coverage */}
-            <button
-              onClick={openCoverageEdit}
-              className="bg-mobile-surface-dark rounded-2xl p-4 border border-mobile-border-dark text-left w-full hover:border-mobile-primary/50 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-2xl">square_foot</span>
-                  <div>
-                    <p className="text-mobile-text-muted text-xs">{t('mobileZoneDetails.coverageTitle')}</p>
-                    <p className="text-white font-bold">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={openIrrigationEdit}
+                    className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5 text-left"
+                  >
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('zones.irrigationMethod')}</p>
+                    <p className="text-sm font-bold text-white mt-1 truncate">{irrigationMethodName}</p>
+                  </button>
+
+                  <button
+                    onClick={openCoverageEdit}
+                    className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5 text-left"
+                  >
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.coverageTitle')}</p>
+                    <p className="text-sm font-bold text-white mt-1 truncate">
                       {growing?.use_area_based
                         ? `${growing.coverage.area_m2?.toFixed(1) ?? '--'} ${t('mobileZoneDetails.units.squareMeters')}`
                         : `${growing?.coverage.plant_count ?? '--'} ${t('mobileZoneDetails.units.plants')}`}
                     </p>
-                  </div>
+                  </button>
                 </div>
-                <span className="material-symbols-outlined text-mobile-text-muted">chevron_right</span>
-              </div>
-            </button>
 
-            {/* Sun Exposure - 3 levels */}
-            <button
-              onClick={openSunEdit}
-              className="bg-mobile-surface-dark rounded-2xl p-4 border border-mobile-border-dark text-left w-full hover:border-mobile-primary/50 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-2xl">
-                    {currentSunLevel === 'shade' ? 'cloud' : currentSunLevel === 'partial' ? 'partly_cloudy_day' : 'wb_sunny'}
-                  </span>
-                  <div>
-                    <p className="text-mobile-text-muted text-xs">{t('mobileZoneDetails.sunExposureTitle')}</p>
-                    <p className="text-white font-bold">
-                      {currentSunLevel === 'shade' ? t('zoneDetails.shade') : currentSunLevel === 'partial' ? t('zoneDetails.partialSun') : t('zoneDetails.fullSun')}
-                    </p>
+                <button
+                  onClick={openSunEdit}
+                  className="w-full rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5 text-left"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.sunExposureTitle')}</p>
+                      <p className="text-sm font-bold text-white mt-1 truncate">
+                        {currentSunLevel === 'shade' ? t('zoneDetails.shade') : currentSunLevel === 'partial' ? t('zoneDetails.partialSun') : t('zoneDetails.fullSun')}
+                      </p>
+                    </div>
+                    <span className="material-symbols-outlined text-mobile-text-muted">chevron_right</span>
                   </div>
-                </div>
-                <span className="material-symbols-outlined text-mobile-text-muted">chevron_right</span>
-              </div>
-            </button>
-
-            {/* Next Watering Preview */}
-            {/* Next Watering Preview - show calculated volume only for FAO-56 */}
-            <div className="bg-gradient-to-br from-mobile-primary/10 to-mobile-primary/5 rounded-2xl p-5 border border-mobile-primary/30 mt-4">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="material-symbols-outlined text-mobile-primary">schedule</span>
-                <span className="text-white font-bold">{t('zoneDetails.nextWatering')}</span>
-              </div>
-              <div className="text-center py-2">
-                <p className="text-4xl font-bold text-white">{nextWateringDisplay.time}</p>
-                <p className="text-mobile-text-muted">{nextWateringDisplay.date}</p>
-                {isFao56 && autoCalc?.calculated_volume_l && (
-                  <p className="text-mobile-primary text-sm mt-2">
-                    {t('mobileZoneDetails.estimatedVolume')
-                      .replace('{value}', autoCalc.calculated_volume_l.toFixed(1))
-                      .replace('{unit}', t('common.litersShort'))}
-                  </p>
-                )}
+                </button>
               </div>
             </div>
           </div>
@@ -3145,101 +3892,13 @@ const MobileZoneDetailsFull: React.FC = () => {
 
         {/* Compensation Tab */}
         {activeTab === 'compensation' && (
-          <div className="flex flex-col gap-6">
-            {/* FAO-56 mode - smart adjustments explained simply */}
+          <div className="flex flex-col gap-4">
             {isFao56 ? (
-              <div className="flex flex-col gap-4">
-                {/* Smart Mode Banner */}
-                <div className="bg-gradient-to-br from-mobile-primary/20 to-mobile-primary/5 rounded-2xl p-5 border border-mobile-primary/30">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="size-12 rounded-full bg-mobile-primary/30 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-mobile-primary text-2xl">auto_awesome</span>
-                    </div>
-                    <div>
-                      <p className="text-white font-bold">{t('mobileZoneDetails.smartWateringActive')}</p>
-                      <p className="text-mobile-primary text-sm">{t('mobileZoneDetails.adjustmentsAutomatic')}</p>
-                    </div>
-                  </div>
-                  <p className="text-mobile-text-muted text-sm leading-relaxed">
-                    {t('mobileZoneDetails.smartModeDescription')}
-                  </p>
-                </div>
-
-                {/* Simple Weather Stats */}
-                <h3 className="text-mobile-text-muted text-xs font-bold uppercase tracking-wider px-1">
-                  {t('mobileZoneDetails.currentWeatherImpact')}
-                </h3>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Water Loss (ET0) */}
-                  <div className="bg-mobile-surface-dark rounded-2xl p-4 border border-mobile-border-dark">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="material-symbols-outlined text-orange-400">wb_sunny</span>
-                      <span className="text-mobile-text-muted text-xs">{t('mobileZoneDetails.waterLossLabel')}</span>
-                    </div>
-                    <p className="text-2xl font-bold text-white">
-                      {autoCalc?.et0_mm_day?.toFixed(1) ?? '--'}
-                      <span className="text-sm text-mobile-text-muted ml-1">{t('mobileZoneDetails.units.mmPerDay')}</span>
-                    </p>
-                    <p className="text-xs text-mobile-text-muted mt-1">
-                      {(autoCalc?.et0_mm_day ?? 0) > 5 ? t('zoneDetails.highEvaporation') :
-                        (autoCalc?.et0_mm_day ?? 0) > 3 ? t('zoneDetails.normalEvaporation') : t('zoneDetails.lowEvaporation')}
-                    </p>
-                  </div>
-
-                  {/* Plant Needs */}
-                  <div className="bg-mobile-surface-dark rounded-2xl p-4 border border-mobile-border-dark">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="material-symbols-outlined text-green-400">eco</span>
-                      <span className="text-mobile-text-muted text-xs">{t('mobileZoneDetails.plantNeedsLabel')}</span>
-                    </div>
-                    <p className="text-2xl font-bold text-white">
-                      {autoCalc?.etc_mm_day?.toFixed(1) ?? '--'}
-                      <span className="text-sm text-mobile-text-muted ml-1">{t('mobileZoneDetails.units.mmPerDay')}</span>
-                    </p>
-                    <p className="text-xs text-mobile-text-muted mt-1">
-                      {t('mobileZoneDetails.plantNeedsNote')}
-                    </p>
-                  </div>
-
-                  {/* Rain Benefit */}
-                  <div className="bg-mobile-surface-dark rounded-2xl p-4 border border-mobile-border-dark">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="material-symbols-outlined text-blue-400">water_drop</span>
-                      <span className="text-mobile-text-muted text-xs">{t('mobileZoneDetails.rainBenefit')}</span>
-                    </div>
-                    <p className="text-2xl font-bold text-white">
-                      {autoCalc?.effective_rain_mm?.toFixed(1) ?? '0'}
-                      <span className="text-sm text-mobile-text-muted ml-1">{t('mobileZoneDetails.units.mm')}</span>
-                    </p>
-                    <p className="text-xs text-mobile-text-muted mt-1">
-                      {(autoCalc?.effective_rain_mm ?? 0) > 0
-                        ? t('mobileZoneDetails.rainBenefitPositive')
-                        : t('mobileZoneDetails.rainBenefitNone')}
-                    </p>
-                  </div>
-
-                  {/* Current Deficit */}
-                  <div className="bg-mobile-surface-dark rounded-2xl p-4 border border-mobile-border-dark">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="material-symbols-outlined text-red-400">trending_down</span>
-                      <span className="text-mobile-text-muted text-xs">{t('mobileZoneDetails.waterDeficit')}</span>
-                    </div>
-                    <p className="text-2xl font-bold text-white">
-                      {autoCalc?.current_deficit_mm?.toFixed(1) ?? '0'}
-                      <span className="text-sm text-mobile-text-muted ml-1">{t('mobileZoneDetails.units.mm')}</span>
-                    </p>
-                    <p className="text-xs text-mobile-text-muted mt-1">
-                      {autoCalc?.irrigation_needed ? t('zoneDetails.irrigationNeeded') : t('zoneDetails.soilHasEnough')}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Summary */}
-                <div className="bg-mobile-card-dark rounded-2xl p-4 border border-white/5">
-                  <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-mobile-primary text-2xl">info</span>
-                    <p className="text-white text-sm">
+              <div className="rounded-2xl border border-mobile-primary/30 bg-mobile-primary/10 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.currentWeatherImpact')}</p>
+                    <p className="text-sm font-bold text-white mt-1 truncate">
                       {autoCalc?.irrigation_needed
                         ? t('mobileZoneDetails.summaryNeeds')
                           .replace('{volume}', String(autoCalc?.calculated_volume_l?.toFixed(0) ?? '--'))
@@ -3247,193 +3906,125 @@ const MobileZoneDetailsFull: React.FC = () => {
                         : t('mobileZoneDetails.summaryEnough')}
                     </p>
                   </div>
+                  <span className="rounded-full bg-mobile-primary/20 px-2 py-1 text-[10px] font-bold uppercase text-mobile-primary">
+                    FAO-56
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  <div className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.waterLossLabel')}</p>
+                    <p className="text-sm font-bold text-white mt-1">
+                      {autoCalc?.et0_mm_day?.toFixed(1) ?? '--'} <span className="text-xs text-mobile-text-muted">{t('mobileZoneDetails.units.mmPerDay')}</span>
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.plantNeedsLabel')}</p>
+                    <p className="text-sm font-bold text-white mt-1">
+                      {autoCalc?.etc_mm_day?.toFixed(1) ?? '--'} <span className="text-xs text-mobile-text-muted">{t('mobileZoneDetails.units.mmPerDay')}</span>
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.rainBenefit')}</p>
+                    <p className="text-sm font-bold text-white mt-1">
+                      {autoCalc?.effective_rain_mm?.toFixed(1) ?? '--'} <span className="text-xs text-mobile-text-muted">{t('mobileZoneDetails.units.mm')}</span>
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5">
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.waterDeficit')}</p>
+                    <p className="text-sm font-bold text-white mt-1">
+                      {autoCalc?.current_deficit_mm?.toFixed(1) ?? '--'} <span className="text-xs text-mobile-text-muted">{t('mobileZoneDetails.units.mm')}</span>
+                    </p>
+                  </div>
                 </div>
               </div>
             ) : (
-              <>
-                {/* Today's Compensation Card */}
-                <div className="flex flex-col gap-4 rounded-2xl bg-mobile-card-dark p-6 border border-white/5">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-mobile-text-muted text-sm font-medium mb-1">{t('mobileZoneDetails.todaysAdjustment')}</p>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-bold tracking-tight text-white">{totalCompensationFactor}{t('common.percent')}</span>
-                        {compensationDelta !== 0 && (
-                          <span className={`text-sm font-bold px-2 py-0.5 rounded-full ${compensationDelta > 0
-                            ? 'bg-orange-500/20 text-orange-400'
-                            : 'bg-blue-500/20 text-blue-400'
-                            }`}>
-                            {compensationDelta > 0 ? '+' : ''}{compensationDelta}{t('common.percent')}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className={`size-12 rounded-full flex items-center justify-center ${compensation?.any_compensation_active
-                      ? 'bg-mobile-primary/20 text-mobile-primary'
-                      : 'bg-white/10 text-gray-500'
-                      }`}>
-                      <span className="material-symbols-outlined">tune</span>
-                    </div>
+              <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4">
+                <div className="flex items-end justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.todaysAdjustment')}</p>
+                    <p className="text-3xl font-black text-white mt-1">
+                      {totalCompensationFactor}{t('common.percent')}
+                    </p>
                   </div>
-
-                  {/* Progress bar */}
-                  <div className="space-y-2">
-                    <div className="h-3 w-full bg-black/40 rounded-full overflow-hidden relative">
-                      <div className="absolute left-[66%] top-0 bottom-0 w-0.5 bg-gray-400 z-10" />
-                      <div
-                        className={`h-full rounded-full transition-all ${totalCompensationFactor > 100 ? 'bg-orange-500' : totalCompensationFactor < 100 ? 'bg-blue-500' : 'bg-mobile-primary'
-                          }`}
-                        style={{ width: `${Math.min(100, (totalCompensationFactor / 150) * 100)}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-xs text-mobile-text-muted font-medium">
-                      <span>{t('mobileZoneDetails.lessWater')}</span>
-                      <span>{t('mobileZoneDetails.normalWater')}</span>
-                      <span>{t('mobileZoneDetails.moreWater')}</span>
-                    </div>
-                  </div>
-
-                  <p className="text-gray-300 text-sm leading-relaxed">
-                    {!compensation?.any_compensation_active
-                      ? t('mobileZoneDetails.noWeatherAdjustments')
-                      : compensationDelta > 0
-                        ? t('mobileZoneDetails.hotWeatherNote')
-                        : t('mobileZoneDetails.rainWeatherNote')
-                    }
-                  </p>
-                </div>
-
-                {/* Compensation Rules */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted pl-2">
-                    {t('mobileZoneDetails.weatherAdjustments')}
-                  </h3>
-
-                  {/* Rain Compensation */}
-                  <div className={`flex items-center justify-between gap-4 rounded-2xl p-5 border border-white/5 relative overflow-hidden ${compConfig?.rain.enabled ? 'bg-mobile-card-dark' : 'bg-mobile-surface-dark/50 opacity-70'
-                    }`}>
-                    {compConfig?.rain.enabled && compensation?.rain.active && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500" />}
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className={`size-12 rounded-full flex items-center justify-center shrink-0 ${compConfig?.rain.enabled ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-gray-500'
-                        }`}>
-                        <span className="material-symbols-outlined">water_drop</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <h4 className={`text-base font-bold ${compConfig?.rain.enabled ? 'text-white' : 'text-mobile-text-muted'}`}>
-                            {t('mobileZoneDetails.rainAdjustmentTitle')}
-                          </h4>
-                          {compConfig?.rain.enabled && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${compensation?.rain.active
-                              ? 'bg-blue-500/20 text-blue-400'
-                              : 'bg-green-500/20 text-green-400'
-                              }`}>
-                              {compensation?.rain.active ? t('labels.active') : t('mobileZoneDetails.enabledLabel')}
-                            </span>
-                          )}
-                        </div>
-                        {compConfig?.rain.enabled ? (
-                          compensation?.rain.active ? (
-                            <>
-                              <p className="text-xs text-mobile-text-muted font-medium">
-                                {t('mobileZoneDetails.recentRain')
-                                  .replace('{value}', compensation.rain.recent_rainfall_mm.toFixed(1))
-                                  .replace('{unit}', t('mobileZoneDetails.units.mm'))}
-                              </p>
-                              <p className="text-xs text-blue-400 font-bold mt-1">
-                                {compensation.rain.skip_watering
-                                  ? t('mobileZoneDetails.skipNextWatering')
-                                  : t('mobileZoneDetails.usingLessWater')
-                                    .replace('{percent}', compensation.rain.reduction_percentage.toFixed(0))
-                                }
-                              </p>
-                            </>
-                          ) : (
-                            <p className="text-xs text-mobile-text-muted font-medium">{t('mobileZoneDetails.waitingForRain')}</p>
-                          )
-                        ) : (
-                          <p className="text-xs text-mobile-text-muted font-medium">{t('mobileZoneDetails.tapSettingsToEnable')}</p>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      className="text-mobile-text-muted hover:text-mobile-primary transition-colors"
-                      onClick={openRainCompEdit}
-                    >
-                      <span className="material-symbols-outlined">settings</span>
-                    </button>
-                  </div>
-
-                  {/* Temperature Compensation */}
-                  <div className={`flex items-center justify-between gap-4 rounded-2xl p-5 border border-white/5 relative overflow-hidden ${compConfig?.temp.enabled ? 'bg-mobile-card-dark' : 'bg-mobile-surface-dark/50 opacity-70'
-                    }`}>
-                    {compConfig?.temp.enabled && compensation?.temperature.active && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-orange-500" />}
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className={`size-12 rounded-full flex items-center justify-center shrink-0 ${compConfig?.temp.enabled ? 'bg-orange-500/20 text-orange-400' : 'bg-white/5 text-gray-500'
-                        }`}>
-                        <span className="material-symbols-outlined">thermostat</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <h4 className={`text-base font-bold ${compConfig?.temp.enabled ? 'text-white' : 'text-mobile-text-muted'}`}>
-                            {t('mobileZoneDetails.tempAdjustmentTitle')}
-                          </h4>
-                          {compConfig?.temp.enabled && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${compensation?.temperature.active
-                              ? 'bg-orange-500/20 text-orange-400'
-                              : 'bg-green-500/20 text-green-400'
-                              }`}>
-                              {compensation?.temperature.active ? t('labels.active') : t('mobileZoneDetails.enabledLabel')}
-                            </span>
-                          )}
-                        </div>
-                        {compConfig?.temp.enabled ? (
-                          compensation?.temperature.active ? (
-                            <>
-                              <p className="text-xs text-mobile-text-muted font-medium">
-                                {t('mobileZoneDetails.currentTemp')
-                                  .replace('{value}', compensation.temperature.current_temperature.toFixed(1))
-                                  .replace('{unit}', t('common.degreesC'))}
-                              </p>
-                              <p className="text-xs text-orange-400 font-bold mt-1">
-                                {t('mobileZoneDetails.tempFactor')
-                                  .replace('{value}', (compensation.temperature.factor * 100).toFixed(0))}
-                              </p>
-                            </>
-                          ) : (
-                            <p className="text-xs text-mobile-text-muted font-medium">
-                              {t('mobileZoneDetails.baseTemp')
-                                .replace('{value}', compConfig.temp.base_temperature.toFixed(0))
-                                .replace('{unit}', t('common.degreesC'))}
-                            </p>
-                          )
-                        ) : (
-                          <p className="text-xs text-mobile-text-muted font-medium">{t('mobileZoneDetails.tapSettingsToEnable')}</p>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      className="text-mobile-text-muted hover:text-mobile-primary transition-colors"
-                      onClick={openTempCompEdit}
-                    >
-                      <span className="material-symbols-outlined">settings</span>
-                    </button>
-                  </div>
-
-                  {/* Summary info when no compensation configured */}
-                  {!compConfig?.rain.enabled && !compConfig?.temp.enabled && (
-                    <div className="text-center py-4 text-mobile-text-muted text-sm">
-                      <p>{t('mobileZoneDetails.noCompensationConfigured')}</p>
-                      <p className="mt-1">{t('mobileZoneDetails.enableCompensationHint')}</p>
-                    </div>
+                  {compensationDelta !== 0 && (
+                    <span className={`rounded-full px-2 py-1 text-xs font-bold ${compensationDelta > 0 ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                      {compensationDelta > 0 ? '+' : ''}{compensationDelta}{t('common.percent')}
+                    </span>
                   )}
                 </div>
+                <div className="mt-3 h-2 w-full rounded-full bg-mobile-border-dark overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${totalCompensationFactor > 100 ? 'bg-orange-500' : totalCompensationFactor < 100 ? 'bg-blue-500' : 'bg-mobile-primary'}`}
+                    style={{ width: `${Math.min(100, (totalCompensationFactor / 150) * 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-mobile-text-muted mt-2">
+                  {!compensation?.any_compensation_active
+                    ? t('mobileZoneDetails.noWeatherAdjustments')
+                    : compensationDelta > 0
+                      ? t('mobileZoneDetails.hotWeatherNote')
+                      : t('mobileZoneDetails.rainWeatherNote')}
+                </p>
+              </div>
+            )}
 
-                <button className="w-full bg-mobile-primary hover:bg-green-400 text-black font-bold py-4 rounded-xl shadow-lg shadow-mobile-primary/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
-                  <span className="material-symbols-outlined">tune</span>
+            {canConfigureCompensation ? (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={openRainCompEdit}
+                    className="rounded-xl border border-mobile-border-dark bg-mobile-surface-dark px-3 py-3 text-left"
+                  >
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.rainAdjustmentTitle')}</p>
+                    <p className="text-sm font-bold text-white mt-1 truncate">
+                      {compConfig?.rain.enabled ? (compensation?.rain.active ? t('labels.active') : t('mobileZoneDetails.enabledLabel')) : t('labels.inactive')}
+                    </p>
+                    {compConfig?.rain.enabled && compensation?.rain.active && (
+                      <p className="text-xs text-blue-400 mt-1 truncate">
+                        {compensation.rain.reduction_percentage.toFixed(0)}{t('common.percent')}
+                      </p>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={openTempCompEdit}
+                    className="rounded-xl border border-mobile-border-dark bg-mobile-surface-dark px-3 py-3 text-left"
+                  >
+                    <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.tempAdjustmentTitle')}</p>
+                    <p className="text-sm font-bold text-white mt-1 truncate">
+                      {compConfig?.temp.enabled ? (compensation?.temperature.active ? t('labels.active') : t('mobileZoneDetails.enabledLabel')) : t('labels.inactive')}
+                    </p>
+                    {compConfig?.temp.enabled && compensation?.temperature.active && (
+                      <p className="text-xs text-orange-400 mt-1 truncate">
+                        {t('mobileZoneDetails.tempFactor').replace('{value}', (compensation.temperature.factor * 100).toFixed(0))}
+                      </p>
+                    )}
+                  </button>
+                </div>
+
+                {!compConfig?.rain.enabled && !compConfig?.temp.enabled && (
+                  <div className="rounded-xl border border-mobile-border-dark bg-mobile-surface-dark px-3 py-2.5 text-xs text-mobile-text-muted">
+                    {t('mobileZoneDetails.enableCompensationHint')}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => {
+                    if (!compConfig?.rain.enabled && compConfig?.temp.enabled) {
+                      openTempCompEdit();
+                      return;
+                    }
+                    openRainCompEdit();
+                  }}
+                  className="w-full rounded-xl bg-mobile-primary py-3 font-bold text-mobile-bg-dark transition-all active:scale-[0.98]"
+                >
                   {t('mobileZoneDetails.configureCompensation')}
                 </button>
               </>
+            ) : (
+              <div className="rounded-xl border border-mobile-border-dark bg-mobile-surface-dark px-3 py-2.5 text-xs text-mobile-text-muted">
+                Compensation is available only for Duration/Volume modes. Switch from FAO-56 to configure it.
+              </div>
             )}
           </div>
         )}
@@ -3441,96 +4032,84 @@ const MobileZoneDetailsFull: React.FC = () => {
         {/* History Tab */}
         {activeTab === 'history' && (
           <div className="flex flex-col gap-4">
-            {/* Summary Stats from Statistics */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col rounded-2xl bg-mobile-card-dark p-5 border border-white/5">
-                <span className="text-mobile-text-muted text-xs font-bold uppercase mb-2">{t('labels.totalVolume')}</span>
-                <span className="text-2xl font-bold text-white">
-                  {zoneStats ? (zoneStats.total_volume / 1000).toFixed(1) : '--'}{t('common.litersShort')}
-                </span>
-                <span className="text-xs text-mobile-text-muted">{t('mobileZoneDetails.allTime')}</span>
-              </div>
-              <div className="flex flex-col rounded-2xl bg-mobile-card-dark p-5 border border-white/5">
-                <span className="text-mobile-text-muted text-xs font-bold uppercase mb-2">{t('labels.sessions')}</span>
-                <span className="text-2xl font-bold text-white">{zoneStats?.count ?? '--'}</span>
-                <span className="text-xs text-mobile-text-muted">{t('mobileZoneDetails.totalRuns')}</span>
-              </div>
-            </div>
-
-            {/* Additional Stats - computed from available data */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="flex flex-col rounded-xl bg-mobile-surface-dark p-4 border border-white/5 text-center">
-                <span className="text-mobile-primary text-lg font-bold">
-                  {zoneStats && zoneStats.count > 0
-                    ? ((zoneStats.total_volume / zoneStats.count) / 1000).toFixed(1)
-                    : '--'}
-                </span>
-                <span className="text-xs text-mobile-text-muted">{t('mobileZoneDetails.avgLiters')}</span>
-              </div>
-              <div className="flex flex-col rounded-xl bg-mobile-surface-dark p-4 border border-white/5 text-center">
-                <span className="text-mobile-primary text-lg font-bold">
-                  {zoneStats?.last_volume
-                    ? (zoneStats.last_volume / 1000).toFixed(1)
-                    : '--'}
-                </span>
-                <span className="text-xs text-mobile-text-muted">{t('mobileZoneDetails.lastLiters')}</span>
-              </div>
-              <div className="flex flex-col rounded-xl bg-mobile-surface-dark p-4 border border-white/5 text-center">
-                <span className="text-mobile-primary text-lg font-bold">
-                  {zoneStats?.last_watering
-                    ? new Date(zoneStats.last_watering * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-                    : '--'}
-                </span>
-                <span className="text-xs text-mobile-text-muted">{t('mobileZoneDetails.lastRun')}</span>
+            <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5">
+                  <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('labels.totalVolume')}</p>
+                  <p className="text-lg font-bold text-white mt-1">
+                    {zoneStats ? (zoneStats.total_volume / 1000).toFixed(1) : '--'} {t('common.litersShort')}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5">
+                  <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('labels.sessions')}</p>
+                  <p className="text-lg font-bold text-white mt-1">{zoneStats?.count ?? '--'}</p>
+                </div>
+                <div className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5">
+                  <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.avgLiters')}</p>
+                  <p className="text-sm font-bold text-white mt-1">
+                    {zoneStats && zoneStats.count > 0
+                      ? ((zoneStats.total_volume / zoneStats.count) / 1000).toFixed(1)
+                      : '--'} {t('common.litersShort')}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5">
+                  <p className="text-[10px] uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.lastRun')}</p>
+                  <p className="text-sm font-bold text-white mt-1">
+                    {zoneStats?.last_watering
+                      ? new Date(zoneStats.last_watering * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                      : '--'}
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* Activity List */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted">{t('mobileZoneDetails.recentActivity')}</h4>
+            <div className="rounded-2xl border border-mobile-border-dark bg-mobile-surface-dark p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h4 className="text-[11px] font-semibold uppercase tracking-wide text-mobile-text-muted">{t('mobileZoneDetails.recentActivity')}</h4>
+                <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-bold text-white">
+                  {zoneHistory.length}
+                </span>
+              </div>
 
               {zoneHistory.length === 0 ? (
-                <div className="text-center py-8 text-mobile-text-muted">
-                  <span className="material-symbols-outlined text-4xl mb-2 block">history</span>
-                  <p>{t('mobileZoneDetails.noHistory')}</p>
+                <div className="rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 py-8 text-center text-mobile-text-muted">
+                  <span className="material-symbols-outlined mb-2 block text-3xl">history</span>
+                  <p className="text-sm">{t('mobileZoneDetails.noHistory')}</p>
                 </div>
               ) : (
-                zoneHistory.map((entry) => {
-                  const date = new Date(entry.timestamp * 1000);
-                  const isSuccess = entry.success_status === 1;
-                  const isError = entry.event_type === 3;
-                  const durationMin = Math.round(entry.actual_value_ml / (entry.flow_rate_avg || 100) / 60);
-                  const volumeL = (entry.total_volume_ml / 1000).toFixed(1);
-                  const triggerLabels = [t('labels.manual'), t('labels.schedule'), t('labels.remote')];
+                <div className="space-y-2">
+                  {zoneHistory.map((entry) => {
+                    const date = new Date(entry.timestamp * 1000);
+                    const isSuccess = entry.success_status === 1;
+                    const isError = entry.event_type === 3;
+                    const durationMin = Math.round(entry.actual_value_ml / (entry.flow_rate_avg || 100) / 60);
+                    const volumeL = (entry.total_volume_ml / 1000).toFixed(1);
+                    const triggerLabels = [t('labels.manual'), t('labels.schedule'), t('labels.remote')];
 
-                  return (
-                    <div key={entry.timestamp} className="flex items-center gap-4 p-4 rounded-xl bg-mobile-surface-dark border border-white/5">
-                      <div className={`size-10 rounded-full flex items-center justify-center ${isError ? 'bg-red-500/10 text-red-400' :
-                        isSuccess ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-yellow-500/10 text-yellow-400'
-                        }`}>
-                        <span className="material-symbols-outlined">
-                          {isError ? 'error' : isSuccess ? 'check_circle' : 'warning'}
+                    return (
+                      <div key={entry.timestamp} className="flex items-start gap-3 rounded-xl border border-mobile-border-dark bg-mobile-bg-dark/50 px-3 py-2.5">
+                        <div className={`mt-0.5 size-8 shrink-0 rounded-full flex items-center justify-center ${isError ? 'bg-red-500/10 text-red-400' : isSuccess ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-yellow-500/10 text-yellow-400'}`}>
+                          <span className="material-symbols-outlined text-[18px]">
+                            {isError ? 'error' : isSuccess ? 'check_circle' : 'warning'}
+                          </span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold text-white">
+                            {date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}, {date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                          <p className="truncate text-xs text-mobile-text-muted mt-0.5">
+                            {isError
+                              ? t('mobileZoneDetails.errorCode').replace('{code}', String(entry.error_code))
+                              : `${durationMin} ${t('common.minutesShort')}${t('mobileZoneDetails.inlineSeparator')}${volumeL}${t('common.litersShort')}${t('mobileZoneDetails.inlineSeparator')}${triggerLabels[entry.trigger_type] ?? t('labels.unknown')}`}
+                          </p>
+                        </div>
+                        <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase ${isError ? 'bg-red-500/10 text-red-400' : isSuccess ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-yellow-500/10 text-yellow-400'}`}>
+                          {isError ? t('common.error') : isSuccess ? t('common.ok') : t('mobileZoneDetails.statusPartial')}
                         </span>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-white font-bold">
-                          {date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}, {date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                        <p className="text-mobile-text-muted text-sm">
-                          {isError
-                            ? t('mobileZoneDetails.errorCode').replace('{code}', String(entry.error_code))
-                            : `${durationMin} ${t('common.minutesShort')}${t('mobileZoneDetails.inlineSeparator')}${volumeL}${t('common.litersShort')}${t('mobileZoneDetails.inlineSeparator')}${triggerLabels[entry.trigger_type] ?? t('labels.unknown')}`
-                          }
-                        </p>
-                      </div>
-                      <span className={`text-xs font-bold uppercase px-2 py-1 rounded ${isError ? 'bg-red-500/10 text-red-400' :
-                        isSuccess ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-yellow-500/10 text-yellow-400'
-                        }`}>
-                        {isError ? t('common.error') : isSuccess ? t('common.ok') : t('mobileZoneDetails.statusPartial')}
-                      </span>
-                    </div>
-                  );
-                })
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>
@@ -3538,9 +4117,44 @@ const MobileZoneDetailsFull: React.FC = () => {
       </div>
 
       {/* Exit toast removed - double-back-to-exit is handled only in AndroidBackButtonHandler on Dashboard */}
+
+      <MobilePlantIdReviewSheet
+        isOpen={!!plantReview}
+        reason={plantReview?.reason ?? 'not_found'}
+        detectedName={
+          plantReview
+            ? (plantReview.candidate.canonical_name
+              || plantReview.candidate.scientific_name
+              || plantReview.candidate.scientificName
+              || '')
+            : ''
+        }
+        probability={plantReview?.candidate.probability ?? null}
+        suggestedPlant={plantReview?.suggestedPlant ?? null}
+        onUseSuggested={plantReview?.suggestedPlant ? handleUseSuggestedPlantFromReview : undefined}
+        onChooseManually={handleChoosePlantManuallyFromReview}
+        onClose={() => setPlantReview(null)}
+      />
+
+      <MobilePremiumUpsellModal
+        isOpen={premiumUpsellOpen}
+        onClose={() => setPremiumUpsellOpen(false)}
+        onPrimaryAction={() => {
+          setPremiumUpsellOpen(false);
+          if (premiumUpsellMode === 'login') {
+            history.push(`/auth?returnTo=${encodeURIComponent(history.location.pathname)}`);
+            return;
+          }
+          history.push('/premium');
+        }}
+        subtitle={premiumUpsellMode === 'login' ? t('mobilePlantId.loginRequired') : t('mobilePlantId.premiumOnly')}
+        primaryLabel={premiumUpsellMode === 'login' ? t('mobileUpsell.loginToUpgrade') : t('mobileUpsell.upgradeNow')}
+      />
     </div>
 
   );
 };
 
 export default MobileZoneDetailsFull;
+
+

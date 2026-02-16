@@ -52,6 +52,27 @@ def find_free_port(host: str, start_port: int, tries: int = 20) -> int:
     return start_port
 
 
+def get_local_ipv4() -> Optional[str]:
+    """Best-effort local IPv4 used for LAN access."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            if ip and not ip.startswith("127."):
+                return ip
+    except OSError:
+        pass
+
+    try:
+        hostname = socket.gethostname()
+        ip = socket.gethostbyname(hostname)
+        if ip and not ip.startswith("127."):
+            return ip
+    except OSError:
+        pass
+    return None
+
+
 def stream_output(proc: subprocess.Popen, prefix: str, line_filter=None):
     if proc.stdout is None:
         return None
@@ -454,7 +475,7 @@ def run():
         "--mode",
         choices=["usb", "wifi"],
         default="usb",
-        help="Connection mode. Use usb for adb reverse, wifi for LAN access.",
+        help="Connection mode for live reload. Use usb for adb reverse, wifi for LAN access.",
     )
     parser.add_argument(
         "--host",
@@ -469,6 +490,30 @@ def run():
     parser.add_argument(
         "--target",
         help="Android device ID from `adb devices`.",
+    )
+    parser.add_argument(
+        "--adb-wireless",
+        action="store_true",
+        help="Connect to an adb-over-wifi target before running.",
+    )
+    parser.add_argument(
+        "--adb-host",
+        help="Device IPv4/hostname for adb wireless (example: 192.168.1.20).",
+    )
+    parser.add_argument(
+        "--adb-port",
+        type=int,
+        default=5555,
+        help="adb wireless port (default: 5555).",
+    )
+    parser.add_argument(
+        "--adb-pair-port",
+        type=int,
+        help="adb pair port for Wireless Debugging (Android 11+).",
+    )
+    parser.add_argument(
+        "--adb-pair-code",
+        help="adb pair code for Wireless Debugging (Android 11+).",
     )
     parser.add_argument(
         "--app-id",
@@ -506,7 +551,17 @@ def run():
     args = parser.parse_args()
 
     if args.mode == "wifi" and not args.host:
-        print("Error: --host is required for wifi mode.")
+        detected_ip = get_local_ipv4()
+        if not detected_ip:
+            print("Error: --host is required for wifi mode (auto-detect failed).")
+            return 2
+        args.host = detected_ip
+        print(f"Detected LAN IP: {args.host}", flush=True)
+    if args.adb_wireless and not args.adb_host:
+        print("Error: --adb-host is required with --adb-wireless.")
+        return 2
+    if (args.adb_pair_port is None) != (args.adb_pair_code is None):
+        print("Error: --adb-pair-port and --adb-pair-code must be used together.")
         return 2
 
     # Ensure Vite + Capacitor use the same port.
@@ -528,14 +583,50 @@ def run():
         return 2
 
     adb_available = shutil.which(adb_cmd) is not None
+    target = args.target
+    if adb_available and args.adb_wireless:
+        pair_target = None
+        if args.adb_pair_port is not None and args.adb_pair_code is not None:
+            pair_target = f"{args.adb_host}:{args.adb_pair_port}"
+            try:
+                print(f"Pairing adb over wifi at {pair_target}...", flush=True)
+                subprocess.run(
+                    [adb_cmd, "pair", pair_target, args.adb_pair_code],
+                    cwd=project_root,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=20,
+                )
+            except (subprocess.TimeoutExpired, OSError):
+                print("Warning: adb pair failed or timed out.", flush=True)
+
+        connect_target = f"{args.adb_host}:{args.adb_port}"
+        try:
+            print(f"Connecting adb over wifi to {connect_target}...", flush=True)
+            subprocess.run(
+                [adb_cmd, "connect", connect_target],
+                cwd=project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            print("Warning: adb connect failed or timed out.", flush=True)
+
+        if not target:
+            target = connect_target
+
     auto_target = None
-    if adb_available:
+    if adb_available and not target:
         auto_target = choose_target(adb_cmd, project_root)
         if auto_target:
             print(f"Using device: {auto_target}")
+            target = auto_target
         else:
             print("Warning: No ready Android devices found.")
-    else:
+    elif not adb_available:
         print("Warning: adb not found in PATH. Device detection may fail.")
 
     # Setup Chrome DevTools port forwarding for remote debugging (opt-in)
@@ -551,7 +642,7 @@ def run():
         except OSError:
             pass
 
-    target = args.target or auto_target
+    # target already resolved above
     app_id = args.app_id or read_app_id(project_root)
     logcat_mode = "all" if args.logcat_all else args.logcat_mode
     logcat_all = logcat_mode == "all"

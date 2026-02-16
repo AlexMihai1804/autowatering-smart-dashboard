@@ -1,0 +1,31 @@
+{
+  "name": "autowatering-aws-backend",
+  "private": true,
+  "version": "0.1.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "dist/handler.js",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf dist",
+    "sam:build": "sam build",
+    "sam:deploy:guided": "sam deploy --guided"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.888.0",
+    "@aws-sdk/client-dynamodb": "^3.888.0",
+    "@aws-sdk/lib-dynamodb": "^3.888.0",
+    "@aws-sdk/util-dynamodb": "^3.888.0",
+    "aws-jwt-verify": "^5.1.1",
+    "busboy": "^1.6.0",
+    "stripe": "^20.3.1"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.147",
+    "@types/busboy": "^1.5.4",
+    "@types/node": "^22.13.1",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.8.2"
+  }
+}

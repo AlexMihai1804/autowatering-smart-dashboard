@@ -1,6 +1,15 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useHistory } from 'react-router-dom';
+import { useAppStore } from '../../store/useAppStore';
 import { useI18n } from '../../i18n';
+import {
+  AlarmCode,
+  AlarmSeverity,
+  getAlarmDescription,
+  getAlarmSeverity,
+  getAlarmTitle,
+  getAffectedChannelFromAlarmData
+} from '../../types/firmware_structs';
 
 interface NotificationItem {
   id: string;
@@ -8,79 +17,101 @@ interface NotificationItem {
   title: string;
   message: string;
   time: string;
-  zone?: string;
+  timestamp: number;
 }
 
-const buildMockNotifications = (t: (key: string) => string): { section: string; items: NotificationItem[] }[] => [
-  {
-    section: t('mobileNotifications.sections.today'),
-    items: [
-      {
-        id: '1',
-        type: 'success',
-        title: t('mobileNotifications.mock.irrigationCompleted.title'),
-        message: t('mobileNotifications.mock.irrigationCompleted.message')
-          .replace('{zone}', 'Front Lawn')
-          .replace('{duration}', '15')
-          .replace('{saved}', '2'),
-        time: '7:00 AM',
-      },
-      {
-        id: '2',
-        type: 'warning',
-        title: t('mobileNotifications.mock.moistureAlert.title'),
-        message: t('mobileNotifications.mock.moistureAlert.message').replace('{threshold}', '15'),
-        time: '6:45 AM',
-      },
-    ],
-  },
-  {
-    section: t('mobileNotifications.sections.yesterday'),
-    items: [
-      {
-        id: '3',
-        type: 'info',
-        title: t('mobileNotifications.mock.scheduleSkipped.title'),
-        message: t('mobileNotifications.mock.scheduleSkipped.message'),
-        time: '5:30 PM',
-      },
-      {
-        id: '4',
-        type: 'info',
-        title: t('mobileNotifications.mock.firmwareUpdated.title'),
-        message: t('mobileNotifications.mock.firmwareUpdated.message').replace('{version}', '2.4.1'),
-        time: '2:00 PM',
-      },
-    ],
-  },
-  {
-    section: t('mobileNotifications.sections.lastWeek'),
-    items: [
-      {
-        id: '5',
-        type: 'success',
-        title: t('mobileNotifications.mock.irrigationCompleted.title'),
-        message: t('mobileNotifications.mock.irrigationCompletedShort.message')
-          .replace('{zone}', 'Backyard Garden')
-          .replace('{duration}', '20'),
-        time: t('mobileNotifications.days.mon'),
-      },
-      {
-        id: '6',
-        type: 'error',
-        title: t('mobileNotifications.mock.connectionLost.title'),
-        message: t('mobileNotifications.mock.connectionLost.message').replace('{minutes}', '30'),
-        time: t('mobileNotifications.days.sun'),
-      },
-    ],
-  },
-];
 const MobileNotifications: React.FC = () => {
   const history = useHistory();
   const { t } = useI18n();
+  const { alarmHistory, alarmStatus, wateringHistory, connectionState, zones } = useAppStore();
   const [activeFilter, setActiveFilter] = useState<'all' | 'errors' | 'warnings' | 'info'>('all');
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
 
-  const mockNotifications = buildMockNotifications(t);
+  const nowEpoch = Math.floor(Date.now() / 1000);
+  const zoneName = (channelId: number) => {
+    const zone = zones.find((z) => z.channel_id === channelId);
+    return zone?.name || `${t('zones.zone')} ${channelId + 1}`;
+  };
+
+  const alarmNotifications = useMemo<NotificationItem[]>(() => {
+    const combined = [...alarmHistory];
+    if (alarmStatus && alarmStatus.alarm_code !== AlarmCode.NONE) {
+      const exists = combined.some((entry) => entry.timestamp === alarmStatus.timestamp);
+      if (!exists) {
+        combined.unshift({
+          alarm_code: alarmStatus.alarm_code,
+          alarm_data: alarmStatus.alarm_data,
+          timestamp: alarmStatus.timestamp
+        });
+      }
+    }
+
+    return combined.map((entry) => {
+      const severity = getAlarmSeverity(entry.alarm_code);
+      const channel = getAffectedChannelFromAlarmData(entry.alarm_code, entry.alarm_data);
+
+      let type: NotificationItem['type'] = 'info';
+      if (severity === AlarmSeverity.CRITICAL || severity === AlarmSeverity.DANGER) type = 'error';
+      else if (severity === AlarmSeverity.WARNING) type = 'warning';
+
+      return {
+        id: `alarm-${entry.timestamp}-${entry.alarm_code}`,
+        type,
+        title: getAlarmTitle(entry.alarm_code, t),
+        message: getAlarmDescription(entry.alarm_code, channel, entry.alarm_data, t),
+        time: new Date(entry.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: entry.timestamp
+      };
+    });
+  }, [alarmHistory, alarmStatus, t, zones]);
+
+  const wateringNotifications = useMemo<NotificationItem[]>(() => {
+    return wateringHistory
+      .filter((entry) => nowEpoch - entry.timestamp <= 7 * 24 * 3600)
+      .map((entry) => {
+        const zone = zoneName(entry.channel_id);
+        const durationMin = Math.max(1, Math.round(entry.target_value_ml / 60));
+        const message = entry.success_status
+          ? t('mobileNotifications.mock.irrigationCompleted.message')
+            .replace('{zone}', zone)
+            .replace('{duration}', String(durationMin))
+            .replace('{saved}', '0')
+          : `${zone}: error ${entry.error_code}`;
+
+        return {
+          id: `watering-${entry.timestamp}-${entry.channel_id}-${entry.event_type}`,
+          type: entry.success_status ? 'success' : 'warning',
+          title: entry.success_status
+            ? t('mobileNotifications.mock.irrigationCompleted.title')
+            : t('common.warning'),
+          message,
+          time: new Date(entry.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          timestamp: entry.timestamp
+        };
+      });
+  }, [wateringHistory, t, zones, nowEpoch]);
+
+  const connectionNotification = useMemo<NotificationItem[]>(() => {
+    if (connectionState === 'connected') return [];
+    return [
+      {
+        id: 'connection-lost',
+        type: 'error',
+        title: t('mobileNotifications.mock.connectionLost.title'),
+        message: t('mobileNotifications.mock.connectionLost.message').replace('{minutes}', '0'),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: nowEpoch
+      }
+    ];
+  }, [connectionState, t, nowEpoch]);
+
+  const allNotifications = useMemo(
+    () =>
+      [...alarmNotifications, ...wateringNotifications, ...connectionNotification]
+        .filter((item) => !hiddenIds.has(item.id))
+        .sort((a, b) => b.timestamp - a.timestamp),
+    [alarmNotifications, wateringNotifications, connectionNotification, hiddenIds]
+  );
 
   const filters = [
     { key: 'all', label: t('mobileNotifications.filters.all') },
@@ -103,16 +134,45 @@ const MobileNotifications: React.FC = () => {
     }
   };
 
-  const filteredNotifications = mockNotifications.map(section => ({
-    ...section,
-    items: section.items.filter(item => {
-      if (activeFilter === 'all') return true;
-      if (activeFilter === 'errors') return item.type === 'error';
-      if (activeFilter === 'warnings') return item.type === 'warning';
-      if (activeFilter === 'info') return item.type === 'info' || item.type === 'success';
-      return true;
-    }),
-  })).filter(section => section.items.length > 0);
+  const filteredNotifications = useMemo(() => {
+    const filterItems = (items: NotificationItem[]) =>
+      items.filter((item) => {
+        if (activeFilter === 'all') return true;
+        if (activeFilter === 'errors') return item.type === 'error';
+        if (activeFilter === 'warnings') return item.type === 'warning';
+        if (activeFilter === 'info') return item.type === 'info' || item.type === 'success';
+        return true;
+      });
+
+    const today = new Date();
+    const todayKey = today.toDateString();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayKey = yesterday.toDateString();
+
+    const sections = [
+      { section: t('mobileNotifications.sections.today'), items: [] as NotificationItem[] },
+      { section: t('mobileNotifications.sections.yesterday'), items: [] as NotificationItem[] },
+      { section: t('mobileNotifications.sections.lastWeek'), items: [] as NotificationItem[] }
+    ];
+
+    for (const item of filterItems(allNotifications)) {
+      const dateKey = new Date(item.timestamp * 1000).toDateString();
+      if (dateKey === todayKey) {
+        sections[0].items.push(item);
+      } else if (dateKey === yesterdayKey) {
+        sections[1].items.push(item);
+      } else {
+        sections[2].items.push(item);
+      }
+    }
+
+    return sections.filter((section) => section.items.length > 0);
+  }, [activeFilter, allNotifications, t]);
+
+  const handleClearAll = () => {
+    setHiddenIds(new Set(allNotifications.map((notification) => notification.id)));
+  };
 
   return (
     <div className="min-h-screen bg-mobile-bg-dark font-manrope pb-24">
@@ -135,7 +195,10 @@ const MobileNotifications: React.FC = () => {
             >
               {t('mobileNotifications.alarms')}
             </button>
-            <button className="text-mobile-text-muted text-sm font-bold hover:text-mobile-primary transition-colors">
+            <button
+              onClick={handleClearAll}
+              className="text-mobile-text-muted text-sm font-bold hover:text-mobile-primary transition-colors"
+            >
               {t('mobileNotifications.clearAll')}
             </button>
           </div>

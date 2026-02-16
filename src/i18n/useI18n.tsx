@@ -1,4 +1,4 @@
-/**
+﻿/**
  * i18n Hook and Context
  * 
  * Provides translation functionality throughout the app
@@ -22,7 +22,7 @@ interface I18nContextType {
 // Available languages
 const AVAILABLE_LANGUAGES: { code: Language; name: string; nativeName: string }[] = [
     { code: 'en', name: 'English', nativeName: 'English' },
-    { code: 'ro', name: 'Romanian', nativeName: 'Română' },
+    { code: 'ro', name: 'Romanian', nativeName: 'Rom\u00E2n\u0103' },
 ];
 
 // Create context
@@ -130,3 +130,4 @@ export const useTranslations = (): TranslationKeys => {
 
 // Export types
 export type { Language, TranslationKeys };
+

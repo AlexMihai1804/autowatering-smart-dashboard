@@ -82,19 +82,92 @@
   @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg;
 }
 
-/* Custom Scrollbar for Web/Desktop */
-::-webkit-scrollbar {
-  width: 8px;
+/* Unified scrollbar styling (web + Ionic scroll part) */
+:root {
+  --app-scrollbar-track: rgba(7, 16, 13, 0.9);
+  --app-scrollbar-thumb: rgba(76, 94, 87, 0.9);
+  --app-scrollbar-thumb-hover: rgba(103, 124, 115, 0.95);
 }
-::-webkit-scrollbar-track {
-  background: #020617; 
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
 }
-::-webkit-scrollbar-thumb {
-  background: #1e293b; 
-  border-radius: 4px;
+
+*::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #334155; 
+
+*::-webkit-scrollbar-track {
+  background: var(--app-scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--app-scrollbar-thumb);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--app-scrollbar-thumb-hover);
+}
+
+ion-content::part(scroll) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+}
+
+ion-content::part(scroll)::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+ion-content::part(scroll)::-webkit-scrollbar-track {
+  background: var(--app-scrollbar-track);
+}
+
+ion-content::part(scroll)::-webkit-scrollbar-thumb {
+  background: var(--app-scrollbar-thumb);
+  border-radius: 999px;
+}
+
+/* Scrollbar utility aliases used across mobile screens */
+.no-scrollbar,
+.scrollbar-hide,
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-hide::-webkit-scrollbar,
+.hide-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/* Keep mobile scrollbar appearance consistent (hidden) */
+@media (max-width: 1023px) {
+  * {
+    scrollbar-width: none;
+  }
+
+  *::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
+  ion-content::part(scroll) {
+    scrollbar-width: none;
+  }
+
+  ion-content::part(scroll)::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
 }
 
 /* IonDatetime dark mode styling */
@@ -120,4 +193,9 @@ ion-popover {
 
 ion-popover::part(content) {
   background: #1e293b;
+}
+
+/* Android edge-to-edge: ensure custom full-screen overlays leave room for the status bar. */
+html.plt-android.plt-hybrid {
+  --app-safe-area-top-min: 24px;
 }

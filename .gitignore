@@ -42,6 +42,7 @@ android/app/build/
 android/capacitor-cordova-android-plugins/build/
 android/.gradle/
 android/local.properties
+android/app/google-services.json
 *.apk
 *.aab
 *.keystore
@@ -50,6 +51,7 @@ android/local.properties
 ios/Pods/
 ios/*.xcworkspace
 ios/build/
+ios/App/App/GoogleService-Info.plist
 *.ipa
 
 # Temporary files
@@ -69,3 +71,6 @@ src/i18n/extracted/
 # GeoTiff test files
 *.tif
 *.tiff
+
+# Backend local build artifacts
+backend/aws-autowatering-backend/.aws-sam/

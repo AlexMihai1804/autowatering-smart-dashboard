@@ -4,7 +4,7 @@
  * 4.10: Share zone config via QR code
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     IonModal,
     IonHeader,
@@ -22,11 +22,10 @@ import {
     IonSpinner,
 } from '@ionic/react';
 import { closeOutline, qrCodeOutline, scanOutline, shareOutline, copyOutline, checkmarkOutline } from 'ionicons/icons';
+import QRCode from 'qrcode';
+import { DEFAULT_ZONE_CONFIG } from '../types/wizard';
 import type { UnifiedZoneConfig as ZoneConfig } from '../types/wizard';
 import { useI18n } from '../i18n';
-
-// Simple QR code generator using canvas
-// For production, consider using a library like qrcode or qrcode.react
 
 interface QRCodeSharingProps {
     isOpen: boolean;
@@ -56,11 +55,44 @@ const compressZoneConfig = (zones: ZoneConfig[]) => {
     }));
 };
 
-// Generate a simple data URL for sharing
-const generateShareUrl = (data: string): string => {
-    const encoded = btoa(encodeURIComponent(data));
-    // In production, this would be your actual share URL
-    return `irrigation://import?data=${encoded}`;
+const decodeImportPayload = (rawInput: string): any => {
+    const trimmed = rawInput.trim();
+
+    if (trimmed.startsWith('irrigation://import?data=')) {
+        const encoded = trimmed.replace('irrigation://import?data=', '');
+        return JSON.parse(decodeURIComponent(atob(encoded)));
+    }
+
+    return JSON.parse(trimmed);
+};
+
+const toFiniteNumber = (value: unknown, fallback: number): number => {
+    const parsed = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const isWateringMode = (value: unknown): value is ZoneConfig['wateringMode'] =>
+    value === 'fao56_auto' || value === 'fao56_eco' || value === 'duration' || value === 'volume';
+
+const decompressZoneConfig = (rawZones: any[]): ZoneConfig[] => {
+    return rawZones.map((raw, index) => {
+        const mode = isWateringMode(raw?.m) ? raw.m : DEFAULT_ZONE_CONFIG.wateringMode;
+        return {
+            ...DEFAULT_ZONE_CONFIG,
+            channelId: index,
+            name: typeof raw?.n === 'string' && raw.n.trim() ? raw.n.trim() : `Zone ${index + 1}`,
+            enabled: raw?.e !== false,
+            skipped: false,
+            wateringMode: mode,
+            coverageType: raw?.ct === 'plants' ? 'plants' : 'area',
+            coverageValue: Math.max(1, toFiniteNumber(raw?.c, DEFAULT_ZONE_CONFIG.coverageValue)),
+            sunExposure: Math.max(0, Math.min(100, toFiniteNumber(raw?.se, DEFAULT_ZONE_CONFIG.sunExposure))),
+            enableCycleSoak: !!raw?.cs,
+            cycleMinutes: Math.max(1, Math.round(toFiniteNumber(raw?.csw, DEFAULT_ZONE_CONFIG.cycleMinutes))),
+            soakMinutes: Math.max(1, Math.round(toFiniteNumber(raw?.csp, DEFAULT_ZONE_CONFIG.soakMinutes))),
+            maxVolumeLimit: Math.max(1, toFiniteNumber(raw?.mv, DEFAULT_ZONE_CONFIG.maxVolumeLimit)),
+        };
+    });
 };
 
 export const QRCodeSharing: React.FC<QRCodeSharingProps> = ({
@@ -74,7 +106,6 @@ export const QRCodeSharing: React.FC<QRCodeSharingProps> = ({
     const [isGenerating, setIsGenerating] = useState(false);
     const [copied, setCopied] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
     const { t, language } = useI18n();
     
     // Generate QR code when modal opens
@@ -94,67 +125,23 @@ export const QRCodeSharing: React.FC<QRCodeSharingProps> = ({
                 v: EXPORT_VERSION,
                 z: compressed,
             });
-            
-            // For a real implementation, use a QR library
-            // Here we'll just show the data and a placeholder
-            console.log('[QRSharing] Data to encode:', data);
-            console.log('[QRSharing] Data length:', data.length);
-            
-            // Create a simple placeholder QR visualization
-            if (canvasRef.current) {
-                const ctx = canvasRef.current.getContext('2d');
-                if (ctx) {
-                    const size = 200;
-                    canvasRef.current.width = size;
-                    canvasRef.current.height = size;
-                    
-                    // Draw a placeholder pattern
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, size, size);
-                    
-                    ctx.fillStyle = '#000000';
-                    // Draw corner patterns
-                    drawFinderPattern(ctx, 10, 10, 40);
-                    drawFinderPattern(ctx, size - 50, 10, 40);
-                    drawFinderPattern(ctx, 10, size - 50, 40);
-                    
-                    // Draw some random data pattern
-                    const cellSize = 4;
-                    const hash = simpleHash(data);
-                    for (let i = 0; i < 30; i++) {
-                        for (let j = 0; j < 30; j++) {
-                            if ((hash + i * j) % 3 === 0) {
-                                ctx.fillRect(60 + i * cellSize, 60 + j * cellSize, cellSize - 1, cellSize - 1);
-                            }
-                        }
-                    }
-                    
-                    setQrDataUrl(canvasRef.current.toDataURL());
+
+            const qrUrl = await QRCode.toDataURL(data, {
+                width: 512,
+                margin: 1,
+                errorCorrectionLevel: 'M',
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF',
                 }
-            }
+            });
+            setQrDataUrl(qrUrl);
         } catch (e) {
             console.error('[QRSharing] Failed to generate QR:', e);
             setError(t('qrSharing.generateFailed'));
         } finally {
             setIsGenerating(false);
         }
-    };
-    
-    const drawFinderPattern = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number) => {
-        ctx.fillRect(x, y, size, size);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(x + 4, y + 4, size - 8, size - 8);
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(x + 8, y + 8, size - 16, size - 16);
-    };
-    
-    const simpleHash = (str: string): number => {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            hash = ((hash << 5) - hash) + str.charCodeAt(i);
-            hash |= 0;
-        }
-        return Math.abs(hash);
     };
     
     const copyShareData = async () => {
@@ -244,11 +231,18 @@ export const QRCodeSharing: React.FC<QRCodeSharingProps> = ({
                                     </div>
                                 ) : (
                                     <>
-                                        <canvas 
-                                            ref={canvasRef} 
-                                            className="rounded-lg bg-white"
-                                            style={{ width: 200, height: 200 }}
-                                        />
+                                        {qrDataUrl ? (
+                                            <img
+                                                src={qrDataUrl}
+                                                alt="QR code"
+                                                className="rounded-lg bg-white"
+                                                style={{ width: 200, height: 200 }}
+                                            />
+                                        ) : (
+                                            <div className="w-48 h-48 flex items-center justify-center rounded-lg bg-white/10 text-gray-400 text-sm">
+                                                {t('qrSharing.generateFailed')}
+                                            </div>
+                                        )}
                                         <p className="text-xs text-gray-500 mt-2">
                                             {t('qrSharing.scanWithDevice')}
                                         </p>
@@ -301,13 +295,15 @@ export const QRCodeSharing: React.FC<QRCodeSharingProps> = ({
                                 <IonButton className="mt-4" onClick={async () => {
                                     try {
                                         const text = await navigator.clipboard.readText();
-                                        const data = JSON.parse(text);
-                                        if (data.v && data.z && onImport) {
-                                            // Would need to decompress and validate here
-                                            console.log('[QRSharing] Import data:', data);
-                                            // onImport(decompressedZones);
-                                            onClose();
+                                        const data = decodeImportPayload(text);
+                                        if (!data?.v || !Array.isArray(data?.z)) {
+                                            throw new Error('Invalid import payload');
                                         }
+                                        if (onImport) {
+                                            const importedZones = decompressZoneConfig(data.z);
+                                            onImport(importedZones);
+                                        }
+                                        onClose();
                                     } catch (e) {
                                         setError(t('qrSharing.invalidData'));
                                     }

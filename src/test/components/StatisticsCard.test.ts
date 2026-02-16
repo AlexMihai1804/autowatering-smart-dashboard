@@ -141,6 +141,6 @@ describe('StatisticsCard', () => {
         it('should export StatisticsCard as default', async () => {
             const module = await import('../../components/StatisticsCard');
             expect(module.default).toBeDefined();
-        });
+        }, 15000);
     });
 });

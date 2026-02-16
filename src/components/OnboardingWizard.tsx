@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
     IonModal,
     IonHeader,
@@ -94,7 +94,7 @@ import {
     WhatsThisTooltip
 } from './onboarding';
 import { SoilSelector } from './onboarding/SoilSelectorSimple';
-import { SoilGridsService, SoilGridsResult, shouldEnableCycleSoak, calculateCycleSoakTiming } from '../services/SoilGridsService';
+import { SoilGridsService, SoilGridsResult, shouldEnableCycleSoak, calculateCycleSoakTiming, calculateSlope } from '../services/SoilGridsService';
 import { getRecommendedCoverageType, getCoverageModeExplanation } from '../utils/plantCoverageHelper';
 // i18n and enhancements
 import { useI18n } from '../i18n';
@@ -350,6 +350,54 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
     // Soil detection state
     const [soilDetectionResult, setSoilDetectionResult] = useState<SoilGridsResult | null>(null);
     const [isDetectingSoil, setIsDetectingSoil] = useState(false);
+    const [zoneSlopeByChannel, setZoneSlopeByChannel] = useState<Record<number, number>>({});
+    const slopeCacheRef = useRef<Map<string, number>>(new Map());
+
+    const currentZoneLocation = zoneConfigs[currentZoneIndex]?.location;
+    const currentZoneIdForSlope = zoneConfigs[currentZoneIndex]?.channel_id ?? currentZoneIndex;
+
+    useEffect(() => {
+        const location = currentZoneLocation;
+        const channelId = currentZoneIdForSlope;
+
+        if (!location) {
+            setZoneSlopeByChannel(prev => {
+                if (!(channelId in prev)) return prev;
+                const next = { ...prev };
+                delete next[channelId];
+                return next;
+            });
+            return;
+        }
+
+        const cacheKey = `${location.latitude.toFixed(5)},${location.longitude.toFixed(5)}`;
+        const cachedSlope = slopeCacheRef.current.get(cacheKey);
+        if (typeof cachedSlope === 'number') {
+            setZoneSlopeByChannel(prev =>
+                prev[channelId] === cachedSlope
+                    ? prev
+                    : { ...prev, [channelId]: cachedSlope }
+            );
+            return;
+        }
+
+        let cancelled = false;
+        void (async () => {
+            try {
+                const slope = await calculateSlope(location.latitude, location.longitude);
+                if (cancelled) return;
+                slopeCacheRef.current.set(cacheKey, slope.slope_percent);
+                setZoneSlopeByChannel(prev => ({ ...prev, [channelId]: slope.slope_percent }));
+            } catch (error) {
+                if (cancelled) return;
+                console.warn('[OnboardingWizard] Slope detection failed:', error);
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [currentZoneLocation?.latitude, currentZoneLocation?.longitude, currentZoneIdForSlope]);
 
 
     // ========================================================================
@@ -2116,12 +2164,14 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                             value={currentZone.soil}
                             location={currentZone.location}
                             onChange={(soil: SoilDBEntry, autoDetected: boolean, confidence: 'high' | 'medium' | 'low' | null) => {
+                                const slopePercent = zoneSlopeByChannel[currentZone.channel_id] ?? 0;
                                 // Auto-calculate Cycle & Soak based on soil infiltration rate
-                                const shouldEnable = shouldEnableCycleSoak(soil);
-                                const timing = calculateCycleSoakTiming(soil);
+                                const shouldEnable = shouldEnableCycleSoak(soil, slopePercent);
+                                const timing = calculateCycleSoakTiming(soil, slopePercent);
 
                                 console.log(`[OnboardingWizard] Soil selected: ${soil.texture}, ` +
                                     `infiltration=${soil.infiltration_rate_mm_h}mm/h, ` +
+                                    `slope=${slopePercent.toFixed(1)}%, ` +
                                     `cycleSoak=${shouldEnable} (cycle=${timing.cycleMinutes}min, soak=${timing.soakMinutes}min)`);
 
                                 updateCurrentZone({
@@ -2158,7 +2208,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                                 autoEnabled={currentZone.cycleSoakAutoEnabled}
                                 cycleMinutes={currentZone.cycleSoakWateringMin}
                                 soakMinutes={currentZone.cycleSoakPauseMin}
-                                slope_percent={0}  // TODO: Add slope detection when location is set
+                                slope_percent={zoneSlopeByChannel[currentZone.channel_id] ?? 0}
                                 onChange={(config) => updateCurrentZone({
                                     enableCycleSoak: config.enabled,
                                     cycleSoakAutoEnabled: config.autoEnabled,
@@ -2297,6 +2347,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
                             autoEnabled={currentZone.cycleSoakAutoEnabled}
                             cycleMinutes={currentZone.cycleSoakWateringMin}
                             soakMinutes={currentZone.cycleSoakPauseMin}
+                            slope_percent={zoneSlopeByChannel[currentZone.channel_id] ?? 0}
                             onChange={({ enabled, autoEnabled, cycleMinutes, soakMinutes }) =>
                                 updateCurrentZone({
                                     enableCycleSoak: enabled,

@@ -29,11 +29,15 @@ import {
     HydraulicStatusData,
     AlarmHistoryEntry,
     HistoryDetailedEntry,
+    HistoryDailyEntry,
+    HistoryMonthlyEntry,
+    HistoryAnnualEntry,
     RainHourlyEntry,
     RainDailyEntry,
     EnvDetailedEntry,
     EnvHourlyEntry,
     EnvDailyEntry,
+    EnvTrendEntry,
     BulkSyncSnapshot,
     CustomSoilConfigData,
     // Pack types
@@ -134,11 +138,15 @@ interface AppState {
 
     // History data caches
     wateringHistory: HistoryDetailedEntry[];
+    wateringHistoryDaily: HistoryDailyEntry[];
+    wateringHistoryMonthly: HistoryMonthlyEntry[];
+    wateringHistoryAnnual: HistoryAnnualEntry[];
     rainHistoryHourly: RainHourlyEntry[];
     rainHistoryDaily: RainDailyEntry[];
     envHistoryDetailed: EnvDetailedEntry[];
     envHistoryHourly: EnvHourlyEntry[];
     envHistoryDaily: EnvDailyEntry[];
+    envHistoryTrend: EnvTrendEntry | null;
 
     // Pack/Custom Plants cache (synced from device)
     packStats: PackStats | null;
@@ -224,11 +232,15 @@ interface AppState {
     // History actions
     setWateringHistory: (entries: HistoryDetailedEntry[]) => void;
     appendWateringHistory: (entries: HistoryDetailedEntry[]) => void;
+    setWateringHistoryDaily: (entries: HistoryDailyEntry[]) => void;
+    setWateringHistoryMonthly: (entries: HistoryMonthlyEntry[]) => void;
+    setWateringHistoryAnnual: (entries: HistoryAnnualEntry[]) => void;
     setRainHistoryHourly: (entries: RainHourlyEntry[]) => void;
     setRainHistoryDaily: (entries: RainDailyEntry[]) => void;
     setEnvHistoryDetailed: (entries: EnvDetailedEntry[]) => void;
     setEnvHistoryHourly: (entries: EnvHourlyEntry[]) => void;
     setEnvHistoryDaily: (entries: EnvDailyEntry[]) => void;
+    setEnvHistoryTrend: (entry: EnvTrendEntry | null) => void;
     clearHistoryCache: () => void;
 
     // Pack/Custom Plants actions
@@ -319,11 +331,15 @@ export const useAppStore = create<AppState>((set) => ({
 
     // History data caches
     wateringHistory: [],
+    wateringHistoryDaily: [],
+    wateringHistoryMonthly: [],
+    wateringHistoryAnnual: [],
     rainHistoryHourly: [],
     rainHistoryDaily: [],
     envHistoryDetailed: [],
     envHistoryHourly: [],
     envHistoryDaily: [],
+    envHistoryTrend: null,
 
     // Pack/Custom Plants cache
     packStats: null,
@@ -504,18 +520,26 @@ export const useAppStore = create<AppState>((set) => ({
     appendWateringHistory: (entries) => set((state) => ({
         wateringHistory: [...state.wateringHistory, ...entries]
     })),
+    setWateringHistoryDaily: (entries) => set({ wateringHistoryDaily: entries }),
+    setWateringHistoryMonthly: (entries) => set({ wateringHistoryMonthly: entries }),
+    setWateringHistoryAnnual: (entries) => set({ wateringHistoryAnnual: entries }),
     setRainHistoryHourly: (entries) => set({ rainHistoryHourly: entries }),
     setRainHistoryDaily: (entries) => set({ rainHistoryDaily: entries }),
     setEnvHistoryDetailed: (entries) => set({ envHistoryDetailed: entries }),
     setEnvHistoryHourly: (entries) => set({ envHistoryHourly: entries }),
     setEnvHistoryDaily: (entries) => set({ envHistoryDaily: entries }),
+    setEnvHistoryTrend: (entry) => set({ envHistoryTrend: entry }),
     clearHistoryCache: () => set({
         wateringHistory: [],
+        wateringHistoryDaily: [],
+        wateringHistoryMonthly: [],
+        wateringHistoryAnnual: [],
         rainHistoryHourly: [],
         rainHistoryDaily: [],
         envHistoryDetailed: [],
         envHistoryHourly: [],
-        envHistoryDaily: []
+        envHistoryDaily: [],
+        envHistoryTrend: null
     }),
 
     // Pack/Custom Plants actions
@@ -736,11 +760,15 @@ export const useAppStore = create<AppState>((set) => ({
         alarmPopupDismissed: false,
         lastSeenAlarmTimestamp: 0,
         wateringHistory: [],
+        wateringHistoryDaily: [],
+        wateringHistoryMonthly: [],
+        wateringHistoryAnnual: [],
         rainHistoryHourly: [],
         rainHistoryDaily: [],
         envHistoryDetailed: [],
         envHistoryHourly: [],
         envHistoryDaily: [],
+        envHistoryTrend: null,
         // Pack cache
         packStats: null,
         customPlants: [],

@@ -12,7 +12,6 @@ const MobileMasterValve: React.FC = () => {
 
   // Local state for form editing
   const [masterValveEnabled, setMasterValveEnabled] = useState(false);
-  const [valveType, setValveType] = useState<'normally_closed' | 'normally_open'>('normally_closed');
   const [delayBefore, setDelayBefore] = useState(0);
   const [delayAfter, setDelayAfter] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -21,28 +20,9 @@ const MobileMasterValve: React.FC = () => {
   useEffect(() => {
     if (systemConfig?.master_valve) {
       const mv = systemConfig.master_valve;
-      // Note: firmware stores delays as int16, we map them to seconds (0-10 or more)
       setMasterValveEnabled(mv.enabled);
       setDelayBefore(Math.max(0, mv.pre_delay));
       setDelayAfter(Math.max(0, mv.post_delay));
-      // Assuming 'overlap_grace' or other field might indicate type, 
-      // but current UI only toggles delay? 
-      // Firmware struct doesn't explicitly have "normally_open/closed" flag in the View we saw earlier?
-      // Let's check firmware_structs.ts or bleService.ts View again.
-      // View byte 14 is auto_management.
-      // There is no explicit "valve type" (NC/NO) in the struct shown in BleService.ts!
-      // Maybe it's implied or not configurable? 
-      // Or maybe it's `current_state` logic?
-      // The mock UI had it. If firmware doesn't support it, we might need to hide it or implement it if possible.
-      // For now, let's keep it as separate state but maybe it doesn't do anything if not in struct?
-      // Wait, let's just stick to what is in SystemConfigData.
-      // SystemConfigData master_valve: enabled, pre_delay, post_delay, overlap_grace, auto_management.
-      // No NO/NC. So we should probably remove "Valve Type" if it's not supported, or map it if it corresponds to something.
-      // Users might want NO/NC for electrical reasons. If firmware is hardcoded for NC (standard), we should maybe hide it or add a note.
-      // For this implementation, I will hide "Valve Type" if not supported by struct, to avoid misleading UI.
-      // Re-reading struct: `overlap_grace`? `auto_management`?
-      // I'll leave Valve Type out for now or keep it mock if user really wants it, but I should probably follow the "Wiring" rule: connect real features.
-      // Since it's missing in firmware struct, I will Remove it to be honest.
     }
   }, [systemConfig]);
 
@@ -55,16 +35,9 @@ const MobileMasterValve: React.FC = () => {
         enabled: masterValveEnabled,
         pre_delay: delayBefore,
         post_delay: delayAfter,
-        // Preserve other fields
         overlap_grace: systemConfig.master_valve.overlap_grace,
         auto_management: systemConfig.master_valve.auto_management,
       };
-
-      // Merge with full config to prevent resetting other fields
-      // BleService.writeSystemConfigObject handles the merge if we pass the full object?
-      // No, we must construct the object carefully. 
-      // Actually writeSystemConfigObject makes a new buffer and uses "config.field ?? default".
-      // So we must pass ALL fields from existing config.
 
       const fullConfig = {
         ...systemConfig,

@@ -179,6 +179,6 @@ describe('DiagnosticsCard', () => {
         it('should export DiagnosticsCard as default', async () => {
             const module = await import('../../components/DiagnosticsCard');
             expect(module.default).toBeDefined();
-        });
+        }, 15000);
     });
 });

@@ -565,7 +565,7 @@ export interface UnifiedHistoryHeader {
 }
 
 // ============================================================================
-// BULK SYNC SNAPSHOT (Characteristic #28) - 60 bytes
+// BULK SYNC SNAPSHOT (Characteristic #28) - 60 bytes (v1) / 68 bytes (v2)
 // ============================================================================
 export interface BulkSyncSnapshot {
     version: number;                 /* uint8 */
@@ -601,6 +601,7 @@ export interface BulkSyncSnapshot {
     next_task_in_min: number;        /* uint16 */
     next_task_timestamp: number;     /* uint32 */
     channel_status: number[];        /* uint8[8] */
+    device_serial?: string;          /* Optional (v2+): null-terminated serial from BLE */
 }
 
 // ============================================================================

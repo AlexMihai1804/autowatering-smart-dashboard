@@ -5,13 +5,40 @@
  * so we maintain our own stack to ensure predictable back navigation.
  */
 
+function splitFullPath(raw: string): { pathname: string; suffix: string } {
+    const input = typeof raw === 'string' ? raw.trim() : '';
+    if (!input) return { pathname: '/', suffix: '' };
+
+    const qIndex = input.indexOf('?');
+    const hIndex = input.indexOf('#');
+    let end = input.length;
+    if (qIndex >= 0) end = Math.min(end, qIndex);
+    if (hIndex >= 0) end = Math.min(end, hIndex);
+
+    const pathname = input.slice(0, end) || '/';
+    const suffix = input.slice(end);
+    return { pathname, suffix };
+}
+
+function normalizePathname(pathname: string): string {
+    const cleaned = pathname.trim() || '/';
+    if (cleaned === '/') return '/';
+    return cleaned.replace(/\/+$/, '');
+}
+
 // Define logical parent paths for fallback navigation
 const PARENT_PATH_MAP: Record<string, string> = {
     '/zones': '/dashboard',
-    '/device': '/dashboard',
+    '/device': '/settings',
     '/history': '/dashboard',
     '/settings': '/dashboard',
+    '/ai-doctor': '/dashboard',
     '/app-settings': '/settings',
+    '/manage-devices': '/settings',
+    '/help': '/settings',
+    '/profile': '/settings',
+    '/premium': '/settings',
+    '/alarms': '/settings',
     '/notifications': '/dashboard',
 };
 
@@ -31,7 +58,7 @@ const ROOT_PATHS = new Set(['/', '/welcome', '/dashboard']);
 
 // Main tab/root routes. Switching between these should not create a long
 // back-history of alternating tabs.
-const TAB_ROOT_PATHS = new Set(['/dashboard', '/zones', '/history', '/settings']);
+const TAB_ROOT_PATHS = new Set(['/dashboard', '/zones', '/ai-doctor', '/history', '/settings']);
 
 class NavigationStack {
     private stack: string[] = [];
@@ -42,33 +69,56 @@ class NavigationStack {
      * Skips duplicate consecutive entries and excluded paths.
      */
     push(path: string): void {
-        // Normalize path (remove trailing slash except for root)
-        const normalizedPath = path === '/' ? '/' : path.replace(/\/$/, '');
+        // Normalize path (normalize pathname; preserve ?query/#hash).
+        const { pathname: rawPathname, suffix } = splitFullPath(path);
+        const normalizedPathname = normalizePathname(rawPathname);
+        const normalizedFullPath = `${normalizedPathname}${suffix}`;
 
         // Skip excluded transitional paths
-        if (EXCLUDED_PATHS.has(normalizedPath)) {
+        if (EXCLUDED_PATHS.has(normalizedPathname)) {
             return;
         }
 
         // Skip duplicate consecutive entries
-        if (this.stack.length > 0 && this.stack[this.stack.length - 1] === normalizedPath) {
+        if (this.stack.length > 0 && this.stack[this.stack.length - 1] === normalizedFullPath) {
             return;
         }
 
-        // Tab switching: replace the current tab root instead of pushing.
-        if (TAB_ROOT_PATHS.has(normalizedPath) && this.stack.length > 0) {
-            const last = this.stack[this.stack.length - 1];
-            if (last && TAB_ROOT_PATHS.has(last)) {
-                this.stack[this.stack.length - 1] = normalizedPath;
+        // Tab switching: collapse to the most recent tab root and replace it.
+        // This prevents deep pages (e.g. /ai-doctor) from polluting tab back history.
+        if (TAB_ROOT_PATHS.has(normalizedPathname) && this.stack.length > 0) {
+            let lastTabIndex = -1;
+            for (let i = this.stack.length - 1; i >= 0; i--) {
+                const candidate = this.stack[i];
+                const candidatePathname = normalizePathname(splitFullPath(candidate || '').pathname);
+                if (candidate && TAB_ROOT_PATHS.has(candidatePathname)) {
+                    lastTabIndex = i;
+                    break;
+                }
+            }
+
+            if (lastTabIndex >= 0) {
+                this.stack = this.stack.slice(0, lastTabIndex + 1);
+                this.stack[lastTabIndex] = normalizedFullPath;
+
+                // Prevent duplicate consecutive tab roots like:
+                // [..., '/zones', '/ai-doctor'] -> switch to '/zones' => [..., '/zones', '/zones']
+                if (
+                    lastTabIndex > 0
+                    && normalizePathname(splitFullPath(this.stack[lastTabIndex - 1] || '').pathname) === normalizedPathname
+                ) {
+                    this.stack.pop();
+                }
+
                 if (import.meta.env.DEV) {
                     // eslint-disable-next-line no-console
-                    console.log('[NavStack] replace(tab):', normalizedPath, '| stack:', [...this.stack]);
+                    console.log('[NavStack] replace(tab):', normalizedFullPath, '| stack:', [...this.stack]);
                 }
                 return;
             }
         }
 
-        this.stack.push(normalizedPath);
+        this.stack.push(normalizedFullPath);
 
         // Trim stack if too large
         if (this.stack.length > this.maxSize) {
@@ -77,7 +127,7 @@ class NavigationStack {
 
         if (import.meta.env.DEV) {
             // eslint-disable-next-line no-console
-            console.log('[NavStack] push:', normalizedPath, '| stack:', [...this.stack]);
+            console.log('[NavStack] push:', normalizedFullPath, '| stack:', [...this.stack]);
         }
     }
 
@@ -95,7 +145,7 @@ class NavigationStack {
 
         if (import.meta.env.DEV) {
             // eslint-disable-next-line no-console
-            console.log('[NavStack] pop:', current, '→', previous, '| stack:', [...this.stack]);
+            console.log('[NavStack] pop:', current, '->', previous, '| stack:', [...this.stack]);
         }
 
         return previous;
@@ -131,34 +181,40 @@ class NavigationStack {
      * Used as fallback when stack is empty.
      */
     getParentPath(path: string): string | null {
-        // Zone details → zones list
-        if (path.startsWith('/zones/') && path !== '/zones') {
-            const match = path.match(/^\/zones\/([^/]+)(?:\/(.*))?$/);
+        const normalizedPath = normalizePathname(splitFullPath(path).pathname);
+        // Zone details -> zones list
+        if (normalizedPath.startsWith('/zones/') && normalizedPath !== '/zones') {
+            const match = normalizedPath.match(/^\/zones\/([^/]+)(?:\/(.*))?$/);
             const channelId = match?.[1];
             const rest = match?.[2];
-            // /zones/1/config → /zones/1
+            // /zones/1/config -> /zones/1
             if (channelId && rest) return `/zones/${channelId}`;
-            // /zones/1 → /zones
+            // /zones/1 -> /zones
             return '/zones';
         }
 
-        // Device sub-pages → device
-        if (path.startsWith('/device/') && path !== '/device') {
+        // Device sub-pages -> device
+        if (normalizedPath.startsWith('/device/') && normalizedPath !== '/device') {
             return '/device';
         }
 
-        // App settings sub-pages → app-settings
-        if (path.startsWith('/app-settings/') && path !== '/app-settings') {
+        // Health sub-pages -> health hub
+        if (normalizedPath.startsWith('/health/') && normalizedPath !== '/health') {
+            return '/health';
+        }
+
+        // App settings sub-pages -> app-settings
+        if (normalizedPath.startsWith('/app-settings/') && normalizedPath !== '/app-settings') {
             return '/app-settings';
         }
 
         // Use explicit parent map
-        if (path in PARENT_PATH_MAP) {
-            return PARENT_PATH_MAP[path];
+        if (normalizedPath in PARENT_PATH_MAP) {
+            return PARENT_PATH_MAP[normalizedPath];
         }
 
         // Default to dashboard
-        if (path !== '/dashboard' && path !== '/' && path !== '/welcome') {
+        if (normalizedPath !== '/dashboard' && normalizedPath !== '/' && normalizedPath !== '/welcome') {
             return '/dashboard';
         }
 

@@ -6,6 +6,7 @@ import {
     calcSoilMoisturePercentPreferred,
     calcSoilMoisturePercentFromAutoCalc,
     calcAverageSoilMoisturePercent,
+    calcSoilMoisturePercentFromVwc,
     getSoilMoistureLabel
 } from '../../utils/soilMoisture';
 
@@ -94,6 +95,28 @@ describe('soilMoisture utils', () => {
             expect(getSoilMoistureLabel(80)).toBe('Optimal');
             expect(getSoilMoistureLabel(40)).toBe('Fair');
             expect(getSoilMoistureLabel(20)).toBe('Low');
+        });
+    });
+
+    describe('calcSoilMoisturePercentFromVwc', () => {
+        it('should return null for invalid inputs', () => {
+            expect(calcSoilMoisturePercentFromVwc({ vwc_m3_m3: null, fieldCapacityPct: 30, wiltingPointPct: 10 })).toBeNull();
+            expect(calcSoilMoisturePercentFromVwc({ vwc_m3_m3: 0.2, fieldCapacityPct: null, wiltingPointPct: 10 })).toBeNull();
+            expect(calcSoilMoisturePercentFromVwc({ vwc_m3_m3: 0.2, fieldCapacityPct: 10, wiltingPointPct: 30 })).toBeNull();
+        });
+
+        it('should convert VWC using FC/WP and clamp to 0..100', () => {
+            // Example: FC=30%, WP=10%
+            // VWC=0.10 -> 0%
+            expect(calcSoilMoisturePercentFromVwc({ vwc_m3_m3: 0.10, fieldCapacityPct: 30, wiltingPointPct: 10 })).toBe(0);
+            // VWC=0.20 -> 50%
+            expect(calcSoilMoisturePercentFromVwc({ vwc_m3_m3: 0.20, fieldCapacityPct: 30, wiltingPointPct: 10 })).toBe(50);
+            // VWC=0.30 -> 100%
+            expect(calcSoilMoisturePercentFromVwc({ vwc_m3_m3: 0.30, fieldCapacityPct: 30, wiltingPointPct: 10 })).toBe(100);
+            // Below WP -> clamp to 0
+            expect(calcSoilMoisturePercentFromVwc({ vwc_m3_m3: 0.05, fieldCapacityPct: 30, wiltingPointPct: 10 })).toBe(0);
+            // Above FC -> clamp to 100
+            expect(calcSoilMoisturePercentFromVwc({ vwc_m3_m3: 0.50, fieldCapacityPct: 30, wiltingPointPct: 10 })).toBe(100);
         });
     });
 });

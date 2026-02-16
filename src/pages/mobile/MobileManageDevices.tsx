@@ -1,7 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../../i18n';
+import { useAppStore } from '../../store/useAppStore';
+import { useKnownDevices } from '../../hooks/useKnownDevices';
+import { BleService } from '../../services/BleService';
 
 interface Device {
   id: string;
@@ -17,53 +20,68 @@ interface Device {
 const MobileManageDevices: React.FC = () => {
   const history = useHistory();
   const { t } = useI18n();
-  
-  // Mock devices - in real app would come from store
-  const devices = useMemo<Device[]>(() => ([
-    {
-      id: '1',
-      name: 'Garden Master 3000',
-      location: 'Backyard',
-      status: 'online',
-      connectionType: 'wifi',
-      signalStrength: 'excellent',
-      lastSync: t('mobileManageDevices.lastSync.justNow'),
-      isActive: true,
-    },
-    {
-      id: '2',
-      name: 'Front Lawn Sprinkler',
-      location: 'Front Yard',
-      status: 'standby',
-      connectionType: 'bluetooth',
-      signalStrength: 'good',
-      lastSync: t('mobileManageDevices.lastSync.minutesAgo').replace('{count}', '5'),
-      isActive: false,
-    },
-    {
-      id: '3',
-      name: 'Greenhouse Drip',
-      location: 'Greenhouse',
-      status: 'offline',
-      connectionType: 'wifi',
-      signalStrength: 'weak',
-      lastSync: t('mobileManageDevices.lastSync.hoursAgo').replace('{count}', '2'),
-      isActive: false,
-    },
-    {
-      id: '4',
-      name: 'Veggie Patch',
-      location: 'Side Yard',
-      status: 'standby',
-      connectionType: 'bluetooth',
-      signalStrength: 'fair',
-      lastSync: t('mobileManageDevices.lastSync.minutesAgo').replace('{count}', '10'),
-      isActive: false,
-    },
-  ]), [t]);
+  const bleService = BleService.getInstance();
+  const { connectionState, connectedDeviceId, discoveredDevices } = useAppStore();
+  const { devices: knownDevices, setAsLastConnected } = useKnownDevices();
+  const [switchingDeviceId, setSwitchingDeviceId] = useState<string | null>(null);
 
-  const activeDevice = devices.find(d => d.isActive);
-  const otherDevices = devices.filter(d => !d.isActive);
+  useEffect(() => {
+    if (!connectedDeviceId) return;
+    if (knownDevices.some((d) => d.id === connectedDeviceId)) return;
+    setAsLastConnected(connectedDeviceId);
+  }, [connectedDeviceId, knownDevices, setAsLastConnected]);
+
+  const formatLastSync = (lastConnected: number): string => {
+    if (!lastConnected) return t('mobileManageDevices.lastSync.justNow');
+    const diffMinutes = Math.floor((Date.now() - lastConnected) / 60000);
+    if (diffMinutes < 1) return t('mobileManageDevices.lastSync.justNow');
+    if (diffMinutes < 60) {
+      return t('mobileManageDevices.lastSync.minutesAgo').replace('{count}', String(diffMinutes));
+    }
+    return t('mobileManageDevices.lastSync.hoursAgo').replace('{count}', String(Math.floor(diffMinutes / 60)));
+  };
+
+  const toSignalStrength = (
+    status: Device['status'],
+    rssi?: number
+  ): Device['signalStrength'] => {
+    if (typeof rssi === 'number') {
+      if (rssi >= -50) return 'excellent';
+      if (rssi >= -60) return 'good';
+      if (rssi >= -70) return 'fair';
+      return 'weak';
+    }
+    if (status === 'online') return 'good';
+    if (status === 'standby') return 'fair';
+    return 'weak';
+  };
+
+  const formatLocation = (deviceId: string) =>
+    `${t('mobileManageDevices.connectionTypes.bluetooth')} ${deviceId.slice(0, 4)}...${deviceId.slice(-4)}`;
+
+  const devices = useMemo<Device[]>(() => {
+    const now = Date.now();
+    return knownDevices.map((device) => {
+      const isActive = connectedDeviceId === device.id && connectionState === 'connected';
+      const lastSeenHours = (now - device.lastConnected) / 3600000;
+      const status: Device['status'] = isActive ? 'online' : lastSeenHours <= 24 ? 'standby' : 'offline';
+      const discovered = discoveredDevices.find((d) => d.deviceId === device.id);
+
+      return {
+        id: device.id,
+        name: device.name || device.originalName || device.id,
+        location: formatLocation(device.id),
+        status,
+        connectionType: 'bluetooth',
+        signalStrength: toSignalStrength(status, discovered?.rssi),
+        lastSync: formatLastSync(device.lastConnected),
+        isActive
+      };
+    });
+  }, [knownDevices, connectedDeviceId, connectionState, discoveredDevices, t]);
+
+  const activeDevice = devices.find((device) => device.isActive) ?? null;
+  const otherDevices = devices.filter((device) => !device.isActive);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -74,9 +92,24 @@ const MobileManageDevices: React.FC = () => {
     }
   };
 
-  const handleSelectDevice = (deviceId: string) => {
-    console.log('Switching to device:', deviceId);
-    // In real app would switch active device
+  const handleSelectDevice = async (deviceId: string) => {
+    if (switchingDeviceId) return;
+    if (deviceId === connectedDeviceId && connectionState === 'connected') return;
+
+    setSwitchingDeviceId(deviceId);
+    try {
+      if (connectionState === 'connected' && connectedDeviceId && connectedDeviceId !== deviceId) {
+        await bleService.disconnect();
+      }
+      await bleService.connect(deviceId);
+      setAsLastConnected(deviceId);
+    } catch (error) {
+      console.error('[MobileManageDevices] Failed to switch device:', error);
+      const reason = error instanceof Error ? error.message : String(error);
+      alert(`${t('common.error')}: ${reason}`);
+    } finally {
+      setSwitchingDeviceId(null);
+    }
   };
 
   const handleAddDevice = () => {
@@ -168,13 +201,13 @@ const MobileManageDevices: React.FC = () => {
             <h3 className="text-white text-lg font-bold leading-tight tracking-tight mb-1 px-1">{t('mobileManageDevices.otherDevices')}</h3>
             
             <AnimatePresence>
-              {otherDevices.map((device) => (
+                {otherDevices.map((device) => (
                 <motion.div
                   key={device.id}
                   layoutId={`device-${device.id}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  onClick={() => handleSelectDevice(device.id)}
+                  onClick={() => void handleSelectDevice(device.id)}
                   className={`group flex items-center justify-between gap-4 rounded-xl bg-mobile-card-dark p-3 pr-4 active:bg-white/5 transition-colors cursor-pointer border border-white/5 hover:border-white/10 ${device.status === 'offline' ? 'opacity-75' : ''}`}
                 >
                   <div className="flex items-center gap-4">
@@ -193,8 +226,13 @@ const MobileManageDevices: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  <button className="shrink-0 flex items-center justify-center size-8 rounded-full bg-white/5 text-white group-hover:bg-mobile-primary group-hover:text-black transition-colors">
-                    <span className="material-symbols-outlined text-[20px]">arrow_forward_ios</span>
+                  <button
+                    disabled={!!switchingDeviceId}
+                    className="shrink-0 flex items-center justify-center size-8 rounded-full bg-white/5 text-white group-hover:bg-mobile-primary group-hover:text-black transition-colors disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">
+                      {switchingDeviceId === device.id ? 'sync' : 'arrow_forward_ios'}
+                    </span>
                   </button>
                 </motion.div>
               ))}

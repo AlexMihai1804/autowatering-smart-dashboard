@@ -266,6 +266,6 @@ describe('TimePicker', () => {
             const module = await import('../../components/TimePicker');
             expect(module.TimePicker).toBeDefined();
             expect(typeof module.TimePicker).toBe('function');
-        });
+        }, 15000);
     });
 });

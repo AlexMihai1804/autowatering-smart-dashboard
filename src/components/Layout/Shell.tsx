@@ -1,7 +1,7 @@
 import React from 'react';
 import { IonApp, IonContent, IonPage, IonRouterOutlet, IonSplitPane, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import { Redirect, Route, Switch } from 'react-router-dom';
+import { Redirect, Route, Switch, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 // Desktop Pages
@@ -27,19 +27,28 @@ import MobileNotifications from '../../pages/mobile/MobileNotifications';
 import MobileDeviceInfo from '../../pages/mobile/MobileDeviceInfo';
 import MobileDeviceSettings from '../../pages/mobile/MobileDeviceSettings';
 import MobileAppSettings from '../../pages/mobile/MobileAppSettings';
-import MobileHelpAbout from '../../pages/mobile/MobileHelpAbout';
-import MobileTimeLocation from '../../pages/mobile/MobileTimeLocation';
-import MobilePowerMode from '../../pages/mobile/MobilePowerMode';
-import MobileDeviceReset from '../../pages/mobile/MobileDeviceReset';
-import MobileMasterValve from '../../pages/mobile/MobileMasterValve';
-import MobileFlowCalibration from '../../pages/mobile/MobileFlowCalibration';
-import MobileNoDevices from '../../pages/mobile/MobileNoDevices';
+  import MobileHelpAbout from '../../pages/mobile/MobileHelpAbout';
+  import MobileTimeLocation from '../../pages/mobile/MobileTimeLocation';
+  import MobileRainSensor from '../../pages/mobile/MobileRainSensor';
+  import MobilePowerMode from '../../pages/mobile/MobilePowerMode';
+  import MobileDeviceReset from '../../pages/mobile/MobileDeviceReset';
+  import MobileMasterValve from '../../pages/mobile/MobileMasterValve';
+  import MobileFlowCalibration from '../../pages/mobile/MobileFlowCalibration';
+  import MobileNoDevices from '../../pages/mobile/MobileNoDevices';
 import MobileConnectionSuccess from '../../pages/mobile/MobileConnectionSuccess';
 import MobileManageDevices from '../../pages/mobile/MobileManageDevices';
 import MobileZoneAddWizard from '../../pages/mobile/MobileZoneAddWizard';
 import MobileAlarmHistory from '../../pages/mobile/MobileAlarmHistory';
 import MobilePacksSettings from '../../pages/mobile/MobilePacksSettings';
 import MobileCreatePlant from '../../pages/mobile/MobileCreatePlant';
+import MobileAiDoctor from '../../pages/mobile/MobileAiDoctor';
+import MobileAuth from '../../pages/mobile/MobileAuth';
+import MobilePremium from '../../pages/mobile/MobilePremium';
+import MobileProfile from '../../pages/mobile/MobileProfile';
+import MobileHealthSetupHub from '../../pages/mobile/MobileHealthSetupHub';
+import MobileDeviceHealth from '../../pages/mobile/MobileDeviceHealth';
+import MobileTroubleshooting from '../../pages/mobile/MobileTroubleshooting';
+import AppUrlHandler from '../AppUrlHandler';
 
 import AndroidBackButtonHandler from '../AndroidBackButtonHandler';
 
@@ -51,8 +60,147 @@ import { useAppStore } from '../../store/useAppStore';
 
 // Hooks
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { useAuth } from '../../auth';
+import { useI18n } from '../../i18n';
 
 setupIonicReact();
+
+const MobileRouteSwitch: React.FC<{ isConnected: boolean }> = ({ isConnected }) => {
+  const location = useLocation();
+  const { t } = useI18n();
+  const { loading: authLoading, user, isGuest } = useAuth();
+  const hasAccountAccess = Boolean(user) || isGuest;
+  const defaultRoute = hasAccountAccess
+    ? (isConnected ? '/dashboard' : '/welcome')
+    : '/auth';
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6 text-mobile-text-muted">
+        <p className="text-sm">{t('mobileAuth.loading')}</p>
+      </div>
+    );
+  }
+
+  if (!hasAccountAccess && location.pathname !== '/auth') {
+    const returnTo = `${location.pathname}${location.search}`;
+    return <Redirect to={`/auth?returnTo=${encodeURIComponent(returnTo)}`} />;
+  }
+
+  return (
+    <Switch>
+      {/* Welcome & Connection Flow */}
+      <Route exact path="/welcome" component={MobileWelcome} />
+      <Route exact path="/no-devices" component={MobileNoDevices} />
+      <Route exact path="/permissions" component={MobilePermissions} />
+      <Route exact path="/scan" component={MobileDeviceScan} />
+      <Route exact path="/connection-success" component={MobileConnectionSuccess} />
+      <Route exact path="/onboarding" component={MobileOnboardingWizard} />
+      <Route exact path="/auth" component={MobileAuth} />
+      <Route exact path="/premium" component={MobilePremium} />
+      <Route exact path="/profile" component={MobileProfile} />
+
+      {/* Main App Routes - only accessible when connected */}
+      <Route exact path="/dashboard">
+        {isConnected ? <MobileDashboard /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/health">
+        {isConnected ? <MobileHealthSetupHub /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/health/device">
+        {isConnected ? <MobileDeviceHealth /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/health/troubleshooting">
+        {isConnected ? <MobileTroubleshooting /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/zones">
+        {isConnected ? <MobileZones /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/zones/add">
+        {isConnected ? <MobileZoneAddWizard /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/zones/:channelId">
+        {isConnected ? <MobileZoneDetailsFull /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/zones/:channelId/config">
+        {isConnected ? <MobileZoneConfig /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/history">
+        {isConnected ? <MobileHistory /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/settings">
+        {isConnected ? <MobileSettings /> : <Redirect to="/welcome" />}
+      </Route>
+
+      {/* Weather & Environment */}
+      <Route exact path="/weather">
+        {isConnected ? <MobileWeatherDetails /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/notifications">
+        {isConnected ? <MobileNotifications /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/alarms">
+        {isConnected ? <MobileAlarmHistory /> : <Redirect to="/welcome" />}
+      </Route>
+
+      {/* Device Settings */}
+      <Route exact path="/device">
+        {isConnected ? <MobileDeviceSettings /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/device/info">
+        {isConnected ? <MobileDeviceInfo /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/device/time">
+        {isConnected ? <MobileTimeLocation /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/device/rain-sensor">
+        {isConnected ? <MobileRainSensor /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/device/master-valve">
+        {isConnected ? <MobileMasterValve /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/device/flow-calibration">
+        {isConnected ? <MobileFlowCalibration /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/device/power-mode">
+        {isConnected ? <MobilePowerMode /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/device/reset">
+        {isConnected ? <MobileDeviceReset /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/device/packs">
+        {isConnected ? <MobilePacksSettings /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/device/create-plant">
+        {isConnected ? <MobileCreatePlant /> : <Redirect to="/welcome" />}
+      </Route>
+
+      {/* App Settings */}
+      <Route exact path="/app-settings">
+        {isConnected ? <MobileAppSettings /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/help">
+        {isConnected ? <MobileHelpAbout /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/ai-doctor">
+        <MobileAiDoctor />
+      </Route>
+      <Route exact path="/manage-devices">
+        {isConnected ? <MobileManageDevices /> : <Redirect to="/welcome" />}
+      </Route>
+
+      {/* Default redirect */}
+      <Route exact path="/">
+        <Redirect to={defaultRoute} />
+      </Route>
+
+      {/* Fallback */}
+      <Route>
+        <Redirect to={defaultRoute} />
+      </Route>
+    </Switch>
+  );
+};
 
 const Shell: React.FC = () => {
   // Desktop is 1024px+, tablet/mobile below
@@ -66,6 +214,7 @@ const Shell: React.FC = () => {
       <IonApp className="bg-mobile-bg-dark text-white font-manrope">
         <IonReactRouter>
           <AndroidBackButtonHandler />
+          <AppUrlHandler />
           <IonPage>
             <IonContent
               fullscreen
@@ -73,104 +222,12 @@ const Shell: React.FC = () => {
               style={{ '--background': 'transparent' } as React.CSSProperties}
             >
               <div className="min-h-screen bg-mobile-bg-dark">
-                <Switch>
-              {/* Welcome & Connection Flow */}
-              <Route exact path="/welcome" component={MobileWelcome} />
-              <Route exact path="/no-devices" component={MobileNoDevices} />
-              <Route exact path="/permissions" component={MobilePermissions} />
-              <Route exact path="/scan" component={MobileDeviceScan} />
-              <Route exact path="/connection-success" component={MobileConnectionSuccess} />
-              <Route exact path="/onboarding" component={MobileOnboardingWizard} />
-              
-              {/* Main App Routes - only accessible when connected */}
-              <Route exact path="/dashboard">
-                {isConnected ? <MobileDashboard /> : <Redirect to="/welcome" />}
-              </Route>
-              <Route exact path="/zones">
-                {isConnected ? <MobileZones /> : <Redirect to="/welcome" />}
-              </Route>
-              <Route exact path="/zones/add">
-                {isConnected ? <MobileZoneAddWizard /> : <Redirect to="/welcome" />}
-              </Route>
-              <Route exact path="/zones/:channelId">
-                {isConnected ? <MobileZoneDetailsFull /> : <Redirect to="/welcome" />}
-              </Route>
-              <Route exact path="/zones/:channelId/config">
-                {isConnected ? <MobileZoneConfig /> : <Redirect to="/welcome" />}
-              </Route>
-              <Route exact path="/history">
-                {isConnected ? <MobileHistory /> : <Redirect to="/welcome" />}
-              </Route>
-              <Route exact path="/settings">
-                {isConnected ? <MobileSettings /> : <Redirect to="/welcome" />}
-              </Route>
-              
-              {/* Weather & Environment */}
-              <Route exact path="/weather">
-                {isConnected ? <MobileWeatherDetails /> : <Redirect to="/welcome" />}
-              </Route>
-              <Route exact path="/notifications">
-                {isConnected ? <MobileNotifications /> : <Redirect to="/welcome" />}
-              </Route>
-              <Route exact path="/alarms">
-                {isConnected ? <MobileAlarmHistory /> : <Redirect to="/welcome" />}
-              </Route>
-              
-              {/* Device Settings */}
-              <Route exact path="/device">
-                {isConnected ? <MobileDeviceSettings /> : <Redirect to="/welcome" />}
-              </Route>
-              <Route exact path="/device/info">
-                {isConnected ? <MobileDeviceInfo /> : <Redirect to="/welcome" />}
-              </Route>
-              <Route exact path="/device/time">
-                {isConnected ? <MobileTimeLocation /> : <Redirect to="/welcome" />}
-              </Route>
-              <Route exact path="/device/master-valve">
-                {isConnected ? <MobileMasterValve /> : <Redirect to="/welcome" />}
-              </Route>
-              <Route exact path="/device/flow-calibration">
-                {isConnected ? <MobileFlowCalibration /> : <Redirect to="/welcome" />}
-              </Route>
-              <Route exact path="/device/power-mode">
-                {isConnected ? <MobilePowerMode /> : <Redirect to="/welcome" />}
-              </Route>
-              <Route exact path="/device/reset">
-                {isConnected ? <MobileDeviceReset /> : <Redirect to="/welcome" />}
-              </Route>
-              <Route exact path="/device/packs">
-                {isConnected ? <MobilePacksSettings /> : <Redirect to="/welcome" />}
-              </Route>
-              <Route exact path="/device/create-plant">
-                {isConnected ? <MobileCreatePlant /> : <Redirect to="/welcome" />}
-              </Route>
-              
-              {/* App Settings */}
-              <Route exact path="/app-settings">
-                {isConnected ? <MobileAppSettings /> : <Redirect to="/welcome" />}
-              </Route>
-              <Route exact path="/help">
-                {isConnected ? <MobileHelpAbout /> : <Redirect to="/welcome" />}
-              </Route>
-              <Route exact path="/manage-devices">
-                {isConnected ? <MobileManageDevices /> : <Redirect to="/welcome" />}
-              </Route>
-              
-              {/* Default redirect */}
-              <Route exact path="/">
-                <Redirect to={isConnected ? "/dashboard" : "/welcome"} />
-              </Route>
-              
-              {/* Fallback */}
-              <Route>
-                <Redirect to={isConnected ? "/dashboard" : "/welcome"} />
-              </Route>
-                </Switch>
+                <MobileRouteSwitch isConnected={isConnected} />
 
                 {/* Bottom Navigation - only show when connected and not on welcome/scan/onboarding */}
                 {isConnected && (
                   <Route render={({ location }) => {
-                    const hideNavPaths = ['/welcome', '/scan', '/permissions', '/onboarding', '/device/', '/zones/', '/weather', '/notifications', '/app-settings', '/help'];
+                    const hideNavPaths = ['/welcome', '/scan', '/permissions', '/onboarding', '/device/', '/zones/', '/weather', '/notifications', '/app-settings', '/help', '/auth', '/premium', '/profile', '/health'];
                     const shouldHide = hideNavPaths.some(p => location.pathname.startsWith(p)) ||
                                       (location.pathname.startsWith('/zones/') && location.pathname.includes('/'));
                     return shouldHide ? null : <MobileBottomNav />;
@@ -189,6 +246,7 @@ const Shell: React.FC = () => {
     <IonApp className="bg-cyber-dark text-white">
       <IonReactRouter>
         <AndroidBackButtonHandler />
+        <AppUrlHandler />
         {isDesktop ? (
           <div className="flex h-screen overflow-hidden bg-cyber-gradient">
             {isConnected && <Sidebar />}

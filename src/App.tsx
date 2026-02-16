@@ -4,6 +4,7 @@ import Shell from './components/Layout/Shell';
 import { DatabaseService } from './services/DatabaseService';
 import { BleService } from './services/BleService';
 import { I18nProvider } from './i18n';
+import { AuthProvider } from './auth';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -40,7 +41,9 @@ const App: React.FC = () => {
 
   return (
     <I18nProvider>
-      <Shell />
+      <AuthProvider>
+        <Shell />
+      </AuthProvider>
     </I18nProvider>
   );
 };

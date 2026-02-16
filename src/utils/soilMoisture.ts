@@ -97,3 +97,30 @@ export function getSoilMoistureLabel(percent: number): 'Optimal' | 'Fair' | 'Low
   if (percent > 30) return 'Fair';
   return 'Low';
 }
+
+export function calcSoilMoisturePercentFromVwc(args: {
+  // Volumetric water content (m3/m3, e.g. 0.22). If you already have % volume, pass vwc_m3_m3 = pct/100.
+  vwc_m3_m3: number | null | undefined;
+  // Field capacity / wilting point in % volume (0-100), matching the firmware's custom soil config fields.
+  fieldCapacityPct: number | null | undefined;
+  wiltingPointPct: number | null | undefined;
+}): number | null {
+  const vwc = args.vwc_m3_m3;
+  const fc = args.fieldCapacityPct;
+  const wp = args.wiltingPointPct;
+
+  if (!Number.isFinite(vwc as any)) return null;
+  if (!Number.isFinite(fc as any)) return null;
+  if (!Number.isFinite(wp as any)) return null;
+
+  const fcClamped = Math.min(100, Math.max(0, Number(fc)));
+  const wpClamped = Math.min(100, Math.max(0, Number(wp)));
+  if (fcClamped <= wpClamped + 0.001) return null;
+
+  // Convert VWC (0..1) -> % volume.
+  const vwcPct = Number(vwc) * 100;
+  const pct = ((vwcPct - wpClamped) / (fcClamped - wpClamped)) * 100;
+
+  if (!Number.isFinite(pct)) return null;
+  return Math.min(100, Math.max(0, Math.round(pct)));
+}

@@ -98,13 +98,11 @@ const MobileZoneDetails: React.FC = () => {
   };
 
   const handleSkipNext = () => {
-    // Mock - would skip next scheduled run
-    console.log('Skip next watering');
+    alert('Skip-next command is not available in current firmware BLE API.');
   };
 
   const handleOpenSchedule = () => {
-    // Navigate to schedule settings
-    console.log('Open schedule');
+    history.push(`/zones/${channelIdNum}/config`);
   };
 
   const handleStartManual = async () => {
@@ -116,8 +114,7 @@ const MobileZoneDetails: React.FC = () => {
   };
 
   const handleOpenSettings = () => {
-    // Would open zone settings
-    console.log('Open zone settings');
+    history.push(`/zones/${channelIdNum}`);
   };
 
   if (!zone) {

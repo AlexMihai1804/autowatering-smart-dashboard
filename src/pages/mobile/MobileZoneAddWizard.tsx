@@ -1,15 +1,31 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import { BleService } from '../../services/BleService';
+import { plantIdService } from '../../services/PlantIdService';
+import type { PlantIdCandidate } from '../../services/PlantIdService';
 import MobileBottomSheet from '../../components/mobile/MobileBottomSheet';
 import { TimePicker } from '../../components/ui/time-picker';
 import { PlantDBEntry, SoilDBEntry, IrrigationMethodEntry, PLANT_CATEGORIES } from '../../services/DatabaseService';
 import { isChannelConfigComplete } from '../../types/firmware_structs';
 import SoilGridsServiceInstance, { CustomSoilParameters, estimateSoilParametersFromTexture } from '../../services/SoilGridsService';
 import { getRecommendedCoverageType, getCoverageModeExplanation } from '../../utils/plantCoverageHelper';
+import { buildPlantDbIndex, resolvePlantDbEntryFromCandidate } from '../../utils/plantIdMapping';
+import {
+  aliasLookupMap,
+  loadLocalPlantIdAliases,
+  mergePlantIdAliasMaps,
+  normalizePlantIdAliasMap,
+  PlantIdAliasMap,
+  PLANT_ID_ALIASES_CLOUD_KEY,
+  saveLocalPlantIdAliases,
+  upsertPlantIdAlias
+} from '../../utils/plantIdAliases';
 import { useI18n } from '../../i18n';
+import { useAuth } from '../../auth';
+import MobilePremiumUpsellModal from '../../components/mobile/MobilePremiumUpsellModal';
+import MobilePlantIdReviewSheet from '../../components/mobile/MobilePlantIdReviewSheet';
 
 type WizardStep =
   | 'select-channel'
@@ -87,6 +103,17 @@ const MobileZoneAddWizard: React.FC = () => {
   const { zones, systemConfig, onboardingState, wizardState, plantDb, soilDb, irrigationMethodDb } = useAppStore();
   const bleService = BleService.getInstance();
   const { t, language } = useI18n();
+  const { isAuthenticated, premium, premiumLoading, user, loadCloudState, saveCloudState } = useAuth();
+  const plantDbIndex = useMemo(() => buildPlantDbIndex(plantDb), [plantDb]);
+
+  const showToast = useCallback(async (text: string) => {
+    try {
+      const { Toast } = await import('@capacitor/toast');
+      await Toast.show({ text, duration: 'short', position: 'bottom' });
+    } catch {
+      // no-op on web / missing plugin
+    }
+  }, []);
 
   // Get unconfigured channels
   const unconfiguredChannels = useMemo(() => {
@@ -157,6 +184,16 @@ const MobileZoneAddWizard: React.FC = () => {
 
   // Plant selection method: 'camera' or 'list'
   const [plantMethod, setPlantMethod] = useState<'camera' | 'list' | null>(null);
+  const [identifyingPlant, setIdentifyingPlant] = useState(false);
+  const plantCameraInputRef = useRef<HTMLInputElement | null>(null);
+  const [plantAliases, setPlantAliases] = useState<PlantIdAliasMap>(() => loadLocalPlantIdAliases());
+  const [pendingAliasCandidate, setPendingAliasCandidate] = useState<PlantIdCandidate | null>(null);
+  const [plantReview, setPlantReview] = useState<{
+    candidate: PlantIdCandidate;
+    reason: 'ambiguous' | 'not_found';
+    suggestedPlant: PlantDBEntry | null;
+    prefilledQuery: string;
+  } | null>(null);
   // Selected plant category for filtering
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   // Location detection state
@@ -202,8 +239,160 @@ const MobileZoneAddWizard: React.FC = () => {
     );
   }, [soilDb, soilSearch]);
 
+  const syncAliasesToCloud = useCallback(async (nextAliases: PlantIdAliasMap) => {
+    if (!user) return;
+    try {
+      const cloudState = await loadCloudState();
+      const baseState = (cloudState && typeof cloudState === 'object')
+        ? cloudState
+        : {};
+      const cloudAliases = normalizePlantIdAliasMap((baseState as Record<string, unknown>)[PLANT_ID_ALIASES_CLOUD_KEY]);
+      const mergedAliases = mergePlantIdAliasMaps(cloudAliases, nextAliases);
+      await saveCloudState(
+        {
+          ...(baseState as Record<string, unknown>),
+          [PLANT_ID_ALIASES_CLOUD_KEY]: mergedAliases
+        },
+        'plant_id_aliases_v1'
+      );
+    } catch (error) {
+      console.warn('[ZoneAddWizard] Failed syncing Plant ID aliases to cloud:', error);
+    }
+  }, [loadCloudState, saveCloudState, user]);
+
+  useEffect(() => {
+    const localAliases = loadLocalPlantIdAliases();
+    setPlantAliases(localAliases);
+
+    let cancelled = false;
+    if (!user) return;
+
+    void (async () => {
+      try {
+        const cloudState = await loadCloudState();
+        const cloudAliases = normalizePlantIdAliasMap(
+          cloudState && typeof cloudState === 'object'
+            ? (cloudState as Record<string, unknown>)[PLANT_ID_ALIASES_CLOUD_KEY]
+            : null
+        );
+        const merged = mergePlantIdAliasMaps(localAliases, cloudAliases);
+        if (cancelled) return;
+        setPlantAliases(merged);
+        saveLocalPlantIdAliases(merged);
+      } catch (error) {
+        console.warn('[ZoneAddWizard] Failed loading Plant ID aliases:', error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadCloudState, user]);
+
+  const persistAliasForCandidate = useCallback((
+    candidate: PlantIdCandidate | null,
+    plant: PlantDBEntry,
+    source: 'camera_auto' | 'camera_review' | 'camera_manual'
+  ) => {
+    if (!candidate) return;
+    const upserted = upsertPlantIdAlias(plantAliases, candidate, plant.id, source);
+    if (!upserted.changed) return;
+
+    setPlantAliases(upserted.aliases);
+    saveLocalPlantIdAliases(upserted.aliases);
+    void syncAliasesToCloud(upserted.aliases);
+  }, [plantAliases, syncAliasesToCloud]);
+
   const updateZoneConfig = (updates: Partial<ZoneConfig>) => {
     setZoneConfig(prev => ({ ...prev, ...updates }));
+  };
+
+  const [premiumUpsellOpen, setPremiumUpsellOpen] = useState(false);
+  const [premiumUpsellMode, setPremiumUpsellMode] = useState<'login' | 'premium'>('premium');
+
+  const handlePlantCameraPick = () => {
+    if (!isAuthenticated) {
+      setPremiumUpsellMode('login');
+      setPremiumUpsellOpen(true);
+      return;
+    }
+    if (premiumLoading) {
+      void (async () => {
+        try {
+          const { Toast } = await import('@capacitor/toast');
+          await Toast.show({ text: t('mobilePlantId.checkingSubscription'), duration: 'short' });
+        } catch {
+          // ignore
+        }
+      })();
+      return;
+    }
+    if (!premium.isPremium) {
+      setPremiumUpsellMode('premium');
+      setPremiumUpsellOpen(true);
+      return;
+    }
+    setPlantMethod('camera');
+    plantCameraInputRef.current?.click();
+  };
+
+  const handlePlantCameraSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setIdentifyingPlant(true);
+    try {
+      const data = await plantIdService.identify({ image: file });
+      const candidate: PlantIdCandidate | null =
+        (data?.best_match ?? data?.match ?? data?.suggestions?.[0] ?? null);
+
+      if (!candidate) {
+        await showToast(t('mobilePlantId.identificationFailed'));
+        return;
+      }
+
+      const resolved = resolvePlantDbEntryFromCandidate(candidate, plantDbIndex, {
+        aliasPlantIdByLookupKey: aliasLookupMap(plantAliases)
+      });
+
+      if (resolved.status === 'match') {
+        updateZoneConfig({ plantType: resolved.plant });
+        persistAliasForCandidate(candidate, resolved.plant, 'camera_auto');
+        setPendingAliasCandidate(null);
+        setPlantReview(null);
+
+        const plantSelectionIndex = stepOrder.indexOf('plant-selection');
+        const nextStep = plantSelectionIndex >= 0 ? stepOrder[plantSelectionIndex + 1] : null;
+        if (currentStep === 'plant-method' && nextStep) {
+          setDirection(1);
+          setCurrentStep(nextStep);
+        }
+        await showToast(t('mobilePlantId.matchSaved'));
+        return;
+      }
+
+      if (resolved.status === 'ambiguous' || resolved.status === 'not_found') {
+        const query = resolved.query.canonicalName || resolved.query.canonical || resolved.query.normalized || '';
+        setPendingAliasCandidate(candidate);
+        setPlantReview({
+          candidate,
+          reason: resolved.status,
+          suggestedPlant: resolved.status === 'ambiguous' ? (resolved.candidates[0] || null) : null,
+          prefilledQuery: query
+        });
+        await showToast(t('mobilePlantId.noLocalMatch'));
+        return;
+      }
+
+      await showToast(t('mobilePlantId.identificationFailed'));
+    } catch (error) {
+      console.error('[ZoneAddWizard] Camera plant identification failed:', error);
+      const message = error instanceof Error ? error.message : t('mobilePlantId.identificationFailed');
+      await showToast(message);
+    } finally {
+      setIdentifyingPlant(false);
+    }
   };
 
   // Step order depends on watering mode:
@@ -242,6 +431,32 @@ const MobileZoneAddWizard: React.FC = () => {
       'zone-summary',
     ];
   }, [preselectedChannel, zoneConfig.wateringMode]);
+
+  const openManualPlantSelectionFromReview = useCallback(() => {
+    if (!plantReview) return;
+    if (plantReview.prefilledQuery) {
+      setPlantSearch(plantReview.prefilledQuery);
+    }
+    setPlantReview(null);
+    setDirection(1);
+    setCurrentStep('plant-selection');
+  }, [plantReview]);
+
+  const handleUseSuggestedPlantFromReview = useCallback(() => {
+    if (!plantReview?.suggestedPlant) return;
+    updateZoneConfig({ plantType: plantReview.suggestedPlant });
+    persistAliasForCandidate(plantReview.candidate, plantReview.suggestedPlant, 'camera_review');
+    setPendingAliasCandidate(null);
+    setPlantReview(null);
+
+    const plantSelectionIndex = stepOrder.indexOf('plant-selection');
+    const nextStep = plantSelectionIndex >= 0 ? stepOrder[plantSelectionIndex + 1] : null;
+    if (currentStep === 'plant-method' && nextStep) {
+      setDirection(1);
+      setCurrentStep(nextStep);
+    }
+    void showToast(t('mobilePlantId.matchSaved'));
+  }, [currentStep, persistAliasForCandidate, plantReview, showToast, stepOrder, t]);
 
   const currentStepIndex = stepOrder.indexOf(currentStep);
   const totalSteps = stepOrder.length;
@@ -615,11 +830,8 @@ const MobileZoneAddWizard: React.FC = () => {
 
             {/* Camera Option */}
             <button
-              onClick={() => {
-                setPlantMethod('camera');
-                // TODO: Implement camera plant identification
-                alert(t('zoneWizard.plantMethod.camera.alert'));
-              }}
+              onClick={handlePlantCameraPick}
+              disabled={identifyingPlant}
               className={`relative w-full flex flex-col items-center gap-4 rounded-[2rem] border-2 p-6 transition-all hover:scale-[1.02] ${plantMethod === 'camera'
                 ? 'border-mobile-primary bg-mobile-surface-dark shadow-[0_0_20px_rgba(19,236,55,0.15)]'
                 : 'border-transparent bg-mobile-surface-dark hover:border-mobile-border-dark'
@@ -632,17 +844,32 @@ const MobileZoneAddWizard: React.FC = () => {
               )}
               <div className={`size-20 rounded-full flex items-center justify-center transition-colors ${plantMethod === 'camera' ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
                 }`}>
-                <span className="material-symbols-outlined text-[40px]">photo_camera</span>
+                <span className="material-symbols-outlined text-[40px]">
+                  {identifyingPlant ? 'progress_activity' : 'photo_camera'}
+                </span>
               </div>
               <div className="text-center space-y-1">
                 <h3 className="text-xl font-bold text-white">{t('zoneWizard.plantMethod.camera.title')}</h3>
                 <p className="text-sm text-mobile-text-muted">{t('zoneWizard.plantMethod.camera.desc')}</p>
               </div>
             </button>
+            <input
+              ref={plantCameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(event) => {
+                void handlePlantCameraSelected(event);
+              }}
+            />
 
             {/* Manual Search Option */}
             <button
-              onClick={() => setPlantMethod('list')}
+              onClick={() => {
+                setPlantMethod('list');
+                setPlantReview(null);
+              }}
               className={`relative w-full flex flex-col items-center gap-4 rounded-[2rem] border-2 p-6 transition-all hover:scale-[1.02] ${plantMethod === 'list'
                 ? 'border-mobile-primary bg-mobile-surface-dark shadow-[0_0_20px_rgba(19,236,55,0.15)]'
                 : 'border-transparent bg-mobile-surface-dark hover:border-mobile-border-dark'
@@ -757,6 +984,10 @@ const MobileZoneAddWizard: React.FC = () => {
                   key={plant.id}
                   onClick={() => {
                     const recommendedCoverage = getRecommendedCoverageType(plant);
+                    if (pendingAliasCandidate) {
+                      persistAliasForCandidate(pendingAliasCandidate, plant, 'camera_manual');
+                      setPendingAliasCandidate(null);
+                    }
                     updateZoneConfig({
                       plantType: plant,
                       // Auto-set coverage type if only one mode is available
@@ -1658,7 +1889,9 @@ const MobileZoneAddWizard: React.FC = () => {
                     <div className="size-9 rounded-full bg-purple-400/20 flex items-center justify-center text-purple-400">
                       <span className="material-symbols-outlined text-lg">schedule</span>
                     </div>
-                    <p className="text-white font-bold text-sm">{t('zoneWizard.schedule.startTime')}</p>
+                    <p className="text-white font-bold text-sm">
+                      {zoneConfig.useSolarTiming ? t('zoneWizard.schedule.solar') : t('zoneWizard.schedule.startTime')}
+                    </p>
                   </div>
 
                   {/* Solar vs Fixed toggle */}
@@ -2228,6 +2461,10 @@ const MobileZoneAddWizard: React.FC = () => {
             <button
               key={plant.id}
               onClick={() => {
+                if (pendingAliasCandidate) {
+                  persistAliasForCandidate(pendingAliasCandidate, plant, 'camera_manual');
+                  setPendingAliasCandidate(null);
+                }
                 updateZoneConfig({ plantType: plant });
                 setShowPlantSheet(false);
                 setPlantSearch('');
@@ -2321,6 +2558,40 @@ const MobileZoneAddWizard: React.FC = () => {
           ))}
         </div>
       </MobileBottomSheet>
+
+      <MobilePlantIdReviewSheet
+        isOpen={!!plantReview}
+        reason={plantReview?.reason ?? 'not_found'}
+        detectedName={
+          plantReview
+            ? (plantReview.candidate.canonical_name
+              || plantReview.candidate.scientific_name
+              || plantReview.candidate.scientificName
+              || '')
+            : ''
+        }
+        probability={plantReview?.candidate.probability ?? null}
+        suggestedPlant={plantReview?.suggestedPlant ?? null}
+        onUseSuggested={plantReview?.suggestedPlant ? handleUseSuggestedPlantFromReview : undefined}
+        onChooseManually={openManualPlantSelectionFromReview}
+        onClose={() => setPlantReview(null)}
+      />
+
+      <MobilePremiumUpsellModal
+        isOpen={premiumUpsellOpen}
+        onClose={() => setPremiumUpsellOpen(false)}
+        title={t('mobileUpsell.title')}
+        subtitle={premiumUpsellMode === 'login' ? t('mobilePlantId.loginRequired') : t('mobilePlantId.premiumOnly')}
+        primaryLabel={premiumUpsellMode === 'login' ? t('mobileUpsell.loginToUpgrade') : t('mobileUpsell.upgradeNow')}
+        onPrimaryAction={() => {
+          setPremiumUpsellOpen(false);
+          if (premiumUpsellMode === 'login') {
+            history.push('/auth?returnTo=/zones/add');
+            return;
+          }
+          history.push('/premium');
+        }}
+      />
     </div>
   );
 };

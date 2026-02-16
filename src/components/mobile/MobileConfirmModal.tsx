@@ -13,6 +13,7 @@ interface MobileConfirmModalProps {
   icon?: string;
   variant?: 'danger' | 'warning' | 'success' | 'info';
   requireConfirmation?: string; // If set, user must type this to confirm
+  loading?: boolean;
 }
 
 const MobileConfirmModal: React.FC<MobileConfirmModalProps> = ({
@@ -26,6 +27,7 @@ const MobileConfirmModal: React.FC<MobileConfirmModalProps> = ({
   icon = 'warning',
   variant = 'danger',
   requireConfirmation,
+  loading = false,
 }) => {
   const { t } = useI18n();
   const [confirmInput, setConfirmInput] = React.useState('');
@@ -60,10 +62,10 @@ const MobileConfirmModal: React.FC<MobileConfirmModalProps> = ({
   };
 
   const colors = variantColors[variant];
-  const canConfirm = !requireConfirmation || confirmInput.toUpperCase() === requireConfirmation.toUpperCase();
+  const canConfirm = !loading && (!requireConfirmation || confirmInput.toUpperCase() === requireConfirmation.toUpperCase());
 
   const handleConfirm = () => {
-    if (canConfirm) {
+    if (!loading && canConfirm) {
       onConfirm();
       setConfirmInput('');
     }
@@ -146,12 +148,13 @@ const MobileConfirmModal: React.FC<MobileConfirmModalProps> = ({
                             ? `${colors.buttonBg} ${colors.glowColor} text-white` 
                             : 'bg-white/10 text-white/30 cursor-not-allowed'}`}
               >
-                {confirmLabel}
+                {loading ? t('common.loading') : confirmLabel}
               </button>
               <button
                 onClick={handleClose}
+                disabled={loading}
                 className="w-full h-12 rounded-lg bg-transparent border border-mobile-border-dark 
-                         text-mobile-text-muted font-semibold text-sm hover:bg-white/5 transition-colors"
+                         text-mobile-text-muted font-semibold text-sm hover:bg-white/5 transition-colors disabled:opacity-50"
               >
                 {cancelLabel}
               </button>
