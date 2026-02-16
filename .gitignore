@@ -74,3 +74,7 @@ src/i18n/extracted/
 
 # Backend local build artifacts
 backend/aws-autowatering-backend/.aws-sam/
+
+# Python cache
+__pycache__/
+*.pyc
