@@ -19,6 +19,7 @@ const MobileDeviceInfo: React.FC = () => {
   const bleService = BleService.getInstance();
   const { devices } = useKnownDevices();
   const [showRebootModal, setShowRebootModal] = useState(false);
+  const [firmwareRevision, setFirmwareRevision] = useState<string | null>(null);
   const { t } = useI18n();
 
   const showToast = useCallback(async (text: string) => {
@@ -42,6 +43,12 @@ const MobileDeviceInfo: React.FC = () => {
     });
     void bleService.readBulkSyncSnapshot().catch((error) => {
       console.warn('[MobileDeviceInfo] Failed to read bulk snapshot:', error);
+    });
+    void bleService.readFirmwareRevision().then((revision) => {
+      setFirmwareRevision(revision);
+    }).catch((error) => {
+      console.warn('[MobileDeviceInfo] Failed to read firmware revision:', error);
+      setFirmwareRevision(null);
     });
   }, [isConnected]);
 
@@ -76,7 +83,7 @@ const MobileDeviceInfo: React.FC = () => {
     return {
       name: connectedDevice?.name || connectedDeviceId || t('mobileSettings.autoWaterDevice'),
       model: `AutoWatering (${systemConfig?.num_channels ?? 8} ch)`,
-      firmware: String(systemConfig?.version ?? bulkSyncSnapshot?.version ?? '?'),
+      firmware: firmwareRevision,
       serial: stableSerial || t('labels.unknown'),
       signalStrength: signalDbm,
       uptime: formatUptime(diagnosticsData?.uptime),
@@ -88,7 +95,12 @@ const MobileDeviceInfo: React.FC = () => {
             : t('labels.unknown'),
       errorCount: diagnosticsData?.error_count ?? 0
     };
-  }, [connectedDevice, connectedDeviceId, systemConfig, bulkSyncSnapshot, diagnosticsData, signalDbm, t]);
+  }, [connectedDevice, connectedDeviceId, systemConfig, bulkSyncSnapshot, diagnosticsData, signalDbm, firmwareRevision, t]);
+
+  const formatFirmware = (value: string | null) => {
+    if (!value) return t('labels.unknown');
+    return value.startsWith('v') || value.startsWith('V') ? value : `v${value}`;
+  };
 
   const handleReboot = async () => {
     // Firmware reboot command is not exposed in current BLE API.
@@ -235,8 +247,8 @@ const MobileDeviceInfo: React.FC = () => {
                 <span className="text-base font-medium text-white">{t('mobileDeviceInfo.firmwareVersion')}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-300">v{deviceData.firmware}</span>
-                <div className="w-2 h-2 rounded-full bg-mobile-primary" />
+                <span className="text-sm font-medium text-gray-300">{formatFirmware(deviceData.firmware)}</span>
+                {deviceData.firmware && <div className="w-2 h-2 rounded-full bg-mobile-primary" />}
               </div>
             </div>
 
@@ -264,7 +276,7 @@ const MobileDeviceInfo: React.FC = () => {
         {/* Actions */}
         <div className="flex flex-col gap-3 mt-4">
           <button 
-            onClick={() => history.push('/device/packs')}
+            onClick={() => history.push('/device/firmware')}
             className="relative flex w-full items-center justify-center overflow-hidden rounded-full h-14 px-5 
                      bg-mobile-primary hover:bg-green-400 active:scale-[0.98] transition-all 
                      text-mobile-bg-dark text-base font-bold shadow-lg shadow-mobile-primary/20"

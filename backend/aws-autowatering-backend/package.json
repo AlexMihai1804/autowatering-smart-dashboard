@@ -8,14 +8,20 @@
   "main": "dist/handler.js",
   "scripts": {
     "build": "tsc",
+    "check": "tsc --noEmit",
     "clean": "rimraf dist",
     "sam:build": "sam build",
-    "sam:deploy:guided": "sam deploy --guided"
+    "sam:deploy": "sam deploy",
+    "sam:deploy:guided": "sam deploy --guided",
+    "deploy": "npm run build && sam build && sam deploy",
+    "deploy:full": "npm install --no-fund --no-audit && npm run deploy"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.888.0",
     "@aws-sdk/client-dynamodb": "^3.888.0",
+    "@aws-sdk/client-s3": "^3.992.0",
     "@aws-sdk/lib-dynamodb": "^3.888.0",
+    "@aws-sdk/s3-request-presigner": "^3.992.0",
     "@aws-sdk/util-dynamodb": "^3.888.0",
     "aws-jwt-verify": "^5.1.1",
     "busboy": "^1.6.0",

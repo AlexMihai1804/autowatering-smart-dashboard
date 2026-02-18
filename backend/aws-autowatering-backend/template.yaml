@@ -42,6 +42,45 @@ Parameters:
   FactoryProvisionToken:
     Type: String
     Default: ""
+  OtaLatestVersion:
+    Type: String
+    Default: ""
+  OtaLatestChannel:
+    Type: String
+    Default: "stable"
+  OtaLatestBoard:
+    Type: String
+    Default: "arduino_nano_33_ble"
+  OtaLatestMandatory:
+    Type: String
+    Default: "false"
+  OtaLatestNotes:
+    Type: String
+    Default: ""
+  OtaLatestArtifactName:
+    Type: String
+    Default: "zephyr.signed.bin"
+  OtaLatestArtifactSizeBytes:
+    Type: String
+    Default: ""
+  OtaLatestArtifactSha256:
+    Type: String
+    Default: ""
+  OtaLatestDownloadUrl:
+    Type: String
+    Default: ""
+  OtaS3Bucket:
+    Type: String
+    Default: ""
+    Description: "S3 bucket name for OTA binary storage"
+  OtaAdminToken:
+    Type: String
+    Default: ""
+    Description: "Shared secret for admin OTA publish endpoints"
+  OtaDownloadUrlTtlSeconds:
+    Type: String
+    Default: "3600"
+    Description: "TTL in seconds for presigned download URLs"
 
 Resources:
   AppRegistryApplication:
@@ -82,9 +121,26 @@ Resources:
       AttributeDefinitions:
         - AttributeName: uid
           AttributeType: S
+        - AttributeName: stripe_customer_id
+          AttributeType: S
+        - AttributeName: stripe_subscription_id
+          AttributeType: S
       KeySchema:
         - AttributeName: uid
           KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: stripe-customer-index
+          KeySchema:
+            - AttributeName: stripe_customer_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: stripe-subscription-index
+          KeySchema:
+            - AttributeName: stripe_subscription_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
       TableName: !Sub "autowatering-users-${AppEnvironment}"
 
   RateLimitsTable:
@@ -120,6 +176,22 @@ Resources:
             ProjectionType: ALL
       TableName: !Sub "autowatering-provisioning-${AppEnvironment}"
 
+  OtaReleasesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: board_channel
+          AttributeType: S
+        - AttributeName: version
+          AttributeType: S
+      KeySchema:
+        - AttributeName: board_channel
+          KeyType: HASH
+        - AttributeName: version
+          KeyType: RANGE
+      TableName: !Sub "autowatering-ota-releases-${AppEnvironment}"
+
   BackendFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -136,6 +208,19 @@ Resources:
           PROVISIONING_TABLE: !Ref ProvisioningTable
           SERIAL_COUNTER_KEY: "serial_counter"
           FACTORY_PROVISION_TOKEN: !Ref FactoryProvisionToken
+          OTA_LATEST_VERSION: !Ref OtaLatestVersion
+          OTA_LATEST_CHANNEL: !Ref OtaLatestChannel
+          OTA_LATEST_BOARD: !Ref OtaLatestBoard
+          OTA_LATEST_MANDATORY: !Ref OtaLatestMandatory
+          OTA_LATEST_NOTES: !Ref OtaLatestNotes
+          OTA_LATEST_ARTIFACT_NAME: !Ref OtaLatestArtifactName
+          OTA_LATEST_ARTIFACT_SIZE_BYTES: !Ref OtaLatestArtifactSizeBytes
+          OTA_LATEST_ARTIFACT_SHA256: !Ref OtaLatestArtifactSha256
+          OTA_LATEST_DOWNLOAD_URL: !Ref OtaLatestDownloadUrl
+          OTA_RELEASES_TABLE: !Ref OtaReleasesTable
+          OTA_S3_BUCKET: !Ref OtaS3Bucket
+          OTA_ADMIN_TOKEN: !Ref OtaAdminToken
+          OTA_DOWNLOAD_URL_TTL_SECONDS: !Ref OtaDownloadUrlTtlSeconds
           COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
           COGNITO_APP_CLIENT_ID: !Ref CognitoAppClientId
           ALLOWED_ORIGINS: !Ref AllowedOrigins
@@ -163,6 +248,14 @@ Resources:
             TableName: !Ref RateLimitsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref ProvisioningTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OtaReleasesTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+              Resource: !Sub "arn:aws:s3:::${OtaS3Bucket}/*"
         - Statement:
             Effect: Allow
             Action:
@@ -267,11 +360,95 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /myDevices
             Method: GET
+        UnclaimDevicePost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /unclaimDevice
+            Method: POST
+        RevokeDevicePost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /revokeDevice
+            Method: POST
+        ReactivateDevicePost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /reactivateDevice
+            Method: POST
+        DeviceAuditGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /deviceAudit
+            Method: GET
+        OtaLatestGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ota/latest
+            Method: GET
+        OtaDownloadUrlGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ota/releases/{version}/download-url
+            Method: GET
+        OtaCreateReleasePost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ota/releases
+            Method: POST
+        OtaPublishReleasePost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ota/releases/{version}/publish
+            Method: POST
+        OtaListReleasesGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ota/releases
+            Method: GET
         AppReturnGet:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
             Path: /appReturn
+            Method: GET
+        HealthGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /health
+            Method: GET
+        HealthDeepGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /health/deep
+            Method: GET
+        HealthOtaGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /health/ota
+            Method: GET
+        HealthStripeGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /health/stripe
+            Method: GET
+        HealthProvisionGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /health/provision
             Method: GET
         OptionsProxy:
           Type: HttpApi

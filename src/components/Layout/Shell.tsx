@@ -25,6 +25,7 @@ import MobileOnboardingWizard from '../../pages/mobile/MobileOnboardingWizard';
 import MobileWeatherDetails from '../../pages/mobile/MobileWeatherDetails';
 import MobileNotifications from '../../pages/mobile/MobileNotifications';
 import MobileDeviceInfo from '../../pages/mobile/MobileDeviceInfo';
+import MobileFirmwareUpdate from '../../pages/mobile/MobileFirmwareUpdate';
 import MobileDeviceSettings from '../../pages/mobile/MobileDeviceSettings';
 import MobileAppSettings from '../../pages/mobile/MobileAppSettings';
   import MobileHelpAbout from '../../pages/mobile/MobileHelpAbout';
@@ -149,6 +150,9 @@ const MobileRouteSwitch: React.FC<{ isConnected: boolean }> = ({ isConnected }) 
       </Route>
       <Route exact path="/device/info">
         {isConnected ? <MobileDeviceInfo /> : <Redirect to="/welcome" />}
+      </Route>
+      <Route exact path="/device/firmware">
+        {isConnected ? <MobileFirmwareUpdate /> : <Redirect to="/welcome" />}
       </Route>
       <Route exact path="/device/time">
         {isConnected ? <MobileTimeLocation /> : <Redirect to="/welcome" />}

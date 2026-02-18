@@ -12,6 +12,7 @@ import { config } from './config';
 
 export interface UserRecord {
     uid: string;
+    doc_version?: number;
     premium?: boolean;
     profile?: Record<string, unknown>;
     state?: Record<string, unknown>;
@@ -43,6 +44,15 @@ export interface ProvisioningRecord {
     claimed_by_uid?: string;
     claimed_at?: string;
     metadata?: Record<string, unknown>;
+    audit_trail?: AuditEntry[];
+}
+
+export interface AuditEntry {
+    action: string;
+    actor_uid: string;
+    timestamp: string;
+    reason?: string;
+    details?: Record<string, unknown>;
 }
 
 const ddbClient = new DynamoDBClient({});
@@ -90,12 +100,55 @@ export async function putUser(user: UserRecord): Promise<void> {
 }
 
 export async function mergeUser(uid: string, patch: Record<string, unknown>): Promise<UserRecord> {
-    const existing = await getUser(uid);
-    const base: UserRecord = existing || { uid };
-    const merged = deepMerge(base, patch);
-    merged.uid = uid;
-    await putUser(merged);
-    return merged;
+    const MAX_RETRIES = 3;
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        const existing = await getUser(uid);
+        const base: UserRecord = existing || { uid };
+        const merged = deepMerge(base, patch);
+        merged.uid = uid;
+
+        const currentVersion = typeof base.doc_version === 'number' ? base.doc_version : 0;
+        merged.doc_version = currentVersion + 1;
+
+        try {
+            if (currentVersion === 0 && !existing) {
+                // New document — condition: must not exist yet
+                await docClient.send(new PutCommand({
+                    TableName: config.usersTable,
+                    Item: merged,
+                    ConditionExpression: 'attribute_not_exists(uid)'
+                }));
+            } else {
+                // Existing document — optimistic lock on doc_version
+                await docClient.send(new PutCommand({
+                    TableName: config.usersTable,
+                    Item: merged,
+                    ConditionExpression: 'doc_version = :expected OR attribute_not_exists(doc_version)',
+                    ExpressionAttributeValues: {
+                        ':expected': currentVersion
+                    }
+                }));
+            }
+            return merged;
+        } catch (error: any) {
+            if (error?.name === 'ConditionalCheckFailedException') {
+                if (attempt < MAX_RETRIES - 1) {
+                    // Brief backoff before retry
+                    await new Promise(r => setTimeout(r, 50 * (attempt + 1)));
+                    continue;
+                }
+                throw Object.assign(
+                    new Error('Concurrent update conflict — please retry'),
+                    { statusCode: 409, code: 'optimistic_lock_failed' }
+                );
+            }
+            throw error;
+        }
+    }
+
+    // Unreachable, but TypeScript wants it
+    throw Object.assign(new Error('mergeUser: max retries exhausted'), { statusCode: 500 });
 }
 
 export async function deleteUser(uid: string): Promise<void> {
@@ -115,6 +168,17 @@ function getNestedValue(source: Record<string, unknown>, path: string[]): unknow
 }
 
 export async function findUserUidByPathValue(path: string[], value: string): Promise<string | null> {
+    // Optimised: use GSI for known Stripe fields, fall back to scan otherwise
+    if (path.length === 2 && path[0] === 'subscription') {
+        if (path[1] === 'stripeCustomerId') {
+            return findUserUidByStripeCustomerId(value);
+        }
+        if (path[1] === 'stripeSubscriptionId') {
+            return findUserUidByStripeSubscriptionId(value);
+        }
+    }
+
+    // Generic fallback scan (should no longer be needed for Stripe lookups)
     let lastEvaluatedKey: Record<string, unknown> | undefined = undefined;
 
     do {
@@ -136,6 +200,36 @@ export async function findUserUidByPathValue(path: string[], value: string): Pro
     } while (lastEvaluatedKey);
 
     return null;
+}
+
+export async function findUserUidByStripeCustomerId(customerId: string): Promise<string | null> {
+    const out = await docClient.send(new QueryCommand({
+        TableName: config.usersTable,
+        IndexName: 'stripe-customer-index',
+        KeyConditionExpression: 'stripe_customer_id = :cid',
+        ExpressionAttributeValues: {
+            ':cid': customerId
+        },
+        Limit: 1
+    }));
+
+    const item = (out.Items || [])[0] as Record<string, unknown> | undefined;
+    return item && typeof item.uid === 'string' ? item.uid : null;
+}
+
+export async function findUserUidByStripeSubscriptionId(subscriptionId: string): Promise<string | null> {
+    const out = await docClient.send(new QueryCommand({
+        TableName: config.usersTable,
+        IndexName: 'stripe-subscription-index',
+        KeyConditionExpression: 'stripe_subscription_id = :sid',
+        ExpressionAttributeValues: {
+            ':sid': subscriptionId
+        },
+        Limit: 1
+    }));
+
+    const item = (out.Items || [])[0] as Record<string, unknown> | undefined;
+    return item && typeof item.uid === 'string' ? item.uid : null;
 }
 
 export async function getRateLimit(id: string): Promise<RateLimitRecord | null> {
@@ -271,4 +365,129 @@ export async function claimProvisioningRecord(
         }
         return 'not_claimable';
     }
+}
+
+// ── Fleet lifecycle operations ──────────────────────────────────────
+
+export async function unclaimProvisioningRecord(
+    hwId: string,
+    actorUid: string,
+    reason?: string
+): Promise<'unclaimed' | 'not_found' | 'not_owned' | 'not_active'> {
+    const record = await getProvisioningRecord(hwId);
+    if (!record) return 'not_found';
+    if (record.status !== 'active') return 'not_active';
+    if (record.claimed_by_uid !== actorUid) return 'not_owned';
+
+    const now = new Date().toISOString();
+    const auditEntry: AuditEntry = {
+        action: 'unclaim',
+        actor_uid: actorUid,
+        timestamp: now,
+        reason: reason || 'User initiated unclaim'
+    };
+
+    await docClient.send(new UpdateCommand({
+        TableName: config.provisioningTable,
+        Key: { hw_id: hwId },
+        UpdateExpression: 'REMOVE claimed_by_uid, claimed_at SET updated_at = :now, audit_trail = list_append(if_not_exists(audit_trail, :empty), :entry)',
+        ConditionExpression: 'claimed_by_uid = :uid AND #status = :active',
+        ExpressionAttributeNames: { '#status': 'status' },
+        ExpressionAttributeValues: {
+            ':uid': actorUid,
+            ':now': now,
+            ':active': 'active',
+            ':entry': [auditEntry],
+            ':empty': []
+        }
+    }));
+
+    return 'unclaimed';
+}
+
+export async function revokeProvisioningRecord(
+    hwId: string,
+    actorUid: string,
+    reason?: string
+): Promise<'revoked' | 'not_found' | 'already_revoked'> {
+    const record = await getProvisioningRecord(hwId);
+    if (!record) return 'not_found';
+    if (record.status === 'revoked') return 'already_revoked';
+
+    const now = new Date().toISOString();
+    const auditEntry: AuditEntry = {
+        action: 'revoke',
+        actor_uid: actorUid,
+        timestamp: now,
+        reason: reason || 'Admin revoked device'
+    };
+
+    await docClient.send(new UpdateCommand({
+        TableName: config.provisioningTable,
+        Key: { hw_id: hwId },
+        UpdateExpression: 'SET #status = :revoked, updated_at = :now, audit_trail = list_append(if_not_exists(audit_trail, :empty), :entry)',
+        ConditionExpression: '#status <> :revoked',
+        ExpressionAttributeNames: { '#status': 'status' },
+        ExpressionAttributeValues: {
+            ':revoked': 'revoked',
+            ':now': now,
+            ':entry': [auditEntry],
+            ':empty': []
+        }
+    }));
+
+    return 'revoked';
+}
+
+export async function reactivateProvisioningRecord(
+    hwId: string,
+    actorUid: string,
+    reason?: string
+): Promise<'reactivated' | 'not_found' | 'already_active'> {
+    const record = await getProvisioningRecord(hwId);
+    if (!record) return 'not_found';
+    if (record.status === 'active') return 'already_active';
+
+    const now = new Date().toISOString();
+    const auditEntry: AuditEntry = {
+        action: 'reactivate',
+        actor_uid: actorUid,
+        timestamp: now,
+        reason: reason || 'Admin reactivated device'
+    };
+
+    await docClient.send(new UpdateCommand({
+        TableName: config.provisioningTable,
+        Key: { hw_id: hwId },
+        UpdateExpression: 'SET #status = :active, updated_at = :now, audit_trail = list_append(if_not_exists(audit_trail, :empty), :entry)',
+        ConditionExpression: '#status <> :active',
+        ExpressionAttributeNames: { '#status': 'status' },
+        ExpressionAttributeValues: {
+            ':active': 'active',
+            ':now': now,
+            ':entry': [auditEntry],
+            ':empty': []
+        }
+    }));
+
+    return 'reactivated';
+}
+
+export async function getDeviceAuditTrail(hwId: string): Promise<AuditEntry[] | null> {
+    const record = await getProvisioningRecord(hwId);
+    if (!record) return null;
+    return record.audit_trail || [];
+}
+
+export async function appendProvisioningAudit(hwId: string, entry: AuditEntry): Promise<void> {
+    await docClient.send(new UpdateCommand({
+        TableName: config.provisioningTable,
+        Key: { hw_id: hwId },
+        UpdateExpression: 'SET audit_trail = list_append(if_not_exists(audit_trail, :empty), :entry), updated_at = :now',
+        ExpressionAttributeValues: {
+            ':entry': [entry],
+            ':empty': [],
+            ':now': entry.timestamp
+        }
+    }));
 }

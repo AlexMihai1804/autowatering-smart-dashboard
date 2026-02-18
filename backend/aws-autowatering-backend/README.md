@@ -27,6 +27,8 @@ AWS replacement for the old Firebase Functions backend.
 - `POST /provision` (factory provisioning, protected by `x-factory-token`)
 - `POST /claimDevice` (authenticated user claims a provisioned serial)
 - `GET /myDevices` (authenticated user device list)
+- `GET /ota/latest` (release lookup by `channel`, `board`, `current_version`)
+- `GET /ota/releases/{version}/download-url` (resolve direct OTA binary URL)
 
 ## Prerequisites
 - AWS CLI configured
@@ -81,6 +83,15 @@ Optional parameters:
 - `RequirePremiumForAi`
 - `RequirePremiumForPlantId`
 - `EnableConversation`
+- `OtaLatestVersion`
+- `OtaLatestChannel`
+- `OtaLatestBoard`
+- `OtaLatestMandatory`
+- `OtaLatestNotes`
+- `OtaLatestArtifactName`
+- `OtaLatestArtifactSizeBytes`
+- `OtaLatestArtifactSha256`
+- `OtaLatestDownloadUrl`
 
 ## Provisioning endpoint (factory)
 

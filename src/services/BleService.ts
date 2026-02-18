@@ -1,6 +1,6 @@
 import { BleClient, BleDevice, ConnectionPriority, ScanResult } from '@capacitor-community/bluetooth-le';
 import { BleFragmentationManager } from './BleFragmentationManager';
-import { SERVICE_UUID, CUSTOM_CONFIG_SERVICE_UUID, PACK_SERVICE_UUID, CHAR_UUIDS } from '../types/uuids';
+import { SERVICE_UUID, CUSTOM_CONFIG_SERVICE_UUID, PACK_SERVICE_UUID, SMP_SERVICE_UUID, SMP_CHARACTERISTIC_UUID, CHAR_UUIDS } from '../types/uuids';
 import { useAppStore } from '../store/useAppStore';
 import {
     ChannelConfigData,
@@ -64,6 +64,10 @@ import {
     isAlarmCritical
 } from '../types/firmware_structs';
 
+// Standard BLE Device Information Service (DIS)
+const DEVICE_INFO_SERVICE_UUID = '0000180a-0000-1000-8000-00805f9b34fb';
+const DEVICE_INFO_FIRMWARE_REV_UUID = '00002a26-0000-1000-8000-00805f9b34fb';
+
 /**
  * BleService - Manages Bluetooth Low Energy communication with the irrigation device
  * 
@@ -85,6 +89,8 @@ export class BleService {
     private static instance: BleService;
     private connectedDeviceId: string | null = null;
     private fragmentationManager: BleFragmentationManager;
+    private otaSessionActive: boolean = false;
+    private otaNotificationsSuspendedForDeviceId: string | null = null;
 
     // Firmware capability flags (discovered lazily via first access)
     private supportsSoilMoistureConfig: boolean | null = null;
@@ -538,7 +544,7 @@ export class BleService {
                 namePrefix: 'AutoWatering',
                 // Web Bluetooth requires listing all services you want to access.
                 // Without PACK_SERVICE_UUID here, `getServices()` won't include it on web.
-                optionalServices: [SERVICE_UUID, CUSTOM_CONFIG_SERVICE_UUID, PACK_SERVICE_UUID]
+                optionalServices: [SERVICE_UUID, CUSTOM_CONFIG_SERVICE_UUID, PACK_SERVICE_UUID, SMP_SERVICE_UUID, DEVICE_INFO_SERVICE_UUID]
             });
 
             console.log('Device selected:', device);
@@ -597,6 +603,7 @@ export class BleService {
             console.log('Connected!');
 
             this.connectedDeviceId = deviceId;
+            this.otaNotificationsSuspendedForDeviceId = null;
             useAppStore.getState().setConnectionState('connected');
             useAppStore.getState().setConnectedDeviceId(deviceId);
 
@@ -888,6 +895,8 @@ export class BleService {
             this.connectedDeviceId = null;
             this.supportsSoilMoistureConfig = null;
             this.supportsIntervalModeConfig = null;
+            this.otaSessionActive = false;
+            this.otaNotificationsSuspendedForDeviceId = null;
             if (this.deferredNotificationsTimer) {
                 clearTimeout(this.deferredNotificationsTimer);
                 this.deferredNotificationsTimer = null;
@@ -903,6 +912,8 @@ export class BleService {
         this.connectedDeviceId = null;
         this.supportsSoilMoistureConfig = null;
         this.supportsIntervalModeConfig = null;
+        this.otaSessionActive = false;
+        this.otaNotificationsSuspendedForDeviceId = null;
         if (this.deferredNotificationsTimer) {
             clearTimeout(this.deferredNotificationsTimer);
             this.deferredNotificationsTimer = null;
@@ -945,10 +956,15 @@ export class BleService {
 
             // Setup remaining notifications in background (delayed) to reduce contention with
             // early onboarding writes (RTC/system config/zone commits).
+            if (this.otaSessionActive) {
+                console.log('[BLE] OTA session active, skipping deferred notifications scheduling');
+                return;
+            }
             if (this.deferredNotificationsTimer) {
                 clearTimeout(this.deferredNotificationsTimer);
             }
             this.deferredNotificationsTimer = setTimeout(() => {
+                if (this.otaSessionActive) return;
                 if (!this.connectedDeviceId || this.connectedDeviceId !== deviceId) return;
                 this.setupNotificationsDeferred(deviceId).catch(err =>
                     console.warn('[BLE] Deferred notifications setup failed:', err));
@@ -964,9 +980,17 @@ export class BleService {
      * Setup remaining notifications in background. Called after essential notifications.
      */
     private async setupNotificationsDeferred(deviceId: string) {
+        if (this.otaSessionActive) {
+            console.log('[BLE] OTA session active, deferred notifications setup skipped');
+            return;
+        }
         console.log('[BLE] Setting up deferred notifications (background)...');
         const subscribeDelay = 80;
         await this.enqueueGattOp('notifications:deferred', async () => {
+            if (this.otaSessionActive) {
+                console.log('[BLE] OTA session active, stopping deferred notifications setup');
+                return;
+            }
             const trySubscribe = async (
                 label: string,
                 serviceUuid: string,
@@ -1016,6 +1040,87 @@ export class BleService {
         });
 
         console.log('[BLE] Deferred notifications setup finished');
+    }
+
+    private getOtaSuspendTargets(): Array<{ label: string; serviceUuid: string; characteristicUuid: string }> {
+        return [
+            { label: 'System Status', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.SYSTEM_STATUS },
+            { label: 'Current Task', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.CURRENT_TASK },
+            { label: 'Valve Control', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.VALVE_CONTROL },
+            { label: 'Environmental Data', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.ENV_DATA },
+            { label: 'Calibration', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.CALIBRATION },
+            { label: 'Reset Control', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.RESET_CONTROL },
+            { label: 'History Management', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.HISTORY_MGMT },
+            { label: 'Onboarding Status', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.ONBOARDING_STATUS },
+            { label: 'Rain Sensor Data', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.RAIN_SENSOR_DATA },
+            { label: 'Flow Sensor', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.FLOW_SENSOR },
+            { label: 'Task Queue', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.TASK_QUEUE },
+            { label: 'Statistics', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.STATISTICS },
+            { label: 'Alarm Status', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.ALARM_STATUS },
+            { label: 'Diagnostics', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.DIAGNOSTICS },
+            { label: 'Hydraulic Status', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.HYDRAULIC_STATUS },
+            { label: 'RTC Config', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.RTC_CONFIG },
+            { label: 'Channel Config', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.CHANNEL_CONFIG },
+            { label: 'Schedule Config', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.SCHEDULE_CONFIG },
+            { label: 'System Config', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.SYSTEM_CONFIG },
+            { label: 'Growing Environment', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.GROWING_ENV },
+            { label: 'Timezone Config', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.TIMEZONE_CONFIG },
+            { label: 'Rain Sensor Config', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.RAIN_SENSOR_CONFIG },
+            { label: 'Rain Integration', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.RAIN_INTEGRATION },
+            { label: 'Soil Moisture Config', serviceUuid: CUSTOM_CONFIG_SERVICE_UUID, characteristicUuid: CHAR_UUIDS.SOIL_MOISTURE_CONFIG },
+            { label: 'Auto Calc Status', serviceUuid: SERVICE_UUID, characteristicUuid: CHAR_UUIDS.AUTO_CALC_STATUS },
+            { label: 'SMP OTA', serviceUuid: SMP_SERVICE_UUID, characteristicUuid: SMP_CHARACTERISTIC_UUID }
+        ];
+    }
+
+    private async suspendNotificationsForOta(deviceId: string): Promise<void> {
+        const targets = this.getOtaSuspendTargets();
+        await this.enqueueGattOp('ota:suspend-notifications', async () => {
+            for (const target of targets) {
+                try {
+                    await this.withTimeout(
+                        BleClient.stopNotifications(deviceId, target.serviceUuid, target.characteristicUuid),
+                        2500,
+                        `BLE stopNotify (${target.characteristicUuid})`
+                    );
+                } catch {
+                    // Not subscribed or characteristic unavailable on this firmware.
+                }
+            }
+        });
+        this.otaNotificationsSuspendedForDeviceId = deviceId;
+    }
+
+    private async restoreNotificationsAfterOta(deviceId: string): Promise<void> {
+        if (!this.connectedDeviceId || this.connectedDeviceId !== deviceId) return;
+        try {
+            await this.setupNotificationsEssential(deviceId);
+        } catch (error) {
+            console.warn('[BLE] Failed to restore notifications after OTA:', error);
+        }
+    }
+
+    public async beginOtaSession(): Promise<void> {
+        this.otaSessionActive = true;
+        if (this.deferredNotificationsTimer) {
+            clearTimeout(this.deferredNotificationsTimer);
+            this.deferredNotificationsTimer = null;
+        }
+
+        // Wait for queued BLE operations (including deferred subscriptions) to drain.
+        await this.enqueueGattOp('ota:wait-idle', async () => undefined);
+
+        const deviceId = this.connectedDeviceId;
+        if (!deviceId) return;
+        await this.suspendNotificationsForOta(deviceId);
+    }
+
+    public async endOtaSession(): Promise<void> {
+        this.otaSessionActive = false;
+        const suspendedForDeviceId = this.otaNotificationsSuspendedForDeviceId;
+        this.otaNotificationsSuspendedForDeviceId = null;
+        if (!suspendedForDeviceId) return;
+        await this.restoreNotificationsAfterOta(suspendedForDeviceId);
     }
 
     private async setupNotifications(deviceId: string) {
@@ -2936,6 +3041,35 @@ export class BleService {
             last_config_update: view.getUint32(44, true),
             last_sensor_reading: view.getUint32(48, true)
         };
+    }
+
+    /**
+     * Read firmware revision string from standard BLE Device Information Service.
+     * Returns null when DIS is not exposed by firmware.
+     */
+    public async readFirmwareRevision(): Promise<string | null> {
+        if (!this.connectedDeviceId) throw new Error('Not connected');
+
+        try {
+            const data = await this.readWithRetry(
+                DEVICE_INFO_SERVICE_UUID,
+                DEVICE_INFO_FIRMWARE_REV_UUID,
+                1,
+                120
+            );
+
+            const raw = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+            const bytes = Uint8Array.from(raw);
+            const nullIndex = bytes.indexOf(0);
+            const payload = nullIndex >= 0 ? bytes.slice(0, nullIndex) : bytes;
+            const decoded = new TextDecoder().decode(payload).trim();
+            return decoded.length > 0 ? decoded : null;
+        } catch (error) {
+            if (this.isCharacteristicNotFoundError(error)) {
+                return null;
+            }
+            throw error;
+        }
     }
 
     // --- Schedule Configuration ---

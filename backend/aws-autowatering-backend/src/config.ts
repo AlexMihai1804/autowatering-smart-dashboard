@@ -19,6 +19,10 @@ export interface BackendConfig {
     requirePremiumForPlantId: boolean;
     enableConversation: boolean;
     rateLimitSalt: string;
+    otaReleasesTable: string;
+    otaS3Bucket: string;
+    otaAdminToken: string;
+    otaDownloadUrlTtlSeconds: number;
 }
 
 function parseList(value: string | undefined, fallback: string[]): string[] {
@@ -63,7 +67,11 @@ export const config: BackendConfig = {
     requirePremiumForAi: parseBoolean(process.env.REQUIRE_PREMIUM_FOR_AI, false),
     requirePremiumForPlantId: parseBoolean(process.env.REQUIRE_PREMIUM_FOR_PLANT_ID, true),
     enableConversation: parseBoolean(process.env.ENABLE_CONVERSATION, true),
-    rateLimitSalt: process.env.RATE_LIMIT_SALT?.trim() || ''
+    rateLimitSalt: process.env.RATE_LIMIT_SALT?.trim() || '',
+    otaReleasesTable: process.env.OTA_RELEASES_TABLE?.trim() || '',
+    otaS3Bucket: process.env.OTA_S3_BUCKET?.trim() || '',
+    otaAdminToken: process.env.OTA_ADMIN_TOKEN?.trim() || '',
+    otaDownloadUrlTtlSeconds: Math.max(60, Math.min(86400, Number.parseInt(process.env.OTA_DOWNLOAD_URL_TTL_SECONDS?.trim() || '3600', 10) || 3600))
 };
 
 export function assertCoreConfig(): void {

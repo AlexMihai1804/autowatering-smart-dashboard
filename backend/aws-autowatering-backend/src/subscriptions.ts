@@ -269,7 +269,10 @@ async function getOrCreateStripeCustomer(stripe: Stripe, uid: string, email?: st
         subscription: {
             stripeCustomerId: customer.id,
             updatedAt: new Date().toISOString()
-        }
+        },
+        // Top-level attribute for GSI lookup
+        stripe_customer_id: customer.id,
+        updatedAt: new Date().toISOString()
     });
 
     return customer.id;
@@ -403,7 +406,10 @@ async function handleStripeCheckoutSessionCompleted(stripe: Stripe, session: Str
             subscription: {
                 stripeCustomerId: customerId,
                 updatedAt: new Date().toISOString()
-            }
+            },
+            // Top-level attribute for GSI lookup
+            stripe_customer_id: customerId,
+            updatedAt: new Date().toISOString()
         });
     }
 

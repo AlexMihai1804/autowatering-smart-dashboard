@@ -367,6 +367,11 @@ export async function readSubscriptionSnapshot(uid: string): Promise<Record<stri
 }
 
 export async function saveSubscriptionSnapshot(uid: string, snapshot: Record<string, unknown>): Promise<void> {
+    const stripeCustomerId = typeof snapshot.stripeCustomerId === 'string' && snapshot.stripeCustomerId
+        ? snapshot.stripeCustomerId : undefined;
+    const stripeSubscriptionId = typeof snapshot.stripeSubscriptionId === 'string' && snapshot.stripeSubscriptionId
+        ? snapshot.stripeSubscriptionId : undefined;
+
     await mergeUser(uid, {
         premium: snapshot.isPremium === true,
         subscription: {
@@ -378,6 +383,9 @@ export async function saveSubscriptionSnapshot(uid: string, snapshot: Record<str
             stripeSubscriptionId: snapshot.stripeSubscriptionId ?? null,
             updatedAt: new Date().toISOString()
         },
+        // Top-level attributes for GSI lookups (eliminates full table scan)
+        stripe_customer_id: stripeCustomerId,
+        stripe_subscription_id: stripeSubscriptionId,
         updatedAt: new Date().toISOString()
     });
 }

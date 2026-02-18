@@ -349,7 +349,7 @@ const MobileDashboard: React.FC = () => {
         ) : (
           <>
             {/* Compact operational snapshot */}
-            <div className="w-full rounded-2xl overflow-hidden bg-mobile-surface-dark shadow-sm border border-mobile-border-dark p-4 space-y-3">
+            <div className="w-full rounded-2xl bg-mobile-surface-dark shadow-sm border border-mobile-border-dark p-4 space-y-3">
               <div className="flex justify-between items-start gap-3">
                 <div className="min-w-0">
                   <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
@@ -437,13 +437,13 @@ const MobileDashboard: React.FC = () => {
 
               <button
                 onClick={() => history.push('/weather')}
-                className="w-full rounded-xl bg-mobile-bg-dark/55 border border-mobile-border-dark px-3 py-2.5 flex items-center justify-between text-left hover:bg-white/5 transition-colors"
+                className="w-full min-h-12 rounded-xl bg-mobile-bg-dark/55 border border-mobile-border-dark px-3 py-3 flex items-center justify-between gap-3 text-left hover:bg-white/5 transition-colors"
               >
-                <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
                   <span className="material-symbols-outlined text-mobile-primary text-[20px]">cloud</span>
-                  <span className="text-sm font-bold text-white">{t('mobileWeatherDetails.title')}</span>
+                  <span className="text-sm font-bold text-white leading-tight break-words">{t('mobileWeatherDetails.title')}</span>
                 </div>
-                <span className="material-symbols-outlined text-mobile-text-muted text-[20px]">chevron_right</span>
+                <span className="material-symbols-outlined text-mobile-text-muted text-[20px] shrink-0">chevron_right</span>
               </button>
             </div>
 

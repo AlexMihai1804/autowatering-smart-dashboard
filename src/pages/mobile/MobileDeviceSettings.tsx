@@ -28,6 +28,14 @@ const MobileDeviceSettings: React.FC = () => {
           route: '/device/info',
         },
         {
+          icon: 'system_update_alt',
+          iconBg: 'bg-orange-500/10',
+          iconColor: 'text-orange-300',
+          label: t('mobileDeviceInfo.checkUpdates'),
+          subtitle: `${t('mobileDeviceInfo.firmwareVersion')} OTA`,
+          route: '/device/firmware',
+        },
+        {
           icon: 'schedule',
           iconBg: 'bg-purple-500/10',
           iconColor: 'text-purple-400',

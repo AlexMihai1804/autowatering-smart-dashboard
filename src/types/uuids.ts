@@ -6,6 +6,10 @@ export const CUSTOM_CONFIG_SERVICE_UUID = '12345678-1234-5678-9abc-def123456780'
 // Pack Service (Plant Packs system for custom plants on external flash)
 export const PACK_SERVICE_UUID = '12345678-1234-5678-9abc-def123456800';
 
+// Zephyr mcumgr SMP over BLE (OTA)
+export const SMP_SERVICE_UUID = '8D53DC1D-1DB7-4CD3-868B-8A527460AA84';
+export const SMP_CHARACTERISTIC_UUID = 'DA2E7828-FBCE-4E01-AE9E-261174997C48';
+
 export const CHAR_UUIDS = {
     VALVE_CONTROL: '12345678-1234-5678-1234-56789abcdef1',
     FLOW_SENSOR: '12345678-1234-5678-1234-56789abcdef2',

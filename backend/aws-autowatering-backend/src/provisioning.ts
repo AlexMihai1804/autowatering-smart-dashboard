@@ -4,12 +4,18 @@ import { config } from './config';
 import {
     claimProvisioningRecord,
     createProvisioningRecord,
+    getDeviceAuditTrail,
     getProvisioningRecord,
     getProvisioningRecordBySerial,
     getUser,
     incrementSerialCounter,
     ProvisioningRecord,
-    mergeUser
+    mergeUser,
+    reactivateProvisioningRecord,
+    revokeProvisioningRecord,
+    unclaimProvisioningRecord,
+    AuditEntry,
+    appendProvisioningAudit
 } from './db';
 import { readJsonBody } from './http';
 import { jsonResponse, sendJsonError } from './shared';
@@ -202,5 +208,135 @@ export async function getMyDevices(ctx: RequestContext) {
         owner_uid: auth.uid,
         count: devices.length,
         devices
+    });
+}
+
+// ── Fleet lifecycle endpoints ───────────────────────────────────────
+
+export async function unclaimDevice(ctx: RequestContext) {
+    const auth = await requireAuthenticatedUser(ctx.headers);
+    const payload = readJsonBody(ctx);
+    const serial = normalizeSerial(payload.serial);
+
+    if (!serial) {
+        return sendJsonError(400, 'invalid_serial', 'serial must be exactly 6 digits');
+    }
+
+    const record = await getProvisioningRecordBySerial(serial);
+    if (!record) {
+        return sendJsonError(404, 'device_not_found', 'No provisioned device found for this serial');
+    }
+
+    const result = await unclaimProvisioningRecord(
+        record.hw_id,
+        auth.uid,
+        typeof payload.reason === 'string' ? payload.reason.slice(0, 256) : undefined
+    );
+
+    if (result === 'not_found') {
+        return sendJsonError(404, 'device_not_found', 'Device not found');
+    }
+    if (result === 'not_owned') {
+        return sendJsonError(403, 'not_owned', 'You do not own this device');
+    }
+    if (result === 'not_active') {
+        return sendJsonError(409, 'not_active', 'Device is not in active status');
+    }
+
+    // Remove device from user's devices map
+    const user = await getUser(auth.uid);
+    if (user?.devices && typeof user.devices === 'object' && !Array.isArray(user.devices)) {
+        const devicesMap = user.devices as Record<string, unknown>;
+        if (devicesMap[serial]) {
+            delete devicesMap[serial];
+            await mergeUser(auth.uid, {
+                devices: devicesMap,
+                updatedAt: new Date().toISOString()
+            });
+        }
+    }
+
+    return jsonResponse(200, {
+        ok: true,
+        unclaimed: true,
+        serial,
+        hw_id: record.hw_id
+    });
+}
+
+export async function revokeDevice(ctx: RequestContext) {
+    if (!isAuthorized(ctx)) {
+        return sendJsonError(401, 'unauthorized', 'Invalid factory token');
+    }
+
+    const payload = readJsonBody(ctx);
+    const hwId = normalizeHwId(payload.hw_id);
+    if (!hwId) {
+        return sendJsonError(400, 'invalid_hw_id', 'hw_id must be 8-64 chars [A-F0-9:_-]');
+    }
+
+    const result = await revokeProvisioningRecord(
+        hwId,
+        'admin',
+        typeof payload.reason === 'string' ? payload.reason.slice(0, 256) : undefined
+    );
+
+    if (result === 'not_found') {
+        return sendJsonError(404, 'device_not_found', 'Device not found');
+    }
+    if (result === 'already_revoked') {
+        return sendJsonError(409, 'already_revoked', 'Device is already revoked');
+    }
+
+    return jsonResponse(200, { ok: true, revoked: true, hw_id: hwId });
+}
+
+export async function reactivateDevice(ctx: RequestContext) {
+    if (!isAuthorized(ctx)) {
+        return sendJsonError(401, 'unauthorized', 'Invalid factory token');
+    }
+
+    const payload = readJsonBody(ctx);
+    const hwId = normalizeHwId(payload.hw_id);
+    if (!hwId) {
+        return sendJsonError(400, 'invalid_hw_id', 'hw_id must be 8-64 chars [A-F0-9:_-]');
+    }
+
+    const result = await reactivateProvisioningRecord(
+        hwId,
+        'admin',
+        typeof payload.reason === 'string' ? payload.reason.slice(0, 256) : undefined
+    );
+
+    if (result === 'not_found') {
+        return sendJsonError(404, 'device_not_found', 'Device not found');
+    }
+    if (result === 'already_active') {
+        return sendJsonError(409, 'already_active', 'Device is already active');
+    }
+
+    return jsonResponse(200, { ok: true, reactivated: true, hw_id: hwId });
+}
+
+export async function getDeviceAudit(ctx: RequestContext) {
+    if (!isAuthorized(ctx)) {
+        return sendJsonError(401, 'unauthorized', 'Invalid factory token');
+    }
+
+    const hwId = normalizeHwId(ctx.event.queryStringParameters?.hw_id);
+    if (!hwId) {
+        return sendJsonError(400, 'invalid_hw_id', 'hw_id query param required (8-64 chars [A-F0-9:_-])');
+    }
+
+    const trail = await getDeviceAuditTrail(hwId);
+    if (trail === null) {
+        return sendJsonError(404, 'device_not_found', 'Device not found');
+    }
+
+    return jsonResponse(200, {
+        ok: true,
+        hw_id: hwId,
+        count: trail.length,
+        audit_trail: trail
     });
 }

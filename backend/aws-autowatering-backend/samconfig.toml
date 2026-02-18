@@ -7,4 +7,4 @@ region = "eu-central-1"
 capabilities = "CAPABILITY_IAM"
 confirm_changeset = false
 no_fail_on_empty_changeset = true
-parameter_overrides = "CognitoUserPoolId=eu-central-1_fTWEJu6dg CognitoAppClientId=3che81vspk4side0du155to6pt CognitoUserPoolArn=arn:aws:cognito-idp:eu-central-1:905418280022:userpool/eu-central-1_fTWEJu6dg StripeMonthlyPriceId=price_1SxyUvQ37jX5oGWy1apXaAH8"
+parameter_overrides = "CognitoUserPoolId=eu-central-1_fTWEJu6dg CognitoAppClientId=3che81vspk4side0du155to6pt CognitoUserPoolArn=arn:aws:cognito-idp:eu-central-1:905418280022:userpool/eu-central-1_fTWEJu6dg StripeMonthlyPriceId=price_1SxyUvQ37jX5oGWy1apXaAH8 OtaLatestVersion=0.0.2 OtaLatestChannel=stable OtaLatestBoard=arduino_nano_33_ble"
