@@ -12,6 +12,9 @@ import { isChannelConfigComplete } from '../../types/firmware_structs';
 import SoilGridsServiceInstance, { CustomSoilParameters, estimateSoilParametersFromTexture } from '../../services/SoilGridsService';
 import { getRecommendedCoverageType, getCoverageModeExplanation } from '../../utils/plantCoverageHelper';
 import { buildPlantDbIndex, resolvePlantDbEntryFromCandidate } from '../../utils/plantIdMapping';
+import { getLocalizedDbPlantName } from '../../utils/plantNameHelpers';
+import { searchPlantsWithRanking } from '../../utils/plantSearch';
+import { translatePlantCategory } from '../../utils/i18nHelpers';
 import {
   aliasLookupMap,
   loadLocalPlantIdAliases,
@@ -26,6 +29,7 @@ import { useI18n } from '../../i18n';
 import { useAuth } from '../../auth';
 import MobilePremiumUpsellModal from '../../components/mobile/MobilePremiumUpsellModal';
 import MobilePlantIdReviewSheet from '../../components/mobile/MobilePlantIdReviewSheet';
+import InlineSwitch from '../../components/mobile/InlineSwitch';
 
 type WizardStep =
   | 'select-channel'
@@ -206,6 +210,8 @@ const MobileZoneAddWizard: React.FC = () => {
   const [showIrrigationSheet, setShowIrrigationSheet] = useState(false);
   const [plantSearch, setPlantSearch] = useState('');
   const [soilSearch, setSoilSearch] = useState('');
+  const getPlantName = useCallback((plant: PlantDBEntry) => getLocalizedDbPlantName(plant, language), [language]);
+  const getCategoryLabel = useCallback((category: string) => translatePlantCategory(category, t), [t]);
 
   // Filter plants - use database from store with category
   const filteredPlants = useMemo(() => {
@@ -218,12 +224,11 @@ const MobileZoneAddWizard: React.FC = () => {
 
     // Then filter by search
     if (plantSearch.trim()) {
-      const lowerSearch = plantSearch.toLowerCase();
-      plants = plants.filter(p =>
-        p.common_name_en?.toLowerCase().includes(lowerSearch) ||
-        p.common_name_ro?.toLowerCase().includes(lowerSearch) ||
-        p.scientific_name?.toLowerCase().includes(lowerSearch)
-      );
+      plants = searchPlantsWithRanking(plants, {
+        query: plantSearch,
+        fuzzy: 'balanced',
+        limit: 100,
+      }).map((result) => result.plant);
     }
 
     return plants.slice(0, 100);
@@ -842,7 +847,7 @@ const MobileZoneAddWizard: React.FC = () => {
                   <span className="material-symbols-outlined text-[18px]">check</span>
                 </div>
               )}
-              <div className={`size-20 rounded-full flex items-center justify-center transition-colors ${plantMethod === 'camera' ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
+              <div className={`mobile-icon-chip mobile-icon-chip-xl transition-colors ${plantMethod === 'camera' ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
                 }`}>
                 <span className="material-symbols-outlined text-[40px]">
                   {identifyingPlant ? 'progress_activity' : 'photo_camera'}
@@ -880,7 +885,7 @@ const MobileZoneAddWizard: React.FC = () => {
                   <span className="material-symbols-outlined text-[18px]">check</span>
                 </div>
               )}
-              <div className={`size-20 rounded-full flex items-center justify-center transition-colors ${plantMethod === 'list' ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
+              <div className={`mobile-icon-chip mobile-icon-chip-xl transition-colors ${plantMethod === 'list' ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
                 }`}>
                 <span className="material-symbols-outlined text-[40px]">potted_plant</span>
               </div>
@@ -952,7 +957,7 @@ const MobileZoneAddWizard: React.FC = () => {
                       }`}
                   >
                     <span className="material-symbols-outlined text-base">{categoryIcons[cat] || 'eco'}</span>
-                    {cat}
+                    {getCategoryLabel(cat)}
                   </button>
                 ))}
               </div>
@@ -965,7 +970,7 @@ const MobileZoneAddWizard: React.FC = () => {
                   <span className="material-symbols-outlined">eco</span>
                 </div>
                 <div className="flex-1">
-                  <p className="text-white font-bold">{zoneConfig.plantType.common_name_en}</p>
+                  <p className="text-white font-bold">{getPlantName(zoneConfig.plantType)}</p>
                   <p className="text-mobile-text-muted text-sm italic">{zoneConfig.plantType.scientific_name}</p>
                 </div>
                 <button
@@ -999,7 +1004,7 @@ const MobileZoneAddWizard: React.FC = () => {
                     : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
                     }`}
                 >
-                  <div className={`size-10 rounded-full flex items-center justify-center ${zoneConfig.plantType?.id === plant.id
+                  <div className={`mobile-icon-chip mobile-icon-chip-md ${zoneConfig.plantType?.id === plant.id
                     ? 'bg-mobile-primary/20 text-mobile-primary'
                     : 'bg-white/5 text-mobile-text-muted'
                     }`}>
@@ -1007,11 +1012,11 @@ const MobileZoneAddWizard: React.FC = () => {
                   </div>
                   <div className="flex-1 text-left">
                     <p className={`font-semibold ${zoneConfig.plantType?.id === plant.id ? 'text-white' : 'text-white'}`}>
-                      {plant.common_name_en}
+                      {getPlantName(plant)}
                     </p>
                     <p className="text-mobile-text-muted text-xs italic">{plant.scientific_name}</p>
                   </div>
-                  <span className="text-mobile-text-muted text-xs bg-white/5 px-2 py-1 rounded">{plant.category}</span>
+                  <span className="text-mobile-text-muted text-xs bg-white/5 px-2 py-1 rounded">{getCategoryLabel(plant.category)}</span>
                 </button>
               ))}
               {filteredPlants.length === 0 && (
@@ -1351,7 +1356,7 @@ const MobileZoneAddWizard: React.FC = () => {
                       : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
                       }`}
                   >
-                    <div className={`size-10 rounded-full flex items-center justify-center ${isSelected ? 'bg-mobile-primary/20 text-mobile-primary' : 'bg-white/5 text-yellow-500'
+                    <div className={`mobile-icon-chip mobile-icon-chip-md ${isSelected ? 'bg-mobile-primary/20 text-mobile-primary' : 'bg-white/5 text-yellow-500'
                       }`}>
                       <span className="material-symbols-outlined">landscape</span>
                     </div>
@@ -1449,7 +1454,7 @@ const MobileZoneAddWizard: React.FC = () => {
                     : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
                     }`}
                 >
-                  <div className={`size-14 rounded-full flex items-center justify-center transition-colors ${zoneConfig.sunExposure === sun.value ? 'bg-orange-500/20 text-orange-400' : 'bg-white/5 text-mobile-text-muted'
+                  <div className={`mobile-icon-chip mobile-icon-chip-lg transition-colors ${zoneConfig.sunExposure === sun.value ? 'bg-orange-500/20 text-orange-400' : 'bg-white/5 text-mobile-text-muted'
                     }`}>
                     <span className="material-symbols-outlined text-3xl">{sun.icon}</span>
                   </div>
@@ -1622,7 +1627,7 @@ const MobileZoneAddWizard: React.FC = () => {
                       : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
                       }`}
                   >
-                    <div className={`size-10 rounded-full flex items-center justify-center ${isSelected ? 'bg-mobile-primary/20 text-mobile-primary' : 'bg-white/5 text-blue-400'
+                    <div className={`mobile-icon-chip mobile-icon-chip-md ${isSelected ? 'bg-mobile-primary/20 text-mobile-primary' : 'bg-white/5 text-blue-400'
                       }`}>
                       <span className="material-symbols-outlined">{methodIcon}</span>
                     </div>
@@ -1792,7 +1797,7 @@ const MobileZoneAddWizard: React.FC = () => {
                     : 'bg-mobile-surface-dark border-mobile-border-dark'
                     }`}
                 >
-                  <div className={`size-10 rounded-full flex items-center justify-center ${zoneConfig.scheduleType === 2 ? 'bg-mobile-primary/20 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
+                  <div className={`mobile-icon-chip mobile-icon-chip-md ${zoneConfig.scheduleType === 2 ? 'bg-mobile-primary/20 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
                     }`}>
                     <span className="material-symbols-outlined">psychology</span>
                   </div>
@@ -1816,7 +1821,7 @@ const MobileZoneAddWizard: React.FC = () => {
                     : 'bg-mobile-surface-dark border-mobile-border-dark'
                     }`}
                 >
-                  <div className={`size-10 rounded-full flex items-center justify-center ${zoneConfig.scheduleType !== 2 ? 'bg-mobile-primary/20 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
+                  <div className={`mobile-icon-chip mobile-icon-chip-md ${zoneConfig.scheduleType !== 2 ? 'bg-mobile-primary/20 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
                     }`}>
                     <span className="material-symbols-outlined">edit_calendar</span>
                   </div>
@@ -1833,9 +1838,9 @@ const MobileZoneAddWizard: React.FC = () => {
 
             {/* Duration/Volume input - ONLY for manual modes */}
             {!isFAO56Mode && (
-              <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark p-4">
+              <div className="mobile-card-surface p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`size-9 rounded-full flex items-center justify-center ${isDurationMode ? 'bg-orange-400/20 text-orange-400' : 'bg-blue-400/20 text-blue-400'
+                  <div className={`mobile-icon-chip mobile-icon-chip-sm ${isDurationMode ? 'bg-orange-400/20 text-orange-400' : 'bg-blue-400/20 text-blue-400'
                     }`}>
                     <span className="material-symbols-outlined text-lg">
                       {isDurationMode ? 'timer' : 'water_drop'}
@@ -1848,7 +1853,7 @@ const MobileZoneAddWizard: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => updateZoneConfig({ scheduleValue: Math.max(1, zoneConfig.scheduleValue - (isDurationMode ? 5 : 1)) })}
-                    className="size-10 rounded-full bg-white/10 flex items-center justify-center text-white"
+                    className="mobile-icon-chip mobile-icon-chip-md bg-white/10 text-white"
                   >
                     <span className="material-symbols-outlined text-lg">remove</span>
                   </button>
@@ -1858,7 +1863,7 @@ const MobileZoneAddWizard: React.FC = () => {
                   </div>
                   <button
                     onClick={() => updateZoneConfig({ scheduleValue: zoneConfig.scheduleValue + (isDurationMode ? 5 : 1) })}
-                    className="size-10 rounded-full bg-white/10 flex items-center justify-center text-white"
+                    className="mobile-icon-chip mobile-icon-chip-md bg-white/10 text-white"
                   >
                     <span className="material-symbols-outlined text-lg">add</span>
                   </button>
@@ -1884,9 +1889,9 @@ const MobileZoneAddWizard: React.FC = () => {
             {(zoneConfig.scheduleType !== 2 || !isFAO56Mode) && (
               <>
                 {/* Start Time - Solar or Fixed */}
-                <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark p-4">
+                <div className="mobile-card-surface p-4">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="size-9 rounded-full bg-purple-400/20 flex items-center justify-center text-purple-400">
+                    <div className="mobile-icon-chip mobile-icon-chip-sm bg-purple-400/20 text-purple-400">
                       <span className="material-symbols-outlined text-lg">schedule</span>
                     </div>
                     <p className="text-white font-bold text-sm">
@@ -1975,9 +1980,9 @@ const MobileZoneAddWizard: React.FC = () => {
                 </div>
 
                 {/* Schedule frequency - DAILY vs PERIODIC */}
-                <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark p-4">
+                <div className="mobile-card-surface p-4">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="size-9 rounded-full bg-green-400/20 flex items-center justify-center text-green-400">
+                    <div className="mobile-icon-chip mobile-icon-chip-sm bg-green-400/20 text-green-400">
                       <span className="material-symbols-outlined text-lg">calendar_month</span>
                     </div>
                     <p className="text-white font-bold text-sm">{t('zoneWizard.schedule.frequency')}</p>
@@ -2118,7 +2123,7 @@ const MobileZoneAddWizard: React.FC = () => {
                   className="flex items-center justify-between gap-4 p-4 rounded-xl bg-mobile-surface-dark border border-mobile-border-dark"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`size-10 rounded-full ${adj.iconBg} flex items-center justify-center ${adj.iconColor}`}>
+                    <div className={`mobile-icon-chip mobile-icon-chip-md ${adj.iconBg} ${adj.iconColor}`}>
                       <span className="material-symbols-outlined">{adj.icon}</span>
                     </div>
                     <div>
@@ -2126,14 +2131,12 @@ const MobileZoneAddWizard: React.FC = () => {
                       <p className="text-mobile-text-muted text-sm">{adj.desc}</p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => updateZoneConfig({ [adj.key]: !zoneConfig[adj.key] })}
-                    className={`w-12 h-7 rounded-full transition-colors relative ${zoneConfig[adj.key] ? 'bg-mobile-primary' : 'bg-white/20'
-                      }`}
-                  >
-                    <div className={`absolute top-1 size-5 rounded-full bg-white shadow-md transition-transform ${zoneConfig[adj.key] ? 'translate-x-6' : 'translate-x-1'
-                      }`} />
-                  </button>
+                  <InlineSwitch
+                    checked={!!zoneConfig[adj.key]}
+                    onToggle={() => updateZoneConfig({ [adj.key]: !zoneConfig[adj.key] })}
+                    label={adj.name}
+                    size="sm"
+                  />
                 </div>
               ))}
             </div>
@@ -2146,7 +2149,7 @@ const MobileZoneAddWizard: React.FC = () => {
                 {/* Cycle & Soak Toggle */}
                 <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-mobile-surface-dark border border-mobile-border-dark">
                   <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400">
+                    <div className="mobile-icon-chip mobile-icon-chip-md bg-cyan-500/20 text-cyan-400">
                       <span className="material-symbols-outlined">autorenew</span>
                     </div>
                     <div>
@@ -2154,18 +2157,18 @@ const MobileZoneAddWizard: React.FC = () => {
                       <p className="text-mobile-text-muted text-sm">{t('zoneWizard.weather.cycleSoak.explanation')}</p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => updateZoneConfig({ enableCycleSoak: !zoneConfig.enableCycleSoak })}
-                    className={`w-12 h-7 rounded-full transition-colors relative ${zoneConfig.enableCycleSoak ? 'bg-mobile-primary' : 'bg-white/20'}`}
-                  >
-                    <div className={`absolute top-1 size-5 rounded-full bg-white shadow-md transition-transform ${zoneConfig.enableCycleSoak ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </button>
+                  <InlineSwitch
+                    checked={zoneConfig.enableCycleSoak}
+                    onToggle={() => updateZoneConfig({ enableCycleSoak: !zoneConfig.enableCycleSoak })}
+                    label={t('zoneWizard.weather.cycleSoak.title')}
+                    size="sm"
+                  />
                 </div>
 
                 {/* Max Volume Input */}
                 <div className="p-4 rounded-xl bg-mobile-surface-dark border border-mobile-border-dark">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="size-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400">
+                    <div className="mobile-icon-chip mobile-icon-chip-md bg-purple-500/20 text-purple-400">
                       <span className="material-symbols-outlined">water</span>
                     </div>
                     <div>
@@ -2178,7 +2181,7 @@ const MobileZoneAddWizard: React.FC = () => {
                       type="number"
                       value={zoneConfig.maxVolumeLimitL}
                       onChange={(e) => updateZoneConfig({ maxVolumeLimitL: Math.max(1, parseInt(e.target.value) || 50) })}
-                      className="flex-1 bg-black/30 border border-mobile-border-dark rounded-lg px-4 py-3 text-white text-lg text-center"
+                      className="mobile-form-field h-12 flex-1 px-4 text-center text-lg"
                       min="1"
                       max="1000"
                     />
@@ -2248,7 +2251,7 @@ const MobileZoneAddWizard: React.FC = () => {
         // FAO-56 modes show plant/soil info
         if (isFAO56Summary) {
           summaryItems.push(
-            { label: t('zoneWizard.summary.items.plantType'), value: zoneConfig.plantType?.common_name_en || t('zoneWizard.summary.notSet'), icon: 'eco' },
+            { label: t('zoneWizard.summary.items.plantType'), value: zoneConfig.plantType ? getPlantName(zoneConfig.plantType) : t('zoneWizard.summary.notSet'), icon: 'eco' },
             { label: t('zoneWizard.summary.items.soilType'), value: soilDisplay, icon: 'landscape' },
             { label: t('zoneWizard.summary.items.sunExposure'), value: zoneConfig.sunExposure === 'full' ? t('zoneWizard.summary.sunExposure.full') : zoneConfig.sunExposure === 'partial' ? t('zoneWizard.summary.sunExposure.partial') : t('zoneWizard.summary.sunExposure.shade'), icon: 'wb_sunny' },
             { label: t('zoneWizard.summary.items.maxVolume'), value: `${zoneConfig.maxVolumeLimitL} ${t('common.litersShort')}`, icon: 'water' },
@@ -2288,7 +2291,7 @@ const MobileZoneAddWizard: React.FC = () => {
         return (
           <div className="space-y-4">
             <div className="text-center mb-3">
-              <div className="size-14 rounded-full bg-mobile-primary/10 flex items-center justify-center mx-auto mb-3">
+              <div className="mobile-icon-chip mobile-icon-chip-lg bg-mobile-primary/10 mx-auto mb-3">
                 <span className="material-symbols-outlined text-mobile-primary text-2xl">check_circle</span>
               </div>
               <h2 className="text-white text-xl font-bold">{zoneConfig.name}</h2>
@@ -2321,7 +2324,7 @@ const MobileZoneAddWizard: React.FC = () => {
               </div>
             )}
 
-            <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark divide-y divide-mobile-border-dark overflow-hidden">
+            <div className="mobile-card-surface divide-y divide-mobile-border-dark overflow-hidden">
               {summaryItems.map(item => (
                 <div key={item.label} className="flex items-center justify-between p-2.5">
                   <div className="flex items-center gap-2.5">
@@ -2471,16 +2474,16 @@ const MobileZoneAddWizard: React.FC = () => {
               }}
               className="w-full flex items-center gap-4 p-4 hover:bg-white/5 transition-colors"
             >
-              <div className="size-10 rounded-full bg-mobile-primary/10 flex items-center justify-center text-mobile-primary">
+              <div className="mobile-icon-chip mobile-icon-chip-md bg-mobile-primary/10 text-mobile-primary">
                 <span className="material-symbols-outlined">eco</span>
               </div>
               <div className="flex-1 text-left">
-                <span className="text-white font-semibold">{plant.common_name_en}</span>
+                <span className="text-white font-semibold">{getPlantName(plant)}</span>
                 {plant.scientific_name && (
                   <p className="text-mobile-text-muted text-xs italic">{plant.scientific_name}</p>
                 )}
               </div>
-              <span className="text-mobile-text-muted text-xs bg-white/5 px-2 py-1 rounded">{plant.category}</span>
+              <span className="text-mobile-text-muted text-xs bg-white/5 px-2 py-1 rounded">{getCategoryLabel(plant.category)}</span>
             </button>
           ))}
         </div>
@@ -2515,7 +2518,7 @@ const MobileZoneAddWizard: React.FC = () => {
               }}
               className="w-full flex items-center gap-4 p-4 hover:bg-white/5 transition-colors"
             >
-              <div className="size-10 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500">
+              <div className="mobile-icon-chip mobile-icon-chip-md bg-yellow-500/10 text-yellow-500">
                 <span className="material-symbols-outlined">landscape</span>
               </div>
               <div className="flex-1 text-left">
@@ -2545,7 +2548,7 @@ const MobileZoneAddWizard: React.FC = () => {
               }}
               className="w-full flex items-center gap-4 p-4 hover:bg-white/5 transition-colors"
             >
-              <div className="size-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
+              <div className="mobile-icon-chip mobile-icon-chip-md bg-blue-500/10 text-blue-400">
                 <span className="material-symbols-outlined">water_drop</span>
               </div>
               <div className="flex-1 text-left">

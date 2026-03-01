@@ -136,10 +136,10 @@ const MobileDeviceReset: React.FC = () => {
   return (
     <div className="min-h-screen bg-mobile-bg-dark font-manrope pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-50 flex items-center bg-mobile-bg-dark/90 backdrop-blur-md p-4 justify-between">
+      <div className="mobile-page-header">
         <button
           onClick={() => history.goBack()}
-          className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+          className="mobile-header-icon-btn"
         >
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
@@ -163,7 +163,7 @@ const MobileDeviceReset: React.FC = () => {
 
         {/* Reset Options */}
         <div className="space-y-3">
-          <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
+          <label className="mobile-section-label">
             {t('mobileDeviceReset.sectionLabel')}
           </label>
 

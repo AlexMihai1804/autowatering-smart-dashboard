@@ -273,7 +273,7 @@ const MobileOnboardingWizard: React.FC = () => {
               <h2 className="text-white text-2xl font-bold mb-2">{t('mobileOnboardingWizard.timeSync.title')}</h2>
               <p className="text-mobile-text-muted">{t('mobileOnboardingWizard.timeSync.subtitle')}</p>
             </div>
-            <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark p-6 text-center">
+            <div className="mobile-card-surface p-6 text-center">
               <p className="text-mobile-text-muted text-sm mb-2">{t('mobileOnboardingWizard.timeSync.currentTime')}</p>
               <p className="text-white text-4xl font-bold tracking-tight">
                 {new Date().toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false })}
@@ -398,7 +398,7 @@ const MobileOnboardingWizard: React.FC = () => {
         return (
           <div className="space-y-6">
             <div className="text-center mb-6">
-              <div className="size-20 rounded-full bg-mobile-primary/10 flex items-center justify-center mx-auto mb-4">
+              <div className="mobile-icon-chip mobile-icon-chip-xl bg-mobile-primary/10 mx-auto mb-4">
                 <span className="material-symbols-outlined text-mobile-primary text-4xl">water_drop</span>
               </div>
               <h2 className="text-white text-2xl font-bold mb-2">{t('mobileOnboardingWizard.selectZones.title')}</h2>
@@ -475,15 +475,15 @@ const MobileOnboardingWizard: React.FC = () => {
               <p className="text-mobile-text-muted">{t('mobileOnboardingWizard.summary.subtitle')}</p>
             </div>
 
-            <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark divide-y divide-mobile-border-dark overflow-hidden">
-              <div className="flex items-center justify-between p-4">
+            <div className="mobile-card-surface divide-y divide-mobile-border-dark overflow-hidden">
+              <div className="mobile-page-header-row">
                 <div className="flex items-center gap-3">
                   <span className="material-symbols-outlined text-mobile-primary">devices</span>
                   <span className="text-mobile-text-muted">{t('mobileOnboardingWizard.summary.deviceNameLabel')}</span>
                 </div>
                 <span className="text-white font-semibold">{deviceName}</span>
               </div>
-              <div className="flex items-center justify-between p-4">
+              <div className="mobile-page-header-row">
                 <div className="flex items-center gap-3">
                   <span className="material-symbols-outlined text-mobile-primary">valve</span>
                   <span className="text-mobile-text-muted">{t('mobileOnboardingWizard.summary.masterValveLabel')}</span>
@@ -492,7 +492,7 @@ const MobileOnboardingWizard: React.FC = () => {
                   {hasMasterValve ? t('mobileOnboardingWizard.summary.enabled') : t('mobileOnboardingWizard.summary.disabled')}
                 </span>
               </div>
-              <div className="flex items-center justify-between p-4">
+              <div className="mobile-page-header-row">
                 <div className="flex items-center gap-3">
                   <span className="material-symbols-outlined text-mobile-primary">water_drop</span>
                   <span className="text-mobile-text-muted">{t('mobileOnboardingWizard.summary.zonesConfiguredLabel')}</span>
@@ -539,7 +539,7 @@ const MobileOnboardingWizard: React.FC = () => {
         <div className="flex items-center p-4 gap-4">
           <button
             onClick={goBack}
-            className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+            className="mobile-header-icon-btn"
           >
             <span className="material-symbols-outlined">arrow_back_ios_new</span>
           </button>
@@ -578,11 +578,11 @@ const MobileOnboardingWizard: React.FC = () => {
       </div>
 
       {/* Bottom button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-mobile-bg-dark via-mobile-bg-dark to-transparent pt-12">
+      <div className="mobile-bottom-cta-bar">
         <button
           onClick={goNext}
           disabled={!canProceed() || saving}
-          className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
+          className="mobile-btn-primary h-14 text-lg font-bold disabled:grayscale"
         >
           {saving ? (
             <>

@@ -73,7 +73,7 @@ const MobileDeviceSettings: React.FC = () => {
           iconColor: 'text-emerald-400',
           label: t('mobileDeviceSettings.items.packsPlants.label'),
           subtitle: packsSubtitle,
-          route: '/device/packs',
+          route: '/marketplace/library?tab=device',
         },
       ],
     },
@@ -129,7 +129,7 @@ const MobileDeviceSettings: React.FC = () => {
       <div className="sticky top-0 z-50 flex items-center bg-mobile-bg-dark p-4 pb-2 justify-between">
         <button
           onClick={() => history.goBack()}
-          className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+          className="mobile-header-icon-btn"
         >
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
@@ -150,7 +150,7 @@ const MobileDeviceSettings: React.FC = () => {
                 <button
                   key={itemIdx}
                   onClick={() => history.push(item.route)}
-                  className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group"
+                  className="mobile-page-header-row w-full hover:bg-white/5 transition-colors group"
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-xl ${item.iconBg} flex items-center justify-center ${item.iconColor}`}>
@@ -182,7 +182,7 @@ const MobileDeviceSettings: React.FC = () => {
                     <button
                       key={itemIdx}
                       onClick={() => history.push(item.route)}
-                      className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group"
+                      className="mobile-page-header-row w-full hover:bg-white/5 transition-colors group"
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-xl ${item.iconBg} flex items-center justify-center ${item.iconColor}`}>

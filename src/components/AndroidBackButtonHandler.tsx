@@ -5,6 +5,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { Toast } from '@capacitor/toast';
 import { runBackInterceptors } from '../lib/backInterceptors';
 import { navigationStack } from '../lib/navigationStack';
+import { useI18n } from '../i18n';
 
 // Only show "press back again to exit" on the main dashboard
 // Other paths like /welcome or / should navigate normally
@@ -14,6 +15,7 @@ const DOUBLE_BACK_TIMEOUT_MS = 2000; // Time window for double-back to exit
 export default function AndroidBackButtonHandler(): null {
   const history = useHistory();
   const location = useLocation();
+  const { t } = useI18n();
   const currentPathRef = useRef(`${location.pathname}${location.search || ''}${location.hash || ''}`);
   const lastBackPressRef = useRef<number>(0);
 
@@ -58,7 +60,7 @@ export default function AndroidBackButtonHandler(): null {
           console.log('[back] first back press, waiting for confirmation');
         }
         Toast.show({
-          text: 'Press back again to exit',
+          text: t('common.pressBackAgainToExit'),
           duration: 'short',
           position: 'bottom',
         });
@@ -135,7 +137,7 @@ export default function AndroidBackButtonHandler(): null {
     return () => {
       document.removeEventListener('ionBackButton', onIonBackButton as any);
     };
-  }, [history]);
+  }, [history, t]);
 
   // Patch UI-triggered `history.goBack()` calls to use the same deterministic
   // in-app back logic as Android hardware back.

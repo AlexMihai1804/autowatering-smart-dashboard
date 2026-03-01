@@ -33,7 +33,7 @@ const HydraulicDetailsCard: React.FC<HydraulicDetailsCardProps> = ({ data }) => 
             <div className={`p-4 flex items-center justify-between border-b border-white/5 ${isLocked ? 'bg-red-500/10' : isLearning ? 'bg-amber-500/10' : 'bg-green-500/10'
                 }`}>
                 <div className="flex items-center gap-3">
-                    <div className={`size-10 rounded-full flex items-center justify-center ${isLocked ? 'bg-red-500/20 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]' :
+                    <div className={`mobile-icon-chip mobile-icon-chip-md ${isLocked ? 'bg-red-500/20 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]' :
                         isLearning ? 'bg-amber-500/20 text-amber-500' : 'bg-green-500/20 text-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]'
                         }`}>
                         <span className="material-symbols-outlined">

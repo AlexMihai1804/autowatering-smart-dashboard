@@ -4,6 +4,10 @@ import { useAppStore } from '../../store/useAppStore';
 import { useKnownDevices } from '../../hooks/useKnownDevices';
 import { BleService } from '../../services/BleService';
 import { useI18n } from '../../i18n';
+import {
+  areRequiredPermissionsGrantedFromStorage,
+  resolveWelcomeRoute,
+} from '../../utils/onboardingRouteResolver';
 
 const MobileWelcome: React.FC = () => {
   const history = useHistory();
@@ -13,23 +17,20 @@ const MobileWelcome: React.FC = () => {
   const { t, language } = useI18n();
   const [isAutoConnecting, setIsAutoConnecting] = useState(false);
   const [autoConnectFailed, setAutoConnectFailed] = useState(false);
+  const [requiredPermissionsGranted] = useState(() => areRequiredPermissionsGrantedFromStorage());
   const locale = language === 'ro' ? 'ro-RO' : 'en-US';
 
-  // Auto-redirect if connected.
-  // IMPORTANT: BLE sets connectionState='connected' before Phase 2 reads onboarding status.
-  // Wait for onboardingState so we can route to onboarding when setup is incomplete.
+  // Centralized entry decision tree: skip screens only when prerequisites are already met.
   useEffect(() => {
-    if (connectionState !== 'connected') return;
-
-    // If we haven't received onboarding status yet, don't redirect.
-    if (!onboardingState) return;
-
-    // If user has at least one zone configured, go straight to dashboard
-    // (don't force them through onboarding wizard every time)
-    const hasConfiguredZone = onboardingState.channels_completion_pct > 0;
-    const nextPath = hasConfiguredZone ? '/dashboard' : '/onboarding';
+    const nextPath = resolveWelcomeRoute({
+      connectionState,
+      onboardingState,
+      knownDevicesCount: devices.length,
+      requiredPermissionsGranted,
+    });
+    if (!nextPath) return;
     history.replace(nextPath);
-  }, [connectionState, onboardingState, history]);
+  }, [connectionState, onboardingState, devices.length, requiredPermissionsGranted, history]);
 
   // Auto-connect to last known device
   useEffect(() => {
@@ -60,7 +61,8 @@ const MobileWelcome: React.FC = () => {
   }, [isLoaded, lastDevice, connectionState, isAutoConnecting, autoConnectFailed, bleService]);
 
   const handleSetupDevice = () => {
-    history.push('/scan');
+    const nextPath = areRequiredPermissionsGrantedFromStorage() ? '/scan' : '/permissions';
+    history.push(nextPath);
   };
 
   const handleConnectToDevice = async (deviceId: string) => {

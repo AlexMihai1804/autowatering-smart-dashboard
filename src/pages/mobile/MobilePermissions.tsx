@@ -115,6 +115,15 @@ const MobilePermissions: React.FC = () => {
     }
   };
 
+  const navigateAfterPermissionFlow = (sourcePermissions: Permission[]) => {
+    const firstMissingRequired = sourcePermissions.findIndex((permission) => permission.required && !permission.granted);
+    if (firstMissingRequired >= 0) {
+      setCurrentIndex(firstMissingRequired);
+      return;
+    }
+    history.push('/scan');
+  };
+
   useEffect(() => {
     let mounted = true;
     const refreshStatuses = async () => {
@@ -184,17 +193,18 @@ const MobilePermissions: React.FC = () => {
         granted = false;
       }
 
-      setPermissions((prev) => {
-        const next = prev.map((permission, index) =>
-          index === currentIndex ? { ...permission, granted } : permission
-        );
-        persistPermissions(next);
-        return next;
-      });
+      const nextPermissions = permissions.map((permission, index) =>
+        index === currentIndex ? { ...permission, granted } : permission
+      );
+      setPermissions(nextPermissions);
+      persistPermissions(nextPermissions);
 
-      if (currentIndex < permissions.length - 1) {
+      if (currentIndex < nextPermissions.length - 1) {
         setCurrentIndex((prev) => prev + 1);
+        return;
       }
+
+      navigateAfterPermissionFlow(nextPermissions);
     };
 
     void requestPermission();
@@ -203,15 +213,14 @@ const MobilePermissions: React.FC = () => {
   const handleSkip = () => {
     if (currentIndex < permissions.length - 1) {
       setCurrentIndex(prev => prev + 1);
+      return;
     }
+    navigateAfterPermissionFlow(permissions);
   };
 
   const handleContinue = () => {
     if (!allRequiredGranted) {
-      const firstMissingRequired = permissions.findIndex((permission) => permission.required && !permission.granted);
-      if (firstMissingRequired >= 0) {
-        setCurrentIndex(firstMissingRequired);
-      }
+      navigateAfterPermissionFlow(permissions);
       return;
     }
     history.push('/scan');
@@ -322,7 +331,7 @@ const MobilePermissions: React.FC = () => {
             <div className="space-y-3">
               <button
                 onClick={handleGrant}
-                className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+                className="mobile-btn-primary h-14 text-lg font-bold"
               >
                 <span className="material-symbols-outlined">check</span>
                 {t('mobilePermissions.allow').replace('{name}', permissionText[currentPermission.id].name)}
@@ -340,7 +349,7 @@ const MobilePermissions: React.FC = () => {
           ) : currentIndex < permissions.length - 1 ? (
             <button
               onClick={() => setCurrentIndex(prev => prev + 1)}
-              className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+              className="mobile-btn-primary h-14 text-lg font-bold"
             >
               {t('common.continue')}
               <span className="material-symbols-outlined">arrow_forward</span>
@@ -349,7 +358,7 @@ const MobilePermissions: React.FC = () => {
             <button
               onClick={handleContinue}
               disabled={!allRequiredGranted}
-              className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+              className="mobile-btn-primary h-14 text-lg font-bold"
             >
               <span className="material-symbols-outlined">rocket_launch</span>
               {t('mobilePermissions.getStarted')}

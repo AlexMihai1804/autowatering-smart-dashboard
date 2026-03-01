@@ -1434,7 +1434,7 @@ export interface PackPlantV1 {
     plant_id: number;              // u16 @0: unique plant ID (1-65534)
     pack_id: number;               // u16 @2: 0=standalone, 1+=from pack
     version: number;               // u16 @4: plant data version
-    reserved: number;              // u16 @6: reserved for alignment
+    cloud_id_crc16: number;        // u16 @6: CRC16 of marketplace plantId (0 = no cloud link)
     
     // === Names (112 bytes) ===
     common_name: string;           // char[48] @8: common name

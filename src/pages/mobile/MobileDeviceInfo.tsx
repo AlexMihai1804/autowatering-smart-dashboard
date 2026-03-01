@@ -122,7 +122,7 @@ const MobileDeviceInfo: React.FC = () => {
       <div className="sticky top-0 z-50 flex items-center bg-mobile-bg-dark p-4 pb-2 justify-between">
         <button 
           onClick={() => history.goBack()}
-          className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+          className="mobile-header-icon-btn"
         >
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
@@ -171,7 +171,7 @@ const MobileDeviceInfo: React.FC = () => {
           </h3>
           <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
             {/* Signal Strength */}
-            <div className="flex items-center justify-between p-4">
+            <div className="mobile-page-header-row">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
                   <span className="material-symbols-outlined text-xl">wifi</span>
@@ -187,7 +187,7 @@ const MobileDeviceInfo: React.FC = () => {
             </div>
 
             {/* Uptime */}
-            <div className="flex items-center justify-between p-4">
+            <div className="mobile-page-header-row">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-400">
                   <span className="material-symbols-outlined text-xl">timer</span>
@@ -198,29 +198,29 @@ const MobileDeviceInfo: React.FC = () => {
             </div>
 
             {/* Battery */}
-            <div className="flex items-center justify-between p-4">
+            <div className="mobile-page-header-row">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-400">
                   <span className="material-symbols-outlined text-xl">battery_charging_full</span>
                 </div>
-                <span className="text-base font-medium text-white">Battery</span>
+                <span className="text-base font-medium text-white">{t('mobileDeviceInfo.battery')}</span>
               </div>
               <span className="text-sm font-medium text-gray-300">{deviceData.battery}</span>
             </div>
 
             {/* Error counter */}
-            <div className="flex items-center justify-between p-4">
+            <div className="mobile-page-header-row">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-400">
                   <span className="material-symbols-outlined text-xl">report</span>
                 </div>
-                <span className="text-base font-medium text-white">Errors</span>
+                <span className="text-base font-medium text-white">{t('mobileDeviceInfo.errors')}</span>
               </div>
               <span className="text-sm font-medium text-gray-300">{deviceData.errorCount}</span>
             </div>
 
             {/* Model */}
-            <div className="flex items-center justify-between p-4">
+            <div className="mobile-page-header-row">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center text-green-400">
                   <span className="material-symbols-outlined text-xl">router</span>
@@ -239,7 +239,7 @@ const MobileDeviceInfo: React.FC = () => {
           </h3>
           <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
             {/* Firmware */}
-            <div className="flex items-center justify-between p-4">
+            <div className="mobile-page-header-row">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-400">
                   <span className="material-symbols-outlined text-xl">memory</span>
@@ -255,7 +255,7 @@ const MobileDeviceInfo: React.FC = () => {
             {/* Serial Number */}
             <button 
               onClick={() => copyToClipboard(deviceData.serial)}
-              className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group"
+              className="mobile-page-header-row w-full hover:bg-white/5 transition-colors group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-gray-500/10 flex items-center justify-center text-gray-400">

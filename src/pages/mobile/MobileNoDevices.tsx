@@ -1,13 +1,15 @@
 import React from 'react';
 import { useHistory } from 'react-router-dom';
 import { useI18n } from '../../i18n';
+import { areRequiredPermissionsGrantedFromStorage } from '../../utils/onboardingRouteResolver';
 
 const MobileNoDevices: React.FC = () => {
   const history = useHistory();
   const { t } = useI18n();
 
   const handleAddDevice = () => {
-    history.push('/scan');
+    const nextPath = areRequiredPermissionsGrantedFromStorage() ? '/scan' : '/permissions';
+    history.push(nextPath);
   };
 
   const handleHelp = () => {

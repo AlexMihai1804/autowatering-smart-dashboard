@@ -174,7 +174,7 @@ const MobileDashboard: React.FC = () => {
         await bleService.resumeCurrentWatering();
         return;
       }
-      alert('Pause/resume is available only while a watering task is active.');
+      alert(t('dashboard.pauseResumeOnlyWhileActive'));
     } catch (error) {
       console.error('Failed to pause/resume watering task:', error);
       const reason = error instanceof Error ? error.message : String(error);
@@ -462,7 +462,7 @@ const MobileDashboard: React.FC = () => {
 
                 <button
                   onClick={handlePauseSchedule}
-                  className="flex items-center justify-center gap-2 w-full p-2.5 rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark text-white font-bold active:scale-[0.98] transition-transform"
+                  className="flex items-center justify-center gap-2 w-full p-2.5 mobile-card-surface text-white font-bold active:scale-[0.98] transition-transform"
                 >
                   <span className="material-symbols-outlined text-[20px]">{isTaskPaused ? 'play_arrow' : 'pause'}</span>
                   <span className="text-sm">{isTaskPaused ? t('taskControl.actions.resume') : t('dashboard.pauseSchedule')}</span>

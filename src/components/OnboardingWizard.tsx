@@ -96,6 +96,8 @@ import {
 import { SoilSelector } from './onboarding/SoilSelectorSimple';
 import { SoilGridsService, SoilGridsResult, shouldEnableCycleSoak, calculateCycleSoakTiming, calculateSlope } from '../services/SoilGridsService';
 import { getRecommendedCoverageType, getCoverageModeExplanation } from '../utils/plantCoverageHelper';
+import { getLocalizedDbPlantName } from '../utils/plantNameHelpers';
+import { searchPlantsWithRanking } from '../utils/plantSearch';
 // i18n and enhancements
 import { useI18n } from '../i18n';
 import { LanguageSelector } from './LanguageSelector';
@@ -231,7 +233,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
     const percentUnit = t('common.percent');
     const wateringModes = useMemo(() => getWateringModes(t), [t]);
     const getZoneDefaultName = (index: number) => `${t('zoneDetails.zone')} ${index + 1}`;
-    const getPlantName = (plant: PlantDBEntry) => (language === 'ro' && plant.common_name_ro ? plant.common_name_ro : plant.common_name_en);
+    const getPlantName = (plant: PlantDBEntry) => getLocalizedDbPlantName(plant, language);
 
     // ========================================================================
     // State
@@ -601,12 +603,10 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onClose }) 
         }
 
         if (searchText) {
-            const query = searchText.toLowerCase();
-            plants = plants.filter(p =>
-                p.common_name_en.toLowerCase().includes(query) ||
-                p.common_name_ro.toLowerCase().includes(query) ||
-                p.scientific_name.toLowerCase().includes(query)
-            );
+            plants = searchPlantsWithRanking(plants, {
+                query: searchText,
+                fuzzy: 'balanced',
+            }).map((result) => result.plant);
         }
 
         return plants; // Show all plants

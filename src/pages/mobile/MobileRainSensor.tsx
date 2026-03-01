@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { BleService } from '../../services/BleService';
 import { useI18n } from '../../i18n';
 import { useAppStore } from '../../store/useAppStore';
 import type { RainConfigData } from '../../types/firmware_structs';
+import InlineSwitch from '../../components/mobile/InlineSwitch';
 
 function clamp(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
@@ -13,6 +14,12 @@ function clamp(value: number, min: number, max: number): number {
 function clampInt(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
   return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+function roundTo(value: number, decimals: number): number {
+  if (!Number.isFinite(value)) return 0;
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
 }
 
 const DEFAULT_CONFIG: RainConfigData = {
@@ -36,6 +43,7 @@ const MobileRainSensor: React.FC = () => {
   const [form, setForm] = useState<RainConfigData>(rainConfig ?? DEFAULT_CONFIG);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
+  const didInitialRefreshRef = useRef(false);
 
   const showToast = async (text: string) => {
     try {
@@ -63,6 +71,8 @@ const MobileRainSensor: React.FC = () => {
   };
 
   useEffect(() => {
+    if (didInitialRefreshRef.current) return;
+    didInitialRefreshRef.current = true;
     void refreshFromDevice();
   }, []);
 
@@ -87,11 +97,11 @@ const MobileRainSensor: React.FC = () => {
     try {
       const next: RainConfigData = {
         ...form,
-        mm_per_pulse: clamp(form.mm_per_pulse, 0.1, 10.0),
+        mm_per_pulse: roundTo(clamp(form.mm_per_pulse, 0.1, 10.0), 3),
         debounce_ms: clampInt(form.debounce_ms, 10, 1000),
         // Keep the other fields in range even if not visible.
-        rain_sensitivity_pct: clamp(form.rain_sensitivity_pct, 0, 100),
-        skip_threshold_mm: clamp(form.skip_threshold_mm, 0, 100),
+        rain_sensitivity_pct: roundTo(clamp(form.rain_sensitivity_pct, 0, 100), 1),
+        skip_threshold_mm: roundTo(clamp(form.skip_threshold_mm, 0, 100), 1),
       };
 
       await bleService.writeRainConfig(next);
@@ -123,10 +133,10 @@ const MobileRainSensor: React.FC = () => {
   return (
     <div className="min-h-screen bg-mobile-bg-dark font-manrope pb-28">
       {/* Header */}
-      <div className="sticky top-0 z-50 flex items-center bg-mobile-bg-dark/90 backdrop-blur-md p-4 justify-between">
+      <div className="mobile-page-header">
         <button
           onClick={() => history.goBack()}
-          className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+          className="mobile-header-icon-btn"
         >
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
@@ -138,7 +148,7 @@ const MobileRainSensor: React.FC = () => {
         </div>
         <button
           onClick={() => void refreshFromDevice()}
-          className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+          className="mobile-header-icon-btn"
           aria-label={t('common.refresh')}
         >
           <span className={`material-symbols-outlined ${loading ? 'animate-spin' : ''}`}>refresh</span>
@@ -147,10 +157,10 @@ const MobileRainSensor: React.FC = () => {
 
       <div className="px-4 space-y-6">
         {/* Status */}
-        <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark overflow-hidden">
+        <div className="mobile-card-surface overflow-hidden">
           <div className="p-5 flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className={`size-14 rounded-full flex items-center justify-center ${rainIntegration?.sensor_active ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'}`}>
+              <div className={`mobile-icon-chip mobile-icon-chip-lg ${rainIntegration?.sensor_active ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'}`}>
                 <span className="material-symbols-outlined text-3xl">rainy</span>
               </div>
               <div>
@@ -185,9 +195,9 @@ const MobileRainSensor: React.FC = () => {
         </div>
 
         {/* Sensor Enable */}
-        <div className="flex items-center justify-between gap-4 p-5 rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark">
+        <div className="mobile-card-surface flex items-center justify-between gap-4 p-5">
           <div className="flex items-center gap-4">
-            <div className={`size-14 rounded-full flex items-center justify-center ${form.sensor_enabled ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'}`}>
+            <div className={`mobile-icon-chip mobile-icon-chip-lg ${form.sensor_enabled ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'}`}>
               <span className="material-symbols-outlined text-3xl">sensors</span>
             </div>
             <div>
@@ -195,19 +205,17 @@ const MobileRainSensor: React.FC = () => {
               <p className="text-mobile-text-muted text-sm px-1">{t('mobileRainSensor.enableSubtitle')}</p>
             </div>
           </div>
-          <button
-            onClick={() => setForm({ ...form, sensor_enabled: !form.sensor_enabled })}
-            className={`w-14 h-8 rounded-full transition-colors relative ${form.sensor_enabled ? 'bg-mobile-primary' : 'bg-white/20'}`}
-            aria-label={t('mobileRainSensor.enableTitle')}
-          >
-            <div className={`absolute top-1.5 size-5 rounded-full bg-white shadow-md transition-transform ${form.sensor_enabled ? 'translate-x-7' : 'translate-x-1.5'}`} />
-          </button>
+          <InlineSwitch
+            checked={form.sensor_enabled}
+            onToggle={() => setForm({ ...form, sensor_enabled: !form.sensor_enabled })}
+            label={t('mobileRainSensor.enableTitle')}
+          />
         </div>
 
         {/* Integration Enable */}
-        <div className={`flex items-center justify-between gap-4 p-5 rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark ${!form.sensor_enabled ? 'opacity-60' : ''}`}>
+        <div className={`mobile-card-surface flex items-center justify-between gap-4 p-5 ${!form.sensor_enabled ? 'opacity-60' : ''}`}>
           <div className="flex items-center gap-4">
-            <div className={`size-14 rounded-full flex items-center justify-center ${form.integration_enabled ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'}`}>
+            <div className={`mobile-icon-chip mobile-icon-chip-lg ${form.integration_enabled ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'}`}>
               <span className="material-symbols-outlined text-3xl">auto_awesome</span>
             </div>
             <div>
@@ -215,18 +223,16 @@ const MobileRainSensor: React.FC = () => {
               <p className="text-mobile-text-muted text-sm px-1">{t('mobileRainSensor.integrationSubtitle')}</p>
             </div>
           </div>
-          <button
-            onClick={() => form.sensor_enabled && setForm({ ...form, integration_enabled: !form.integration_enabled })}
+          <InlineSwitch
+            checked={form.integration_enabled}
             disabled={!form.sensor_enabled}
-            className={`w-14 h-8 rounded-full transition-colors relative ${form.integration_enabled ? 'bg-mobile-primary' : 'bg-white/20'}`}
-            aria-label={t('mobileRainSensor.integrationTitle')}
-          >
-            <div className={`absolute top-1.5 size-5 rounded-full bg-white shadow-md transition-transform ${form.integration_enabled ? 'translate-x-7' : 'translate-x-1.5'}`} />
-          </button>
+            onToggle={() => form.sensor_enabled && setForm({ ...form, integration_enabled: !form.integration_enabled })}
+            label={t('mobileRainSensor.integrationTitle')}
+          />
         </div>
 
         {/* Calibration */}
-        <div className={`rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark overflow-hidden ${!form.sensor_enabled ? 'opacity-60' : ''}`}>
+        <div className={`mobile-card-surface overflow-hidden ${!form.sensor_enabled ? 'opacity-60' : ''}`}>
           <div className="p-4 flex items-center justify-between gap-3">
             <div>
               <p className="text-white font-semibold">{t('mobileRainSensor.calibrationTitle')}</p>
@@ -235,7 +241,7 @@ const MobileRainSensor: React.FC = () => {
             <button
               onClick={() => form.sensor_enabled && void handleCalibrate()}
               disabled={!form.sensor_enabled}
-              className="h-10 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold transition-colors flex items-center gap-2"
+              className="mobile-btn-surface h-10 px-4 font-semibold"
             >
               <span className="material-symbols-outlined">tune</span>
               {t('mobileRainSensor.calibrate')}
@@ -245,7 +251,7 @@ const MobileRainSensor: React.FC = () => {
           <div className="p-4 border-t border-mobile-border-dark space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
+                <label className="mobile-form-label">
                   {t('mobileRainSensor.mmPerPulse')}
                 </label>
                 <input
@@ -253,15 +259,15 @@ const MobileRainSensor: React.FC = () => {
                   min={0.1}
                   max={10}
                   step={0.1}
-                  value={Number.isFinite(form.mm_per_pulse) ? form.mm_per_pulse : 0}
+                  value={Number.isFinite(form.mm_per_pulse) ? roundTo(form.mm_per_pulse, 3) : 0}
                   onChange={(e) => setForm({ ...form, mm_per_pulse: Number(e.target.value) })}
                   disabled={!form.sensor_enabled}
-                  className={`w-full h-12 rounded-xl bg-white/5 border border-white/10 px-3 text-white ${!form.sensor_enabled ? 'opacity-50' : ''}`}
+                  className={`mobile-form-field ${!form.sensor_enabled ? 'opacity-50' : ''}`}
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
+                <label className="mobile-form-label">
                   {t('mobileRainSensor.debounceMs')}
                 </label>
                 <input
@@ -272,7 +278,7 @@ const MobileRainSensor: React.FC = () => {
                   value={Number.isFinite(form.debounce_ms) ? form.debounce_ms : 0}
                   onChange={(e) => setForm({ ...form, debounce_ms: Number(e.target.value) })}
                   disabled={!form.sensor_enabled}
-                  className={`w-full h-12 rounded-xl bg-white/5 border border-white/10 px-3 text-white ${!form.sensor_enabled ? 'opacity-50' : ''}`}
+                  className={`mobile-form-field ${!form.sensor_enabled ? 'opacity-50' : ''}`}
                 />
               </div>
             </div>
@@ -292,7 +298,7 @@ const MobileRainSensor: React.FC = () => {
                 <div className="mt-3 space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="text-xs font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
+                      <label className="mobile-form-label">
                         {t('mobileRainSensor.sensitivityPct')}
                       </label>
                       <input
@@ -300,15 +306,15 @@ const MobileRainSensor: React.FC = () => {
                         min={0}
                         max={100}
                         step={1}
-                        value={Number.isFinite(form.rain_sensitivity_pct) ? form.rain_sensitivity_pct : 0}
+                        value={Number.isFinite(form.rain_sensitivity_pct) ? roundTo(form.rain_sensitivity_pct, 1) : 0}
                         onChange={(e) => setForm({ ...form, rain_sensitivity_pct: Number(e.target.value) })}
                         disabled={!form.sensor_enabled}
-                        className={`w-full h-12 rounded-xl bg-white/5 border border-white/10 px-3 text-white ${!form.sensor_enabled ? 'opacity-50' : ''}`}
+                        className={`mobile-form-field ${!form.sensor_enabled ? 'opacity-50' : ''}`}
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
+                      <label className="mobile-form-label">
                         {t('mobileRainSensor.skipThresholdMm')}
                       </label>
                       <input
@@ -316,10 +322,10 @@ const MobileRainSensor: React.FC = () => {
                         min={0}
                         max={100}
                         step={0.1}
-                        value={Number.isFinite(form.skip_threshold_mm) ? form.skip_threshold_mm : 0}
+                        value={Number.isFinite(form.skip_threshold_mm) ? roundTo(form.skip_threshold_mm, 1) : 0}
                         onChange={(e) => setForm({ ...form, skip_threshold_mm: Number(e.target.value) })}
                         disabled={!form.sensor_enabled}
-                        className={`w-full h-12 rounded-xl bg-white/5 border border-white/10 px-3 text-white ${!form.sensor_enabled ? 'opacity-50' : ''}`}
+                        className={`mobile-form-field ${!form.sensor_enabled ? 'opacity-50' : ''}`}
                       />
                     </div>
                   </div>
@@ -333,11 +339,11 @@ const MobileRainSensor: React.FC = () => {
         </div>
 
         {/* Save Button */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-mobile-bg-dark via-mobile-bg-dark to-transparent pt-12">
+        <div className="mobile-bottom-cta-bar">
           <button
             onClick={() => void handleSave()}
             disabled={saving}
-            className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+            className="mobile-btn-primary h-14 text-lg font-bold"
           >
             <span className="material-symbols-outlined">save</span>
             {saving ? t('mobileRainSensor.saving') : t('mobileRainSensor.save')}
@@ -349,4 +355,3 @@ const MobileRainSensor: React.FC = () => {
 };
 
 export default MobileRainSensor;
-

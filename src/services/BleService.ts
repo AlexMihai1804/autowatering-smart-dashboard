@@ -126,6 +126,12 @@ export class BleService {
 
     // Lock to prevent duplicate connection attempts
     private isConnecting: boolean = false;
+    // Lock to prevent duplicate native device-picker dialogs (StrictMode/dev double effects, rapid taps)
+    private isScanInProgress: boolean = false;
+    // Native LE scan session state (requestLEScan/stopLEScan)
+    private nativeLeScanActive: boolean = false;
+    private nativeLeScanResolve: (() => void) | null = null;
+    private nativeLeScanTimeoutId: ReturnType<typeof setTimeout> | null = null;
     private connectionId: number = 0;  // Monotonically increasing connection ID
 
     private constructor() {
@@ -138,6 +144,12 @@ export class BleService {
 
     private delay(ms: number): Promise<void> {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    private roundFloat(value: number, decimals: number): number {
+        if (!Number.isFinite(value)) return 0;
+        const factor = 10 ** decimals;
+        return Math.round(value * factor) / factor;
     }
 
     private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
@@ -534,12 +546,74 @@ export class BleService {
         }
     }
 
-    public async scan(): Promise<void> {
+    public async stopScan(): Promise<void> {
+        if (this.nativeLeScanTimeoutId) {
+            clearTimeout(this.nativeLeScanTimeoutId);
+            this.nativeLeScanTimeoutId = null;
+        }
+
         try {
+            if (this.nativeLeScanActive) {
+                await BleClient.stopLEScan();
+            }
+        } catch (error) {
+            console.warn('[BLE] stopLEScan failed:', error);
+        } finally {
+            this.nativeLeScanActive = false;
+            const resolve = this.nativeLeScanResolve;
+            this.nativeLeScanResolve = null;
+            if (resolve) resolve();
+
+            if (useAppStore.getState().connectionState === 'scanning') {
+                useAppStore.getState().setConnectionState('disconnected');
+            }
+        }
+    }
+
+    public async scan(scanDurationMs: number = 8000): Promise<void> {
+        if (this.isScanInProgress) {
+            console.warn('[BLE] Scan already in progress, ignoring duplicate scan call');
+            return;
+        }
+
+        this.isScanInProgress = true;
+        try {
+            const { Capacitor } = await import('@capacitor/core');
+            const isNative = Capacitor.isNativePlatform();
+
+            useAppStore.getState().clearDiscoveredDevices();
             useAppStore.getState().setConnectionState('scanning');
 
-            // Use requestDevice which works on Web (opens picker) and Native
-            // We filter by namePrefix because 128-bit UUIDs are often not in the advertisement packet
+            if (isNative) {
+                await BleClient.requestLEScan(
+                    {
+                        // Keep broad prefix so we can show a branded list instead of native picker.
+                        namePrefix: 'AutoWater',
+                        allowDuplicates: true,
+                    },
+                    (result: ScanResult) => {
+                        const device = result.device;
+                        if (!device?.deviceId) return;
+
+                        useAppStore.getState().addDiscoveredDevice({
+                            deviceId: device.deviceId,
+                            name: result.localName || device.name,
+                            rssi: result.rssi,
+                        });
+                    }
+                );
+
+                this.nativeLeScanActive = true;
+                await new Promise<void>((resolve) => {
+                    this.nativeLeScanResolve = resolve;
+                    this.nativeLeScanTimeoutId = setTimeout(() => {
+                        void this.stopScan();
+                    }, scanDurationMs);
+                });
+                return;
+            }
+
+            // Web fallback: browser requires native picker flow.
             const device = await BleClient.requestDevice({
                 namePrefix: 'AutoWatering',
                 // Web Bluetooth requires listing all services you want to access.
@@ -550,16 +624,26 @@ export class BleService {
             console.log('Device selected:', device);
             useAppStore.getState().addDiscoveredDevice(device);
 
-            // Auto-connect after selection
+            // Auto-connect after selection (web picker flow)
             await this.connect(device.deviceId);
 
         } catch (error) {
             console.error('Scan/Selection failed', error);
             useAppStore.getState().setConnectionState('disconnected');
+        } finally {
+            this.isScanInProgress = false;
         }
     }
 
     public async connect(deviceId: string, force: boolean = false): Promise<void> {
+        if (this.nativeLeScanActive) {
+            try {
+                await this.stopScan();
+            } catch (scanStopError) {
+                console.warn('[BLE] Failed to stop active scan before connect:', scanStopError);
+            }
+        }
+
         // Prevent duplicate connection attempts
         if (this.isConnecting) {
             console.warn('[BLE] Connection already in progress, ignoring duplicate connect call');
@@ -3410,12 +3494,12 @@ export class BleService {
 
     private parseRainConfig(view: DataView): RainConfigData {
         return {
-            mm_per_pulse: view.getFloat32(0, true),
+            mm_per_pulse: this.roundFloat(view.getFloat32(0, true), 3),
             debounce_ms: view.getUint16(4, true),
             sensor_enabled: view.getUint8(6) !== 0,
             integration_enabled: view.getUint8(7) !== 0,
-            rain_sensitivity_pct: view.getFloat32(8, true),
-            skip_threshold_mm: view.getFloat32(12, true)
+            rain_sensitivity_pct: this.roundFloat(view.getFloat32(8, true), 1),
+            skip_threshold_mm: this.roundFloat(view.getFloat32(12, true), 1)
         };
     }
 
@@ -3627,7 +3711,7 @@ export class BleService {
 
         const channelReduction: number[] = [];
         for (let i = 0; i < 8; i++) {
-            channelReduction.push(view.getFloat32(30 + i * 4, true));
+            channelReduction.push(this.roundFloat(view.getFloat32(30 + i * 4, true), 2));
         }
 
         const channelSkip: boolean[] = [];
@@ -3639,12 +3723,12 @@ export class BleService {
             sensor_active: view.getUint8(0) !== 0,
             integration_enabled: view.getUint8(1) !== 0,
             last_pulse_time: view.getUint32(2, true),
-            calibration_mm_per_pulse: view.getFloat32(6, true),
-            rainfall_last_hour: view.getFloat32(10, true),
-            rainfall_last_24h: view.getFloat32(14, true),
-            rainfall_last_48h: view.getFloat32(18, true),
-            sensitivity_pct: view.getFloat32(22, true),
-            skip_threshold_mm: view.getFloat32(26, true),
+            calibration_mm_per_pulse: this.roundFloat(view.getFloat32(6, true), 3),
+            rainfall_last_hour: this.roundFloat(view.getFloat32(10, true), 3),
+            rainfall_last_24h: this.roundFloat(view.getFloat32(14, true), 3),
+            rainfall_last_48h: this.roundFloat(view.getFloat32(18, true), 3),
+            sensitivity_pct: this.roundFloat(view.getFloat32(22, true), 1),
+            skip_threshold_mm: this.roundFloat(view.getFloat32(26, true), 1),
             channel_reduction_pct: channelReduction,
             channel_skip_irrigation: channelSkip,
             hourly_entries: view.getUint16(70, true),
@@ -5837,7 +5921,7 @@ export class BleService {
             plant_id: data.getUint16(0, true),
             pack_id: data.getUint16(2, true),
             version: data.getUint16(4, true),
-            reserved: data.getUint16(6, true),
+            cloud_id_crc16: data.getUint16(6, true),
             
             // Names (112 bytes)
             common_name,
@@ -5934,7 +6018,7 @@ export class BleService {
         view.setUint16(0, plant.plant_id, true);
         view.setUint16(2, plant.pack_id, true);
         view.setUint16(4, plant.version, true);
-        view.setUint16(6, plant.reserved, true);
+        view.setUint16(6, plant.cloud_id_crc16, true);
         
         // Names (112 bytes)
         const commonNameBytes = encoder.encode(plant.common_name);
@@ -6221,15 +6305,43 @@ export class BleService {
                 try {
                     if (settled) return;
 
-                    firstPacketReceived = true;
-                    armIdleTimeout();
-
                     const bytes = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
                     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
                     
+                    // ── Validate packet ──────────────────────────────────────
+                    if (bytes.length < 4) {
+                        console.warn(`[BLE] Stream notification too small (${bytes.length}B), ignoring`);
+                        return;
+                    }
+
                     const totalCount = view.getUint16(0, true);
                     const returnedCount = view.getUint8(2);
                     const flags = view.getUint8(3);
+
+                    // Reject if claimed entries don't fit in the packet
+                    const expectedMinSize = 4 + returnedCount * ENTRY_SIZE;
+                    if (returnedCount > 0 && expectedMinSize > bytes.length) {
+                        console.warn(
+                            `[BLE] Stream notification invalid: ${returnedCount} entries need ${expectedMinSize}B but packet is ${bytes.length}B, ignoring`
+                        );
+                        return;
+                    }
+
+                    // After STARTING, reject notifications where total drifted wildly
+                    // (catches interleaved readPackPlant responses being parsed as stream)
+                    if (totalExpected > 0 && !(flags & FLAG_STARTING) && totalCount > 0) {
+                        const drift = Math.abs(totalCount - totalExpected);
+                        if (drift > 20) {
+                            console.warn(
+                                `[BLE] Stream notification totalCount=${totalCount} vs expected=${totalExpected} (drift=${drift}), ignoring stale/foreign packet`
+                            );
+                            return;
+                        }
+                    }
+                    // ────────────────────────────────────────────────────────
+
+                    firstPacketReceived = true;
+                    armIdleTimeout();
                     
                     // Debug log
                     console.log(`[BLE] Stream notification: total=${totalCount}, returned=${returnedCount}, flags=0x${flags.toString(16).padStart(2, '0')}`);
@@ -6276,8 +6388,8 @@ export class BleService {
                         onProgress(plants.length / totalExpected, plants.length, totalExpected);
                     }
                     
-                    // Handle COMPLETE flag
-                    if (flags === FLAG_COMPLETE) {
+                    // Handle COMPLETE flag (bitwise, same as STARTING)
+                    if (flags & FLAG_COMPLETE) {
                         isComplete = true;
                         console.log(`[BLE] Stream complete: received ${plants.length} plants`);
 

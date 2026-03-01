@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/pop
 import { useConfigExport } from '../../hooks/useConfigExport';
 import { useOfflineMode } from '../../hooks/useOfflineMode';
 import { useAppStore } from '../../store/useAppStore';
+import { useUxPrefsStore } from '../../store/useUxPrefsStore';
 import { createInitialZones } from '../../types/wizard';
 import { getHistoryService } from '../../services/HistoryService';
 import { useAuth } from '../../auth';
@@ -52,6 +53,7 @@ const MobileAppSettings: React.FC = () => {
   const isDark = resolvedTheme === 'dark';
 
   const { t, language, setLanguage, availableLanguages } = useI18n();
+  const { isAdvanced: uxIsAdvanced, toggleMode: uxToggle } = useUxPrefsStore();
 
   const appearanceRef = useRef<HTMLDivElement | null>(null);
   const languageRef = useRef<HTMLDivElement | null>(null);
@@ -251,7 +253,7 @@ const MobileAppSettings: React.FC = () => {
     try {
       const snapshot = buildCloudSnapshot();
       await saveCloudState(snapshot, CLOUD_STATE_VERSION);
-      await showToast('Backup saved to your account.');
+      await showToast(t('appSettings.backupSaved'));
     } catch (error) {
       console.error('[MobileAppSettings] Backup failed:', error);
       const reason = error instanceof Error ? error.message : String(error);
@@ -271,12 +273,12 @@ const MobileAppSettings: React.FC = () => {
     try {
       const cloudState = await loadCloudState();
       if (!cloudState) {
-        await showToast('No cloud backup found for this account.');
+        await showToast(t('appSettings.backupNotFound'));
         return;
       }
 
       applyCloudSnapshot(cloudState);
-      await showToast('Backup restored from account.');
+      await showToast(t('appSettings.backupRestored'));
     } catch (error) {
       console.error('[MobileAppSettings] Restore failed:', error);
       const reason = error instanceof Error ? error.message : String(error);
@@ -307,7 +309,7 @@ const MobileAppSettings: React.FC = () => {
       <div className="sticky top-0 z-50 flex items-center bg-mobile-bg-dark p-4 pb-2 justify-between shrink-0">
         <button 
           onClick={() => history.goBack()}
-          className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+          className="mobile-header-icon-btn"
         >
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
@@ -324,7 +326,7 @@ const MobileAppSettings: React.FC = () => {
             {t('appSettings.notifications')}
           </h3>
           <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
-            <div className="flex items-center justify-between p-4">
+            <div className="mobile-page-header-row">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
                   <span className="material-symbols-outlined">notifications</span>
@@ -345,7 +347,7 @@ const MobileAppSettings: React.FC = () => {
             {t('appSettings.appearance')}
           </h3>
           <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
-            <div className="flex items-center justify-between p-4">
+            <div className="mobile-page-header-row">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
                   <span className="material-symbols-outlined">dark_mode</span>
@@ -366,7 +368,7 @@ const MobileAppSettings: React.FC = () => {
             {t('appSettings.language')}
           </h3>
           <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
-            <div className="flex items-center justify-between p-4">
+            <div className="mobile-page-header-row">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400">
                   <span className="material-symbols-outlined">translate</span>
@@ -408,6 +410,27 @@ const MobileAppSettings: React.FC = () => {
                   </div>
                 </PopoverContent>
               </Popover>
+            </div>
+          </div>
+        </div>
+
+        {/* UX Mode Section */}
+        <div className="flex flex-col gap-2">
+          <h3 className="px-2 text-sm font-medium text-mobile-text-muted uppercase tracking-wider">
+            {t('appSettings.uxMode')}
+          </h3>
+          <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
+            <div className="mobile-page-header-row">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400">
+                  <span className="material-symbols-outlined">tune</span>
+                </div>
+                <div className="flex flex-col items-start">
+                  <span className="text-base font-medium text-white">{t('appSettings.advancedMode')}</span>
+                  <span className="text-xs text-mobile-text-muted">{t('appSettings.advancedModeDesc')}</span>
+                </div>
+              </div>
+              <Toggle enabled={uxIsAdvanced} onChange={() => uxToggle()} />
             </div>
           </div>
         </div>
@@ -461,15 +484,15 @@ const MobileAppSettings: React.FC = () => {
             <button
               onClick={() => void handleBackupToAccount()}
               disabled={isBackupBusy}
-              className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group disabled:opacity-60"
+              className="mobile-page-header-row w-full hover:bg-white/5 transition-colors group disabled:opacity-60"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
                   <span className="material-symbols-outlined">{isBackupBusy ? 'sync' : 'backup'}</span>
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="text-base font-medium text-white">Backup To Account</span>
-                  <span className="text-xs text-mobile-text-muted">Save app preferences and device list to cloud.</span>
+                  <span className="text-base font-medium text-white">{t('appSettings.backupToAccount')}</span>
+                  <span className="text-xs text-mobile-text-muted">{t('appSettings.backupToAccountDesc')}</span>
                 </div>
               </div>
               <span className="material-symbols-outlined text-mobile-text-muted group-hover:text-white transition-colors">
@@ -480,15 +503,15 @@ const MobileAppSettings: React.FC = () => {
             <button
               onClick={() => void handleRestoreFromAccount()}
               disabled={isRestoreBusy}
-              className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group disabled:opacity-60"
+              className="mobile-page-header-row w-full hover:bg-white/5 transition-colors group disabled:opacity-60"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400">
                   <span className="material-symbols-outlined">{isRestoreBusy ? 'sync' : 'restore'}</span>
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="text-base font-medium text-white">Restore From Account</span>
-                  <span className="text-xs text-mobile-text-muted">Load saved app preferences from cloud backup.</span>
+                  <span className="text-base font-medium text-white">{t('appSettings.restoreFromAccount')}</span>
+                  <span className="text-xs text-mobile-text-muted">{t('appSettings.restoreFromAccountDesc')}</span>
                 </div>
               </div>
               <span className="material-symbols-outlined text-mobile-text-muted group-hover:text-white transition-colors">
@@ -499,7 +522,7 @@ const MobileAppSettings: React.FC = () => {
             <button
               onClick={() => void handleExportData()}
               disabled={isExporting}
-              className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group disabled:opacity-60"
+              className="mobile-page-header-row w-full hover:bg-white/5 transition-colors group disabled:opacity-60"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400">
@@ -518,7 +541,7 @@ const MobileAppSettings: React.FC = () => {
             <button
               onClick={() => void handleClearAppData()}
               disabled={isClearing}
-              className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group disabled:opacity-60"
+              className="mobile-page-header-row w-full hover:bg-white/5 transition-colors group disabled:opacity-60"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-400">

@@ -5,6 +5,7 @@ import { BleService } from '../../services/BleService';
 import { GrowingEnvData, TimezoneConfigData } from '../../types/firmware_structs';
 import { useI18n } from '../../i18n';
 import { readStoredLocation, writeStoredLocation } from '../../services/LocationStorage';
+import InlineSwitch from '../../components/mobile/InlineSwitch';
 
 type DstPreset = 'eu' | 'us';
 
@@ -290,10 +291,10 @@ const MobileTimeLocation: React.FC = () => {
   return (
     <div className="min-h-screen bg-mobile-bg-dark font-manrope pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-50 flex items-center bg-mobile-bg-dark/90 backdrop-blur-md p-4 justify-between">
+      <div className="mobile-page-header">
         <button
           onClick={() => history.goBack()}
-          className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+          className="mobile-header-icon-btn"
         >
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
@@ -305,7 +306,7 @@ const MobileTimeLocation: React.FC = () => {
             void bleService.readTimezoneConfig().catch(console.error);
             void bleService.readGrowingEnvironment(0).catch(console.error);
           }}
-          className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+          className="mobile-header-icon-btn"
           aria-label={t('common.refresh')}
         >
           <span className="material-symbols-outlined">refresh</span>
@@ -314,9 +315,9 @@ const MobileTimeLocation: React.FC = () => {
 
       <div className="px-4 space-y-6">
         {/* Current Time Card */}
-        <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark overflow-hidden">
+        <div className="mobile-card-surface overflow-hidden">
           <div className="p-6 flex flex-col items-center">
-            <div className="size-20 rounded-full bg-mobile-primary/10 flex items-center justify-center mb-4">
+            <div className="mobile-icon-chip mobile-icon-chip-xl bg-mobile-primary/10 mb-4">
               <span className="material-symbols-outlined text-mobile-primary text-4xl">schedule</span>
             </div>
             <p className="text-mobile-text-muted text-sm mb-1">{t('mobileTimeLocation.deviceTime')}</p>
@@ -333,7 +334,7 @@ const MobileTimeLocation: React.FC = () => {
         <button
           onClick={handleSyncNow}
           disabled={loading}
-          className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          className="mobile-btn-primary h-14 text-lg font-bold"
         >
           <span className="material-symbols-outlined">sync</span>
           {loading ? t('mobileTimeLocation.syncing') : t('mobileTimeLocation.syncNow')}
@@ -341,10 +342,10 @@ const MobileTimeLocation: React.FC = () => {
 
         {/* Timezone Selection */}
         <div className="space-y-3">
-          <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
+          <label className="mobile-section-label">
             {t('mobileTimeLocation.timezone')}
           </label>
-          <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark divide-y divide-mobile-border-dark overflow-hidden">
+          <div className="mobile-card-surface divide-y divide-mobile-border-dark overflow-hidden">
             {timezones.map((tz) => (
               <button
                 key={tz.id}
@@ -383,13 +384,13 @@ const MobileTimeLocation: React.FC = () => {
 
         {/* DST */}
         <div className="space-y-3">
-          <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
+          <label className="mobile-section-label">
             {t('mobileTimeLocation.dst.sectionTitle')}
           </label>
 
-          <div className="flex items-center justify-between gap-4 p-5 rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark">
+          <div className="mobile-card-surface flex items-center justify-between gap-4 p-5">
             <div className="flex items-center gap-4">
-              <div className={`size-14 rounded-full flex items-center justify-center ${dstEnabled ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
+              <div className={`mobile-icon-chip mobile-icon-chip-lg ${dstEnabled ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
                 }`}
               >
                 <span className="material-symbols-outlined text-3xl">schedule</span>
@@ -401,8 +402,9 @@ const MobileTimeLocation: React.FC = () => {
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => {
+            <InlineSwitch
+              checked={dstEnabled}
+              onToggle={() => {
                 const next = !dstEnabled;
                 setDstEnabled(next);
                 if (next) {
@@ -419,21 +421,15 @@ const MobileTimeLocation: React.FC = () => {
                   setDstOffsetMinutes(rule.offsetMinutes);
                 }
               }}
-              className={`w-14 h-8 rounded-full transition-colors relative ${dstEnabled ? 'bg-mobile-primary' : 'bg-white/20'
-                }`}
-              aria-label={t('mobileTimeLocation.dst.toggleTitle')}
-            >
-              <div className={`absolute top-1.5 size-5 rounded-full bg-white shadow-md transition-transform ${dstEnabled ? 'translate-x-7' : 'translate-x-1.5'
-                }`}
-              />
-            </button>
+              label={t('mobileTimeLocation.dst.toggleTitle')}
+            />
           </div>
 
           {/* Advanced DST / Offset */}
-          <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark overflow-hidden">
+          <div className="mobile-card-surface overflow-hidden">
             <button
               onClick={() => setAdvancedOpen(!advancedOpen)}
-              className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
+              className="w-full mobile-page-header-row hover:bg-white/5 transition-colors"
             >
               <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined text-mobile-text-muted">tune</span>
@@ -451,7 +447,7 @@ const MobileTimeLocation: React.FC = () => {
               <div className="p-4 border-t border-mobile-border-dark space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
+                    <label className="mobile-form-label">
                       {t('mobileTimeLocation.advanced.utcOffsetMinutes')}
                     </label>
                     <input
@@ -461,12 +457,12 @@ const MobileTimeLocation: React.FC = () => {
                       step={15}
                       value={utcOffsetMinutes}
                       onChange={(e) => setUtcOffsetMinutes(Number(e.target.value))}
-                      className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-3 text-white"
+                      className="mobile-form-field"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
+                    <label className="mobile-form-label">
                       {t('mobileTimeLocation.advanced.dstOffsetMinutes')}
                     </label>
                     <input
@@ -477,14 +473,14 @@ const MobileTimeLocation: React.FC = () => {
                       value={dstOffsetMinutes}
                       onChange={(e) => setDstOffsetMinutes(Number(e.target.value))}
                       disabled={!dstEnabled}
-                      className={`w-full h-12 rounded-xl bg-white/5 border border-white/10 px-3 text-white ${!dstEnabled ? 'opacity-50' : ''
+                      className={`mobile-form-field ${!dstEnabled ? 'opacity-50' : ''
                         }`}
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-xs font-bold uppercase tracking-wider text-mobile-text-muted px-1">
+                  <p className="mobile-section-label-xs">
                     {t('mobileTimeLocation.advanced.dstStart')}
                   </p>
                   <div className="grid grid-cols-3 gap-3">
@@ -492,7 +488,7 @@ const MobileTimeLocation: React.FC = () => {
                       value={dstStartMonth}
                       onChange={(e) => setDstStartMonth(Number(e.target.value))}
                       disabled={!dstEnabled}
-                      className={`h-12 rounded-xl bg-white/5 border border-white/10 px-3 text-white ${!dstEnabled ? 'opacity-50' : ''}`}
+                      className={`mobile-form-select ${!dstEnabled ? 'opacity-50' : ''}`}
                     >
                       {Array.from({ length: 12 }).map((_, idx) => {
                         const month = idx + 1;
@@ -509,7 +505,7 @@ const MobileTimeLocation: React.FC = () => {
                       value={dstStartWeek}
                       onChange={(e) => setDstStartWeek(Number(e.target.value))}
                       disabled={!dstEnabled}
-                      className={`h-12 rounded-xl bg-white/5 border border-white/10 px-3 text-white ${!dstEnabled ? 'opacity-50' : ''}`}
+                      className={`mobile-form-select ${!dstEnabled ? 'opacity-50' : ''}`}
                     >
                       {[1, 2, 3, 4, 5].map((w) => (
                         <option key={w} value={w}>
@@ -522,7 +518,7 @@ const MobileTimeLocation: React.FC = () => {
                       value={dstStartDow}
                       onChange={(e) => setDstStartDow(Number(e.target.value))}
                       disabled={!dstEnabled}
-                      className={`h-12 rounded-xl bg-white/5 border border-white/10 px-3 text-white ${!dstEnabled ? 'opacity-50' : ''}`}
+                      className={`mobile-form-select ${!dstEnabled ? 'opacity-50' : ''}`}
                     >
                       {Array.from({ length: 7 }).map((_, idx) => {
                         const base = new Date(Date.UTC(2026, 0, 4)); // Sunday
@@ -538,7 +534,7 @@ const MobileTimeLocation: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-xs font-bold uppercase tracking-wider text-mobile-text-muted px-1">
+                  <p className="mobile-section-label-xs">
                     {t('mobileTimeLocation.advanced.dstEnd')}
                   </p>
                   <div className="grid grid-cols-3 gap-3">
@@ -546,7 +542,7 @@ const MobileTimeLocation: React.FC = () => {
                       value={dstEndMonth}
                       onChange={(e) => setDstEndMonth(Number(e.target.value))}
                       disabled={!dstEnabled}
-                      className={`h-12 rounded-xl bg-white/5 border border-white/10 px-3 text-white ${!dstEnabled ? 'opacity-50' : ''}`}
+                      className={`mobile-form-select ${!dstEnabled ? 'opacity-50' : ''}`}
                     >
                       {Array.from({ length: 12 }).map((_, idx) => {
                         const month = idx + 1;
@@ -563,7 +559,7 @@ const MobileTimeLocation: React.FC = () => {
                       value={dstEndWeek}
                       onChange={(e) => setDstEndWeek(Number(e.target.value))}
                       disabled={!dstEnabled}
-                      className={`h-12 rounded-xl bg-white/5 border border-white/10 px-3 text-white ${!dstEnabled ? 'opacity-50' : ''}`}
+                      className={`mobile-form-select ${!dstEnabled ? 'opacity-50' : ''}`}
                     >
                       {[1, 2, 3, 4, 5].map((w) => (
                         <option key={w} value={w}>
@@ -576,7 +572,7 @@ const MobileTimeLocation: React.FC = () => {
                       value={dstEndDow}
                       onChange={(e) => setDstEndDow(Number(e.target.value))}
                       disabled={!dstEnabled}
-                      className={`h-12 rounded-xl bg-white/5 border border-white/10 px-3 text-white ${!dstEnabled ? 'opacity-50' : ''}`}
+                      className={`mobile-form-select ${!dstEnabled ? 'opacity-50' : ''}`}
                     >
                       {Array.from({ length: 7 }).map((_, idx) => {
                         const base = new Date(Date.UTC(2026, 0, 4)); // Sunday
@@ -597,10 +593,10 @@ const MobileTimeLocation: React.FC = () => {
 
         {/* Location */}
         <div className="space-y-3">
-          <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
+          <label className="mobile-section-label">
             {t('mobileTimeLocation.locationCoordinates')}
           </label>
-          <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark p-4">
+          <div className="mobile-card-surface p-4">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-mobile-text-muted text-sm">{t('mobileTimeLocation.latitude')}</p>
@@ -613,7 +609,7 @@ const MobileTimeLocation: React.FC = () => {
             </div>
             <button
               onClick={handleGetLocation}
-              className="w-full h-12 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+              className="mobile-btn-surface w-full h-12 font-semibold"
             >
               <span className="material-symbols-outlined">my_location</span>
               {t('mobileTimeLocation.getLocation')}
@@ -625,11 +621,11 @@ const MobileTimeLocation: React.FC = () => {
         </div>
 
         {/* Save Button */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-mobile-bg-dark via-mobile-bg-dark to-transparent pt-12">
+        <div className="mobile-bottom-cta-bar">
           <button
             onClick={handleSave}
             disabled={loading}
-            className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+            className="mobile-btn-primary h-14 text-lg font-bold"
           >
             <span className="material-symbols-outlined">save</span>
             {loading ? t('mobileTimeLocation.saving') : t('mobileTimeLocation.saveSettings')}

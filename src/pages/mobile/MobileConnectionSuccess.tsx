@@ -1,6 +1,8 @@
 import React from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import { useI18n } from '../../i18n';
+import { useAppStore } from '../../store/useAppStore';
+import { resolvePostConnectionRoute } from '../../utils/onboardingRouteResolver';
 
 interface LocationState {
   deviceName?: string;
@@ -11,12 +13,14 @@ const MobileConnectionSuccess: React.FC = () => {
   const history = useHistory();
   const location = useLocation<LocationState>();
   const { t } = useI18n();
+  const { onboardingState } = useAppStore();
 
   const deviceName = location.state?.deviceName ?? t('dashboard.deviceNamePlaceholder');
   const deviceId = location.state?.deviceId ?? 'AW-8839-X';
 
   const handleContinueSetup = () => {
-    history.push('/onboarding');
+    const nextPath = resolvePostConnectionRoute(onboardingState);
+    history.push(nextPath ?? '/onboarding');
   };
 
   const handleSkipToDashboard = () => {
@@ -48,7 +52,7 @@ const MobileConnectionSuccess: React.FC = () => {
           {/* Middle ring */}
           <div className="relative flex items-center justify-center size-32 rounded-full bg-gradient-to-tr from-mobile-primary/20 to-mobile-primary/5 border border-mobile-primary/30 shadow-[0_0_30px_rgba(19,236,55,0.3)]">
             {/* Icon Container */}
-            <div className="flex items-center justify-center size-20 rounded-full bg-mobile-primary shadow-lg shadow-mobile-primary/40">
+            <div className="mobile-icon-chip mobile-icon-chip-xl bg-mobile-primary shadow-lg shadow-mobile-primary/40">
               <span className="material-symbols-outlined text-black text-5xl font-bold">check</span>
             </div>
           </div>

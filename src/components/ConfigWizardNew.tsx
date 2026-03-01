@@ -91,6 +91,8 @@ import {
     WateringMode as FirmwareWateringMode
 } from '../types/firmware_structs';
 import { useI18n } from '../i18n';
+import { getLocalizedDbPlantName } from '../utils/plantNameHelpers';
+import { searchPlantsWithRanking } from '../utils/plantSearch';
 
 // ============================================================================
 // Helper function to translate plant category
@@ -481,13 +483,11 @@ const ConfigWizard: React.FC = () => {
     // Filtered plant/soil lists
     const filteredPlants = useMemo(() => {
         if (!plantSearch) return plantDb.slice(0, 30);
-        const q = plantSearch.toLowerCase();
-        return plantDb.filter(p =>
-            p.common_name_en.toLowerCase().includes(q) ||
-            p.common_name_ro.toLowerCase().includes(q) ||
-            p.scientific_name?.toLowerCase().includes(q) ||
-            p.category?.toLowerCase().includes(q)
-        ).slice(0, 50);
+        return searchPlantsWithRanking(plantDb, {
+            query: plantSearch,
+            fuzzy: 'balanced',
+            limit: 50,
+        }).map((result) => result.plant);
     }, [plantDb, plantSearch]);
 
     const filteredSoils = useMemo(() => {
@@ -837,8 +837,8 @@ const ConfigWizard: React.FC = () => {
                                         color={currentConfig.plant?.id === plant.id ? 'primary' : undefined}
                                     >
                                         <IonLabel>
-                                            <h2>{plant.common_name_en}</h2>
-                                            <p>{language === 'ro' ? plant.common_name_ro : plant.common_name_en} - {translatePlantCategory(plant.category, t)}</p>
+                                            <h2>{getLocalizedDbPlantName(plant, language)}</h2>
+                                            <p>{plant.scientific_name} - {translatePlantCategory(plant.category, t)}</p>
                                         </IonLabel>
                                         {currentConfig.plant?.id === plant.id && (
                                             <IonIcon icon={checkmark} slot="end" />

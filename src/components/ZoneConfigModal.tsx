@@ -74,6 +74,8 @@ import { LocationPicker } from './LocationPicker';
 import { TimePicker } from './TimePicker';
 import { LocationData } from '../types/wizard';
 import { useI18n } from '../i18n';
+import { getLocalizedDbPlantName } from '../utils/plantNameHelpers';
+import { searchPlantsWithRanking } from '../utils/plantSearch';
 
 // ============================================================================
 // Types
@@ -331,12 +333,10 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
         }
         
         if (searchText) {
-            const query = searchText.toLowerCase();
-            plants = plants.filter(p =>
-                p.common_name_en.toLowerCase().includes(query) ||
-                p.common_name_ro.toLowerCase().includes(query) ||
-                p.scientific_name.toLowerCase().includes(query)
-            );
+            plants = searchPlantsWithRanking(plants, {
+                query: searchText,
+                fuzzy: 'balanced',
+            }).map((result) => result.plant);
         }
         
         return plants.slice(0, 50);
@@ -347,10 +347,7 @@ const ZoneConfigModal: React.FC<ZoneConfigModalProps> = ({ isOpen, onClose, chan
     // ========================================================================
     
     const getPlantName = (plant: PlantDBEntry) => {
-        if (language === 'ro' && plant.common_name_ro) {
-            return plant.common_name_ro;
-        }
-        return plant.common_name_en;
+        return getLocalizedDbPlantName(plant, language);
     };
 
     const updateZoneConfig = (updates: Partial<ZoneConfig>) => {

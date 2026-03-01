@@ -244,11 +244,11 @@ const MobileAuth: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-mobile-bg-dark font-manrope overflow-hidden">
-      <div className="sticky top-0 z-20 bg-mobile-bg-dark/95 backdrop-blur-md border-b border-white/5">
-        <div className="flex items-center justify-between p-4">
+      <div className="mobile-page-header-shell">
+        <div className="mobile-page-header-row">
           <button
             onClick={() => history.goBack()}
-            className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+            className="mobile-header-icon-btn"
           >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
@@ -260,12 +260,12 @@ const MobileAuth: React.FC = () => {
       <div className="flex-1 overflow-y-auto pb-28 overscroll-contain">
         <div className="px-4 py-5 space-y-4">
           {loading ? (
-            <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4">
+            <div className="mobile-card-elevated p-4">
               <p className="text-mobile-text-muted text-sm">{t('mobileAuth.loading')}</p>
             </div>
           ) : user ? (
             <div className="space-y-4">
-              <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4">
+              <div className="mobile-card-elevated p-4">
                 <p className="text-white text-base font-bold">{user.email || t('mobileAuth.signedInUserFallback')}</p>
                 <p className="text-mobile-text-muted text-sm mt-1">
                   {t('mobileAuth.planLabel').replace(
@@ -281,7 +281,7 @@ const MobileAuth: React.FC = () => {
               {returnTo && (
                 <button
                   onClick={() => history.replace(returnTo)}
-                  className="w-full rounded-xl py-3 font-bold bg-mobile-primary text-mobile-bg-dark"
+                  className="mobile-btn-primary py-3 font-bold"
                 >
                   {t('mobileAuth.continueTo')}
                 </button>
@@ -289,14 +289,14 @@ const MobileAuth: React.FC = () => {
 
               <button
                 onClick={() => history.push('/profile')}
-                className="w-full rounded-xl py-3 font-semibold bg-white/10 text-white"
+                className="mobile-btn-secondary font-semibold"
               >
                 {t('mobileAuth.openProfile')}
               </button>
 
               <button
                 onClick={() => history.push('/premium')}
-                className="w-full rounded-xl py-3 font-bold bg-mobile-primary text-mobile-bg-dark"
+                className="mobile-btn-primary py-3 font-bold"
               >
                 {t('mobileAuth.manageSubscription')}
               </button>
@@ -304,14 +304,14 @@ const MobileAuth: React.FC = () => {
               <button
                 onClick={handleSignOut}
                 disabled={busy}
-                className="w-full rounded-xl py-3 font-bold bg-white/10 text-white disabled:opacity-60"
+                className="mobile-btn-secondary font-bold"
               >
                 {busy ? t('mobileProfile.working') : t('mobileAuth.signOut')}
               </button>
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4">
+              <div className="mobile-card-elevated p-4">
                 <p className="text-white text-base font-bold">{t('mobileAuth.accessTitle')}</p>
                 <p className="text-mobile-text-muted text-sm mt-1">
                   {t('mobileAuth.accessSubtitle')}
@@ -319,7 +319,7 @@ const MobileAuth: React.FC = () => {
               </div>
 
               {authConfigured ? (
-                <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4 space-y-4">
+                <div className="mobile-card-elevated p-4 space-y-4">
                   {mode !== 'confirm' && isGoogleSignInConfigured && (
                     <button
                       onClick={() => void handleGoogleSignIn()}
@@ -362,7 +362,7 @@ const MobileAuth: React.FC = () => {
                           type="email"
                           value={email}
                           onChange={(event) => setEmail(event.target.value)}
-                          className="mt-2 w-full rounded-xl border border-mobile-border-dark bg-mobile-surface-dark px-3 py-2 text-sm text-white placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary"
+                          className="mobile-form-field mt-2 text-sm"
                           placeholder={t('mobileAuth.emailPlaceholder')}
                         />
                       </div>
@@ -373,7 +373,7 @@ const MobileAuth: React.FC = () => {
                           type="password"
                           value={password}
                           onChange={(event) => setPassword(event.target.value)}
-                          className="mt-2 w-full rounded-xl border border-mobile-border-dark bg-mobile-surface-dark px-3 py-2 text-sm text-white placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary"
+                          className="mobile-form-field mt-2 text-sm"
                           placeholder={t('mobileAuth.passwordPlaceholder')}
                         />
                         {mode === 'signup' && (
@@ -390,7 +390,7 @@ const MobileAuth: React.FC = () => {
                             type="password"
                             value={confirmPassword}
                             onChange={(event) => setConfirmPassword(event.target.value)}
-                            className="mt-2 w-full rounded-xl border border-mobile-border-dark bg-mobile-surface-dark px-3 py-2 text-sm text-white placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary"
+                            className="mobile-form-field mt-2 text-sm"
                             placeholder={t('mobileAuth.confirmPasswordPlaceholder')}
                           />
                         </div>
@@ -411,7 +411,7 @@ const MobileAuth: React.FC = () => {
                           type="text"
                           value={confirmationCode}
                           onChange={(event) => setConfirmationCode(event.target.value)}
-                          className="mt-2 w-full rounded-xl border border-mobile-border-dark bg-mobile-surface-dark px-3 py-2 text-sm text-white placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary"
+                          className="mobile-form-field mt-2 text-sm"
                           placeholder={t('mobileAuth.confirmationCodePlaceholder')}
                           inputMode="numeric"
                           autoComplete="one-time-code"
@@ -436,7 +436,7 @@ const MobileAuth: React.FC = () => {
                     <button
                       onClick={handleSubmit}
                       disabled={busy}
-                      className="w-full rounded-xl py-3 font-bold bg-mobile-primary text-mobile-bg-dark disabled:opacity-60"
+                      className="mobile-btn-primary py-3 font-bold"
                     >
                       {busy ? t('mobileProfile.working') : mode === 'login' ? t('mobileAuth.submitLogin') : t('mobileAuth.submitSignup')}
                     </button>
@@ -445,14 +445,14 @@ const MobileAuth: React.FC = () => {
                       <button
                         onClick={() => void handleConfirm()}
                         disabled={busy}
-                        className="w-full rounded-xl py-3 font-bold bg-mobile-primary text-mobile-bg-dark disabled:opacity-60"
+                        className="mobile-btn-primary py-3 font-bold"
                       >
                         {busy ? t('mobileProfile.working') : t('mobileAuth.submitConfirm')}
                       </button>
                       <button
                         onClick={() => void handleResendCode()}
                         disabled={busy}
-                        className="w-full rounded-xl py-3 font-semibold bg-white/10 text-white disabled:opacity-60"
+                        className="mobile-btn-secondary font-semibold"
                       >
                         {t('mobileAuth.resendCode')}
                       </button>
@@ -479,13 +479,13 @@ const MobileAuth: React.FC = () => {
                 </div>
               )}
 
-              <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4 space-y-3">
+              <div className="mobile-card-elevated p-4 space-y-3">
                 <p className="text-white text-sm font-semibold">
                   {isGuest ? t('mobileAuth.guestTitleActive') : t('mobileAuth.guestTitle')}
                 </p>
                 <button
                   onClick={handleGuest}
-                  className="w-full rounded-xl py-3 font-bold bg-white/10 text-white"
+                  className="mobile-btn-secondary font-bold"
                 >
                   {t('mobileAuth.continueAsGuest')}
                 </button>

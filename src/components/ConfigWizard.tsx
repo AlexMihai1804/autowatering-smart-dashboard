@@ -4,6 +4,9 @@ import { close, checkmark } from 'ionicons/icons';
 import { useAppStore } from '../store/useAppStore';
 import { useI18n } from '../i18n';
 import { PlantDBEntry, SoilDBEntry } from '../services/DatabaseService';
+import { getLocalizedDbPlantName } from '../utils/plantNameHelpers';
+import { searchPlantsWithRanking } from '../utils/plantSearch';
+import InlineSwitch from './mobile/InlineSwitch';
 
 // Helper function to translate plant category
 const translatePlantCategory = (category: string, t: (key: string) => string): string => {
@@ -52,7 +55,7 @@ const ConfigWizard: React.FC<ConfigWizardProps> = ({ isOpen, onClose, onSave, in
     const { plantDb, soilDb } = useAppStore();
     const { t, language } = useI18n();
 
-    const getPlantName = (plant: PlantDBEntry) => (language === 'ro' && plant.common_name_ro ? plant.common_name_ro : plant.common_name_en);
+    const getPlantName = (plant: PlantDBEntry) => getLocalizedDbPlantName(plant, language);
 
     // Form State
     const [selectedPlant, setSelectedPlant] = useState<PlantDBEntry | null>(null);
@@ -61,12 +64,10 @@ const ConfigWizard: React.FC<ConfigWizardProps> = ({ isOpen, onClose, onSave, in
 
     const filteredPlants = useMemo(() => {
         if (!searchText) return plantDb.slice(0, 20); // Show first 20 by default
-        const query = searchText.toLowerCase();
-        return plantDb.filter(p => 
-            p.common_name_en.toLowerCase().includes(query) ||
-            p.common_name_ro.toLowerCase().includes(query) ||
-            p.scientific_name.toLowerCase().includes(query)
-        );
+        return searchPlantsWithRanking(plantDb, {
+            query: searchText,
+            fuzzy: 'balanced',
+        }).map((result) => result.plant);
     }, [plantDb, searchText]);
 
     const handleNext = () => {
@@ -169,12 +170,12 @@ const ConfigWizard: React.FC<ConfigWizardProps> = ({ isOpen, onClose, onSave, in
                                     <h3 className="text-lg font-bold text-white">{t('wizard.schedule.fao56Smart')}</h3>
                                     <p className="text-sm text-gray-400">{t('wizard.schedule.fao56SmartDesc')}</p>
                                 </div>
-                                <div 
-                                    className={`w-14 h-8 rounded-full p-1 cursor-pointer transition-colors ${autoEnabled ? 'bg-cyber-emerald' : 'bg-gray-600'}`}
-                                    onClick={() => setAutoEnabled(!autoEnabled)}
-                                >
-                                    <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform ${autoEnabled ? 'translate-x-6' : ''}`} />
-                                </div>
+                                <InlineSwitch
+                                    checked={autoEnabled}
+                                    onToggle={() => setAutoEnabled(!autoEnabled)}
+                                    label={t('wizard.schedule.fao56Smart')}
+                                    size="sm"
+                                />
                             </div>
 
                             <div className="glass-panel p-4">

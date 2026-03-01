@@ -92,9 +92,9 @@ const MobileFirmwareUpdate: React.FC = () => {
       setUpdateAvailable(Boolean(result.updateAvailable && result.latest));
 
       if (result.updateAvailable && result.latest) {
-        await showToast(t('mobilePacksSettings.updates.available'));
+        await showToast(t('firmwareUpdate.available'));
       } else {
-        await showToast(t('mobilePacksSettings.updates.upToDate'));
+        await showToast(t('firmwareUpdate.upToDate'));
       }
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
@@ -115,7 +115,7 @@ const MobileFirmwareUpdate: React.FC = () => {
       percent: 1,
       transferredBytes: 0,
       totalBytes: 0,
-      message: 'Downloading firmware package...'
+      message: t('firmwareUpdate.downloadingPackage')
     });
 
     try {
@@ -125,7 +125,7 @@ const MobileFirmwareUpdate: React.FC = () => {
         percent: 4,
         transferredBytes: 0,
         totalBytes: binary.length,
-        message: 'Starting BLE OTA transfer...'
+        message: t('firmwareUpdate.startingTransfer')
       });
 
       const result = await otaBleService.installUpdate({
@@ -138,7 +138,7 @@ const MobileFirmwareUpdate: React.FC = () => {
       setUpdateAvailable(false);
       await refreshFirmwareRevision();
       await showToast(
-        t('notifications.events.firmwareUpdated.message').replace('{version}', latestRelease.version)
+        t('mobileNotifications.mock.firmwareUpdated.message').replace('{version}', latestRelease.version)
       );
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
@@ -162,7 +162,7 @@ const MobileFirmwareUpdate: React.FC = () => {
       <div className="sticky top-0 z-50 flex items-center bg-mobile-bg-dark p-4 pb-2 justify-between">
         <button
           onClick={() => history.goBack()}
-          className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+          className="mobile-header-icon-btn"
         >
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
@@ -174,20 +174,20 @@ const MobileFirmwareUpdate: React.FC = () => {
       <main className="flex-1 flex flex-col px-4 gap-4 pb-8">
         {!backendConfigured && (
           <div className="bg-red-500/20 border border-red-500/30 rounded-2xl p-4">
-            <p className="text-sm text-red-300 font-semibold">OTA backend is not configured.</p>
+            <p className="text-sm text-red-300 font-semibold">{t('firmwareUpdate.backendNotConfigured')}</p>
             <p className="text-xs text-red-200/80 mt-1">{otaBackendService.getMissingConfigReason()}</p>
           </div>
         )}
 
         {!isConnected && (
           <div className="bg-amber-500/20 border border-amber-500/30 rounded-2xl p-4">
-            <p className="text-sm text-amber-200">Connect to a device before checking firmware updates.</p>
+            <p className="text-sm text-amber-200">{t('firmwareUpdate.connectDeviceFirst')}</p>
           </div>
         )}
 
         {isTaskActive && (
           <div className="bg-amber-500/20 border border-amber-500/30 rounded-2xl p-4">
-            <p className="text-sm text-amber-200">Stop active watering before starting OTA.</p>
+            <p className="text-sm text-amber-200">{t('firmwareUpdate.stopWateringFirst')}</p>
           </div>
         )}
 
@@ -203,11 +203,11 @@ const MobileFirmwareUpdate: React.FC = () => {
             <span className="text-sm font-mono text-mobile-text-muted">{connectedDeviceId || '--'}</span>
           </div>
           <div className="p-4 flex items-center justify-between">
-            <span className="text-sm text-mobile-text-muted">OTA Channel</span>
+            <span className="text-sm text-mobile-text-muted">{t('firmwareUpdate.otaChannel')}</span>
             <span className="text-sm font-semibold text-white">{channel}</span>
           </div>
           <div className="p-4 flex items-center justify-between">
-            <span className="text-sm text-mobile-text-muted">Hardware Board</span>
+            <span className="text-sm text-mobile-text-muted">{t('firmwareUpdate.hardwareBoard')}</span>
             <span className="text-sm font-semibold text-white">{board}</span>
           </div>
         </div>
@@ -225,14 +225,14 @@ const MobileFirmwareUpdate: React.FC = () => {
             <span className={`material-symbols-outlined text-[20px] ${checking ? 'animate-spin' : ''}`}>
               {checking ? 'refresh' : 'system_update'}
             </span>
-            {checking ? t('mobilePacksSettings.updates.checking') : t('mobileDeviceInfo.checkUpdates')}
+            {checking ? t('firmwareUpdate.checking') : t('mobileDeviceInfo.checkUpdates')}
           </span>
         </button>
 
         {latestRelease && (
           <div className="bg-white/5 rounded-2xl border border-white/5 p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-mobile-text-muted uppercase tracking-wide">Latest Release</p>
+              <p className="text-xs text-mobile-text-muted uppercase tracking-wide">{t('firmwareUpdate.latestRelease')}</p>
               <span
                 className={`text-xs font-semibold px-2 py-1 rounded-full ${
                   updateAvailable
@@ -240,23 +240,23 @@ const MobileFirmwareUpdate: React.FC = () => {
                     : 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
                 }`}
               >
-                {updateAvailable ? t('mobilePacksSettings.updates.available') : t('mobilePacksSettings.updates.upToDate')}
+                {updateAvailable ? t('firmwareUpdate.available') : t('firmwareUpdate.upToDate')}
               </span>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-sm text-mobile-text-muted">Version</span>
+              <span className="text-sm text-mobile-text-muted">{t('firmwareUpdate.versionLabel')}</span>
               <span className="text-sm font-semibold text-white">v{latestRelease.version}</span>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-sm text-mobile-text-muted">Package size</span>
+              <span className="text-sm text-mobile-text-muted">{t('firmwareUpdate.packageSize')}</span>
               <span className="text-sm font-semibold text-white">{formatBytes(latestRelease.artifact?.sizeBytes)}</span>
             </div>
 
             {latestRelease.notes && (
               <div className="rounded-xl bg-mobile-bg-dark/60 border border-mobile-border-dark p-3">
-                <p className="text-xs text-mobile-text-muted uppercase tracking-wide mb-1">Release notes</p>
+                <p className="text-xs text-mobile-text-muted uppercase tracking-wide mb-1">{t('firmwareUpdate.releaseNotes')}</p>
                 <p className="text-sm text-gray-200 whitespace-pre-wrap">{latestRelease.notes}</p>
               </div>
             )}
@@ -300,12 +300,18 @@ const MobileFirmwareUpdate: React.FC = () => {
         {installResult && (
           <div className="bg-emerald-500/20 border border-emerald-500/30 rounded-2xl p-4 space-y-1">
             <p className="text-sm font-semibold text-emerald-300">{t('common.success')}</p>
-            <p className="text-xs text-emerald-200/90">Uploaded {formatBytes(installResult.uploadedBytes)}</p>
+            <p className="text-xs text-emerald-200/90">
+              {t('firmwareUpdate.uploadedSummary').replace('{size}', formatBytes(installResult.uploadedBytes))}
+            </p>
             {installResult.targetVersion && (
-              <p className="text-xs text-emerald-200/90">Target version: v{installResult.targetVersion}</p>
+              <p className="text-xs text-emerald-200/90">
+                {t('firmwareUpdate.targetVersion').replace('{version}', installResult.targetVersion)}
+              </p>
             )}
             {installResult.runningVersion && (
-              <p className="text-xs text-emerald-200/90">Running version: v{installResult.runningVersion}</p>
+              <p className="text-xs text-emerald-200/90">
+                {t('firmwareUpdate.runningVersion').replace('{version}', installResult.runningVersion)}
+              </p>
             )}
           </div>
         )}
@@ -323,7 +329,7 @@ const MobileFirmwareUpdate: React.FC = () => {
             <span className={`material-symbols-outlined text-[20px] ${installing ? 'animate-spin' : ''}`}>
               {installing ? 'progress_activity' : 'download'}
             </span>
-            {installing ? t('mobilePacksSettings.updates.install') : 'Download & Install OTA'}
+            {installing ? t('firmwareUpdate.install') : t('firmwareUpdate.downloadAndInstall')}
           </span>
         </button>
       </main>

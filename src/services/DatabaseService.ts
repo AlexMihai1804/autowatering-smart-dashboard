@@ -1,4 +1,5 @@
 import { useAppStore } from '../store/useAppStore';
+import { searchPlantsWithRanking } from '../utils/plantSearch';
 
 function getIrrigationPopularityScore(codeEnum: string): number {
     const c = (codeEnum || '').toUpperCase();
@@ -215,23 +216,21 @@ export class DatabaseService {
     }
 
     public searchPlants(query: string, category?: PlantCategory): PlantDBEntry[] {
-        const lowerQuery = query.toLowerCase();
+        const trimmedQuery = query.trim();
         let plants = useAppStore.getState().plantDb;
         
         if (category) {
             plants = plants.filter((p) => p.category === category);
         }
         
-        if (!query) {
+        if (!trimmedQuery) {
             return plants;
         }
-        
-        return plants.filter((p) => 
-            p.common_name_en.toLowerCase().includes(lowerQuery) ||
-            p.common_name_ro.toLowerCase().includes(lowerQuery) ||
-            p.scientific_name.toLowerCase().includes(lowerQuery) ||
-            p.subtype.toLowerCase().includes(lowerQuery)
-        );
+
+        return searchPlantsWithRanking(plants, {
+            query: trimmedQuery,
+            fuzzy: 'balanced',
+        }).map((result) => result.plant);
     }
 
     public getAllCategories(): string[] {

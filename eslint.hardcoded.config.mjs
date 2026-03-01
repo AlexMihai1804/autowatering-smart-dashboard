@@ -4,6 +4,7 @@
 
 import shopifyPlugin from '@shopify/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
+import reactHooksPlugin from 'eslint-plugin-react-hooks';
 
 export default [
   {
@@ -11,6 +12,7 @@ export default [
     ignores: ['src/test/**', '**/*.test.tsx'],
     plugins: {
       '@shopify': shopifyPlugin,
+      'react-hooks': reactHooksPlugin,
     },
     languageOptions: {
       parser: tsParser,

@@ -180,6 +180,7 @@ interface AppState {
     // Actions
     setConnectionState: (state: 'disconnected' | 'scanning' | 'connecting' | 'connected') => void;
     addDiscoveredDevice: (device: BleDevice) => void;
+    clearDiscoveredDevices: () => void;
     setConnectedDeviceId: (id: string | null) => void;
 
     // Data Actions
@@ -368,11 +369,21 @@ export const useAppStore = create<AppState>((set) => ({
 
     setConnectionState: (state) => set({ connectionState: state }),
     addDiscoveredDevice: (device) => set((state) => {
-        if (state.discoveredDevices.some(d => d.deviceId === device.deviceId)) {
-            return state;
+        const existingIndex = state.discoveredDevices.findIndex(d => d.deviceId === device.deviceId);
+        if (existingIndex >= 0) {
+            const updated = [...state.discoveredDevices];
+            const prev = updated[existingIndex];
+            updated[existingIndex] = {
+                ...prev,
+                ...device,
+                // Keep a meaningful name if the latest advertisement omits it
+                name: device.name || prev.name,
+            };
+            return { discoveredDevices: updated };
         }
         return { discoveredDevices: [...state.discoveredDevices, device] };
     }),
+    clearDiscoveredDevices: () => set({ discoveredDevices: [] }),
     setConnectedDeviceId: (id) => set({ connectedDeviceId: id }),
 
     updateZone: (channelId, data) => set((state) => {

@@ -1,0 +1,24 @@
+{
+  "byId": {},
+  "bySubtype": {
+    "plant_corn": ["maize", "sweet corn", "field corn", "porumb"],
+    "plant_maize": ["corn", "sweet corn", "field corn", "porumb"],
+    "plant_tomato": ["tomatoes", "tomata", "tomate", "rosie", "rosii"],
+    "plant_eggplant": ["aubergine", "brinjal", "vinete"],
+    "plant_zucchini": ["courgette", "dovlecel"],
+    "plant_coriander": ["cilantro", "coriandru"],
+    "plant_green_onion": ["scallion", "spring onion", "ceapa verde"],
+    "plant_bell_pepper": ["capsicum", "ardei gras"]
+  },
+  "byScientific": {
+    "zea mays": ["corn", "maize", "sweet corn", "porumb"],
+    "solanum lycopersicum": ["tomato", "tomatoes", "rosie", "rosii", "tomata", "tomate"],
+    "solanum melongena": ["eggplant", "aubergine", "brinjal", "vinete"],
+    "coriandrum sativum": ["coriander", "cilantro", "coriandru"],
+    "cucurbita pepo": ["zucchini", "courgette", "dovlecel"],
+    "allium cepa": ["onion", "green onion", "scallion", "spring onion", "ceapa", "ceapa verde"],
+    "capsicum annuum": ["pepper", "bell pepper", "capsicum", "ardei", "ardei gras"],
+    "beta vulgaris": ["beet", "beetroot", "sfecla", "sfecla rosie"],
+    "eruca vesicaria": ["rocket", "arugula", "rucola"]
+  }
+}

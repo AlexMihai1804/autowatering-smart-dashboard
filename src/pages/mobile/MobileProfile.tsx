@@ -186,11 +186,11 @@ const MobileProfile: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-mobile-bg-dark font-manrope overflow-hidden">
-      <div className="sticky top-0 z-20 bg-mobile-bg-dark/95 backdrop-blur-md border-b border-white/5">
-        <div className="flex items-center justify-between p-4">
+      <div className="mobile-page-header-shell">
+        <div className="mobile-page-header-row">
           <button
             onClick={handleBack}
-            className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+            className="mobile-header-icon-btn"
           >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
@@ -201,7 +201,7 @@ const MobileProfile: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto pb-28 overscroll-contain">
         <div className="px-4 py-5 space-y-4">
-          <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4">
+          <div className="mobile-card-elevated p-4">
             <p className="text-white text-base font-bold">{user.email || 'Account'}</p>
             <p className="text-mobile-text-muted text-sm mt-1">
               {t('mobileProfile.emailStatus').replace(
@@ -212,7 +212,7 @@ const MobileProfile: React.FC = () => {
           </div>
 
           {profileLoading && activeSection === 'overview' && (
-            <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4 text-mobile-text-muted text-sm">
+            <div className="mobile-card-elevated p-4 text-mobile-text-muted text-sm">
               {t('mobileProfile.loading')}
             </div>
           )}
@@ -231,12 +231,12 @@ const MobileProfile: React.FC = () => {
 
           {activeSection === 'overview' && (
             <>
-              <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 overflow-hidden divide-y divide-white/5">
+              <div className="mobile-card-elevated overflow-hidden divide-y divide-white/5">
                 <button
                   onClick={() => setSection('details')}
                   className="w-full px-4 py-3 flex items-center gap-3 text-left active:bg-white/5"
                 >
-                  <div className="w-9 h-9 rounded-full bg-white/10 text-gray-300 flex items-center justify-center shrink-0">
+                  <div className="mobile-icon-chip mobile-icon-chip-sm bg-white/10 text-gray-300">
                     <span className="material-symbols-outlined text-[20px]">person</span>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -248,7 +248,7 @@ const MobileProfile: React.FC = () => {
                   onClick={() => setSection('security')}
                   className="w-full px-4 py-3 flex items-center gap-3 text-left active:bg-white/5"
                 >
-                  <div className="w-9 h-9 rounded-full bg-white/10 text-gray-300 flex items-center justify-center shrink-0">
+                  <div className="mobile-icon-chip mobile-icon-chip-sm bg-white/10 text-gray-300">
                     <span className="material-symbols-outlined text-[20px]">lock</span>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -260,7 +260,7 @@ const MobileProfile: React.FC = () => {
                   onClick={() => history.push('/premium')}
                   className="w-full px-4 py-3 flex items-center gap-3 text-left active:bg-white/5"
                 >
-                  <div className="w-9 h-9 rounded-full bg-mobile-primary/20 text-mobile-primary flex items-center justify-center shrink-0">
+                  <div className="mobile-icon-chip mobile-icon-chip-sm bg-mobile-primary/20 text-mobile-primary">
                     <span className="material-symbols-outlined text-[20px]">workspace_premium</span>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -272,7 +272,7 @@ const MobileProfile: React.FC = () => {
                   onClick={() => setSection('danger')}
                   className="w-full px-4 py-3 flex items-center gap-3 text-left active:bg-white/5"
                 >
-                  <div className="w-9 h-9 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center shrink-0">
+                  <div className="mobile-icon-chip mobile-icon-chip-sm bg-red-500/20 text-red-400">
                     <span className="material-symbols-outlined text-[20px]">warning</span>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -285,35 +285,35 @@ const MobileProfile: React.FC = () => {
           )}
 
           {activeSection === 'details' && (
-            <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4 space-y-3">
+            <div className="mobile-card-elevated p-4 space-y-3">
               <input
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
                 placeholder={t('mobileProfile.placeholderDisplayName')}
-                className="w-full rounded-xl border border-mobile-border-dark bg-mobile-surface-dark px-3 py-2 text-sm text-white placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary"
+                className="mobile-form-field text-sm"
               />
               <input
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
                 placeholder={t('mobileProfile.placeholderPhone')}
-                className="w-full rounded-xl border border-mobile-border-dark bg-mobile-surface-dark px-3 py-2 text-sm text-white placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary"
+                className="mobile-form-field text-sm"
               />
               <input
                 value={company}
                 onChange={(event) => setCompany(event.target.value)}
                 placeholder={t('mobileProfile.placeholderCompany')}
-                className="w-full rounded-xl border border-mobile-border-dark bg-mobile-surface-dark px-3 py-2 text-sm text-white placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary"
+                className="mobile-form-field text-sm"
               />
               <input
                 value={country}
                 onChange={(event) => setCountry(event.target.value)}
                 placeholder={t('mobileProfile.placeholderCountry')}
-                className="w-full rounded-xl border border-mobile-border-dark bg-mobile-surface-dark px-3 py-2 text-sm text-white placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary"
+                className="mobile-form-field text-sm"
               />
               <button
                 onClick={() => void handleSaveProfile()}
                 disabled={!profileDirty || saving}
-                className="w-full rounded-xl py-3 font-bold bg-mobile-primary text-mobile-bg-dark disabled:opacity-60"
+                className="mobile-btn-primary py-3 font-bold"
               >
                 {saving ? t('mobileProfile.saving') : t('mobileProfile.saveProfile')}
               </button>
@@ -321,12 +321,12 @@ const MobileProfile: React.FC = () => {
           )}
 
           {activeSection === 'security' && (
-            <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4 space-y-3">
+            <div className="mobile-card-elevated p-4 space-y-3">
               {!profile?.emailVerified && (
                 <button
                   onClick={() => void handleSendVerification()}
                   disabled={securityBusy}
-                  className="w-full rounded-xl py-3 font-semibold bg-white/10 text-white disabled:opacity-60"
+                  className="mobile-btn-secondary font-semibold"
                 >
                   {t('mobileProfile.sendVerificationEmail')}
                 </button>
@@ -336,26 +336,26 @@ const MobileProfile: React.FC = () => {
                 value={currentPassword}
                 onChange={(event) => setCurrentPassword(event.target.value)}
                 placeholder={t('mobileProfile.placeholderCurrentPassword')}
-                className="w-full rounded-xl border border-mobile-border-dark bg-mobile-surface-dark px-3 py-2 text-sm text-white placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary"
+                className="mobile-form-field text-sm"
               />
               <input
                 type="password"
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
                 placeholder={t('mobileProfile.placeholderNewPassword')}
-                className="w-full rounded-xl border border-mobile-border-dark bg-mobile-surface-dark px-3 py-2 text-sm text-white placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary"
+                className="mobile-form-field text-sm"
               />
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
                 placeholder={t('mobileProfile.placeholderConfirmNewPassword')}
-                className="w-full rounded-xl border border-mobile-border-dark bg-mobile-surface-dark px-3 py-2 text-sm text-white placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary"
+                className="mobile-form-field text-sm"
               />
               <button
                 onClick={() => void handleChangePassword()}
                 disabled={securityBusy}
-                className="w-full rounded-xl py-3 font-semibold bg-white/10 text-white disabled:opacity-60"
+                className="mobile-btn-secondary font-semibold"
               >
                 {securityBusy ? t('mobileProfile.working') : t('mobileProfile.changePassword')}
               </button>
@@ -363,10 +363,10 @@ const MobileProfile: React.FC = () => {
           )}
 
           {activeSection === 'danger' && (
-            <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4 space-y-3">
+            <div className="mobile-card-elevated p-4 space-y-3">
               <button
                 onClick={() => void handleSignOut()}
-                className="w-full rounded-xl py-3 font-semibold bg-white/10 text-white"
+                className="mobile-btn-secondary font-semibold"
               >
                 {t('mobileProfile.signOut')}
               </button>

@@ -130,10 +130,10 @@ const MobileFlowCalibration: React.FC = () => {
   return (
     <div className="min-h-screen bg-mobile-bg-dark font-manrope pb-32">
       {/* Header */}
-      <div className="sticky top-0 z-50 flex items-center bg-mobile-bg-dark/90 backdrop-blur-md p-4 justify-between">
+      <div className="mobile-page-header">
         <button
           onClick={() => history.goBack()}
-          className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+          className="mobile-header-icon-btn"
         >
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
@@ -145,7 +145,7 @@ const MobileFlowCalibration: React.FC = () => {
 
       <div className="px-4 space-y-6">
         {/* Current Value Card */}
-        <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark p-6">
+        <div className="mobile-card-surface p-6">
           <div className="flex items-center gap-4">
             <div className="size-16 rounded-full bg-mobile-primary/10 flex items-center justify-center">
               <span className="material-symbols-outlined text-mobile-primary text-3xl">water_drop</span>
@@ -166,7 +166,7 @@ const MobileFlowCalibration: React.FC = () => {
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-white px-1">{t('mobileFlowCalibration.wizardTitle')}</h3>
 
-              <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark overflow-hidden">
+              <div className="mobile-card-surface overflow-hidden">
                 {[
                   { num: 1, title: t('mobileFlowCalibration.steps.selectZone.title'), desc: t('mobileFlowCalibration.steps.selectZone.desc') },
                   { num: 2, title: t('mobileFlowCalibration.steps.prepareContainer.title'), desc: t('mobileFlowCalibration.steps.prepareContainer.desc') },
@@ -188,7 +188,7 @@ const MobileFlowCalibration: React.FC = () => {
 
             {/* Zone Selection */}
             <div className="space-y-3">
-              <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
+              <label className="mobile-section-label">
                 {t('mobileFlowCalibration.selectZone')}
               </label>
               <div className="grid grid-cols-2 gap-3">
@@ -218,7 +218,7 @@ const MobileFlowCalibration: React.FC = () => {
             <button
               onClick={handleStartCalibration}
               disabled={selectedZone === null || saveLoading}
-              className={`w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 ${(selectedZone === null || saveLoading) ? 'opacity-50 cursor-not-allowed' : ''
+              className={`mobile-btn-primary h-14 text-lg font-bold ${(selectedZone === null || saveLoading) ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
             >
               <span className="material-symbols-outlined">play_arrow</span>
@@ -294,7 +294,7 @@ const MobileFlowCalibration: React.FC = () => {
           <div className="space-y-6">
             {/* Success Icon */}
             <div className="flex flex-col items-center py-8">
-              <div className="size-20 rounded-full bg-mobile-primary/20 flex items-center justify-center mb-4">
+              <div className="mobile-icon-chip mobile-icon-chip-xl bg-mobile-primary/20 mb-4">
                 <span className="material-symbols-outlined text-mobile-primary text-4xl">check_circle</span>
               </div>
               <h3 className="text-white text-xl font-bold">{t('mobileFlowCalibration.completeTitle')}</h3>
@@ -305,7 +305,7 @@ const MobileFlowCalibration: React.FC = () => {
 
             {/* Volume Input */}
             <div className="space-y-3">
-              <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
+              <label className="mobile-section-label">
                 {t('mobileFlowCalibration.enterCollectedVolume')}
               </label>
               <div className="flex items-center gap-3">
@@ -338,7 +338,7 @@ const MobileFlowCalibration: React.FC = () => {
             <button
               onClick={handleSave}
               disabled={saveLoading}
-              className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+              className="mobile-btn-primary h-14 text-lg font-bold"
             >
               <span className="material-symbols-outlined">save</span>
               {saveLoading ? t('mobileFlowCalibration.saving') : t('mobileFlowCalibration.saveCalibration')}

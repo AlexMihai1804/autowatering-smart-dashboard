@@ -111,11 +111,11 @@ const MobileAiDoctor: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-mobile-bg-dark font-manrope overflow-hidden">
-      <div className="sticky top-0 z-20 bg-mobile-bg-dark/95 backdrop-blur-md border-b border-white/5">
-        <div className="flex items-center justify-between p-4">
+      <div className="mobile-page-header-shell">
+        <div className="mobile-page-header-row">
           <button
             onClick={() => history.goBack()}
-            className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+            className="mobile-header-icon-btn"
           >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
@@ -126,7 +126,7 @@ const MobileAiDoctor: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto pb-28 overscroll-contain">
         <div className="px-4 py-5 space-y-4">
-          <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4">
+          <div className="mobile-card-elevated p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-white text-base font-bold">{t('mobileAiDoctor.cardTitle')}</p>
@@ -146,13 +146,13 @@ const MobileAiDoctor: React.FC = () => {
           )}
 
           {premiumLoading && (
-            <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4">
+            <div className="mobile-card-elevated p-4">
               <p className="text-mobile-text-muted text-sm">{t('mobileAiDoctor.checkingSubscription')}</p>
             </div>
           )}
 
           {canUseAiDoctor && (
-            <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4 space-y-4">
+            <div className="mobile-card-elevated p-4 space-y-4">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -172,7 +172,7 @@ const MobileAiDoctor: React.FC = () => {
 
               {previewUrl && (
                 <div className="rounded-xl overflow-hidden ring-1 ring-white/10">
-                  <img src={previewUrl} alt="Plant preview" className="w-full h-48 object-cover" />
+                  <img src={previewUrl} alt={t('mobileAiDoctor.previewAlt')} className="w-full h-48 object-cover" />
                 </div>
               )}
 
@@ -209,7 +209,7 @@ const MobileAiDoctor: React.FC = () => {
 
           {result && (
             <div className="space-y-4">
-              <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4">
+              <div className="mobile-card-elevated p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-white text-base font-bold">{result.plantName || t('mobileAiDoctor.unknownPlant')}</p>
@@ -241,7 +241,7 @@ const MobileAiDoctor: React.FC = () => {
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4">
+              <div className="mobile-card-elevated p-4">
                 <p className="text-white font-bold">{t('mobileAiDoctor.diseaseCandidatesTitle')}</p>
                 {diseaseSuggestions.length === 0 ? (
                   <p className="text-mobile-text-muted text-sm mt-2">{t('mobileAiDoctor.diseaseCandidatesEmpty')}</p>
@@ -261,14 +261,14 @@ const MobileAiDoctor: React.FC = () => {
               </div>
 
               {result.followUpQuestion && (
-                <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4">
+                <div className="mobile-card-elevated p-4">
                   <p className="text-white font-bold">{t('mobileAiDoctor.followUpQuestionTitle')}</p>
                   <p className="text-mobile-text-muted text-sm mt-2">{result.followUpQuestion}</p>
                 </div>
               )}
 
               {result.llmAdvice && (
-                <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4">
+                <div className="mobile-card-elevated p-4">
                   <p className="text-white font-bold">{t('mobileAiDoctor.aiTreatmentGuidanceTitle')}</p>
                   <p className="text-mobile-text-muted text-sm mt-2 whitespace-pre-wrap">{result.llmAdvice}</p>
                 </div>

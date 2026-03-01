@@ -61,6 +61,7 @@ ios/App/App/GoogleService-Info.plist
 
 # Local scratch output
 errors.txt
+logcat_dump.txt
 
 # Local analysis outputs
 *_output.txt
@@ -74,6 +75,7 @@ src/i18n/extracted/
 
 # Backend local build artifacts
 backend/aws-autowatering-backend/.aws-sam/
+backend/
 
 # Python cache
 __pycache__/

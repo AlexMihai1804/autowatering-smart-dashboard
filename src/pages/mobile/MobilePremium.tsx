@@ -139,11 +139,11 @@ const MobilePremium: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-mobile-bg-dark font-manrope overflow-hidden">
-      <div className="sticky top-0 z-20 bg-mobile-bg-dark/95 backdrop-blur-md border-b border-white/5">
-        <div className="flex items-center justify-between p-4">
+      <div className="mobile-page-header-shell">
+        <div className="mobile-page-header-row">
           <button
             onClick={() => history.goBack()}
-            className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+            className="mobile-header-icon-btn"
           >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
@@ -186,7 +186,7 @@ const MobilePremium: React.FC = () => {
           )}
 
           {!user ? (
-            <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4 space-y-3">
+            <div className="mobile-card-elevated p-4 space-y-3">
               <p className="text-white text-sm">
                 {t('mobilePremium.loginRequired')}
               </p>
@@ -199,7 +199,7 @@ const MobilePremium: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4">
+              <div className="mobile-card-elevated p-4">
                 <p className="text-white text-base font-bold">
                   {t('mobilePremium.statusLabel').replace(
                     '{status}',
@@ -228,7 +228,7 @@ const MobilePremium: React.FC = () => {
               )}
 
               {premiumLoading && (
-                <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4 text-mobile-text-muted text-sm">
+                <div className="mobile-card-elevated p-4 text-mobile-text-muted text-sm">
                   {t('mobilePremium.syncing')}
                 </div>
               )}
@@ -253,14 +253,14 @@ const MobilePremium: React.FC = () => {
 
               <button
                 onClick={() => void handleRefreshStatus()}
-                className="w-full rounded-xl py-3 font-semibold bg-white/10 text-white"
+                className="mobile-btn-secondary font-semibold"
               >
                 {t('mobilePremium.refreshStatus')}
               </button>
             </div>
           )}
 
-          <div className="rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-4">
+          <div className="mobile-card-elevated p-4">
             <p className="text-white font-bold">{t('mobilePremium.includedTitle')}</p>
             <p className="text-mobile-text-muted text-xs mt-1">{t('mobilePremium.includedResetNote')}</p>
 

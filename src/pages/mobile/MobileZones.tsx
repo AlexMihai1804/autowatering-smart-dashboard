@@ -173,7 +173,7 @@ const MobileZones: React.FC = () => {
   return (
     <div className="flex flex-col h-screen bg-mobile-bg-dark text-white overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between p-4 pb-2 bg-mobile-bg-dark sticky top-0 z-10 safe-area-top shrink-0">
+      <header className="mobile-page-header-row pb-2 bg-mobile-bg-dark sticky top-0 z-10 safe-area-top shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-mobile-primary/20 flex items-center justify-center text-mobile-primary">
             <span className="material-symbols-outlined">water_drop</span>
@@ -197,7 +197,7 @@ const MobileZones: React.FC = () => {
           <>
             {/* Status Summary */}
             <div className="px-4 pt-4 pb-2 space-y-2">
-              <div className="flex items-center justify-between gap-3 rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark p-3">
+              <div className="flex items-center justify-between gap-3 mobile-card-surface p-3">
                 <div className="min-w-0">
                   <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
                     {isWatering ? t('zones.wateringInProgress') : t('zones.irrigationZones')}

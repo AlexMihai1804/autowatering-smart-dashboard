@@ -3,10 +3,11 @@ import { useHistory } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { BleService } from '../../services/BleService';
 import { useI18n } from '../../i18n';
+import InlineSwitch from '../../components/mobile/InlineSwitch';
 
 const MobileMasterValve: React.FC = () => {
   const history = useHistory();
-  const { systemConfig, connectionState } = useAppStore();
+  const { systemConfig } = useAppStore();
   const bleService = BleService.getInstance();
   const { t } = useI18n();
 
@@ -61,10 +62,10 @@ const MobileMasterValve: React.FC = () => {
   return (
     <div className="min-h-screen bg-mobile-bg-dark font-manrope pb-32">
       {/* Header */}
-      <div className="sticky top-0 z-50 flex items-center bg-mobile-bg-dark/90 backdrop-blur-md p-4 justify-between">
+      <div className="mobile-page-header">
         <button
           onClick={() => history.goBack()}
-          className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+          className="mobile-header-icon-btn"
         >
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
@@ -76,9 +77,9 @@ const MobileMasterValve: React.FC = () => {
 
       <div className="px-4 space-y-6">
         {/* Enable Toggle */}
-        <div className="flex items-center justify-between gap-4 p-5 rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark">
+        <div className="mobile-card-surface flex items-center justify-between gap-4 p-5">
           <div className="flex items-center gap-4">
-            <div className={`size-14 rounded-full flex items-center justify-center ${masterValveEnabled ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
+            <div className={`mobile-icon-chip mobile-icon-chip-lg ${masterValveEnabled ? 'bg-mobile-primary/10 text-mobile-primary' : 'bg-white/5 text-mobile-text-muted'
               }`}>
               <span className="material-symbols-outlined text-3xl">valve</span>
             </div>
@@ -87,14 +88,11 @@ const MobileMasterValve: React.FC = () => {
               <p className="text-mobile-text-muted text-sm px-1">{t('mobileMasterValve.subtitle')}</p>
             </div>
           </div>
-          <button
-            onClick={() => setMasterValveEnabled(!masterValveEnabled)}
-            className={`w-14 h-8 rounded-full transition-colors relative ${masterValveEnabled ? 'bg-mobile-primary' : 'bg-white/20'
-              }`}
-          >
-            <div className={`absolute top-1.5 size-5 rounded-full bg-white shadow-md transition-transform ${masterValveEnabled ? 'translate-x-7' : 'translate-x-1.5'
-              }`} />
-          </button>
+          <InlineSwitch
+            checked={masterValveEnabled}
+            onToggle={() => setMasterValveEnabled(!masterValveEnabled)}
+            label={t('mobileMasterValve.title')}
+          />
         </div>
 
         {/* Configuration Section - Only visible when enabled */}
@@ -116,33 +114,11 @@ const MobileMasterValve: React.FC = () => {
                 step="1"
                 value={delayBefore}
                 onChange={(e) => setDelayBefore(Number(e.target.value))}
-                className="w-full h-8 bg-transparent cursor-pointer touch-none"
+                className="mobile-range-slider w-full touch-none"
                 style={{
-                  WebkitAppearance: 'none',
-                  background: `linear-gradient(to right, #13ec37 0%, #13ec37 ${(delayBefore / 60) * 100}%, rgba(255,255,255,0.1) ${(delayBefore / 60) * 100}%, rgba(255,255,255,0.1) 100%)`,
-                  borderRadius: '10px',
-                  height: '6px'
+                  ['--mobile-range-pct' as any]: `${(delayBefore / 60) * 100}%`,
                 }}
               />
-              <style>{`
-                input[type=range]::-webkit-slider-thumb {
-                  -webkit-appearance: none;
-                  height: 24px;
-                  width: 24px;
-                  border-radius: 50%;
-                  background: #ffffff;
-                  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-                  margin-top: -9px;
-                }
-                input[type=range]::-moz-range-thumb {
-                  height: 24px;
-                  width: 24px;
-                  border: none;
-                  border-radius: 50%;
-                  background: #ffffff;
-                  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-                }
-              `}</style>
               <p className="text-mobile-text-muted text-sm px-1">
                 {t('mobileMasterValve.delayBeforeHint')
                   .replace('{seconds}', delayBefore.toString())
@@ -165,12 +141,9 @@ const MobileMasterValve: React.FC = () => {
                 step="1"
                 value={delayAfter}
                 onChange={(e) => setDelayAfter(Number(e.target.value))}
-                className="w-full h-8 bg-transparent cursor-pointer touch-none"
+                className="mobile-range-slider w-full touch-none"
                 style={{
-                  WebkitAppearance: 'none',
-                  background: `linear-gradient(to right, #13ec37 0%, #13ec37 ${(delayAfter / 60) * 100}%, rgba(255,255,255,0.1) ${(delayAfter / 60) * 100}%, rgba(255,255,255,0.1) 100%)`,
-                  borderRadius: '10px',
-                  height: '6px'
+                  ['--mobile-range-pct' as any]: `${(delayAfter / 60) * 100}%`,
                 }}
               />
               <p className="text-mobile-text-muted text-sm px-1">
@@ -181,7 +154,7 @@ const MobileMasterValve: React.FC = () => {
             </div>
 
             {/* Timing Diagram */}
-            <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark p-6 mt-6">
+            <div className="mobile-card-surface p-6 mt-6">
               <h4 className="text-white font-bold mb-6 flex items-center gap-2">
                 <span className="material-symbols-outlined text-mobile-primary">schedule</span>
                 {t('mobileMasterValve.timingVisualization')}
@@ -228,11 +201,11 @@ const MobileMasterValve: React.FC = () => {
       </div>
 
       {/* Save Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-mobile-bg-dark via-mobile-bg-dark to-transparent pt-12">
+      <div className="mobile-bottom-cta-bar">
         <button
           onClick={handleSave}
           disabled={saving || !systemConfig}
-          className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
+          className="mobile-btn-primary h-14 text-lg font-bold disabled:grayscale"
         >
           {saving ? (
             <>

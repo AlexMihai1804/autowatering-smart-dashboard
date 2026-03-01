@@ -19,7 +19,7 @@ const MobileHelpAbout: React.FC = () => {
 
   const openExternal = (url?: string) => {
     if (!url) {
-      alert('This link is not configured yet. Set the corresponding VITE_* URL.');
+      alert(t('mobileHelpAbout.linkNotConfigured'));
       return;
     }
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -35,7 +35,7 @@ const MobileHelpAbout: React.FC = () => {
       <div className="sticky top-0 z-50 flex items-center bg-mobile-bg-dark p-4 pb-2 justify-between">
         <button
           onClick={() => history.goBack()}
-          className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+          className="mobile-header-icon-btn"
         >
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
@@ -70,7 +70,7 @@ const MobileHelpAbout: React.FC = () => {
           <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
             <button
               onClick={() => openExternal(docsUrl)}
-              className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group"
+              className="mobile-page-header-row w-full hover:bg-white/5 transition-colors group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
@@ -88,7 +88,7 @@ const MobileHelpAbout: React.FC = () => {
 
             <button
               onClick={() => openExternal(faqUrl)}
-              className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group"
+              className="mobile-page-header-row w-full hover:bg-white/5 transition-colors group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
@@ -106,7 +106,7 @@ const MobileHelpAbout: React.FC = () => {
 
             <button
               onClick={() => openSupportMail('AutoWatering Support')}
-              className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group"
+              className="mobile-page-header-row w-full hover:bg-white/5 transition-colors group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400">
@@ -124,7 +124,7 @@ const MobileHelpAbout: React.FC = () => {
 
             <button
               onClick={() => openSupportMail('AutoWatering Bug Report')}
-              className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group"
+              className="mobile-page-header-row w-full hover:bg-white/5 transition-colors group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400">
@@ -150,7 +150,7 @@ const MobileHelpAbout: React.FC = () => {
           <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/5 divide-y divide-white/5">
             <button
               onClick={() => openExternal(termsUrl)}
-              className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group"
+              className="mobile-page-header-row w-full hover:bg-white/5 transition-colors group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-gray-500/10 flex items-center justify-center text-gray-400">
@@ -165,7 +165,7 @@ const MobileHelpAbout: React.FC = () => {
 
             <button
               onClick={() => openExternal(privacyUrl)}
-              className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group"
+              className="mobile-page-header-row w-full hover:bg-white/5 transition-colors group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-gray-500/10 flex items-center justify-center text-gray-400">
@@ -180,7 +180,7 @@ const MobileHelpAbout: React.FC = () => {
 
             <button
               onClick={() => openExternal(licensesUrl)}
-              className="flex items-center justify-between p-4 w-full hover:bg-white/5 transition-colors group"
+              className="mobile-page-header-row w-full hover:bg-white/5 transition-colors group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-gray-500/10 flex items-center justify-center text-gray-400">

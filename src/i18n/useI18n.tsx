@@ -113,11 +113,23 @@ export const I18nProvider: React.FC<I18nProviderProps> = ({ children }) => {
     );
 };
 
+// Fallback used when context is temporarily unavailable (e.g. Vite HMR)
+const FALLBACK_CONTEXT: I18nContextType = {
+    language: DEFAULT_LANGUAGE,
+    setLanguage: () => {},
+    t: (key: string) => key,
+    translations: translations[DEFAULT_LANGUAGE],
+    availableLanguages: AVAILABLE_LANGUAGES,
+};
+
 // Hook to use translations
 export const useI18n = (): I18nContextType => {
     const context = useContext(I18nContext);
     if (!context) {
-        throw new Error('useI18n must be used within an I18nProvider');
+        // During Vite HMR the context may be momentarily null —
+        // return a safe fallback instead of crashing the whole tree.
+        console.warn('[i18n] Context unavailable — using fallback (HMR?)');
+        return FALLBACK_CONTEXT;
     }
     return context;
 };

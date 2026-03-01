@@ -10,6 +10,8 @@ import { LocationData } from '../../types/wizard';
 import SoilGridsServiceInstance, { estimateSoilParametersFromTexture } from '../../services/SoilGridsService';
 import { registerBackInterceptor } from '../../lib/backInterceptors';
 import { buildPlantDbIndex, resolvePlantDbEntryFromCandidate } from '../../utils/plantIdMapping';
+import { getLocalizedDbPlantName } from '../../utils/plantNameHelpers';
+import { searchPlantsWithRanking } from '../../utils/plantSearch';
 import {
   aliasLookupMap,
   loadLocalPlantIdAliases,
@@ -26,6 +28,7 @@ import MobilePremiumUpsellModal from '../../components/mobile/MobilePremiumUpsel
 import MobilePlantIdReviewSheet from '../../components/mobile/MobilePlantIdReviewSheet';
 import MobileConfirmModal from '../../components/mobile/MobileConfirmModal';
 import AdvancedSection from '../../components/mobile/AdvancedSection';
+import { translatePlantCategory } from '../../utils/i18nHelpers';
 
 type TabType = 'overview' | 'schedule' | 'compensation' | 'history';
 type EditSheetType =
@@ -168,6 +171,8 @@ const MobileZoneDetailsFull: React.FC = () => {
     Lawn: t('plantCategories.lawn'),
     Shrub: t('plantCategories.shrub'),
   }), [t]);
+  const getPlantName = useCallback((plant: PlantDBEntry) => getLocalizedDbPlantName(plant, language), [language]);
+  const getCategoryLabel = useCallback((category: string) => plantCategoryLabels[category] || translatePlantCategory(category, t), [plantCategoryLabels, t]);
 
   // Derived state
   const zone = useMemo(() => zones.find(z => z.channel_id === channelIdNum), [zones, channelIdNum]);
@@ -324,6 +329,22 @@ const MobileZoneDetailsFull: React.FC = () => {
   // Plant search state
   const [plantSearchTerm, setPlantSearchTerm] = useState('');
   const [plantCategory, setPlantCategory] = useState<string | null>(null);
+  const filteredPlantOptions = useMemo(() => {
+    let plants = plantDb;
+    if (plantCategory) {
+      plants = plants.filter((plant) => plant.category === plantCategory);
+    }
+
+    if (plantSearchTerm.trim()) {
+      plants = searchPlantsWithRanking(plants, {
+        query: plantSearchTerm,
+        fuzzy: 'balanced',
+        limit: 50,
+      }).map((result) => result.plant);
+    }
+
+    return plants.slice(0, 50);
+  }, [plantDb, plantCategory, plantSearchTerm]);
 
   // Soil search/custom state
   const [soilSearchTerm, setSoilSearchTerm] = useState('');
@@ -427,8 +448,8 @@ const MobileZoneDetailsFull: React.FC = () => {
     // plant_db_index 0 is valid (Wheat). Only show "Not configured" if truly uninitialized
     // which is already handled by isChannelInitialized check above
     const entry = plantDb.find(p => p.id === growing.plant_db_index);
-    return entry?.common_name_en || t('mobileZoneDetails.plantId').replace('{id}', String(growing.plant_db_index));
-  }, [growing, plantDb, isChannelInitialized, t]);
+    return entry ? getPlantName(entry) : t('mobileZoneDetails.plantId').replace('{id}', String(growing.plant_db_index));
+  }, [growing, plantDb, isChannelInitialized, t, getPlantName]);
 
   // Check if we have custom soil (from GPS detection or manual custom config)
   const isCustomSoil = useMemo(() => {
@@ -1636,7 +1657,7 @@ const MobileZoneDetailsFull: React.FC = () => {
       <div className="sticky top-0 z-50 flex items-center bg-mobile-bg-dark/90 backdrop-blur-md p-4 pb-2 justify-between shrink-0">
         <button
           onClick={handleBack}
-          className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+          className="mobile-header-icon-btn"
         >
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
@@ -1883,7 +1904,7 @@ const MobileZoneDetailsFull: React.FC = () => {
         {/* Watering Mode Edit Sheet */}
         {editSheet === 'watering-mode' && (
           <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className="mobile-page-header-row border-b border-white/10">
               <button
                 onClick={() => setEditSheet(null)}
                 disabled={saving}
@@ -2017,7 +2038,7 @@ const MobileZoneDetailsFull: React.FC = () => {
         {/* Schedule Edit Sheet */}
         {editSheet === 'schedule' && scheduleForm && (
           <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className="mobile-page-header-row border-b border-white/10">
               <button
                 onClick={() => setEditSheet(null)}
                 disabled={saving}
@@ -2035,7 +2056,7 @@ const MobileZoneDetailsFull: React.FC = () => {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <div className="flex items-center justify-between p-4 bg-mobile-surface-dark rounded-2xl border border-mobile-border-dark">
+              <div className="mobile-page-header-row bg-mobile-surface-dark rounded-2xl border border-mobile-border-dark">
                 <div>
                   <p className="text-white font-bold">{t('mobileZoneDetails.scheduleActiveTitle')}</p>
                   <p className="text-mobile-text-muted text-sm">{t('mobileZoneDetails.scheduleActiveSubtitle')}</p>
@@ -2126,7 +2147,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => setScheduleForm({ ...scheduleForm, days_mask: Math.max(1, scheduleForm.days_mask - 1) })}
-                          className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                          className="mobile-icon-chip mobile-icon-chip-md bg-white/10 text-white"
                         >
                           <span className="material-symbols-outlined">remove</span>
                         </button>
@@ -2136,7 +2157,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                         </div>
                         <button
                           onClick={() => setScheduleForm({ ...scheduleForm, days_mask: Math.min(255, scheduleForm.days_mask + 1) })}
-                          className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                          className="mobile-icon-chip mobile-icon-chip-md bg-white/10 text-white"
                         >
                           <span className="material-symbols-outlined">add</span>
                         </button>
@@ -2151,7 +2172,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                         <div className="flex flex-col items-center">
                           <button
                             onClick={() => setScheduleForm({ ...scheduleForm, hour: (scheduleForm.hour + 1) % 24 })}
-                            className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                            className="mobile-icon-chip mobile-icon-chip-md bg-white/10 text-white"
                           >
                             <span className="material-symbols-outlined">expand_less</span>
                           </button>
@@ -2160,7 +2181,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                           </span>
                           <button
                             onClick={() => setScheduleForm({ ...scheduleForm, hour: (scheduleForm.hour - 1 + 24) % 24 })}
-                            className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                            className="mobile-icon-chip mobile-icon-chip-md bg-white/10 text-white"
                           >
                             <span className="material-symbols-outlined">expand_more</span>
                           </button>
@@ -2169,7 +2190,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                         <div className="flex flex-col items-center">
                           <button
                             onClick={() => setScheduleForm({ ...scheduleForm, minute: (scheduleForm.minute + 5) % 60 })}
-                            className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                            className="mobile-icon-chip mobile-icon-chip-md bg-white/10 text-white"
                           >
                             <span className="material-symbols-outlined">expand_less</span>
                           </button>
@@ -2178,7 +2199,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                           </span>
                           <button
                             onClick={() => setScheduleForm({ ...scheduleForm, minute: (scheduleForm.minute - 5 + 60) % 60 })}
-                            className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                            className="mobile-icon-chip mobile-icon-chip-md bg-white/10 text-white"
                           >
                             <span className="material-symbols-outlined">expand_more</span>
                           </button>
@@ -2312,7 +2333,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => setScheduleForm({ ...scheduleForm, days_mask: Math.max(1, scheduleForm.days_mask - 1) })}
-                          className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                          className="mobile-icon-chip mobile-icon-chip-md bg-white/10 text-white"
                         >
                           <span className="material-symbols-outlined">remove</span>
                         </button>
@@ -2322,7 +2343,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                         </div>
                         <button
                           onClick={() => setScheduleForm({ ...scheduleForm, days_mask: Math.min(255, scheduleForm.days_mask + 1) })}
-                          className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                          className="mobile-icon-chip mobile-icon-chip-md bg-white/10 text-white"
                         >
                           <span className="material-symbols-outlined">add</span>
                         </button>
@@ -2362,7 +2383,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                         <div className="flex flex-col items-center">
                           <button
                             onClick={() => setScheduleForm({ ...scheduleForm, hour: (scheduleForm.hour + 1) % 24 })}
-                            className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                            className="mobile-icon-chip mobile-icon-chip-md bg-white/10 text-white"
                           >
                             <span className="material-symbols-outlined">expand_less</span>
                           </button>
@@ -2371,7 +2392,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                           </span>
                           <button
                             onClick={() => setScheduleForm({ ...scheduleForm, hour: (scheduleForm.hour - 1 + 24) % 24 })}
-                            className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                            className="mobile-icon-chip mobile-icon-chip-md bg-white/10 text-white"
                           >
                             <span className="material-symbols-outlined">expand_more</span>
                           </button>
@@ -2380,7 +2401,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                         <div className="flex flex-col items-center">
                           <button
                             onClick={() => setScheduleForm({ ...scheduleForm, minute: (scheduleForm.minute + 5) % 60 })}
-                            className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                            className="mobile-icon-chip mobile-icon-chip-md bg-white/10 text-white"
                           >
                             <span className="material-symbols-outlined">expand_less</span>
                           </button>
@@ -2389,7 +2410,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                           </span>
                           <button
                             onClick={() => setScheduleForm({ ...scheduleForm, minute: (scheduleForm.minute - 5 + 60) % 60 })}
-                            className="size-10 rounded-full bg-white/10 text-white flex items-center justify-center"
+                            className="mobile-icon-chip mobile-icon-chip-md bg-white/10 text-white"
                           >
                             <span className="material-symbols-outlined">expand_more</span>
                           </button>
@@ -2511,7 +2532,7 @@ const MobileZoneDetailsFull: React.FC = () => {
           };
           return (
             <div className="fixed inset-0 z-[100] flex flex-col bg-mobile-bg-dark">
-              <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <div className="mobile-page-header-row border-b border-white/10">
                 <button
                   onClick={() => setEditSheet(null)}
                   disabled={saving}
@@ -2598,7 +2619,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                           }`}
                       >
                         <span className="material-symbols-outlined text-base">{categoryIcons[cat] || 'eco'}</span>
-                        {plantCategoryLabels[cat] || cat}
+                        {getCategoryLabel(cat)}
                       </button>
                     ))}
                   </div>
@@ -2611,7 +2632,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                       <span className="material-symbols-outlined">eco</span>
                     </div>
                     <div className="flex-1">
-                      <p className="text-white font-bold">{selectedPlant.common_name_en || selectedPlant.common_name_ro}</p>
+                      <p className="text-white font-bold">{getPlantName(selectedPlant)}</p>
                       <p className="text-mobile-text-muted text-sm italic">{selectedPlant.scientific_name}</p>
                     </div>
                     <button
@@ -2625,17 +2646,7 @@ const MobileZoneDetailsFull: React.FC = () => {
 
                 {/* Plant List */}
                 <div className="space-y-2">
-                  {plantDb
-                    .filter(p => {
-                      const matchesSearch = !plantSearchTerm ||
-                        p.common_name_en?.toLowerCase().includes(plantSearchTerm.toLowerCase()) ||
-                        p.common_name_ro?.toLowerCase().includes(plantSearchTerm.toLowerCase()) ||
-                        p.scientific_name?.toLowerCase().includes(plantSearchTerm.toLowerCase());
-                      const matchesCategory = !plantCategory || p.category === plantCategory;
-                      return matchesSearch && matchesCategory;
-                    })
-                    .slice(0, 50)
-                    .map(plant => (
+                  {filteredPlantOptions.map(plant => (
                       <button
                         key={plant.id}
                         onClick={() => setSelectedPlant(plant)}
@@ -2644,7 +2655,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                           : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
                           }`}
                       >
-                        <div className={`size-10 rounded-full flex items-center justify-center ${selectedPlant?.id === plant.id
+                        <div className={`mobile-icon-chip mobile-icon-chip-md ${selectedPlant?.id === plant.id
                           ? 'bg-mobile-primary/20 text-mobile-primary'
                           : 'bg-white/5 text-mobile-text-muted'
                           }`}>
@@ -2652,12 +2663,12 @@ const MobileZoneDetailsFull: React.FC = () => {
                         </div>
                         <div className="flex-1 text-left">
                           <p className={`font-semibold ${selectedPlant?.id === plant.id ? 'text-white' : 'text-white'}`}>
-                            {plant.common_name_en || plant.common_name_ro}
+                            {getPlantName(plant)}
                           </p>
                           <p className="text-mobile-text-muted text-xs italic">{plant.scientific_name}</p>
                         </div>
                         <span className="text-mobile-text-muted text-xs bg-white/5 px-2 py-1 rounded">
-                          {plantCategoryLabels[plant.category] || plant.category}
+                          {getCategoryLabel(plant.category)}
                         </span>
                         {selectedPlant?.id === plant.id && (
                           <span className="material-symbols-outlined text-mobile-primary">check_circle</span>
@@ -2673,7 +2684,7 @@ const MobileZoneDetailsFull: React.FC = () => {
         {/* Soil Edit Sheet - Native Mobile Style */}
         {editSheet === 'soil' && (
           <div className="fixed inset-0 z-[100] flex flex-col bg-mobile-bg-dark">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className="mobile-page-header-row border-b border-white/10">
               <button
                 onClick={() => setEditSheet(null)}
                 disabled={saving}
@@ -2825,7 +2836,7 @@ const MobileZoneDetailsFull: React.FC = () => {
         {/* Irrigation Edit Sheet - Native Mobile Style */}
         {editSheet === 'irrigation' && (
           <div className="fixed inset-0 z-[100] flex flex-col bg-mobile-bg-dark">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className="mobile-page-header-row border-b border-white/10">
               <button
                 onClick={() => setEditSheet(null)}
                 disabled={saving}
@@ -2869,7 +2880,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                         : 'bg-mobile-surface-dark border-mobile-border-dark hover:border-mobile-primary/50'
                         }`}
                     >
-                      <div className={`size-10 rounded-full flex items-center justify-center ${isSelected ? 'bg-mobile-primary/20 text-mobile-primary' : 'bg-white/5 text-blue-400'
+                      <div className={`mobile-icon-chip mobile-icon-chip-md ${isSelected ? 'bg-mobile-primary/20 text-mobile-primary' : 'bg-white/5 text-blue-400'
                         }`}>
                         <span className="material-symbols-outlined">{methodIcon}</span>
                       </div>
@@ -2902,7 +2913,7 @@ const MobileZoneDetailsFull: React.FC = () => {
         {/* Coverage Edit Sheet */}
         {editSheet === 'coverage' && growingForm && (
           <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className="mobile-page-header-row border-b border-white/10">
               <button
                 onClick={() => setEditSheet(null)}
                 disabled={saving}
@@ -3068,7 +3079,7 @@ const MobileZoneDetailsFull: React.FC = () => {
         {/* Sun Exposure Edit Sheet - 3 levels */}
         {editSheet === 'sun' && (
           <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className="mobile-page-header-row border-b border-white/10">
               <button
                 onClick={() => setEditSheet(null)}
                 disabled={saving}
@@ -3172,7 +3183,7 @@ const MobileZoneDetailsFull: React.FC = () => {
         {/* Rain Compensation Edit Sheet */}
         {editSheet === 'rain-compensation' && rainCompForm && (
           <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className="mobile-page-header-row border-b border-white/10">
               <button
                 onClick={() => setEditSheet(null)}
                 disabled={saving}
@@ -3265,7 +3276,7 @@ const MobileZoneDetailsFull: React.FC = () => {
         {/* Temperature Compensation Edit Sheet */}
         {editSheet === 'temp-compensation' && tempCompForm && (
           <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className="mobile-page-header-row border-b border-white/10">
               <button
                 onClick={() => setEditSheet(null)}
                 disabled={saving}
@@ -3357,7 +3368,7 @@ const MobileZoneDetailsFull: React.FC = () => {
 
         {editSheet === 'zone-name' && (
           <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className="mobile-page-header-row border-b border-white/10">
               <button
                 onClick={() => setEditSheet(null)}
                 disabled={saving}
@@ -3390,7 +3401,7 @@ const MobileZoneDetailsFull: React.FC = () => {
 
         {editSheet === 'planting-date' && (
           <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className="mobile-page-header-row border-b border-white/10">
               <button
                 onClick={() => setEditSheet(null)}
                 disabled={saving}
@@ -3422,7 +3433,7 @@ const MobileZoneDetailsFull: React.FC = () => {
 
         {editSheet === 'location' && (
           <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className="mobile-page-header-row border-b border-white/10">
               <button
                 onClick={() => setEditSheet(null)}
                 disabled={saving}
@@ -3469,7 +3480,7 @@ const MobileZoneDetailsFull: React.FC = () => {
         {/* Water Management Edit Sheet (Cycle & Soak + Max Volume) */}
         {editSheet === 'water-management' && waterManagementForm && (
           <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className="mobile-page-header-row border-b border-white/10">
               <button
                 onClick={() => setEditSheet(null)}
                 disabled={saving}
@@ -3678,7 +3689,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                 <div className="flex items-center gap-4 bg-mobile-surface-dark rounded-2xl p-6 border border-mobile-border-dark">
                   <button
                     onClick={() => setWaterManagementForm({ ...waterManagementForm, maxVolumeLimitL: Math.max(10, waterManagementForm.maxVolumeLimitL - 10) })}
-                    className="size-14 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center"
+                    className="mobile-icon-chip mobile-icon-chip-lg bg-white/10 text-white hover:bg-white/20 transition-colors"
                   >
                     <span className="material-symbols-outlined text-2xl">remove</span>
                   </button>
@@ -3688,7 +3699,7 @@ const MobileZoneDetailsFull: React.FC = () => {
                   </div>
                   <button
                     onClick={() => setWaterManagementForm({ ...waterManagementForm, maxVolumeLimitL: Math.min(500, waterManagementForm.maxVolumeLimitL + 10) })}
-                    className="size-14 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center justify-center"
+                    className="mobile-icon-chip mobile-icon-chip-lg bg-white/10 text-white hover:bg-white/20 transition-colors"
                   >
                     <span className="material-symbols-outlined text-2xl">add</span>
                   </button>
@@ -4023,7 +4034,7 @@ const MobileZoneDetailsFull: React.FC = () => {
               </>
             ) : (
               <div className="rounded-xl border border-mobile-border-dark bg-mobile-surface-dark px-3 py-2.5 text-xs text-mobile-text-muted">
-                Compensation is available only for Duration/Volume modes. Switch from FAO-56 to configure it.
+                {t('mobileZoneDetails.compensationModeHint')}
               </div>
             )}
           </div>

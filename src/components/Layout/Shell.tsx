@@ -1,8 +1,7 @@
 import React from 'react';
-import { IonApp, IonContent, IonPage, IonRouterOutlet, IonSplitPane, setupIonicReact } from '@ionic/react';
+import { IonApp, IonContent, IonPage, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { Redirect, Route, Switch, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
 
 // Desktop Pages
 import Dashboard from '../../pages/Dashboard';
@@ -39,7 +38,6 @@ import MobileConnectionSuccess from '../../pages/mobile/MobileConnectionSuccess'
 import MobileManageDevices from '../../pages/mobile/MobileManageDevices';
 import MobileZoneAddWizard from '../../pages/mobile/MobileZoneAddWizard';
 import MobileAlarmHistory from '../../pages/mobile/MobileAlarmHistory';
-import MobileCreatePlant from '../../pages/mobile/MobileCreatePlant';
 import MobileAiDoctor from '../../pages/mobile/MobileAiDoctor';
 import MobileAuth from '../../pages/mobile/MobileAuth';
 import MobilePremium from '../../pages/mobile/MobilePremium';
@@ -47,6 +45,18 @@ import MobileProfile from '../../pages/mobile/MobileProfile';
 import MobileHealthSetupHub from '../../pages/mobile/MobileHealthSetupHub';
 import MobileDeviceHealth from '../../pages/mobile/MobileDeviceHealth';
 import MobileTroubleshooting from '../../pages/mobile/MobileTroubleshooting';
+import MobileMarketplace from '../../pages/mobile/MobileMarketplace';
+import MobilePlantDetail from '../../pages/mobile/MobilePlantDetail';
+import MobilePlantEditor from '../../pages/mobile/MobilePlantEditor';
+import MobileMarketplaceSearch from '../../pages/mobile/MobileMarketplaceSearch';
+import MobileMyLibrary from '../../pages/mobile/MobileMyLibrary';
+import MobileMyPlants from '../../pages/mobile/MobileMyPlants';
+import MobilePackDetail from '../../pages/mobile/MobilePackDetail';
+import MobileAuthorProfile from '../../pages/mobile/MobileAuthorProfile';
+import MobilePlantChat from '../../pages/mobile/MobilePlantChat';
+import MobileAdminDashboard from '../../pages/mobile/MobileAdminDashboard';
+import MobileAdminModeration from '../../pages/mobile/MobileAdminModeration';
+import MobileAdminPlants from '../../pages/mobile/MobileAdminPlants';
 import AppUrlHandler from '../AppUrlHandler';
 
 import AndroidBackButtonHandler from '../AndroidBackButtonHandler';
@@ -170,10 +180,6 @@ const MobileRouteSwitch: React.FC<{ isConnected: boolean }> = ({ isConnected }) 
       <Route exact path="/device/reset">
         {isConnected ? <MobileDeviceReset /> : <Redirect to="/welcome" />}
       </Route>
-      <Route exact path="/device/create-plant">
-        {isConnected ? <MobileCreatePlant /> : <Redirect to="/welcome" />}
-      </Route>
-
       {/* App Settings */}
       <Route exact path="/app-settings">
         {isConnected ? <MobileAppSettings /> : <Redirect to="/welcome" />}
@@ -184,6 +190,24 @@ const MobileRouteSwitch: React.FC<{ isConnected: boolean }> = ({ isConnected }) 
       <Route exact path="/ai-doctor">
         <MobileAiDoctor />
       </Route>
+
+      {/* Marketplace - no BLE connection required */}
+      <Route exact path="/marketplace" component={MobileMarketplace} />
+      <Route exact path="/marketplace/ai-search" component={MobileMarketplaceSearch} />
+      <Route exact path="/marketplace/library" component={MobileMyLibrary} />
+      <Route exact path="/marketplace/my-plants" component={MobileMyPlants} />
+      <Route exact path="/marketplace/packs/:packId" component={MobilePackDetail} />
+      <Route exact path="/marketplace/authors/:authorId" component={MobileAuthorProfile} />
+      <Route exact path="/marketplace/plants/new/edit" component={MobilePlantEditor} />
+      <Route exact path="/marketplace/plants/:plantId" component={MobilePlantDetail} />
+      <Route exact path="/marketplace/plants/:plantId/edit" component={MobilePlantEditor} />
+      <Route exact path="/marketplace/plants/:plantId/chat" component={MobilePlantChat} />
+
+      {/* Admin - role check inside each page */}
+      <Route exact path="/admin" component={MobileAdminDashboard} />
+      <Route exact path="/admin/moderation" component={MobileAdminModeration} />
+      <Route exact path="/admin/plants" component={MobileAdminPlants} />
+
       <Route exact path="/manage-devices">
         {isConnected ? <MobileManageDevices /> : <Redirect to="/welcome" />}
       </Route>
@@ -226,7 +250,7 @@ const Shell: React.FC = () => {
                 {/* Bottom Navigation - only show when connected and not on welcome/scan/onboarding */}
                 {isConnected && (
                   <Route render={({ location }) => {
-                    const hideNavPaths = ['/welcome', '/scan', '/permissions', '/onboarding', '/device/', '/zones/', '/weather', '/notifications', '/app-settings', '/help', '/auth', '/premium', '/profile', '/health'];
+                    const hideNavPaths = ['/welcome', '/scan', '/permissions', '/onboarding', '/device/', '/zones/', '/weather', '/notifications', '/app-settings', '/help', '/auth', '/premium', '/profile', '/health', '/marketplace/plants/', '/marketplace/packs/', '/marketplace/authors/', '/marketplace/ai-search', '/marketplace/library', '/marketplace/my-plants', '/admin'];
                     const shouldHide = hideNavPaths.some(p => location.pathname.startsWith(p)) ||
                                       (location.pathname.startsWith('/zones/') && location.pathname.includes('/'));
                     return shouldHide ? null : <MobileBottomNav />;

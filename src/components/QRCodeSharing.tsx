@@ -234,7 +234,7 @@ export const QRCodeSharing: React.FC<QRCodeSharingProps> = ({
                                         {qrDataUrl ? (
                                             <img
                                                 src={qrDataUrl}
-                                                alt="QR code"
+                                                alt={t('qrSharing.qrCodeAlt')}
                                                 className="rounded-lg bg-white"
                                                 style={{ width: 200, height: 200 }}
                                             />

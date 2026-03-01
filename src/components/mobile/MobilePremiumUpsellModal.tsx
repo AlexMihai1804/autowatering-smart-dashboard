@@ -102,7 +102,7 @@ const MobilePremiumUpsellModal: React.FC<MobilePremiumUpsellModalProps> = ({
 
                 <button
                   onClick={onClose}
-                  className="w-full rounded-xl py-3 font-semibold bg-white/10 text-white hover:bg-white/15 transition-colors"
+                  className="mobile-btn-secondary font-semibold"
                 >
                   {resolvedSecondary}
                 </button>

@@ -41,6 +41,8 @@ import {
 } from '../../utils/onboardingHelpers';
 import { WhatsThisTooltip } from './WhatsThisTooltip';
 import { useI18n } from '../../i18n';
+import { getLocalizedDbPlantName } from '../../utils/plantNameHelpers';
+import { searchPlantsWithRanking } from '../../utils/plantSearch';
 
 // Helper function to translate plant category
 const translatePlantCategory = (category: string, t: (key: string) => string): string => {
@@ -94,31 +96,41 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
     onChange,
     disabled = false,
 }) => {
-    const { t } = useI18n();
+    const { t, language } = useI18n();
     const [searchText, setSearchText] = useState('');
     const [activeCategory, setActiveCategory] = useState<PlantCategoryId | 'all'>('all');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const getPlantName = (plant: PlantDBEntry) => getLocalizedDbPlantName(plant, language);
 
-    // 2.2: Popular plants list (by common_name_en for reliable matching)
-    const POPULAR_PLANTS = [
-        'Lawn Grass',      // Gazon
-        'Tomatoes',        // Roșii
-        'Peppers',         // Ardei
-        'Roses',           // Trandafiri
-        'Apple Tree',      // Măr
-        'Grapevine',       // Viță de vie
-        'Lavender',        // Lavandă
-        'Basil',           // Busuioc
+    // 2.2: Popular plants list with RO/EN variants.
+    const POPULAR_PLANT_QUERIES = [
+        'gazon',
+        'tomato',
+        'pepper',
+        'rose',
+        'apple tree',
+        'grapevine',
+        'lavender',
+        'basil',
     ];
 
     // Get popular plants from available plants
     const popularPlants = useMemo(() => {
-        return POPULAR_PLANTS
-            .map(name => plants.find(p => 
-                p.common_name_en.toLowerCase() === name.toLowerCase()
-            ))
-            .filter((p): p is PlantDBEntry => p !== undefined)
-            .slice(0, 8);
+        const picked = new Map<number, PlantDBEntry>();
+
+        for (const query of POPULAR_PLANT_QUERIES) {
+            const best = searchPlantsWithRanking(plants, {
+                query,
+                fuzzy: 'balanced',
+                limit: 1,
+            })[0]?.plant;
+
+            if (best) {
+                picked.set(best.id, best);
+            }
+        }
+
+        return Array.from(picked.values()).slice(0, 8);
     }, [plants]);
 
     // Group plants by category
@@ -148,22 +160,19 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
         let result = activeCategory === 'all' ? plants : plantsByCategory[activeCategory];
 
         if (searchText.trim()) {
-            const searchLower = searchText.toLowerCase();
-            result = result.filter((p: PlantDBEntry) =>
-                p.common_name_ro.toLowerCase().includes(searchLower) ||
-                p.common_name_en.toLowerCase().includes(searchLower) ||
-                p.scientific_name?.toLowerCase().includes(searchLower) ||
-                p.category?.toLowerCase().includes(searchLower)
-            );
+            result = searchPlantsWithRanking(result, {
+                query: searchText,
+                fuzzy: 'balanced',
+            }).map((entry) => entry.plant);
         }
 
         // Sort: selected first, then by name
-        return result.sort((a: PlantDBEntry, b: PlantDBEntry) => {
+        return [...result].sort((a: PlantDBEntry, b: PlantDBEntry) => {
             if (value?.id === a.id) return -1;
             if (value?.id === b.id) return 1;
-            return a.common_name_ro.localeCompare(b.common_name_ro);
+            return getPlantName(a).localeCompare(getPlantName(b));
         });
-    }, [plants, plantsByCategory, activeCategory, searchText, value]);
+    }, [plants, plantsByCategory, activeCategory, searchText, value, language]);
 
     // Get category count
     const getCategoryCount = (cat: PlantCategoryId | 'all'): number => {
@@ -246,7 +255,7 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
                                 {getCategoryEmoji(getPlantCategory(value))}
                             </div>
                             <div className="flex-1">
-                                <h3 className="text-white font-bold m-0">{value.common_name_ro}</h3>
+                                <h3 className="text-white font-bold m-0">{getPlantName(value)}</h3>
                                 <p className="text-gray-400 text-sm m-0">{value.scientific_name}</p>
                             </div>
                             <div className="text-right">
@@ -279,7 +288,7 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
                                 outline
                                 className="cursor-pointer"
                             >
-                                {getCategoryEmoji(getPlantCategory(plant))} {plant.common_name_ro}
+                                {getCategoryEmoji(getPlantCategory(plant))} {getPlantName(plant)}
                             </IonChip>
                         ))}
                     </div>
@@ -310,7 +319,7 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
                                     )}
                                 </div>
                                 <h4 className="text-white font-medium text-sm m-0 mb-1 line-clamp-1">
-                                    {plant.common_name_ro}
+                                    {getPlantName(plant)}
                                 </h4>
                                 <p className="text-gray-500 text-xs m-0 line-clamp-1">
                                     {plant.scientific_name}
@@ -345,7 +354,7 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
                                             {getCategoryEmoji(category)}
                                         </span>
                                         <IonLabel>
-                                            <h2 className="text-white font-medium">{plant.common_name_ro}</h2>
+                                            <h2 className="text-white font-medium">{getPlantName(plant)}</h2>
                                             <p className="text-gray-400 text-sm">{plant.scientific_name}</p>
                                             <p className="text-gray-500 text-xs">{translatePlantCategory(plant.category, t)}</p>
                                         </IonLabel>
@@ -392,3 +401,5 @@ export const PlantSelector: React.FC<PlantSelectorProps> = ({
 };
 
 export default PlantSelector;
+
+

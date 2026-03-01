@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useHistory } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import { BleService } from '../../services/BleService';
 import { useAppStore } from '../../store/useAppStore';
 import { useKnownDevices } from '../../hooks/useKnownDevices';
 import { useI18n } from '../../i18n';
+import { resolvePostConnectionRoute } from '../../utils/onboardingRouteResolver';
 
 interface DiscoveredDevice {
   deviceId: string;
@@ -15,18 +17,49 @@ const MobileDeviceScan: React.FC = () => {
   const history = useHistory();
   const { connectionState, discoveredDevices, connectedDeviceId, onboardingState } = useAppStore();
   const bleService = BleService.getInstance();
-  const { addDevice } = useKnownDevices();
+  const { addDevice, devices } = useKnownDevices();
   const { t } = useI18n();
   const [isScanning, setIsScanning] = useState(false);
+  const [isSystemPickerOpen, setIsSystemPickerOpen] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
   const [connectingTo, setConnectingTo] = useState<string | null>(null);
   const [lastConnectedName, setLastConnectedName] = useState<string | null>(null);
   const didSaveDeviceRef = useRef(false);
+  const showConnectionSuccessRef = useRef(false);
+  const didStartInitialScanRef = useRef(false);
+  const scanInFlightRef = useRef(false);
+  const isNativePlatform = Capacitor.isNativePlatform();
+  const scanningActive = isScanning || isSystemPickerOpen || connectionState === 'scanning';
+
+  const startScan = async () => {
+    if (scanInFlightRef.current || connectionState === 'connecting') return;
+
+    scanInFlightRef.current = true;
+    setScanError(null);
+    setIsScanning(true);
+    setIsSystemPickerOpen(!isNativePlatform);
+    setConnectingTo(null);
+
+    try {
+      await bleService.scan();
+    } catch (error) {
+      console.error('Scan failed:', error);
+      const reason = error instanceof Error ? error.message : String(error);
+      setScanError(reason);
+    } finally {
+      scanInFlightRef.current = false;
+      setIsSystemPickerOpen(false);
+      setIsScanning(false);
+    }
+  };
 
   // Start scanning on mount
   useEffect(() => {
-    startScan();
+    if (didStartInitialScanRef.current) return;
+    didStartInitialScanRef.current = true;
+    void startScan();
     return () => {
-      // Stop scan on unmount if needed
+      void bleService.stopScan();
     };
   }, []);
 
@@ -40,28 +73,27 @@ const MobileDeviceScan: React.FC = () => {
     }
   }, [connectionState, connectedDeviceId, addDevice, lastConnectedName]);
 
-  // Redirect once we know onboarding completion
+  // Route after successful connection using centralized onboarding decision logic.
   useEffect(() => {
     if (connectionState !== 'connected') return;
-    if (!onboardingState) return;
 
-    // If user has at least one zone configured, go straight to dashboard
-    const hasConfiguredZone = onboardingState.channels_completion_pct > 0;
-    const nextPath = hasConfiguredZone ? '/dashboard' : '/onboarding';
-    history.replace(nextPath);
-  }, [connectionState, onboardingState, history]);
-
-  const startScan = async () => {
-    setIsScanning(true);
-    try {
-      await bleService.scan();
-    } catch (error) {
-      console.error('Scan failed:', error);
+    if (showConnectionSuccessRef.current) {
+      showConnectionSuccessRef.current = false;
+      history.replace('/connection-success', {
+        deviceName: lastConnectedName || t('mobileDeviceScan.defaultDeviceName'),
+        deviceId: connectedDeviceId || undefined,
+      });
+      return;
     }
-    setTimeout(() => setIsScanning(false), 5000);
-  };
+
+    const nextPath = resolvePostConnectionRoute(onboardingState);
+    if (!nextPath) return;
+    history.replace(nextPath);
+  }, [connectionState, onboardingState, history, lastConnectedName, connectedDeviceId, t]);
 
   const handleConnect = async (device: DiscoveredDevice) => {
+    const isKnownDevice = devices.some((known) => known.id === device.deviceId);
+    showConnectionSuccessRef.current = !isKnownDevice;
     setConnectingTo(device.deviceId);
     setLastConnectedName(device.name || null);
     try {
@@ -69,6 +101,7 @@ const MobileDeviceScan: React.FC = () => {
       await bleService.connect(device.deviceId, true);
     } catch (error) {
       console.error('Connection failed:', error);
+      showConnectionSuccessRef.current = false;
       setConnectingTo(null);
       setLastConnectedName(null);
     }
@@ -85,7 +118,7 @@ const MobileDeviceScan: React.FC = () => {
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-mobile-bg-dark max-w-md mx-auto">
       {/* Header */}
-      <header className="flex items-center justify-between p-4 bg-mobile-bg-dark z-10 sticky top-0 safe-area-top">
+      <header className="mobile-page-header-row bg-mobile-bg-dark z-10 sticky top-0 safe-area-top">
         <button 
           onClick={() => history.goBack()}
           className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors"
@@ -104,29 +137,51 @@ const MobileDeviceScan: React.FC = () => {
       {/* Main Content */}
       <main className="flex-1 flex flex-col p-4 pb-24">
         {/* Scanning Visualizer */}
-        <div className="flex flex-col items-center justify-center py-10 relative">
-          {/* Radar Animation Background */}
-          {isScanning && (
-            <div className="absolute flex items-center justify-center inset-0 z-0 overflow-hidden">
-              <div className="absolute w-32 h-32 rounded-full border border-mobile-primary/30 animate-ping"></div>
-              <div className="absolute w-32 h-32 rounded-full border border-mobile-primary/20 animate-ping" style={{ animationDelay: '0.5s' }}></div>
+        <div className="flex flex-col items-center justify-center py-10">
+          {/* Center Icon + centered scan rings */}
+          <div className="relative mb-6 flex h-24 w-24 items-center justify-center overflow-visible">
+            {scanningActive && (
+              <>
+                <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                  <div className="mobile-scan-ring h-28 w-28 rounded-full border border-mobile-primary/40"></div>
+                </div>
+                <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                  <div
+                    className="mobile-scan-ring h-36 w-36 rounded-full border border-mobile-primary/20"
+                    style={{ animationDelay: '0.55s' }}
+                  ></div>
+                </div>
+              </>
+            )}
+
+            <div className="relative z-10 bg-mobile-surface-dark shadow-xl rounded-full w-24 h-24 flex items-center justify-center ring-4 ring-mobile-primary/10">
+              <span className={`material-symbols-outlined block leading-none text-mobile-primary text-[40px] ${scanningActive ? 'animate-pulse' : ''}`}>
+                {scanningActive ? 'bluetooth_searching' : 'bluetooth'}
+              </span>
             </div>
-          )}
-          
-          {/* Center Icon */}
-          <div className="relative z-10 bg-mobile-surface-dark shadow-xl rounded-full w-24 h-24 flex items-center justify-center mb-6 ring-4 ring-mobile-primary/10">
-            <span className={`material-symbols-outlined text-mobile-primary text-[40px] ${isScanning ? 'animate-pulse' : ''}`}>
-              {isScanning ? 'bluetooth_searching' : 'bluetooth'}
-            </span>
           </div>
           
           <div className="relative z-10 text-center space-y-2">
             <h3 className="text-xl font-bold tracking-tight">
-              {isScanning ? t('mobileDeviceScan.scanning') : t('mobileDeviceScan.scanComplete')}
+              {scanningActive ? t('mobileDeviceScan.scanning') : t('mobileDeviceScan.scanComplete')}
             </h3>
             <p className="text-sm text-gray-400 max-w-[280px] mx-auto leading-relaxed">
               {t('mobileDeviceScan.scanHint')}
             </p>
+            {scanningActive && (
+              <div className="mt-4 rounded-full border border-mobile-primary/30 bg-mobile-primary/10 px-4 py-2">
+                <p className="text-xs font-semibold text-mobile-primary">
+                  {t('mobileDeviceScan.scanning')}
+                </p>
+              </div>
+            )}
+            {scanError && (
+              <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-left max-w-[320px]">
+                <p className="text-xs font-semibold text-red-300">
+                  {t('common.error')}: {scanError}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -136,7 +191,7 @@ const MobileDeviceScan: React.FC = () => {
             <h4 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
               {t('mobileDeviceScan.availableDevices').replace('{count}', discoveredDevices.length.toString())}
             </h4>
-            {isScanning && (
+            {scanningActive && (
               <div className="w-4 h-4 rounded-full border-2 border-mobile-primary border-t-transparent animate-spin"></div>
             )}
           </div>
@@ -144,7 +199,7 @@ const MobileDeviceScan: React.FC = () => {
           {discoveredDevices.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <span className="material-symbols-outlined text-5xl mb-4 block opacity-50">devices</span>
-              <p>{isScanning ? t('mobileDeviceScan.looking') : t('mobileDeviceScan.noneFound')}</p>
+              <p>{scanningActive ? t('mobileDeviceScan.looking') : t('mobileDeviceScan.noneFound')}</p>
             </div>
           ) : (
             discoveredDevices.map((device) => {
@@ -174,7 +229,7 @@ const MobileDeviceScan: React.FC = () => {
                   
                   <button 
                     onClick={() => handleConnect(device)}
-                    disabled={isConnecting || connectionState === 'connecting'}
+                    disabled={isConnecting || connectionState === 'connecting' || isSystemPickerOpen}
                     className={`shrink-0 flex items-center justify-center rounded-full h-9 px-5 text-sm font-bold transition-all ${
                       isConnecting 
                         ? 'bg-mobile-primary/50 text-mobile-bg-dark cursor-wait'
@@ -198,7 +253,10 @@ const MobileDeviceScan: React.FC = () => {
 
         {/* Helper Text / Troubleshooting */}
         <div className="mt-8 flex justify-center">
-          <button className="text-sm font-medium text-mobile-primary hover:text-green-400 flex items-center gap-1 transition-colors">
+          <button
+            onClick={() => history.push('/permissions')}
+            className="text-sm font-medium text-mobile-primary hover:text-green-400 flex items-center gap-1 transition-colors"
+          >
             <span className="material-symbols-outlined text-[18px]">help</span>
             {t('mobileDeviceScan.cantFind')}
           </button>
@@ -206,16 +264,16 @@ const MobileDeviceScan: React.FC = () => {
       </main>
 
       {/* Sticky Bottom Action (Scan Again) */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-mobile-bg-dark via-mobile-bg-dark to-transparent pt-12 max-w-md mx-auto safe-area-bottom">
+      <div className="mobile-bottom-cta-bar max-w-md mx-auto safe-area-bottom">
         <button 
-          onClick={startScan}
-          disabled={isScanning}
+          onClick={() => void startScan()}
+          disabled={scanningActive || connectionState === 'connecting'}
           className="w-full h-12 flex items-center justify-center gap-2 rounded-full bg-mobile-surface-dark border border-mobile-border-dark hover:bg-white/5 active:scale-[0.98] transition-all shadow-lg text-white font-bold text-base disabled:opacity-50"
         >
-          <span className={`material-symbols-outlined text-[20px] ${isScanning ? 'animate-spin' : ''}`}>
+          <span className={`material-symbols-outlined text-[20px] ${scanningActive ? 'animate-spin' : ''}`}>
             refresh
           </span>
-          {isScanning ? t('mobileDeviceScan.scanningShort') : t('mobileDeviceScan.restartScan')}
+          {scanningActive ? t('mobileDeviceScan.scanningShort') : t('mobileDeviceScan.restartScan')}
         </button>
       </div>
     </div>

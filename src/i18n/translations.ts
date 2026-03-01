@@ -14,6 +14,7 @@ export interface TranslationKeys {
         back: string;
         cancel: string;
         save: string;
+        saving: string;
         confirm: string;
         close: string;
         loading: string;
@@ -30,6 +31,9 @@ export interface TranslationKeys {
         ok: string;
         retry: string;
         refresh: string;
+        pressBackAgainToExit: string;
+        showAll: string;
+        showLess: string;
         continue: string;
         finish: string;
         change: string;
@@ -47,6 +51,7 @@ export interface TranslationKeys {
         fix: string;
         view: string;
         set: string;
+        advanced: string;
         minutes: string;
         minutesShort: string;
         secondsShort: string;
@@ -754,6 +759,7 @@ export interface TranslationKeys {
         quickActions: string;
         manualWater: string;
         pauseSchedule: string;
+        pauseResumeOnlyWhileActive: string;
         completeSetup: string;
         noZonesConfigured: string;
         title: string;
@@ -801,6 +807,7 @@ export interface TranslationKeys {
             fault: string;
             rtcError: string;
             lowPower: string;
+            freezeLockout: string;
             unknown: string;
         };
     };
@@ -1265,6 +1272,7 @@ export interface TranslationKeys {
         startWatering: string;
         stopWatering: string;
         resetZone: string;
+        skipNextNotAvailable: string;
         // Recommendations
         recommended: string;
         optional: string;
@@ -1618,6 +1626,285 @@ export interface TranslationKeys {
         aiDoctor: string;
         history: string;
         settings: string;
+        marketplace: string;
+    };
+
+    marketplace: {
+        title: string;
+        browse: string;
+        plants: string;
+        packs: string;
+        search: string;
+        searchPlaceholder: string;
+        aiSearch: string;
+        aiSearchHint: string;
+        aiSearchPlaceholder: string;
+        searchFailed: string;
+        aiAnswer: string;
+        suggestedQueries: string;
+        searchSuggestionIndoorLowLight: string;
+        searchSuggestionDroughtSucculents: string;
+        searchSuggestionTomatoFao56: string;
+        searchSuggestionMediterraneanHerbs: string;
+        allCategories: string;
+        newest: string;
+        topRated: string;
+        mostDownloaded: string;
+        loadMore: string;
+        noResults: string;
+        createPlant: string;
+        editPlant: string;
+        newPlant: string;
+        saveDraft: string;
+        submitForReview: string;
+        signInRequired: string;
+        details: string;
+        reviews: string;
+        comments: string;
+        writeReview: string;
+        writeComment: string;
+        addComment: string;
+        reply: string;
+        install: string;
+        installed: string;
+        installAll: string;
+        remove: string;
+        category: string;
+        selectCategory: string;
+        scientificName: string;
+        commonNameEn: string;
+        commonNameRo: string;
+        placeholderScientificName: string;
+        placeholderCommonNameEn: string;
+        placeholderCommonNameRo: string;
+        placeholderTags: string;
+        descriptionEn: string;
+        descriptionRo: string;
+        tags: string;
+        images: string;
+        addImages: string;
+        technicalData: string;
+        aiFillGaps: string;
+        translateEnToRo: string;
+        translateRoToEn: string;
+        myLibrary: string;
+        myPlants: string;
+        authorProfile: string;
+        publishedPlants: string;
+        noPlants: string;
+        noAuthoredPlants: string;
+        noFilteredPlants: string;
+        createFirst: string;
+        plantChat: string;
+        chatWelcome: string;
+        chatHint: string;
+        chatPlaceholder: string;
+        chatError: string;
+        packNotFound: string;
+        plantsInPack: string;
+        downloads: string;
+        views: string;
+        rating: string;
+        synced: string;
+        pendingSync: string;
+        askAi: string;
+        viewAuthor: string;
+        aiSearchTitle: string;
+        askAiSubtitle: string;
+        browseMarketplace: string;
+        collections: string;
+        emptyLibrary: string;
+        noComments: string;
+        noDescription: string;
+        generatingDescription: string;
+        noPacks: string;
+        noReviews: string;
+        notSynced: string;
+        packsTab: string;
+        plantsInLibrary: string;
+        storageUsed: string;
+        plantsTab: string;
+        reviewBody: string;
+        reviewTitle: string;
+        searchWithAi: string;
+        sortNewest: string;
+        sortPopular: string;
+        sortTopRated: string;
+        submitReview: string;
+        trySearching: string;
+        // Device sync
+        libraryTab: string;
+        onDeviceTab: string;
+        syncToDevice: string;
+        syncAllToDevice: string;
+        removeFromDevice: string;
+        syncingToDevice: string;
+        syncSuccess: string;
+        syncFailed: string;
+        noDevicePlants: string;
+        devicePlantsCount: string;
+        connectDeviceToSync: string;
+        publishToMarketplace: string;
+        publishDescription: string;
+        romPlant: string;
+        customPlant: string;
+        devicePlantId: string;
+        romPlantId: string;
+        onDevice: string;
+        updateOnDevice: string;
+        plantsCount: string;
+        // Unified grid + device filter
+        filterAll: string;
+        filterOnDevice: string;
+        filterNotInstalled: string;
+        deviceOffline: string;
+        // Detail page tabs
+        overviewTab: string;
+        guideTab: string;
+        deviceTab: string;
+        // Growing guide
+        noGrowingData: string;
+        cropCoefficients: string;
+        cropCoefficientsHint: string;
+        growthStages: string;
+        growthStagesOngoingSummary: string;
+        growthStagesOngoingOnlySummary: string;
+        growthStagesOngoingHint: string;
+        stageOngoingShort: string;
+        stageOngoingLabel: string;
+        stageMaturityLabel: string;
+        stageIni: string;
+        stageDev: string;
+        stageMid: string;
+        stageEnd: string;
+        kcInitialLabel: string;
+        kcMidLabel: string;
+        kcEndLabel: string;
+        kcDevLabel: string;
+        rootAndSoil: string;
+        rootDepthLabel: string;
+        rootDepthHint: string;
+        growingConditions: string;
+        optimalTempLabel: string;
+        optimalTempHint: string;
+        fromValueTemplate: string;
+        upToValueTemplate: string;
+        soilPhLabel: string;
+        soilPhHint: string;
+        frostToleranceHint: string;
+        droughtLabel: string;
+        shadeLabel: string;
+        salinityLabel: string;
+        toleranceLow: string;
+        toleranceMedium: string;
+        toleranceHigh: string;
+        droughtHintLow: string;
+        droughtHintMedium: string;
+        droughtHintHigh: string;
+        shadeHintLow: string;
+        shadeHintMedium: string;
+        shadeHintHigh: string;
+        salinityHintLow: string;
+        salinityHintMedium: string;
+        salinityHintHigh: string;
+        indoorSuitableLabel: string;
+        criticalStageLabel: string;
+        criticalStageEstLabel: string;
+        criticalStageGenericLabel: string;
+        criticalStageHint: string;
+        moreInfoLabel: string;
+        careGuideTitle: string;
+        technicalDetails: string;
+        technicalDetailsDesc: string;
+        otherParameters: string;
+        growthCycleAnnual: string;
+        growthCyclePerennial: string;
+        growthCycleBiennial: string;
+        primaryUseOrnamental: string;
+        primaryUseFood: string;
+        primaryUseFruit: string;
+        primaryUseVegetable: string;
+        primaryUseHerb: string;
+        primaryUseMedicinal: string;
+        primaryUseAromatic: string;
+        primaryUseForage: string;
+        primaryUseLawn: string;
+        primaryUseTimber: string;
+        primaryUseIndustrial: string;
+        irrigMethodDrip: string;
+        irrigMethodSprinkler: string;
+        irrigMethodSurface: string;
+        irrigMethodManual: string;
+        irrigMethodRainfed: string;
+        // Device tab detail
+        deviceVersion: string;
+        removedFromDevice: string;
+        confirmRemoveFromDevice: string;
+        daysLabel: string;
+        totalLabel: string;
+        connectToManage: string;
+        notOnDevice: string;
+        builtInPlant: string;
+        builtInPlantDesc: string;
+        upToDate: string;
+        updateAvailable: string;
+        quickFacts: string;
+        qfCycle: string;
+        qfTemp: string;
+        qfFrost: string;
+        qfWater: string;
+        qfIndoor: string;
+        qfUse: string;
+        qfIrrigation: string;
+        qfHigh: string;
+        qfMedium: string;
+        qfLow: string;
+        qfWaterHigh: string;
+        qfWaterMedium: string;
+        qfWaterLow: string;
+        status: {
+            all: string;
+            draft: string;
+            pending_review: string;
+            approved: string;
+            rejected: string;
+        };
+    };
+
+    admin: {
+        title: string;
+        subtitle: string;
+        accessDenied: string;
+        accessDeniedDesc: string;
+        totalPlants: string;
+        pendingReview: string;
+        approved: string;
+        rejected: string;
+        totalPacks: string;
+        totalUsers: string;
+        totalReviews: string;
+        totalDownloads: string;
+        moderationQueue: string;
+        moderationDesc: string;
+        plantManager: string;
+        plantManagerDesc: string;
+        filterPending: string;
+        filterFlagged: string;
+        filterAll: string;
+        queueEmpty: string;
+        aiScore: string;
+        accuracy: string;
+        completeness: string;
+        quality: string;
+        aiRecommends: string;
+        aiReview: string;
+        approve: string;
+        reject: string;
+        noPlantsFound: string;
+        loading: string;
+        loadMore: string;
+        draft: string;
+        authorLabel: string;
     };
 
     timePicker: {
@@ -1640,6 +1927,7 @@ export interface TranslationKeys {
         copyData: string;
         includedTitle: string;
         includedItem: string;
+        qrCodeAlt: string;
         scanUnavailable: string;
         scanPasteHint: string;
         pasteFromClipboard: string;
@@ -1767,6 +2055,8 @@ export interface TranslationKeys {
         signalFair: string;
         signalWeak: string;
         uptime: string;
+        battery: string;
+        errors: string;
         model: string;
         softwareHardware: string;
         firmwareVersion: string;
@@ -1860,223 +2150,26 @@ export interface TranslationKeys {
         };
     };
 
-    mobilePacksSettings: {
-        title: string;
-        loading: string;
-        syncError: string;
-        tabs: {
-            plants: string;
-            packs: string;
-        };
-        storage: {
-            title: string;
-            flash: string;
-            free: string;
-            romPlants: string;
-            customPlants: string;
-            packs: string;
-            unavailable: string;
-        };
-        plants: {
-            builtIn: string;
-            installed: string;
-        };
-        customPlants: {
-            title: string;
-            empty: string;
-            emptyHint: string;
-            partial: string;
-            installed: string;
-            manageHint: string;
-            create: string;
-        };
-        romPlants: {
-            title: string;
-            plantsCount: string;
-            more: string;
-            showMore: string;
-        };
-        updates: {
-            title: string;
-            hint: string;
-            check: string;
-            checking: string;
-            upToDate: string;
-            available: string;
-            install: string;
-        };
-        packs: {
-            installed: string;
-            available: string;
-            base: string;
-            empty: string;
-            emptyHint: string;
-            comingSoon: string;
-            comingSoonHint: string;
-        };
-        deleteConfirm: {
-            title: string;
-            message: string;
-            confirm: string;
-        };
-        plantDetails: {
-            scientificName: string;
-            category: string;
-            plantId: string;
-            packId: string;
-            rootingDepth: string;
-            version: string;
-            kcIni: string;
-            kcMid: string;
-            kcEnd: string;
-            close: string;
-            growthCycle: string;
-            growthRate: string;
-            cropCoefficients: string;
-            kcDev: string;
-            rootDepth: string;
-            rootMin: string;
-            rootMax: string;
-            depletionFraction: string;
-            growthStages: string;
-            stageIni: string;
-            stageDev: string;
-            stageMid: string;
-            stageEnd: string;
-            tolerances: string;
-            droughtTolerance: string;
-            shadeTolerance: string;
-            salinityTolerance: string;
-            irrigation: string;
-            recommendedMethod: string;
-            bleOnlyNote: string;
-        };
-        packDetails: {
-            plantsInPack: string;
-            noPlants: string;
-            close: string;
-        };
-        labels: {
-            id: string;
-            version: string;
-            pack: string;
-        };
-    };
-
-    mobileCreatePlant: {
-        title: string;
-        save: string;
-        steps: {
-            basic: { title: string; subtitle: string; };
-            growth: { title: string; subtitle: string; };
-            water: { title: string; subtitle: string; };
-            review: { title: string; subtitle: string; };
-        };
-        fields: {
-            name: string;
-            scientificName: string;
-            category: string;
-            growthCycle: string;
-            rootMin: string;
-            rootMax: string;
-        };
-        placeholders: {
-            name: string;
-            scientificName: string;
-        };
-        cycles: {
-            annual: string;
-            perennial: string;
-            biennial: string;
-        };
-        stages: {
-            initial: string;
-            development: string;
-            midSeason: string;
-            lateSeason: string;
-        };
-        hints: {
-            stageIni: string;
-            stageDev: string;
-            stageMid: string;
-            stageEnd: string;
-            kcIni: string;
-            kcMid: string;
-            kcEnd: string;
-            depletion: string;
-        };
-        kc: {
-            initial: string;
-            mid: string;
-            end: string;
-        };
-        help: {
-            basicTitle: string;
-            basicDesc: string;
-            whyName: string;
-            nameExplain: string;
-            nameExample: string;
-            whyScientific: string;
-            scientificExplain: string;
-            scientificExample: string;
-            whyCategory: string;
-            categoryExplain: string;
-            whyCycle: string;
-            cycleExplain: string;
-            cycleExample: string;
-            growthTitle: string;
-            growthDesc: string;
-            whatAreStages: string;
-            stageIniDetail: string;
-            stageDevDetail: string;
-            stageMidDetail: string;
-            stageEndDetail: string;
-            waterTitle: string;
-            waterDesc: string;
-            whatIsKc: string;
-            kcExplain: string;
-            kcLow: string;
-            kcHigh: string;
-            kcMod: string;
-            kcTip: string;
-            rootExplain: string;
-            rootTip: string;
-            depletionExplain: string;
-            depletionSensitive: string;
-            depletionTolerant: string;
-            irrigationExplain: string;
-            irrigDrip: string;
-            irrigSprinkler: string;
-            irrigManual: string;
-        };
-        growthTimeline: string;
-        kcPreview: string;
-        rootDepth: string;
-        depletionFraction: string;
-        irrigationMethod: string;
-        totalDays: string;
-        summary: {
-            basic: string;
-            growth: string;
-            water: string;
-        };
-        validation: {
-            nameRequired: string;
-            stagesTooShort: string;
-            stagesTooLong: string;
-            stageIniMin: string;
-            stageMidMin: string;
-            kcRange: string;
-            kcMidRange: string;
-            kcMidHigher: string;
-            rootRange: string;
-            rootMaxHigher: string;
-            rootMaxTooDeep: string;
-            depletionRange: string;
-            allValid: string;
-            readyToSave: string;
-            hasErrors: string;
-        };
+    firmwareUpdate: {
+        checking: string;
+        upToDate: string;
+        available: string;
+        install: string;
+        backendNotConfigured: string;
+        connectDeviceFirst: string;
+        stopWateringFirst: string;
+        otaChannel: string;
+        hardwareBoard: string;
+        latestRelease: string;
+        versionLabel: string;
+        packageSize: string;
+        releaseNotes: string;
+        downloadAndInstall: string;
+        uploadedSummary: string;
+        targetVersion: string;
+        runningVersion: string;
+        downloadingPackage: string;
+        startingTransfer: string;
     };
 
     mobileFlowCalibration: {
@@ -2119,6 +2212,7 @@ export interface TranslationKeys {
         appName: string;
         appTagline: string;
         versionBuild: string;
+        linkNotConfigured: string;
         helpSection: {
             title: string;
             userGuide: { title: string; subtitle: string; };
@@ -2568,6 +2662,7 @@ export interface TranslationKeys {
         upgradeToPremium: string;
         checkingSubscription: string;
         chooseLeafPhoto: string;
+        previewAlt: string;
         symptomsLabel: string;
         symptomsPlaceholder: string;
         analyzing: string;
@@ -2592,6 +2687,86 @@ export interface TranslationKeys {
         premiumOnly: string;
         noLocalMatch: string;
         identificationFailed: string;
+        reviewTitle: string;
+        reviewAmbiguous: string;
+        reviewNoLocal: string;
+        detectedByCamera: string;
+        matchConfidence: string;
+        suggestedLocal: string;
+        chooseManually: string;
+        useThis: string;
+        matchSaved: string;
+    };
+
+    mobilePacksSettings: {
+        syncError: string;
+        title: string;
+        loading: string;
+        tabs: {
+            plants: string;
+            packs: string;
+        };
+        storage: {
+            flash: string;
+            romPlants: string;
+            customPlants: string;
+        };
+        plants: {
+            builtIn: string;
+            installed: string;
+        };
+        labels: {
+            id: string;
+            version: string;
+            pack: string;
+        };
+        customPlants: {
+            title: string;
+            empty: string;
+            emptyHint: string;
+            create: string;
+        };
+        romPlants: {
+            title: string;
+            plantsCount: string;
+            showMore: string;
+        };
+        packs: {
+            installed: string;
+            empty: string;
+            emptyHint: string;
+        };
+        updates: {
+            checking: string;
+            check: string;
+            upToDate: string;
+            available: string;
+        };
+        plantDetails: {
+            plantId: string;
+            packId: string;
+            version: string;
+            bleOnlyNote: string;
+            cropCoefficients: string;
+            growthStages: string;
+            stageIni: string;
+            stageDev: string;
+            stageMid: string;
+            stageEnd: string;
+            rootDepth: string;
+            depletionFraction: string;
+            tolerances: string;
+            droughtTolerance: string;
+            shadeTolerance: string;
+            salinityTolerance: string;
+            recommendedMethod: string;
+            close: string;
+        };
+        packDetails: {
+            plantsInPack: string;
+            noPlants: string;
+            close: string;
+        };
     };
 
     mobileTimeLocation: {
@@ -2818,6 +2993,7 @@ export interface TranslationKeys {
         intervalModeLoadFailed: string;
         intervalModeUnsupported: string;
         manualControl: string;
+        advancedZoneControls: string;
         tapToStartCycle: string;
         resetConfirmBody: string;
         wateringModeTitle: string;
@@ -2961,6 +3137,7 @@ export interface TranslationKeys {
         noCompensationConfigured: string;
         enableCompensationHint: string;
         configureCompensation: string;
+        compensationModeHint: string;
         allTime: string;
         totalRuns: string;
         avgLiters: string;
@@ -3017,6 +3194,16 @@ export interface TranslationKeys {
         exportDesc: string;
         clearAppData: string;
         clearAppDesc: string;
+        backupToAccount: string;
+        backupToAccountDesc: string;
+        restoreFromAccount: string;
+        restoreFromAccountDesc: string;
+        backupSaved: string;
+        backupNotFound: string;
+        backupRestored: string;
+        uxMode: string;
+        advancedMode: string;
+        advancedModeDesc: string;
     };
 
     ecoBadge: {
@@ -3099,6 +3286,7 @@ export const en: TranslationKeys = {
         back: 'Back',
         cancel: 'Cancel',
         save: 'Save',
+        saving: 'Saving...',
         confirm: 'Confirm',
         close: 'Close',
         loading: 'Loading...',
@@ -3115,6 +3303,9 @@ export const en: TranslationKeys = {
         ok: 'OK',
         retry: 'Retry',
         refresh: 'Refresh',
+        pressBackAgainToExit: 'Press back again to exit',
+        showAll: 'Show all',
+        showLess: 'Show less',
         continue: 'Continue',
         finish: 'Finish',
         change: 'Change',
@@ -3132,6 +3323,7 @@ export const en: TranslationKeys = {
         fix: 'Fix',
         view: 'View',
         set: 'Set',
+        advanced: 'Advanced',
         minutes: 'minutes',
         minutesShort: 'min',
         secondsShort: 's',
@@ -3868,6 +4060,7 @@ export const en: TranslationKeys = {
         quickActions: 'Quick Actions',
         manualWater: 'Manual Water',
         pauseSchedule: 'Pause Schedule',
+        pauseResumeOnlyWhileActive: 'Pause/resume is available only while a watering task is active.',
         completeSetup: 'Complete Setup',
         noZonesConfigured: 'No zones configured yet',
         title: 'COMMAND DECK',
@@ -3915,13 +4108,14 @@ export const en: TranslationKeys = {
             fault: 'SYSTEM FAULT',
             rtcError: 'RTC ERROR',
             lowPower: 'LOW POWER',
+            freezeLockout: 'FREEZE LOCKOUT',
             unknown: 'UNKNOWN',
         },
     },
 
     healthHub: {
-        bannerTitle: 'Health & Setup',
-        title: 'Health & Setup',
+        bannerTitle: 'Stare si configurare',
+        title: 'Stare si configurare',
         subtitle: 'Setup score, locks, alarms, and quick fixes',
         systemStatusTitle: 'System status',
         setupScore: 'Setup score',
@@ -3946,7 +4140,7 @@ export const en: TranslationKeys = {
         noActiveAlarms: 'No active alarms',
         deviceHealthCta: 'Device Health',
         deviceHealthCtaHint: 'Diagnostics snapshot and debug bundle',
-        troubleshootingCta: 'Troubleshooting',
+        troubleshootingCta: 'Depanare',
         troubleshootingCtaHint: 'Step-by-step fixes for common alarms',
         deviceHealth: {
             title: 'Device Health',
@@ -3975,7 +4169,7 @@ export const en: TranslationKeys = {
             bmeUnknown: 'Unknown',
         },
         troubleshooting: {
-            title: 'Troubleshooting',
+            title: 'Depanare',
             subtitle: 'Common alarm fixes',
             activeAlarmBanner: 'Current alarm focus',
             activeAlarmNone: 'No active alarm',
@@ -4226,7 +4420,7 @@ export const en: TranslationKeys = {
         wateringInProgress: 'Watering in Progress',
         allSystemsNormal: 'All Systems Normal',
         noZonesConfigured: 'No Zones Configured',
-        activeCount: '{count} Active',
+        activeCount: '{count} active',
         tapAddZone: 'Tap Add Zone to set up your first irrigation zone',
         addFirstZone: 'Add First Zone',
         notScheduled: 'Not scheduled',
@@ -4363,6 +4557,7 @@ export const en: TranslationKeys = {
         startWatering: 'Start Watering',
         stopWatering: 'Stop Watering',
         resetZone: 'Reset Zone',
+        skipNextNotAvailable: 'Skip-next command is not available in current firmware BLE API.',
         // Recommendations
         recommended: 'Recommended',
         optional: 'Optional',
@@ -4716,6 +4911,278 @@ export const en: TranslationKeys = {
         aiDoctor: 'AI Doctor',
         history: 'History',
         settings: 'Settings',
+        marketplace: 'Plants',
+    },
+    marketplace: {
+        title: 'Plant Marketplace',
+        browse: 'Browse',
+        plants: 'Plants',
+        packs: 'Packs',
+        search: 'Search',
+        searchPlaceholder: 'Search plants...',
+        aiSearch: 'AI Search',
+        aiSearchHint: 'Ask anything about plants using natural language',
+        aiSearchPlaceholder: 'Describe the plant you\'re looking for...',
+        searchFailed: 'Search failed',
+        aiAnswer: 'AI Answer',
+        suggestedQueries: 'Suggested Queries',
+        searchSuggestionIndoorLowLight: 'Best indoor plants for low light',
+        searchSuggestionDroughtSucculents: 'Drought-resistant succulents',
+        searchSuggestionTomatoFao56: 'FAO-56 parameters for tomatoes',
+        searchSuggestionMediterraneanHerbs: 'Herbs that grow well in Mediterranean climate',
+        allCategories: 'All',
+        newest: 'Newest',
+        topRated: 'Top Rated',
+        mostDownloaded: 'Popular',
+        loadMore: 'Load More',
+        noResults: 'No plants found',
+        createPlant: 'Create Plant',
+        editPlant: 'Edit Plant',
+        newPlant: 'New Plant',
+        saveDraft: 'Save Draft',
+        submitForReview: 'Submit for Review',
+        signInRequired: 'Sign in to access this feature',
+        details: 'Details',
+        reviews: 'Reviews',
+        comments: 'Comments',
+        writeReview: 'Write a review...',
+        writeComment: 'Write a comment...',
+        addComment: 'Add Comment',
+        reply: 'Reply',
+        install: 'Install',
+        installed: 'Installed',
+        installAll: 'Install All Plants',
+        remove: 'Remove',
+        category: 'Category',
+        selectCategory: 'Select category...',
+        scientificName: 'Scientific Name',
+        commonNameEn: 'Name (EN)',
+        commonNameRo: 'Name (RO)',
+        placeholderScientificName: 'Solanum lycopersicum',
+        placeholderCommonNameEn: 'Tomato',
+        placeholderCommonNameRo: 'Tomato',
+        placeholderTags: 'indoor, tropical, low-water',
+        descriptionEn: 'Description (EN)',
+        descriptionRo: 'Description (RO)',
+        tags: 'Tags (comma separated)',
+        images: 'Images',
+        addImages: 'Add images',
+        technicalData: 'Technical Data (AI-filled)',
+        aiFillGaps: 'AI Fill Gaps',
+        translateEnToRo: 'EN -> RO',
+        translateRoToEn: 'RO -> EN',
+        myLibrary: 'My Library',
+        myPlants: 'My Plants',
+        authorProfile: 'Author Profile',
+        publishedPlants: 'Published Plants',
+        noPlants: 'No plants published yet',
+        noAuthoredPlants: 'You haven\'t created any plants yet',
+        noFilteredPlants: 'No plants with this status',
+        createFirst: 'Create Your First Plant',
+        plantChat: 'Plant AI Chat',
+        chatWelcome: 'Ask anything about this plant',
+        chatHint: 'Watering schedule, sunlight needs, soil preferences, pest control, FAO-56 data...',
+        chatPlaceholder: 'Ask about this plant...',
+        chatError: 'Sorry, something went wrong. Please try again.',
+        packNotFound: 'Pack not found',
+        plantsInPack: 'Plants in this pack',
+        downloads: 'downloads',
+        views: 'views',
+        rating: 'rating',
+        synced: 'Synced',
+        pendingSync: 'Pending sync',
+        askAi: 'Ask AI',
+        viewAuthor: 'View Author',
+        aiSearchTitle: 'AI Plant Search',
+        askAiSubtitle: 'Get care tips, disease info, and more',
+        browseMarketplace: 'Browse Marketplace',
+        collections: 'Collections',
+        emptyLibrary: 'Your library is empty',
+        noComments: 'No comments yet',
+        noDescription: 'No description.',
+        generatingDescription: 'Generating description with AI...',
+        noPacks: 'No packs yet',
+        noReviews: 'No reviews yet',
+        notSynced: 'Not synced',
+        packsTab: 'Packs',
+        plantsInLibrary: 'plants in your library',
+        storageUsed: '{percent}% used',
+        plantsTab: 'Plants',
+        reviewBody: 'Your review...',
+        reviewTitle: 'Title (optional)',
+        searchWithAi: 'Search with AI',
+        sortNewest: 'Newest',
+        sortPopular: 'Popular',
+        sortTopRated: 'Top Rated',
+        submitReview: 'Submit Review',
+        trySearching: 'Try searching for',
+        libraryTab: 'Library',
+        onDeviceTab: 'On Device',
+        syncToDevice: 'Sync to Device',
+        syncAllToDevice: 'Sync All to Device',
+        removeFromDevice: 'Remove from Device',
+        syncingToDevice: 'Syncing to device...',
+        syncSuccess: 'Successfully synced to device',
+        syncFailed: 'Failed to sync to device',
+        noDevicePlants: 'No plants on device',
+        devicePlantsCount: 'plants on device',
+        connectDeviceToSync: 'Connect to a device to sync plants',
+        publishToMarketplace: 'Publish to Marketplace',
+        publishDescription: 'Share this plant with the community',
+        romPlant: 'Built-in',
+        customPlant: 'Custom',
+        devicePlantId: 'Device ID',
+        romPlantId: 'ROM ID',
+        onDevice: 'On Device',
+        updateOnDevice: 'Update on Device',
+        plantsCount: 'plants',
+        filterAll: 'All',
+        filterOnDevice: 'On Device',
+        filterNotInstalled: 'Not Installed',
+        deviceOffline: 'Device offline',
+        overviewTab: 'Overview',
+        guideTab: 'Guide',
+        deviceTab: 'Device',
+        noGrowingData: 'No growing data available',
+        cropCoefficients: 'Crop Coefficients',
+        cropCoefficientsHint: 'FAO-56 crop coefficients (Kc) - water use relative to reference evapotranspiration.',
+        growthStages: 'Growth Stages',
+        growthStagesOngoingSummary: '{days} {unit} to maturity, then permanent mature stage',
+        growthStagesOngoingOnlySummary: 'Permanent mature stage',
+        growthStagesOngoingHint: 'The plant remains in mature stage.',
+        stageOngoingShort: 'mature',
+        stageOngoingLabel: 'permanent',
+        stageMaturityLabel: 'Maturity',
+        stageIni: 'Initial',
+        stageDev: 'Development',
+        stageMid: 'Mid-season',
+        stageEnd: 'Late',
+        kcInitialLabel: 'Kc Initial',
+        kcMidLabel: 'Kc Mid-season',
+        kcEndLabel: 'Kc End',
+        kcDevLabel: 'Kc Development',
+        rootAndSoil: 'Root & Soil',
+        rootDepthLabel: 'Root depth',
+        rootDepthHint: 'Typical active root depth used when estimating how much water the soil can store.',
+        growingConditions: 'Growing Conditions',
+        optimalTempLabel: 'Optimal temp',
+        optimalTempHint: 'Range where the plant grows best with minimal stress.',
+        fromValueTemplate: 'from {value}{unit}',
+        upToValueTemplate: 'up to {value}{unit}',
+        soilPhLabel: 'Soil pH',
+        soilPhHint: 'Preferred soil acidity range for healthy nutrient uptake.',
+        frostToleranceHint: 'Approximate minimum temperature the plant can tolerate without major damage.',
+        droughtLabel: 'Resistance to dry periods',
+        shadeLabel: 'Adaptation to low light',
+        salinityLabel: 'Salt tolerance (soil/water)',
+        toleranceLow: 'Low',
+        toleranceMedium: 'Medium',
+        toleranceHigh: 'High',
+        droughtHintLow: 'Needs frequent watering. Soil should not stay dry for long.',
+        droughtHintMedium: 'Needs regular watering, but can handle short dry periods.',
+        droughtHintHigh: 'Handles longer dry periods better than average plants.',
+        shadeHintLow: 'Needs strong light and more direct sun.',
+        shadeHintMedium: 'Grows well in partial shade.',
+        shadeHintHigh: 'Adapts well to low-light conditions.',
+        salinityHintLow: 'Sensitive to salty soil/water. Use low-salinity water.',
+        salinityHintMedium: 'Moderate tolerance to salts in soil/water.',
+        salinityHintHigh: 'Tolerates salts in soil/water better than average plants.',
+        indoorSuitableLabel: 'Indoor suitable',
+        criticalStageLabel: 'Water-sensitive stage',
+        criticalStageEstLabel: 'After planting (establishment)',
+        criticalStageGenericLabel: 'Sensitive period (keep watering steady)',
+        criticalStageHint: 'During this stage, irregular watering can reduce growth or yield.',
+        moreInfoLabel: 'More info',
+        careGuideTitle: 'Care Guide',
+        technicalDetails: 'Technical Details',
+        technicalDetailsDesc: 'FAO-56, pH, frost tolerance',
+        otherParameters: 'Other Parameters',
+        growthCycleAnnual: 'Annual',
+        growthCyclePerennial: 'Perennial',
+        growthCycleBiennial: 'Biennial',
+        primaryUseOrnamental: 'Ornamental',
+        primaryUseFood: 'Food',
+        primaryUseFruit: 'Fruit',
+        primaryUseVegetable: 'Vegetable',
+        primaryUseHerb: 'Herb',
+        primaryUseMedicinal: 'Medicinal',
+        primaryUseAromatic: 'Aromatic',
+        primaryUseForage: 'Forage',
+        primaryUseLawn: 'Lawn',
+        primaryUseTimber: 'Timber',
+        primaryUseIndustrial: 'Industrial',
+        irrigMethodDrip: 'Drip',
+        irrigMethodSprinkler: 'Sprinkler',
+        irrigMethodSurface: 'Surface',
+        irrigMethodManual: 'Manual',
+        irrigMethodRainfed: 'Rainfed',
+        deviceVersion: 'Version on device',
+        removedFromDevice: 'Removed from device',
+        confirmRemoveFromDevice: 'Remove this plant from the device?',
+        connectToManage: 'Connect device to manage',
+        notOnDevice: 'This plant is not synced to your device yet',
+        builtInPlant: 'Built-in ROM Plant',
+        builtInPlantDesc: 'Pre-loaded in device firmware — always available',
+        upToDate: 'Up to date',
+        updateAvailable: 'Update available',
+        quickFacts: 'Quick Facts',
+        qfCycle: 'Cycle',
+        qfTemp: 'Temperature',
+        qfFrost: 'Frost tolerance',
+        qfWater: 'Water needs',
+        qfIndoor: 'Indoor',
+        qfUse: 'Use',
+        qfIrrigation: 'Irrigation',
+        qfHigh: 'High',
+        qfMedium: 'Medium',
+        qfLow: 'Low',
+        qfWaterHigh: 'High water need',
+        qfWaterMedium: 'Medium water need',
+        qfWaterLow: 'Low water need',
+        daysLabel: 'days',
+        totalLabel: 'total',
+        status: {
+            all: 'All',
+            draft: 'Drafts',
+            pending_review: 'Pending',
+            approved: 'Approved',
+            rejected: 'Rejected',
+        },
+    },
+    admin: {
+        title: 'Admin Panel',
+        subtitle: 'Plant Marketplace',
+        accessDenied: 'Access Denied',
+        accessDeniedDesc: 'You need administrator privileges to access this section.',
+        totalPlants: 'Total Plants',
+        pendingReview: 'Pending Review',
+        approved: 'Approved',
+        rejected: 'Rejected',
+        totalPacks: 'Total Packs',
+        totalUsers: 'Total Users',
+        totalReviews: 'Reviews',
+        totalDownloads: 'Downloads',
+        moderationQueue: 'Moderation Queue',
+        moderationDesc: 'Review and approve submitted plants',
+        plantManager: 'Plant Manager',
+        plantManagerDesc: 'Browse, search and manage all plants',
+        filterPending: 'Pending',
+        filterFlagged: 'AI Flagged',
+        filterAll: 'All',
+        queueEmpty: 'Queue is empty — all caught up!',
+        aiScore: 'AI Score',
+        accuracy: 'Accuracy',
+        completeness: 'Completeness',
+        quality: 'Quality',
+        aiRecommends: 'AI Recommends',
+        aiReview: 'AI Review',
+        approve: 'Approve',
+        reject: 'Reject',
+        noPlantsFound: 'No plants found',
+        loading: 'Loading...',
+        loadMore: 'Load More',
+        draft: 'Draft',
+        authorLabel: 'Author',
     },
     timePicker: {
         selectTime: 'Select time',
@@ -4736,6 +5203,7 @@ export const en: TranslationKeys = {
         copyData: 'Copy data',
         includedTitle: 'Included in share',
         includedItem: '{name} ({mode})',
+        qrCodeAlt: 'QR code',
         scanUnavailable: 'Camera scanning requires native app capabilities.',
         scanPasteHint: 'You can paste configuration data from clipboard instead.',
         pasteFromClipboard: 'Paste from Clipboard',
@@ -4856,6 +5324,8 @@ export const en: TranslationKeys = {
         signalFair: 'Fair',
         signalWeak: 'Weak',
         uptime: 'Uptime',
+        battery: 'Battery',
+        errors: 'Errors',
         model: 'Model',
         softwareHardware: 'Software & Hardware',
         firmwareVersion: 'Firmware Version',
@@ -4945,222 +5415,26 @@ export const en: TranslationKeys = {
             packsPlants: { label: 'Packs & Plants', subtitle: 'Manage installed plant profiles', subtitleWithCount: '{count} custom plants installed' },
         },
     },
-    mobilePacksSettings: {
-        title: 'Packs & Plants',
-        loading: 'Loading data from device...',
-        syncError: 'Failed to load data. Please try again.',
-        tabs: {
-            plants: 'Plants',
-            packs: 'Packs',
-        },
-        storage: {
-            title: 'Storage',
-            flash: 'Flash Storage',
-            free: '{amount} available',
-            romPlants: 'ROM Plants',
-            customPlants: 'Custom',
-            packs: 'Packs',
-            unavailable: 'Storage info not available',
-        },
-        plants: {
-            builtIn: 'Built-in database',
-            installed: 'From packs',
-        },
-        customPlants: {
-            title: 'Custom Plants',
-            empty: 'No custom plants installed',
-            emptyHint: 'Custom plants can be added via pack installation',
-            partial: 'Partial list',
-            installed: 'custom plants installed',
-            manageHint: 'Custom plants are managed via pack installation',
-            create: 'Create Plant',
-        },
-        romPlants: {
-            title: 'Built-in Plants',
-            plantsCount: 'plants',
-            more: 'more',
-            showMore: 'Show more',
-        },
-        updates: {
-            title: 'Updates',
-            hint: 'Check for new plant packs',
-            check: 'Check',
-            checking: 'Checking...',
-            upToDate: 'Everything is up to date',
-            available: 'Updates available',
-            install: 'Install',
-        },
-        packs: {
-            installed: 'Installed Packs',
-            available: 'Available Packs',
-            base: 'Base Plant Database',
-            empty: 'No packs installed',
-            emptyHint: 'Packs can be downloaded to add new plants',
-            comingSoon: 'More packs coming soon',
-            comingSoonHint: 'Check back later for additional plant packs',
-        },
-        deleteConfirm: {
-            title: 'Delete Plant',
-            message: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
-            confirm: 'Delete',
-        },
-        plantDetails: {
-            scientificName: 'Scientific Name',
-            category: 'Category',
-            plantId: 'Plant ID',
-            packId: 'Pack ID',
-            rootingDepth: 'Rooting Depth',
-            version: 'Version',
-            kcIni: 'Kc Initial',
-            kcMid: 'Kc Mid',
-            kcEnd: 'Kc End',
-            close: 'Close',
-            growthCycle: 'Growth Cycle',
-            growthRate: 'Growth Rate',
-            cropCoefficients: 'Crop Coefficients (Kc)',
-            kcDev: 'Kc Development',
-            rootDepth: 'Root Depth',
-            rootMin: 'Minimum',
-            rootMax: 'Maximum',
-            depletionFraction: 'Depletion Fraction',
-            growthStages: 'Growth Stages (days)',
-            stageIni: 'Initial',
-            stageDev: 'Development',
-            stageMid: 'Mid-season',
-            stageEnd: 'Late-season',
-            tolerances: 'Tolerances',
-            droughtTolerance: 'Drought',
-            shadeTolerance: 'Shade',
-            salinityTolerance: 'Salinity',
-            irrigation: 'Irrigation',
-            recommendedMethod: 'Recommended Method',
-            bleOnlyNote: 'This plant only has basic BLE data. Full details available for ROM plants.',
-        },
-        packDetails: {
-            plantsInPack: 'Plants in Pack',
-            noPlants: 'No plants found in this pack',
-            close: 'Close',
-        },
-        labels: {
-            id: 'ID',
-            version: 'v',
-            pack: 'Pack',
-        },
-    },
-    mobileCreatePlant: {
-        title: 'Create Custom Plant',
-        save: 'Save Plant',
-        steps: {
-            basic: { title: 'Basic Info', subtitle: 'Name and category of your plant' },
-            growth: { title: 'Growth Stages', subtitle: 'Define the growth cycle duration' },
-            water: { title: 'Water Needs', subtitle: 'Set irrigation parameters' },
-            review: { title: 'Review', subtitle: 'Verify all values before saving' },
-        },
-        fields: {
-            name: 'Plant Name',
-            scientificName: 'Scientific Name',
-            category: 'Category',
-            growthCycle: 'Growth Cycle',
-            rootMin: 'Minimum Depth',
-            rootMax: 'Maximum Depth',
-        },
-        placeholders: {
-            name: 'e.g. Cherry Tomato',
-            scientificName: 'e.g. Solanum lycopersicum',
-        },
-        cycles: {
-            annual: 'Annual',
-            perennial: 'Perennial',
-            biennial: 'Biennial',
-        },
-        stages: {
-            initial: 'Initial Stage',
-            development: 'Development',
-            midSeason: 'Mid-Season',
-            lateSeason: 'Late Season',
-        },
-        hints: {
-            stageIni: 'Seedling phase, low water needs',
-            stageDev: 'Rapid growth, increasing water demand',
-            stageMid: 'Peak growth, highest water needs',
-            stageEnd: 'Maturation, decreasing water needs',
-            kcIni: 'Low values (0.3-0.5) for young plants',
-            kcMid: 'Peak values (0.9-1.2) at full growth',
-            kcEnd: 'Moderate values (0.5-0.8) at maturity',
-            depletion: 'Higher = more drought tolerant, Lower = needs frequent watering',
-        },
-        kc: {
-            initial: 'Kc Initial (Seedling)',
-            mid: 'Kc Mid (Full Growth)',
-            end: 'Kc End (Maturity)',
-        },
-        help: {
-            basicTitle: 'Plant Identity',
-            basicDesc: 'Start by giving your plant a recognizable name and classifying it properly.',
-            whyName: 'Why give a name?',
-            nameExplain: 'The name helps you identify this plant in your irrigation zones. Use a name you\'ll easily remember.',
-            nameExample: 'e.g. "Garden Tomatoes" or "Balcony Basil"',
-            whyScientific: 'Why scientific name?',
-            scientificExplain: 'Optional but useful to identify exact species. Helps when searching for specific growing information.',
-            scientificExample: 'e.g. "Ocimum basilicum" for basil',
-            whyCategory: 'Why choose a category?',
-            categoryExplain: 'Categories group similar plants with comparable water needs. This helps with default settings.',
-            whyCycle: 'What is growth cycle?',
-            cycleExplain: 'Determines how the plant completes its life: annuals complete in one season, perennials live multiple years, biennials take two years.',
-            cycleExample: 'Most vegetables are annual, most fruit trees are perennial',
-            growthTitle: 'Growth Timeline',
-            growthDesc: 'Define how long each growth phase lasts. This affects water scheduling throughout the season.',
-            whatAreStages: 'What are growth stages?',
-            stageIniDetail: 'Initial: Seedling/transplant phase. Plants are small, roots shallow, water needs low.',
-            stageDevDetail: 'Development: Rapid vegetative growth. Plants establish roots, water needs increasing.',
-            stageMidDetail: 'Mid-season: Full canopy, flowering/fruiting. Maximum water consumption.',
-            stageEndDetail: 'Late season: Maturation and harvest. Water needs decrease as plant finishes cycle.',
-            waterTitle: 'Irrigation Settings',
-            waterDesc: 'Set the water coefficients that determine how much water your plant needs at each stage.',
-            whatIsKc: 'What is Kc (Crop Coefficient)?',
-            kcExplain: 'Kc is a multiplier for reference evapotranspiration (ET₀). It tells us how much water the plant needs relative to a reference grass.',
-            kcLow: '0.3-0.5 = Low water needs (seedlings, drought-tolerant)',
-            kcHigh: '1.0-1.2 = High water needs (full growth, vegetables)',
-            kcMod: '0.6-0.8 = Moderate needs (established plants)',
-            kcTip: 'Tip: Most vegetables peak at Kc 0.9-1.1 during mid-season.',
-            rootExplain: 'Root depth determines how deep water can be stored in soil. Shallow roots need more frequent watering.',
-            rootTip: 'Vegetables: 30-60cm, Shrubs: 60-100cm, Trees: 100-200cm',
-            depletionExplain: 'Depletion fraction is how much soil water can be used before the plant is stressed. Higher = more drought tolerant.',
-            depletionSensitive: 'Water-sensitive plant',
-            depletionTolerant: 'Drought-tolerant plant',
-            irrigationExplain: 'Choose the irrigation method you\'ll use for this plant:',
-            irrigDrip: 'Slow, targeted watering at root zone. Best for vegetables & water conservation.',
-            irrigSprinkler: 'Overhead spray, covers larger area. Good for lawns and established beds.',
-            irrigManual: 'Hand watering with hose or watering can. Flexible but less consistent.',
-        },
-        growthTimeline: 'Growth Timeline',
-        kcPreview: 'Water Needs Preview',
-        rootDepth: 'Root Depth',
-        depletionFraction: 'Depletion Fraction',
-        irrigationMethod: 'Irrigation Method',
-        totalDays: 'Total Growth Cycle',
-        summary: {
-            basic: 'Basic Information',
-            growth: 'Growth Stages',
-            water: 'Water Parameters',
-        },
-        validation: {
-            nameRequired: 'Plant name is required',
-            stagesTooShort: 'Total growth cycle must be at least 30 days',
-            stagesTooLong: 'Total growth cycle cannot exceed 365 days',
-            stageIniMin: 'Initial stage should be at least 5 days',
-            stageMidMin: 'Mid-season stage should be at least 10 days',
-            kcRange: 'Kc values must be between 0.1 and 1.5',
-            kcMidRange: 'Kc Mid should be between 0.5 and 1.5',
-            kcMidHigher: 'Kc Mid should be higher than Kc Initial',
-            rootRange: 'Root depth must be between 5 and 200 cm',
-            rootMaxHigher: 'Maximum depth must be greater than minimum',
-            rootMaxTooDeep: 'Maximum root depth cannot exceed 300 cm',
-            depletionRange: 'Depletion fraction should be between 20% and 80%',
-            allValid: 'All values look good!',
-            readyToSave: 'Your plant is ready to be saved',
-            hasErrors: 'Please fix the following issues:',
-        },
+    firmwareUpdate: {
+        checking: 'Checking...',
+        upToDate: 'Everything is up to date',
+        available: 'Updates available',
+        install: 'Install',
+        backendNotConfigured: 'OTA backend is not configured.',
+        connectDeviceFirst: 'Connect to a device before checking firmware updates.',
+        stopWateringFirst: 'Stop active watering before starting OTA.',
+        otaChannel: 'OTA Channel',
+        hardwareBoard: 'Hardware Board',
+        latestRelease: 'Latest Release',
+        versionLabel: 'Version',
+        packageSize: 'Package size',
+        releaseNotes: 'Release notes',
+        downloadAndInstall: 'Download & Install OTA',
+        uploadedSummary: 'Uploaded {size}',
+        targetVersion: 'Target version: v{version}',
+        runningVersion: 'Running version: v{version}',
+        downloadingPackage: 'Downloading firmware package...',
+        startingTransfer: 'Starting BLE OTA transfer...',
     },
     mobileFlowCalibration: {
         title: 'Flow Calibration',
@@ -5201,6 +5475,7 @@ export const en: TranslationKeys = {
         appName: 'AutoWater',
         appTagline: 'Smart irrigation made simple',
         versionBuild: 'Version {version} (Build {build})',
+        linkNotConfigured: 'This link is not configured yet. Set the corresponding VITE_* URL.',
         helpSection: {
             title: 'Help Center',
             userGuide: { title: 'User Guide', subtitle: 'Learn how to set up your system' },
@@ -5636,6 +5911,7 @@ export const en: TranslationKeys = {
         upgradeToPremium: 'Upgrade to premium',
         checkingSubscription: 'Checking subscription status...',
         chooseLeafPhoto: 'Choose leaf photo',
+        previewAlt: 'Plant preview',
         symptomsLabel: 'Symptoms (optional)',
         symptomsPlaceholder: 'Example: yellow spots, curling leaves, white powder, stem rot...',
         analyzing: 'Analyzing...',
@@ -5659,6 +5935,85 @@ export const en: TranslationKeys = {
         premiumOnly: 'Camera plant identification is available only on Premium.',
         noLocalMatch: 'Plant was identified by API, but no matching plant exists in local database.',
         identificationFailed: 'Plant identification failed.',
+        reviewTitle: 'Review detection',
+        reviewAmbiguous: 'The detection is uncertain. Pick the best local match.',
+        reviewNoLocal: 'No exact local match was found. Choose the closest plant.',
+        detectedByCamera: 'Detected by camera',
+        matchConfidence: 'Match confidence: {value}%',
+        suggestedLocal: 'Suggested local plant',
+        chooseManually: 'Choose manually',
+        useThis: 'Use this plant',
+        matchSaved: 'Plant selection saved.',
+    },
+    mobilePacksSettings: {
+        syncError: 'Could not sync pack data from device.',
+        title: 'Packs & Plants',
+        loading: 'Loading...',
+        tabs: {
+            plants: 'Plants',
+            packs: 'Packs',
+        },
+        storage: {
+            flash: 'Flash',
+            romPlants: 'ROM plants',
+            customPlants: 'Custom plants',
+        },
+        plants: {
+            builtIn: 'Built-in plants',
+            installed: 'Installed plants',
+        },
+        labels: {
+            id: 'ID',
+            version: 'v',
+            pack: 'Pack',
+        },
+        customPlants: {
+            title: 'Custom plants',
+            empty: 'No custom plants installed',
+            emptyHint: 'Install plants from Marketplace to see them here.',
+            create: 'Create plant',
+        },
+        romPlants: {
+            title: 'Built-in plant database',
+            plantsCount: 'plants',
+            showMore: 'Show more',
+        },
+        packs: {
+            installed: 'Installed packs',
+            empty: 'No packs installed',
+            emptyHint: 'Install a pack to see grouped plants here.',
+        },
+        updates: {
+            checking: 'Checking updates...',
+            check: 'Check updates',
+            upToDate: 'Everything is up to date.',
+            available: 'Updates are available.',
+        },
+        plantDetails: {
+            plantId: 'Plant ID',
+            packId: 'Pack ID',
+            version: 'Version',
+            bleOnlyNote: 'This detail is read from BLE payload.',
+            cropCoefficients: 'Crop coefficients',
+            growthStages: 'Growth stages',
+            stageIni: 'Initial',
+            stageDev: 'Development',
+            stageMid: 'Mid',
+            stageEnd: 'End',
+            rootDepth: 'Root depth',
+            depletionFraction: 'Depletion fraction',
+            tolerances: 'Tolerances',
+            droughtTolerance: 'Drought',
+            shadeTolerance: 'Shade',
+            salinityTolerance: 'Salinity',
+            recommendedMethod: 'Recommended irrigation',
+            close: 'Close',
+        },
+        packDetails: {
+            plantsInPack: 'Plants in this pack',
+            noPlants: 'No plants found in this pack.',
+            close: 'Close',
+        },
     },
     mobileTimeLocation: {
         title: 'Time & Location',
@@ -5879,6 +6234,7 @@ export const en: TranslationKeys = {
         intervalModeLoadFailed: 'Cycle & Soak timing could not be loaded. Durations were not saved.',
         intervalModeUnsupported: 'Cycle & Soak timing is not supported by your firmware.',
         manualControl: 'Manual Control',
+        advancedZoneControls: 'Advanced zone controls',
         tapToStartCycle: 'Tap to start {minutes} min cycle',
         resetConfirmBody: 'Reset zone settings to defaults?',
         wateringModeTitle: 'Watering Mode',
@@ -6024,6 +6380,7 @@ export const en: TranslationKeys = {
         noCompensationConfigured: 'No compensation configured',
         enableCompensationHint: 'Enable adjustments in settings',
         configureCompensation: 'Configure compensation',
+        compensationModeHint: 'Compensation is available only for Duration/Volume modes. Switch from FAO-56 to configure it.',
         allTime: 'All time',
         totalRuns: 'Total runs',
         avgLiters: 'Avg liters',
@@ -6076,6 +6433,16 @@ export const en: TranslationKeys = {
         exportDesc: 'Download your watering history',
         clearAppData: 'Clear App Data',
         clearAppDesc: 'Remove local cache and settings',
+        backupToAccount: 'Back Up to Account',
+        backupToAccountDesc: 'Save app preferences and device list to the cloud',
+        restoreFromAccount: 'Restore from Account',
+        restoreFromAccountDesc: 'Load saved app preferences from cloud backup',
+        backupSaved: 'Backup saved to your account.',
+        backupNotFound: 'No cloud backup found for this account.',
+        backupRestored: 'Backup restored from your account.',
+        uxMode: 'Display Mode',
+        advancedMode: 'Advanced Mode',
+        advancedModeDesc: 'Show technical details like pH, FAO-56 Kc values',
     },
     ecoBadge: {
         rainDetected: 'Rain Detected',
@@ -6153,6 +6520,7 @@ export const ro: TranslationKeys = {
         back: 'Înapoi',
         cancel: 'Anulează',
         save: 'Salvează',
+        saving: 'Se salveaza...',
         confirm: 'Confirmă',
         close: 'Închide',
         loading: 'Se încarcă...',
@@ -6183,9 +6551,13 @@ export const ro: TranslationKeys = {
         edit: 'Editeaz?',
         apply: 'Aplic?',
         fix: 'Rezolva',
-        refresh: 'Refresh',
+        refresh: 'Reimprospateaza',
+        pressBackAgainToExit: 'Apasa inca o data inapoi pentru a iesi',
+        showAll: 'Arată tot',
+        showLess: 'Arată mai puțin',
         view: 'Vezi',
         set: 'Seteaza',
+        advanced: 'Avansat',
         minutes: 'minute',
         minutesShort: 'min',
         secondsShort: 's',
@@ -6923,6 +7295,7 @@ export const ro: TranslationKeys = {
         quickActions: 'Acțiuni Rapide',
         manualWater: 'Udare Manuală',
         pauseSchedule: 'Pauză Program',
+        pauseResumeOnlyWhileActive: 'Pauza sau reluarea este disponibilă doar când există o udare activă.',
         completeSetup: 'Finalizează Configurarea',
         noZonesConfigured: 'Nicio zonă configurată încă',
         title: 'PUNCT DE COMAND?',
@@ -6970,6 +7343,7 @@ export const ro: TranslationKeys = {
             fault: 'DEFEC?IUNE SISTEM',
             rtcError: 'EROARE RTC',
             lowPower: 'PUTERE SC?ZUT?',
+            freezeLockout: 'BLOCARE INGHET (FREEZE LOCKOUT)',
             unknown: 'NECUNOSCUT',
         },
     },
@@ -7417,6 +7791,7 @@ export const ro: TranslationKeys = {
         startWatering: 'Pornește Udarea',
         stopWatering: 'Oprește Udarea',
         resetZone: 'Resetează Zona',
+        skipNextNotAvailable: 'Comanda de sarire a urmatoarei udari nu este disponibila in firmware-ul BLE curent.',
         // Recommendations
         recommended: 'Recomandat',
         optional: 'Opțional',
@@ -7771,6 +8146,278 @@ export const ro: TranslationKeys = {
         aiDoctor: 'AI Doctor',
         history: 'Istoric',
         settings: 'Setari',
+        marketplace: 'Plante',
+    },
+    marketplace: {
+        title: 'Piata de Plante',
+        browse: 'Exploreaza',
+        plants: 'Plante',
+        packs: 'Pachete',
+        search: 'Cauta',
+        searchPlaceholder: 'Cauta plante...',
+        aiSearch: 'Cautare AI',
+        aiSearchHint: 'Intreaba orice despre plante folosind limbaj natural',
+        aiSearchPlaceholder: 'Descrie planta pe care o cauti...',
+        searchFailed: 'Cautarea a esuat',
+        aiAnswer: 'Raspuns AI',
+        suggestedQueries: 'Intrebari sugerate',
+        searchSuggestionIndoorLowLight: 'Cele mai bune plante de interior pentru lumina redusa',
+        searchSuggestionDroughtSucculents: 'Suculente rezistente la seceta',
+        searchSuggestionTomatoFao56: 'Parametri FAO-56 pentru rosii',
+        searchSuggestionMediterraneanHerbs: 'Ierburi care cresc bine in clima mediteraneana',
+        allCategories: 'Toate',
+        newest: 'Cele mai noi',
+        topRated: 'Cele mai bine cotate',
+        mostDownloaded: 'Populare',
+        loadMore: 'Incarca mai mult',
+        noResults: 'Nicio planta gasita',
+        createPlant: 'Creeaza planta',
+        editPlant: 'Editeaza planta',
+        newPlant: 'Planta noua',
+        saveDraft: 'Salveaza ciorna',
+        submitForReview: 'Trimite la revizie',
+        signInRequired: 'Autentifica-te pentru a accesa aceasta functie',
+        details: 'Detalii',
+        reviews: 'Recenzii',
+        comments: 'Comentarii',
+        writeReview: 'Scrie o recenzie...',
+        writeComment: 'Scrie un comentariu...',
+        addComment: 'Adauga comentariu',
+        reply: 'Raspunde',
+        install: 'Instaleaza',
+        installed: 'Instalat',
+        installAll: 'Instaleaza toate plantele',
+        remove: 'Sterge',
+        category: 'Categorie',
+        selectCategory: 'Selecteaza categoria...',
+        scientificName: 'Nume stiintific',
+        commonNameEn: 'Nume (EN)',
+        commonNameRo: 'Nume (RO)',
+        placeholderScientificName: 'Solanum lycopersicum',
+        placeholderCommonNameEn: 'Tomato',
+        placeholderCommonNameRo: 'Rosie',
+        placeholderTags: 'interior, tropical, putina-apa',
+        descriptionEn: 'Descriere (EN)',
+        descriptionRo: 'Descriere (RO)',
+        tags: 'Etichete (separate prin virgula)',
+        images: 'Imagini',
+        addImages: 'Adauga imagini',
+        technicalData: 'Date tehnice (completate de AI)',
+        aiFillGaps: 'AI Completeaza',
+        translateEnToRo: 'EN -> RO',
+        translateRoToEn: 'RO -> EN',
+        myLibrary: 'Biblioteca mea',
+        myPlants: 'Plantele mele',
+        authorProfile: 'Profil autor',
+        publishedPlants: 'Plante publicate',
+        noPlants: 'Nicio planta publicata inca',
+        noAuthoredPlants: 'Nu ai creat inca nicio planta',
+        noFilteredPlants: 'Nicio planta cu acest status',
+        createFirst: 'Creeaza prima ta planta',
+        plantChat: 'Chat AI Planta',
+        chatWelcome: 'Intreaba orice despre aceasta planta',
+        chatHint: 'Program de udare, nevoi de lumina, preferinte de sol, control daunatori, date FAO-56...',
+        chatPlaceholder: 'Intreaba despre aceasta planta...',
+        chatError: 'Ne pare rau, ceva nu a mers bine. Incearca din nou.',
+        packNotFound: 'Pachet negasit',
+        plantsInPack: 'Plantele din acest pachet',
+        downloads: 'descarcari',
+        views: 'vizualizari',
+        rating: 'rating',
+        synced: 'Sincronizat',
+        pendingSync: 'In asteptare',
+        askAi: 'Intreaba AI',
+        viewAuthor: 'Vezi autorul',
+        aiSearchTitle: 'Cautare AI Plante',
+        askAiSubtitle: 'Primeste sfaturi de ingrijire, informatii despre boli si mai mult',
+        browseMarketplace: 'Exploreaza Piata',
+        collections: 'Colectii',
+        emptyLibrary: 'Biblioteca ta este goala',
+        noComments: 'Niciun comentariu inca',
+        noDescription: 'Fara descriere.',
+        generatingDescription: 'Se genereaz\u0103 descrierea cu AI...',
+        noPacks: 'Niciun pachet inca',
+        noReviews: 'Nicio recenzie inca',
+        notSynced: 'Nesincronizat',
+        packsTab: 'Pachete',
+        plantsInLibrary: 'plante in biblioteca ta',
+        storageUsed: '{percent}% folosit',
+        plantsTab: 'Plante',
+        reviewBody: 'Recenzia ta...',
+        reviewTitle: 'Titlu (optional)',
+        searchWithAi: 'Cauta cu AI',
+        sortNewest: 'Cele mai noi',
+        sortPopular: 'Populare',
+        sortTopRated: 'Cele mai bine cotate',
+        submitReview: 'Trimite recenzia',
+        trySearching: 'Incearca sa cauti',
+        libraryTab: 'Biblioteca',
+        onDeviceTab: 'Pe Dispozitiv',
+        syncToDevice: 'Sincronizeaza pe Dispozitiv',
+        syncAllToDevice: 'Sincronizeaza Totul pe Dispozitiv',
+        removeFromDevice: 'Sterge de pe Dispozitiv',
+        syncingToDevice: 'Se sincronizeaza pe dispozitiv...',
+        syncSuccess: 'Sincronizat cu succes pe dispozitiv',
+        syncFailed: 'Sincronizarea pe dispozitiv a esuat',
+        noDevicePlants: 'Nicio planta pe dispozitiv',
+        devicePlantsCount: 'plante pe dispozitiv',
+        connectDeviceToSync: 'Conecteaza un dispozitiv pentru a sincroniza plantele',
+        publishToMarketplace: 'Publica in Piata',
+        publishDescription: 'Partajeaza aceasta planta cu comunitatea',
+        romPlant: 'Incorporat',
+        customPlant: 'Personalizat',
+        devicePlantId: 'ID Dispozitiv',
+        romPlantId: 'ID ROM',
+        onDevice: 'Pe Dispozitiv',
+        updateOnDevice: 'Actualizeaza pe Dispozitiv',
+        plantsCount: 'plante',
+        filterAll: 'Toate',
+        filterOnDevice: 'Pe Dispozitiv',
+        filterNotInstalled: 'Neinstalate',
+        deviceOffline: 'Dispozitiv offline',
+        overviewTab: 'Prezentare',
+        guideTab: 'Ghid',
+        deviceTab: 'Dispozitiv',
+        noGrowingData: 'Nu sunt date de crestere disponibile',
+        cropCoefficients: 'Coeficienti de cultura',
+        cropCoefficientsHint: 'Coeficienti FAO-56 (Kc) - consum relativ de apa fata de evapotranspiratia de referinta.',
+        growthStages: 'Stadii de crestere',
+        growthStagesOngoingSummary: '{days} {unit} pana la maturitate, apoi stadiu matur permanent',
+        growthStagesOngoingOnlySummary: 'Stadiu matur permanent',
+        growthStagesOngoingHint: 'Planta ramane in stadiul matur.',
+        stageOngoingShort: 'matur',
+        stageOngoingLabel: 'permanent',
+        stageMaturityLabel: 'Maturitate',
+        stageIni: 'Initial',
+        stageDev: 'Dezvoltare',
+        stageMid: 'Mijloc',
+        stageEnd: 'Final',
+        kcInitialLabel: 'Kc Initial',
+        kcMidLabel: 'Kc Mijloc',
+        kcEndLabel: 'Kc Final',
+        kcDevLabel: 'Kc Dezvoltare',
+        rootAndSoil: 'Radacina si sol',
+        rootDepthLabel: 'Adancime radacina',
+        rootDepthHint: 'Adancimea tipica a radacinilor active, folosita la estimarea apei disponibile in sol.',
+        growingConditions: 'Conditii de crestere',
+        optimalTempLabel: 'Temperatura optima',
+        optimalTempHint: 'Intervalul in care planta creste cel mai bine, cu stres minim.',
+        fromValueTemplate: 'de la {value}{unit}',
+        upToValueTemplate: 'pana la {value}{unit}',
+        soilPhLabel: 'pH sol',
+        soilPhHint: 'Intervalul de aciditate/alcalinitate a solului preferat de planta.',
+        frostToleranceHint: 'Temperatura minima aproximativa suportata fara afectari majore.',
+        droughtLabel: 'Rezistenta la lipsa apei',
+        shadeLabel: 'Adaptare la lumina redusa',
+        salinityLabel: 'Rezistenta la saruri (apa/sol)',
+        toleranceLow: 'Scazuta',
+        toleranceMedium: 'Medie',
+        toleranceHigh: 'Ridicata',
+        droughtHintLow: 'Are nevoie de udari dese. Solul nu trebuie lasat uscat mult timp.',
+        droughtHintMedium: 'Are nevoie de udare regulata, dar suporta perioade scurte de uscaciune.',
+        droughtHintHigh: 'Suporta mai bine perioadele fara apa fata de majoritatea plantelor.',
+        shadeHintLow: 'Are nevoie de lumina multa si soare direct.',
+        shadeHintMedium: 'Creste bine la lumina partiala.',
+        shadeHintHigh: 'Se adapteaza bine in zone cu lumina redusa.',
+        salinityHintLow: 'Este sensibila la saruri. Evita apa sau solul salin.',
+        salinityHintMedium: 'Tolereaza moderat sarurile din apa/sol.',
+        salinityHintHigh: 'Tolereaza mai bine sarurile din apa/sol.',
+        indoorSuitableLabel: 'Potrivita pentru interior',
+        criticalStageLabel: 'Etapa sensibila la lipsa apei',
+        criticalStageEstLabel: 'Prindere dupa plantare',
+        criticalStageGenericLabel: 'Perioada sensibila (udare constanta)',
+        criticalStageHint: 'In aceasta etapa, udarea neregulata poate afecta cresterea sau productia.',
+        moreInfoLabel: 'Mai multe informatii',
+        careGuideTitle: 'Ghid de ingrijire',
+        technicalDetails: 'Detalii tehnice',
+        technicalDetailsDesc: 'FAO-56, pH, toleranta la ger',
+        otherParameters: 'Alti parametri',
+        growthCycleAnnual: 'Anuala',
+        growthCyclePerennial: 'Perena',
+        growthCycleBiennial: 'Bienala',
+        primaryUseOrnamental: 'Ornamentala',
+        primaryUseFood: 'Alimentar',
+        primaryUseFruit: 'Fruct',
+        primaryUseVegetable: 'Leguma',
+        primaryUseHerb: 'Planta aromatica',
+        primaryUseMedicinal: 'Medicinal',
+        primaryUseAromatic: 'Aromatic',
+        primaryUseForage: 'Furaj',
+        primaryUseLawn: 'Gazon',
+        primaryUseTimber: 'Lemn',
+        primaryUseIndustrial: 'Industrial',
+        irrigMethodDrip: 'Picurare',
+        irrigMethodSprinkler: 'Aspersie',
+        irrigMethodSurface: 'La suprafata',
+        irrigMethodManual: 'Manual',
+        irrigMethodRainfed: 'Pluvial',
+        deviceVersion: 'Versiune pe dispozitiv',
+        removedFromDevice: 'Sters de pe dispozitiv',
+        confirmRemoveFromDevice: 'Stergi aceasta planta de pe dispozitiv?',
+        connectToManage: 'Conectează dispozitivul pentru a gestiona',
+        notOnDevice: 'Această plantă nu este încă sincronizată pe dispozitiv',
+        builtInPlant: 'Plantă ROM Integrată',
+        builtInPlantDesc: 'Pre-încărcată în firmware — mereu disponibilă',
+        upToDate: 'La zi',
+        updateAvailable: 'Actualizare disponibilă',
+        quickFacts: 'Informații Rapide',
+        qfCycle: 'Ciclu',
+        qfTemp: 'Temperatură',
+        qfFrost: 'Toleranță la îngheț',
+        qfWater: 'Necesar apă',
+        qfIndoor: 'Interior',
+        qfUse: 'Utilizare',
+        qfIrrigation: 'Irigare',
+        qfHigh: 'Ridicat',
+        qfMedium: 'Mediu',
+        qfLow: 'Scăzut',
+        qfWaterHigh: 'Necesar mare de apă',
+        qfWaterMedium: 'Necesar mediu de apă',
+        qfWaterLow: 'Necesar redus de apă',
+        daysLabel: 'zile',
+        totalLabel: 'total',
+        status: {
+            all: 'Toate',
+            draft: 'Ciorne',
+            pending_review: 'In asteptare',
+            approved: 'Aprobate',
+            rejected: 'Respinse',
+        },
+    },
+    admin: {
+        title: 'Panou Admin',
+        subtitle: 'Piata de Plante',
+        accessDenied: 'Acces Refuzat',
+        accessDeniedDesc: 'Ai nevoie de privilegii de administrator pentru a accesa aceasta sectiune.',
+        totalPlants: 'Total Plante',
+        pendingReview: 'In Asteptare',
+        approved: 'Aprobate',
+        rejected: 'Respinse',
+        totalPacks: 'Total Pachete',
+        totalUsers: 'Total Utilizatori',
+        totalReviews: 'Recenzii',
+        totalDownloads: 'Descarcari',
+        moderationQueue: 'Coada Moderare',
+        moderationDesc: 'Revizuieste si aproba plantele trimise',
+        plantManager: 'Manager Plante',
+        plantManagerDesc: 'Cauta si gestioneaza toate plantele',
+        filterPending: 'In Asteptare',
+        filterFlagged: 'Semnalate AI',
+        filterAll: 'Toate',
+        queueEmpty: 'Coada este goala — totul e la zi!',
+        aiScore: 'Scor AI',
+        accuracy: 'Acuratete',
+        completeness: 'Completitudine',
+        quality: 'Calitate',
+        aiRecommends: 'AI Recomanda',
+        aiReview: 'Revizie AI',
+        approve: 'Aproba',
+        reject: 'Respinge',
+        noPlantsFound: 'Nicio planta gasita',
+        loading: 'Se incarca...',
+        loadMore: 'Incarca Mai Multe',
+        draft: 'Ciorna',
+        authorLabel: 'Autor',
     },
     timePicker: {
         selectTime: 'Selecteaza ora',
@@ -7791,6 +8438,7 @@ export const ro: TranslationKeys = {
         copyData: 'Copiaza date',
         includedTitle: 'Inclus in partajare',
         includedItem: '{name} ({mode})',
+        qrCodeAlt: 'Cod QR',
         scanUnavailable: 'Scanarea camerei necesita aplicatia nativa.',
         scanPasteHint: 'Poti lipi datele de configurare din clipboard.',
         pasteFromClipboard: 'Lipeste din Clipboard',
@@ -7911,6 +8559,8 @@ export const ro: TranslationKeys = {
         signalFair: 'Acceptabil',
         signalWeak: 'Slab',
         uptime: 'Timp pornit',
+        battery: 'Baterie',
+        errors: 'Erori',
         model: 'Model',
         softwareHardware: 'Software si hardware',
         firmwareVersion: 'Versiune firmware',
@@ -8000,222 +8650,26 @@ export const ro: TranslationKeys = {
             packsPlants: { label: 'Pachete si plante', subtitle: 'Gestioneaza profilele de plante', subtitleWithCount: '{count} plante custom instalate' },
         },
     },
-    mobilePacksSettings: {
-        title: 'Pachete si plante',
-        loading: 'Se incarca datele de pe dispozitiv...',
-        syncError: 'Eroare la incarcarea datelor. Incearca din nou.',
-        tabs: {
-            plants: 'Plante',
-            packs: 'Pachete',
-        },
-        storage: {
-            title: 'Stocare',
-            flash: 'Memorie Flash',
-            free: '{amount} disponibil',
-            romPlants: 'Plante ROM',
-            customPlants: 'Custom',
-            packs: 'Pachete',
-            unavailable: 'Info stocare indisponibil',
-        },
-        plants: {
-            builtIn: 'Baza de date integrata',
-            installed: 'Din pachete',
-        },
-        customPlants: {
-            title: 'Plante personalizate',
-            empty: 'Nicio planta personalizata instalata',
-            emptyHint: 'Plantele personalizate pot fi adaugate prin instalarea de pachete',
-            partial: 'Lista partiala',
-            installed: 'plante personalizate instalate',
-            manageHint: 'Plantele custom se gestioneaza prin instalarea de pachete',
-            create: 'Creeaza Planta',
-        },
-        romPlants: {
-            title: 'Plante integrate',
-            plantsCount: 'plante',
-            more: 'mai multe',
-            showMore: 'Arata mai multe',
-        },
-        updates: {
-            title: 'Actualizari',
-            hint: 'Verifica pachete noi sau actualizari',
-            check: 'Verifica actualizari',
-            checking: 'Se verifica...',
-            upToDate: 'Totul este la zi',
-            available: 'Actualizari disponibile',
-            install: 'Instaleaza',
-        },
-        packs: {
-            installed: 'Pachete instalate',
-            available: 'Pachete disponibile',
-            base: 'Baza de date plante',
-            empty: 'Niciun pachet instalat',
-            emptyHint: 'Pachetele pot fi descarcate pentru a adauga plante noi',
-            comingSoon: 'Mai multe pachete in curand',
-            comingSoonHint: 'Revino mai tarziu pentru pachete aditionale',
-        },
-        deleteConfirm: {
-            title: 'Sterge planta',
-            message: 'Esti sigur ca vrei sa stergi "{name}"? Aceasta actiune nu poate fi anulata.',
-            confirm: 'Sterge',
-        },
-        plantDetails: {
-            scientificName: 'Nume stiintific',
-            category: 'Categorie',
-            plantId: 'ID planta',
-            packId: 'ID pachet',
-            rootingDepth: 'Adancime radacini',
-            version: 'Versiune',
-            kcIni: 'Kc Initial',
-            kcMid: 'Kc Mijloc',
-            kcEnd: 'Kc Final',
-            close: 'Inchide',
-            growthCycle: 'Ciclu de crestere',
-            growthRate: 'Rata de crestere',
-            cropCoefficients: 'Coeficienti Kc',
-            kcDev: 'Kc Dezvoltare',
-            rootDepth: 'Adancime radacini',
-            rootMin: 'Minim',
-            rootMax: 'Maxim',
-            depletionFraction: 'Fractie epuizare',
-            growthStages: 'Stadii de crestere (zile)',
-            stageIni: 'Initial',
-            stageDev: 'Dezvoltare',
-            stageMid: 'Mijloc sezon',
-            stageEnd: 'Final sezon',
-            tolerances: 'Tolerante',
-            droughtTolerance: 'Seceta',
-            shadeTolerance: 'Umbra',
-            salinityTolerance: 'Salinitate',
-            irrigation: 'Irigare',
-            recommendedMethod: 'Metoda recomandata',
-            bleOnlyNote: 'Aceasta planta are doar date BLE de baza. Detalii complete disponibile pentru plantele ROM.',
-        },
-        packDetails: {
-            plantsInPack: 'Plante din pachet',
-            noPlants: 'Nu s-au gasit plante in acest pachet',
-            close: 'Inchide',
-        },
-        labels: {
-            id: 'ID',
-            version: 'v',
-            pack: 'Pachet',
-        },
-    },
-    mobileCreatePlant: {
-        title: 'Creeaza Planta',
-        save: 'Salveaza Planta',
-        steps: {
-            basic: { title: 'Informatii de baza', subtitle: 'Numele si categoria plantei' },
-            growth: { title: 'Stadii de crestere', subtitle: 'Defineste durata ciclului de crestere' },
-            water: { title: 'Nevoi de apa', subtitle: 'Seteaza parametrii de irigare' },
-            review: { title: 'Verificare', subtitle: 'Verifica toate valorile inainte de salvare' },
-        },
-        fields: {
-            name: 'Nume planta',
-            scientificName: 'Nume stiintific',
-            category: 'Categorie',
-            growthCycle: 'Ciclu de crestere',
-            rootMin: 'Adancime minima',
-            rootMax: 'Adancime maxima',
-        },
-        placeholders: {
-            name: 'ex. Rosie Cherry',
-            scientificName: 'ex. Solanum lycopersicum',
-        },
-        cycles: {
-            annual: 'Anuala',
-            perennial: 'Perena',
-            biennial: 'Bienala',
-        },
-        stages: {
-            initial: 'Stadiu Initial',
-            development: 'Dezvoltare',
-            midSeason: 'Mijloc Sezon',
-            lateSeason: 'Final Sezon',
-        },
-        hints: {
-            stageIni: 'Faza de rasad, nevoi scazute de apa',
-            stageDev: 'Crestere rapida, nevoi crescande de apa',
-            stageMid: 'Crestere maxima, cele mai mari nevoi de apa',
-            stageEnd: 'Maturare, nevoi descrescatoare de apa',
-            kcIni: 'Valori mici (0.3-0.5) pentru plante tinere',
-            kcMid: 'Valori maxime (0.9-1.2) la crestere completa',
-            kcEnd: 'Valori moderate (0.5-0.8) la maturitate',
-            depletion: 'Mai mare = mai toleranta la seceta, Mai mic = necesita udare frecventa',
-        },
-        kc: {
-            initial: 'Kc Initial (Rasad)',
-            mid: 'Kc Mijloc (Crestere Completa)',
-            end: 'Kc Final (Maturitate)',
-        },
-        help: {
-            basicTitle: 'Identitatea Plantei',
-            basicDesc: 'Incepe prin a da plantei tale un nume recunoscut si clasifica-o corect.',
-            whyName: 'De ce sa dai un nume?',
-            nameExplain: 'Numele te ajuta sa identifici aceasta planta in zonele de irigare. Foloseste un nume pe care il vei retine usor.',
-            nameExample: 'ex. "Rosii de gradina" sau "Busuioc de balcon"',
-            whyScientific: 'De ce nume stiintific?',
-            scientificExplain: 'Optional dar util pentru a identifica specia exacta. Ajuta cand cauti informatii specifice despre cultivare.',
-            scientificExample: 'ex. "Ocimum basilicum" pentru busuioc',
-            whyCategory: 'De ce sa alegi o categorie?',
-            categoryExplain: 'Categoriile grupeaza plante similare cu nevoi de apa comparabile. Ajuta la setarile implicite.',
-            whyCycle: 'Ce este ciclul de crestere?',
-            cycleExplain: 'Determina cum isi completeaza planta viata: anualele se completeaza intr-un sezon, perenele traiesc mai multi ani, bienalele dureaza doi ani.',
-            cycleExample: 'Majoritatea legumelor sunt anuale, majoritatea pomilor fructiferi sunt perene',
-            growthTitle: 'Linie Temporala de Crestere',
-            growthDesc: 'Defineste cat dureaza fiecare faza de crestere. Aceasta afecteaza programul de udare pe tot sezonul.',
-            whatAreStages: 'Ce sunt stadiile de crestere?',
-            stageIniDetail: 'Initial: Faza de rasad/transplant. Plantele sunt mici, radacinile putin adanci, nevoi scazute de apa.',
-            stageDevDetail: 'Dezvoltare: Crestere vegetativa rapida. Plantele isi stabilesc radacinile, nevoile de apa cresc.',
-            stageMidDetail: 'Mijloc sezon: Frunzis complet, inflorire/fructificare. Consum maxim de apa.',
-            stageEndDetail: 'Final sezon: Maturare si recoltare. Nevoile de apa scad pe masura ce planta isi termina ciclul.',
-            waterTitle: 'Setari de Irigare',
-            waterDesc: 'Seteaza coeficientii de apa care determina cat de multa apa are nevoie planta ta in fiecare stadiu.',
-            whatIsKc: 'Ce este Kc (Coeficient Cultural)?',
-            kcExplain: 'Kc este un multiplicator pentru evapotranspiratia de referinta (ET₀). Ne spune cat de multa apa are nevoie planta fata de o iarba de referinta.',
-            kcLow: '0.3-0.5 = Nevoi scazute de apa (rasaduri, tolerante la seceta)',
-            kcHigh: '1.0-1.2 = Nevoi mari de apa (crestere completa, legume)',
-            kcMod: '0.6-0.8 = Nevoi moderate (plante stabilite)',
-            kcTip: 'Sfat: Majoritatea legumelor ating Kc 0.9-1.1 la mijlocul sezonului.',
-            rootExplain: 'Adancimea radacinilor determina cat de adanc poate fi stocata apa in sol. Radacinile putin adanci necesita udare mai frecventa.',
-            rootTip: 'Legume: 30-60cm, Arbusti: 60-100cm, Copaci: 100-200cm',
-            depletionExplain: 'Fractia de epuizare este cat din apa solului poate fi folosita inainte ca planta sa fie stresata. Mai mare = mai toleranta la seceta.',
-            depletionSensitive: 'Planta sensibila la apa',
-            depletionTolerant: 'Planta toleranta la seceta',
-            irrigationExplain: 'Alege metoda de irigare pe care o vei folosi pentru aceasta planta:',
-            irrigDrip: 'Udare lenta, tintita la zona radacinilor. Cea mai buna pentru legume si economisirea apei.',
-            irrigSprinkler: 'Stropire de sus, acopera o zona mai mare. Buna pentru gazon si straturi stabilite.',
-            irrigManual: 'Udare manuala cu furtun sau stropitoare. Flexibila dar mai putin consistenta.',
-        },
-        growthTimeline: 'Linie temporala crestere',
-        kcPreview: 'Previzualizare nevoi apa',
-        rootDepth: 'Adancime radacini',
-        depletionFraction: 'Fractie de epuizare',
-        irrigationMethod: 'Metoda de irigare',
-        totalDays: 'Ciclu total de crestere',
-        summary: {
-            basic: 'Informatii de baza',
-            growth: 'Stadii de crestere',
-            water: 'Parametri de apa',
-        },
-        validation: {
-            nameRequired: 'Numele plantei este obligatoriu',
-            stagesTooShort: 'Ciclul total trebuie sa fie de cel putin 30 zile',
-            stagesTooLong: 'Ciclul total nu poate depasi 365 zile',
-            stageIniMin: 'Stadiul initial trebuie sa fie de cel putin 5 zile',
-            stageMidMin: 'Stadiul de mijloc trebuie sa fie de cel putin 10 zile',
-            kcRange: 'Valorile Kc trebuie sa fie intre 0.1 si 1.5',
-            kcMidRange: 'Kc Mijloc trebuie sa fie intre 0.5 si 1.5',
-            kcMidHigher: 'Kc Mijloc trebuie sa fie mai mare decat Kc Initial',
-            rootRange: 'Adancimea radacinilor trebuie sa fie intre 5 si 200 cm',
-            rootMaxHigher: 'Adancimea maxima trebuie sa fie mai mare decat minima',
-            rootMaxTooDeep: 'Adancimea maxima nu poate depasi 300 cm',
-            depletionRange: 'Fractia de epuizare trebuie sa fie intre 20% si 80%',
-            allValid: 'Toate valorile sunt corecte!',
-            readyToSave: 'Planta ta este gata de salvare',
-            hasErrors: 'Te rugam sa corectezi urmatoarele probleme:',
-        },
+    firmwareUpdate: {
+        checking: 'Se verifica...',
+        upToDate: 'Totul este la zi',
+        available: 'Actualizari disponibile',
+        install: 'Instaleaza',
+        backendNotConfigured: 'Backend-ul OTA nu este configurat.',
+        connectDeviceFirst: 'Conecteaza un dispozitiv inainte sa verifici actualizarile de firmware.',
+        stopWateringFirst: 'Opreste udarea activa inainte de a porni OTA.',
+        otaChannel: 'Canal OTA',
+        hardwareBoard: 'Placa hardware',
+        latestRelease: 'Ultima versiune',
+        versionLabel: 'Versiune',
+        packageSize: 'Dimensiune pachet',
+        releaseNotes: 'Note de versiune',
+        downloadAndInstall: 'Descarca si instaleaza OTA',
+        uploadedSummary: 'Transferat {size}',
+        targetVersion: 'Versiune tinta: v{version}',
+        runningVersion: 'Versiune curenta: v{version}',
+        downloadingPackage: 'Se descarca pachetul de firmware...',
+        startingTransfer: 'Pornesc transferul OTA prin BLE...',
     },
     mobileFlowCalibration: {
         title: 'Calibrare debit',
@@ -8256,6 +8710,7 @@ export const ro: TranslationKeys = {
         appName: 'AutoWater',
         appTagline: 'Irigare inteligenta, simpla',
         versionBuild: 'Versiune {version} (Build {build})',
+        linkNotConfigured: 'Acest link nu este configurat inca. Seteaza URL-ul VITE_* corespunzator.',
         helpSection: {
             title: 'Ajutor',
             userGuide: { title: 'Ghid utilizator', subtitle: 'Invata cum configurezi sistemul' },
@@ -8691,6 +9146,7 @@ export const ro: TranslationKeys = {
         upgradeToPremium: 'Treci la premium',
         checkingSubscription: 'Se verifica abonamentul...',
         chooseLeafPhoto: 'Alege poza frunzei',
+        previewAlt: 'Previzualizare planta',
         symptomsLabel: 'Simptome (optional)',
         symptomsPlaceholder: 'Ex: pete galbene, frunze rasucite, praf alb, putregai...',
         analyzing: 'Se analizeaza...',
@@ -8714,6 +9170,85 @@ export const ro: TranslationKeys = {
         premiumOnly: 'Identificarea cu camera este disponibila doar pe Premium.',
         noLocalMatch: 'Planta a fost identificata de API, dar nu exista in baza de date locala.',
         identificationFailed: 'Identificarea plantei a esuat.',
+        reviewTitle: 'Verifica identificarea',
+        reviewAmbiguous: 'Rezultatul este ambiguu. Alege varianta corecta din baza locala.',
+        reviewNoLocal: 'Nu am gasit o potrivire locala exacta. Alege cea mai apropiata planta.',
+        detectedByCamera: 'Detectata de camera',
+        matchConfidence: 'Incredere potrivire: {value}%',
+        suggestedLocal: 'Planta locala sugerata',
+        chooseManually: 'Alege manual',
+        useThis: 'Foloseste aceasta planta',
+        matchSaved: 'Selectia plantei a fost salvata.',
+    },
+    mobilePacksSettings: {
+        syncError: 'Nu am putut sincroniza datele de pachete de pe dispozitiv.',
+        title: 'Pachete si plante',
+        loading: 'Se incarca...',
+        tabs: {
+            plants: 'Plante',
+            packs: 'Pachete',
+        },
+        storage: {
+            flash: 'Memorie flash',
+            romPlants: 'Plante ROM',
+            customPlants: 'Plante personalizate',
+        },
+        plants: {
+            builtIn: 'Plante preinstalate',
+            installed: 'Plante instalate',
+        },
+        labels: {
+            id: 'ID',
+            version: 'v',
+            pack: 'Pachet',
+        },
+        customPlants: {
+            title: 'Plante personalizate',
+            empty: 'Nu exista plante personalizate instalate',
+            emptyHint: 'Instaleaza plante din Marketplace ca sa apara aici.',
+            create: 'Creeaza planta',
+        },
+        romPlants: {
+            title: 'Baza de date plante preinstalata',
+            plantsCount: 'plante',
+            showMore: 'Arata mai multe',
+        },
+        packs: {
+            installed: 'Pachete instalate',
+            empty: 'Nu exista pachete instalate',
+            emptyHint: 'Instaleaza un pachet pentru a vedea plantele grupate aici.',
+        },
+        updates: {
+            checking: 'Se verifica actualizarile...',
+            check: 'Verifica actualizari',
+            upToDate: 'Totul este actualizat.',
+            available: 'Exista actualizari disponibile.',
+        },
+        plantDetails: {
+            plantId: 'ID planta',
+            packId: 'ID pachet',
+            version: 'Versiune',
+            bleOnlyNote: 'Acest detaliu este citit din payload-ul BLE.',
+            cropCoefficients: 'Coeficienti de cultura',
+            growthStages: 'Etape de crestere',
+            stageIni: 'Initial',
+            stageDev: 'Dezvoltare',
+            stageMid: 'Mijloc',
+            stageEnd: 'Final',
+            rootDepth: 'Adancime radacina',
+            depletionFraction: 'Fractie de depletie',
+            tolerances: 'Tolerante',
+            droughtTolerance: 'Seceta',
+            shadeTolerance: 'Umbra',
+            salinityTolerance: 'Salinitate',
+            recommendedMethod: 'Metoda recomandata de irigare',
+            close: 'Inchide',
+        },
+        packDetails: {
+            plantsInPack: 'Plante in acest pachet',
+            noPlants: 'Nu s-au gasit plante in acest pachet.',
+            close: 'Inchide',
+        },
     },
     mobileTimeLocation: {
         title: 'Timp si locatie',
@@ -8934,6 +9469,7 @@ export const ro: TranslationKeys = {
         intervalModeLoadFailed: 'Nu am putut citi timpii Cycle & Soak. Duratele nu au fost salvate.',
         intervalModeUnsupported: 'Timpii Cycle & Soak nu sunt suportati de firmware-ul tau.',
         manualControl: 'Control manual',
+        advancedZoneControls: 'Controale avansate zona',
         tapToStartCycle: 'Apasa pentru ciclu de {minutes} min',
         resetConfirmBody: 'Resetezi setarile zonei?',
         wateringModeTitle: 'Mod udare',
@@ -9079,6 +9615,7 @@ export const ro: TranslationKeys = {
         noCompensationConfigured: 'Nu sunt ajustari configurate',
         enableCompensationHint: 'Activeaza ajustarile in setari',
         configureCompensation: 'Configureaza ajustari',
+        compensationModeHint: 'Compensarea este disponibila doar pentru modurile Durata/Volum. Schimba din FAO-56 ca sa o configurezi.',
         allTime: 'Tot timpul',
         totalRuns: 'Total rulari',
         avgLiters: 'Medie litri',
@@ -9131,6 +9668,16 @@ export const ro: TranslationKeys = {
         exportDesc: 'Descarca istoricul de udare',
         clearAppData: 'Sterge datele aplicatiei',
         clearAppDesc: 'Sterge cache-ul local si setarile',
+        backupToAccount: 'Backup in cont',
+        backupToAccountDesc: 'Salveaza preferintele aplicatiei si lista de dispozitive in cloud',
+        restoreFromAccount: 'Restaureaza din cont',
+        restoreFromAccountDesc: 'Incarca preferintele salvate din backup-ul din cloud',
+        backupSaved: 'Backup-ul a fost salvat in cont.',
+        backupNotFound: 'Nu exista backup in cloud pentru acest cont.',
+        backupRestored: 'Backup-ul a fost restaurat din cont.',
+        uxMode: 'Mod afisare',
+        advancedMode: 'Mod avansat',
+        advancedModeDesc: 'Arata detalii tehnice precum pH, valori FAO-56 Kc',
     },
     ecoBadge: {
         rainDetected: 'Ploaie detectata',
@@ -9209,3 +9756,4 @@ export const translations: Record<Language, TranslationKeys> = {
 
 // Default language
 export const DEFAULT_LANGUAGE: Language = 'en';
+

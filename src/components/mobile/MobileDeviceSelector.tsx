@@ -83,7 +83,7 @@ const MobileDeviceSelector: React.FC<MobileDeviceSelectorProps> = ({
                 <h3 className="text-white text-xl font-bold">{t('deviceSelector.title')}</h3>
                 <button
                   onClick={onClose}
-                  className="size-10 rounded-full bg-white/5 flex items-center justify-center text-mobile-text-muted hover:bg-white/10 transition-colors"
+                  className="mobile-icon-chip mobile-icon-chip-md bg-white/5 text-mobile-text-muted hover:bg-white/10 transition-colors"
                 >
                   <span className="material-symbols-outlined">close</span>
                 </button>
@@ -125,7 +125,7 @@ const MobileDeviceSelector: React.FC<MobileDeviceSelectorProps> = ({
                     }`}
                   >
                     {/* Device Icon */}
-                    <div className={`relative size-14 rounded-full flex items-center justify-center shrink-0 ${
+                    <div className={`relative mobile-icon-chip mobile-icon-chip-lg ${
                       device.isConnected ? 'bg-mobile-primary/20' : 'bg-white/5'
                     }`}>
                       <span className={`material-symbols-outlined text-2xl ${

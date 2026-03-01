@@ -13,6 +13,7 @@ import {
 } from '../../utils/soilMoisture';
 import { OpenMeteoService } from '../../services/OpenMeteoService';
 import { readStoredLocation, writeStoredLocation } from '../../services/LocationStorage';
+import InlineSwitch from '../../components/mobile/InlineSwitch';
 
 const MobileWeatherDetails: React.FC = () => {
   const history = useHistory();
@@ -613,7 +614,7 @@ const MobileWeatherDetails: React.FC = () => {
         </div>
         
         {/* Forecast Chart */}
-        <div className="flex flex-col gap-2 rounded-2xl bg-mobile-card-dark ring-1 ring-white/5 p-6">
+        <div className="flex flex-col gap-2 mobile-card-elevated p-6">
           <div className="flex items-center justify-between mb-2">
             <p className="text-white text-base font-bold leading-normal">{t('mobileWeatherDetails.forecast.title')}</p>
             <div className="flex gap-4">
@@ -761,29 +762,13 @@ const MobileWeatherDetails: React.FC = () => {
                     <p className="text-white font-bold">{t('mobileWeatherDetails.soilMoistureOverride.enabledLabel')}</p>
                     <p className="text-mobile-text-muted text-sm">{t('mobileWeatherDetails.soilMoistureOverride.subtitle')}</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setSoilMoistureOverrideEnabled(!soilMoistureOverrideEnabled)}
+                  <InlineSwitch
+                    checked={soilMoistureOverrideEnabled}
                     disabled={soilMoistureOverrideLoading || soilMoistureOverrideSaving}
-                    aria-pressed={soilMoistureOverrideEnabled}
-                    className={[
-                      'relative inline-flex h-8 w-14 shrink-0 rounded-full border transition-colors',
-                      'disabled:opacity-50',
-                      soilMoistureOverrideEnabled
-                        ? 'bg-mobile-primary/90 border-mobile-primary/30'
-                        : 'bg-white/10 border-white/10'
-                    ].join(' ')}
-                    aria-label={t('mobileWeatherDetails.soilMoistureOverride.enabledLabel')}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={[
-                        'absolute left-1 top-1 h-6 w-6 rounded-full bg-white shadow',
-                        'transition-transform duration-150 ease-out',
-                        soilMoistureOverrideEnabled ? 'translate-x-6' : 'translate-x-0'
-                      ].join(' ')}
-                    />
-                  </button>
+                    onToggle={() => setSoilMoistureOverrideEnabled(!soilMoistureOverrideEnabled)}
+                    label={t('mobileWeatherDetails.soilMoistureOverride.enabledLabel')}
+                    size="sm"
+                  />
                 </div>
 
                 {soilMoistureOverrideEnabled && (

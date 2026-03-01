@@ -44,6 +44,14 @@ describe('translations', () => {
             expect(en.settings.language).toBe('Language');
         });
 
+        it('should include new marketplace search i18n keys', () => {
+            expect(en.marketplace.searchFailed).toBeDefined();
+            expect(en.marketplace.searchSuggestionIndoorLowLight).toBeDefined();
+            expect(en.marketplace.searchSuggestionDroughtSucculents).toBeDefined();
+            expect(en.marketplace.searchSuggestionTomatoFao56).toBeDefined();
+            expect(en.marketplace.searchSuggestionMediterraneanHerbs).toBeDefined();
+        });
+
         it('should have zones translations', () => {
             expect(en.zones).toBeDefined();
             expect(en.zones.zone).toBe('Zone');
@@ -80,6 +88,14 @@ describe('translations', () => {
         it('should have settings translations', () => {
             expect(ro.settings).toBeDefined();
             expect(ro.settings.language).toBeDefined();
+        });
+
+        it('should include new marketplace search i18n keys', () => {
+            expect(ro.marketplace.searchFailed).toBeDefined();
+            expect(ro.marketplace.searchSuggestionIndoorLowLight).toBeDefined();
+            expect(ro.marketplace.searchSuggestionDroughtSucculents).toBeDefined();
+            expect(ro.marketplace.searchSuggestionTomatoFao56).toBeDefined();
+            expect(ro.marketplace.searchSuggestionMediterraneanHerbs).toBeDefined();
         });
 
         it('should have zones translations', () => {
@@ -137,6 +153,24 @@ describe('translations', () => {
             };
 
             const emptyPaths = checkEmpty(en);
+            expect(emptyPaths).toEqual([]);
+        });
+
+        it('should not have empty string values in ro', () => {
+            const checkEmpty = (obj: any, path = ''): string[] => {
+                const emptyPaths: string[] = [];
+                for (const key of Object.keys(obj)) {
+                    const newPath = path ? `${path}.${key}` : key;
+                    if (typeof obj[key] === 'object' && obj[key] !== null) {
+                        emptyPaths.push(...checkEmpty(obj[key], newPath));
+                    } else if (obj[key] === '') {
+                        emptyPaths.push(newPath);
+                    }
+                }
+                return emptyPaths;
+            };
+
+            const emptyPaths = checkEmpty(ro);
             expect(emptyPaths).toEqual([]);
         });
     });

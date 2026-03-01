@@ -1,14 +1,14 @@
 /**
  * Onboarding Components - Barrel Export
- * 
+ *
  * Smart onboarding components for FAO-56 zone configuration
  */
 
 // Tooltip and Help Components
-export { 
-    WhatsThisTooltip, 
-    WhatsThisInline, 
-    LabelWithHelp 
+export {
+    WhatsThisTooltip,
+    WhatsThisInline,
+    LabelWithHelp
 } from './WhatsThisTooltip';
 
 // Selection Components
@@ -23,7 +23,7 @@ export { CycleSoakAuto } from './CycleSoakAuto';
 export { MaxVolumeConfig } from './MaxVolumeConfig';
 
 // Re-export types for convenience
-export type { 
+export type {
     PlantCategoryId,
     PlantCategoryInfo,
     IrrigationMethodVisual,

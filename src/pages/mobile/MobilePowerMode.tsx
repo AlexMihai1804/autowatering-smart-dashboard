@@ -105,10 +105,10 @@ const MobilePowerMode: React.FC = () => {
   return (
     <div className="min-h-screen bg-mobile-bg-dark font-manrope pb-32">
       {/* Header */}
-      <div className="sticky top-0 z-50 flex items-center bg-mobile-bg-dark/90 backdrop-blur-md p-4 justify-between">
+      <div className="mobile-page-header">
         <button
           onClick={() => history.goBack()}
-          className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+          className="mobile-header-icon-btn"
         >
           <span className="material-symbols-outlined">arrow_back_ios_new</span>
         </button>
@@ -120,7 +120,7 @@ const MobilePowerMode: React.FC = () => {
 
       <div className="px-4 space-y-6">
         {/* Current Battery */}
-        <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark p-6">
+        <div className="mobile-card-surface p-6">
           <div className="flex items-center gap-4">
             <div className={`size-16 rounded-full ${isMains ? 'bg-blue-500/10' : 'bg-mobile-primary/10'} flex items-center justify-center`}>
               <span className={`material-symbols-outlined ${isMains ? 'text-blue-400' : 'text-mobile-primary'} text-3xl`}>
@@ -155,7 +155,7 @@ const MobilePowerMode: React.FC = () => {
 
         {/* Mode Selection */}
         <div className="space-y-3">
-          <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted block px-1">
+          <label className="mobile-section-label">
             {t('mobilePowerMode.selectPowerMode')}
           </label>
 
@@ -209,11 +209,11 @@ const MobilePowerMode: React.FC = () => {
       </div>
 
       {/* Save Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-mobile-bg-dark via-mobile-bg-dark to-transparent pt-12">
+      <div className="mobile-bottom-cta-bar">
         <button
           onClick={handleSave}
           disabled={saving}
-          className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          className="mobile-btn-primary h-14 text-lg font-bold"
         >
           <span className="material-symbols-outlined">save</span>
           {saving ? t('mobilePowerMode.saving') : t('mobilePowerMode.apply')}

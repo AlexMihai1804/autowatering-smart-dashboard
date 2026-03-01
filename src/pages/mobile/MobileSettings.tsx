@@ -4,6 +4,8 @@ import { BleService } from '../../services/BleService';
 import { useAuth } from '../../auth';
 import { useI18n } from '../../i18n';
 import { useAppStore } from '../../store/useAppStore';
+import { useAdminAuth } from '../../hooks/useAdminAuth';
+import { areRequiredPermissionsGrantedFromStorage } from '../../utils/onboardingRouteResolver';
 import packageJson from '../../../package.json';
 
 interface SettingsItem {
@@ -18,6 +20,7 @@ const MobileSettings: React.FC = () => {
   const { connectedDeviceId, connectionState, systemConfig } = useAppStore();
   const { user, isGuest, premium } = useAuth();
   const { t } = useI18n();
+  const { isAdmin } = useAdminAuth();
   const bleService = BleService.getInstance();
 
   const isOnline = connectionState === 'connected';
@@ -32,7 +35,8 @@ const MobileSettings: React.FC = () => {
   };
 
   const handleSwitchDevice = () => {
-    history.push('/scan');
+    const nextPath = areRequiredPermissionsGrantedFromStorage() ? '/scan' : '/permissions';
+    history.push(nextPath);
   };
 
   const handleAccountOpen = () => {
@@ -86,7 +90,7 @@ const MobileSettings: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto pb-28 overscroll-contain">
         <div className="px-4 space-y-4">
-          <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark p-4">
+          <div className="mobile-card-surface p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[11px] uppercase tracking-wider text-mobile-text-muted font-semibold">
@@ -124,7 +128,7 @@ const MobileSettings: React.FC = () => {
             </div>
           </div>
 
-          <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark overflow-hidden divide-y divide-mobile-border-dark">
+          <div className="mobile-card-surface overflow-hidden divide-y divide-mobile-border-dark">
             {settingsItems.map((item) => (
               <button
                 key={item.label}
@@ -143,7 +147,24 @@ const MobileSettings: React.FC = () => {
             ))}
           </div>
 
-          <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark p-4 flex items-center justify-between">
+          {/* Admin Panel - only visible to admins */}
+          {isAdmin && (
+            <button
+              onClick={() => history.push('/admin')}
+              className="w-full rounded-2xl bg-gradient-to-r from-purple-500/20 to-pink-500/10 border border-purple-500/20 p-4 flex items-center gap-3 text-left"
+            >
+              <div className="w-9 h-9 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[20px]">admin_panel_settings</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-semibold text-white">{t('admin.title')}</p>
+                <p className="text-xs text-gray-400">{t('admin.moderationDesc')}</p>
+              </div>
+              <span className="material-symbols-outlined text-gray-500 text-[22px]">chevron_right</span>
+            </button>
+          )}
+
+          <div className="mobile-card-surface p-4 flex items-center justify-between">
             <div className="min-w-0">
               <p className="text-sm font-bold truncate">{connectedDeviceId || t('mobileSettings.autoWaterDevice')}</p>
               <p className="text-xs text-mobile-text-muted mt-1">

@@ -1,6 +1,7 @@
 import React from 'react';
 import { PlantDBEntry } from '../../services/DatabaseService';
 import { useI18n } from '../../i18n';
+import { getLocalizedDbPlantName } from '../../utils/plantNameHelpers';
 
 interface MobilePlantIdReviewSheetProps {
   isOpen: boolean;
@@ -23,7 +24,7 @@ const MobilePlantIdReviewSheet: React.FC<MobilePlantIdReviewSheetProps> = ({
   onChooseManually,
   onClose
 }) => {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   if (!isOpen) return null;
 
   const hasUseAction = Boolean(suggestedPlant && onUseSuggested);
@@ -64,7 +65,7 @@ const MobilePlantIdReviewSheet: React.FC<MobilePlantIdReviewSheetProps> = ({
         {suggestedPlant && (
           <div className="mt-3 rounded-2xl border border-mobile-primary/30 bg-mobile-primary/10 p-3">
             <p className="text-[11px] uppercase tracking-wide text-mobile-text-muted">{t('mobilePlantId.suggestedLocal')}</p>
-            <p className="text-white font-semibold mt-1">{suggestedPlant.common_name_en || suggestedPlant.common_name_ro}</p>
+            <p className="text-white font-semibold mt-1">{getLocalizedDbPlantName(suggestedPlant, language)}</p>
             <p className="text-xs text-mobile-text-muted italic">{suggestedPlant.scientific_name}</p>
           </div>
         )}
@@ -90,4 +91,3 @@ const MobilePlantIdReviewSheet: React.FC<MobilePlantIdReviewSheetProps> = ({
 };
 
 export default MobilePlantIdReviewSheet;
-

@@ -30,6 +30,8 @@ const IGNORE_PATTERNS = [
   /[=&|<>!?:]+/,
   // Variable names / camelCase
   /^[a-z][a-zA-Z0-9_]*$/,
+  // JS/TS constructor expressions accidentally matched by JSX regex
+  /^new\s+[A-Za-z_$][A-Za-z0-9_$]*(<[^>]+>)?$/,
   // Dot notation (object access)
   /\./,
   // Square brackets

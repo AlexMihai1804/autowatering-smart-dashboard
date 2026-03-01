@@ -354,6 +354,12 @@ describe('DatabaseService', () => {
                 expect(results[0].subtype).toBe('PLANT_TOMATO');
             });
 
+            it('should match Romanian diacritics-insensitive queries', () => {
+                const results = dbService.searchPlants('rosie');
+                expect(results.length).toBe(1);
+                expect(results[0].subtype).toBe('PLANT_TOMATO');
+            });
+
             it('should search by scientific name', () => {
                 const results = dbService.searchPlants('solanum');
                 expect(results.length).toBe(1);
@@ -370,6 +376,29 @@ describe('DatabaseService', () => {
                 const results = dbService.searchPlants('BASIL');
                 expect(results.length).toBe(1);
                 expect(results[0].subtype).toBe('PLANT_BASIL');
+            });
+
+            it('should support fuzzy typo matching', () => {
+                const results = dbService.searchPlants('tomto');
+                expect(results.length).toBe(1);
+                expect(results[0].subtype).toBe('PLANT_TOMATO');
+            });
+
+            it('should support local synonym aliases', () => {
+                const maizePlant: PlantDBEntry = {
+                    ...mockPlants[0],
+                    id: 99,
+                    subtype: 'PLANT_MAIZE',
+                    category: 'Agriculture',
+                    common_name_ro: 'Porumb',
+                    common_name_en: 'Corn',
+                    scientific_name: 'Zea mays',
+                };
+                useAppStore.getState().setDatabase([...mockPlants, maizePlant], mockSoils, mockIrrigationMethods);
+
+                const results = dbService.searchPlants('maize');
+                expect(results.length).toBeGreaterThan(0);
+                expect(results[0].subtype).toBe('PLANT_MAIZE');
             });
 
             it('should return all plants for empty query', () => {
@@ -394,7 +423,6 @@ describe('DatabaseService', () => {
                 expect(results).toEqual([]);
             });
         });
-
         describe('getAllCategories', () => {
             it('should return unique categories from plants', () => {
                 const categories = dbService.getAllCategories();
@@ -637,3 +665,5 @@ describe('DatabaseService', () => {
         });
     });
 });
+
+

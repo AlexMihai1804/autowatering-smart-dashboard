@@ -3,17 +3,17 @@ import { useHistory, useParams } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import MobileBottomSheet from '../../components/mobile/MobileBottomSheet';
 import { BleService } from '../../services/BleService';
+import { PlantDBEntry, SoilDBEntry } from '../../services/DatabaseService';
 import { useI18n } from '../../i18n';
-
-type PlantInfo = { id: number; name: string; kc?: number; category?: string };
-type SoilInfo = { id: number; name: string; description?: string };
+import { getLocalizedDbPlantName } from '../../utils/plantNameHelpers';
+import { searchPlantsWithRanking } from '../../utils/plantSearch';
 
 const MobileZoneConfig: React.FC = () => {
   const history = useHistory();
   const { channelId } = useParams<{ channelId: string }>();
   const { zones, plantDb, soilDb, growingEnv } = useAppStore();
   const bleService = BleService.getInstance();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   const channelIdNum = parseInt(channelId, 10);
   const zone = zones.find(z => z.channel_id === channelIdNum);
@@ -21,8 +21,8 @@ const MobileZoneConfig: React.FC = () => {
 
   // Form state
   const [zoneName, setZoneName] = useState(zone?.name || `${t('zones.zone')} ${channelIdNum + 1}`);
-  const [selectedPlant, setSelectedPlant] = useState<PlantInfo | null>(null);
-  const [selectedSoil, setSelectedSoil] = useState<SoilInfo | null>(null);
+  const [selectedPlant, setSelectedPlant] = useState<PlantDBEntry | null>(null);
+  const [selectedSoil, setSelectedSoil] = useState<SoilDBEntry | null>(null);
   const [sunExposure, setSunExposure] = useState<'full' | 'partial' | 'shade'>('full');
   const [areaSize, setAreaSize] = useState(50);
   const [isSaving, setIsSaving] = useState(false);
@@ -34,28 +34,12 @@ const MobileZoneConfig: React.FC = () => {
   const [plantSearch, setPlantSearch] = useState('');
   const [soilSearch, setSoilSearch] = useState('');
 
-  const plants: PlantInfo[] = useMemo(
-    () => (Array.isArray(plantDb)
-      ? plantDb.map((plant) => ({
-        id: plant.id,
-        name: plant.common_name_en,
-        kc: plant.kc_mid ?? undefined,
-        category: plant.category
-      }))
-      : []),
-    [plantDb]
-  );
+  const plants: PlantDBEntry[] = useMemo(() => (Array.isArray(plantDb) ? plantDb : []), [plantDb]);
 
-  const soils: SoilInfo[] = useMemo(
-    () => (Array.isArray(soilDb)
-      ? soilDb.map((soil) => ({
-        id: soil.id,
-        name: soil.soil_type,
-        description: soil.texture
-      }))
-      : []),
-    [soilDb]
-  );
+  const soils: SoilDBEntry[] = useMemo(() => (Array.isArray(soilDb) ? soilDb : []), [soilDb]);
+
+  const getPlantName = (plant: PlantDBEntry | null | undefined) =>
+    getLocalizedDbPlantName(plant, language);
 
   useEffect(() => {
     if (!zone || formInitialized) return;
@@ -80,12 +64,23 @@ const MobileZoneConfig: React.FC = () => {
     setFormInitialized(false);
   }, [channelIdNum]);
 
-  const filteredPlants = plants.filter(p => 
-    p.name?.toLowerCase().includes(plantSearch.toLowerCase())
-  );
-  const filteredSoils = soils.filter(s => 
-    s.name?.toLowerCase().includes(soilSearch.toLowerCase())
-  );
+  const filteredPlants = useMemo(() => {
+    if (!plantSearch.trim()) return plants;
+    return searchPlantsWithRanking(plants, {
+      query: plantSearch,
+      fuzzy: 'balanced',
+      limit: 100,
+    }).map((result) => result.plant);
+  }, [plants, plantSearch]);
+
+  const filteredSoils = useMemo(() => {
+    if (!soilSearch.trim()) return soils;
+    const lower = soilSearch.toLowerCase();
+    return soils.filter((soil) =>
+      soil.soil_type?.toLowerCase().includes(lower) ||
+      soil.texture?.toLowerCase().includes(lower),
+    );
+  }, [soils, soilSearch]);
 
   const sunOptions = [
     { value: 'full', label: t('mobileZoneConfig.sun.full'), icon: 'wb_sunny', desc: t('mobileZoneConfig.sun.fullDesc') },
@@ -162,10 +157,10 @@ const MobileZoneConfig: React.FC = () => {
   return (
     <div className="min-h-screen bg-mobile-bg-dark font-manrope pb-32">
       {/* Header */}
-      <div className="sticky top-0 z-50 flex items-center bg-mobile-bg-dark/90 backdrop-blur-md p-4 justify-between">
+      <div className="mobile-page-header">
         <button 
           onClick={() => history.goBack()}
-          className="text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+          className="mobile-header-icon-btn"
         >
           <span className="material-symbols-outlined">close</span>
         </button>
@@ -175,7 +170,7 @@ const MobileZoneConfig: React.FC = () => {
         <button 
           onClick={() => void handleSave()}
           disabled={isSaving}
-          className="text-mobile-primary flex size-12 items-center justify-center rounded-full hover:bg-mobile-primary/10 transition-colors font-bold"
+          className="mobile-header-icon-btn mobile-header-icon-btn-accent font-bold"
         >
           <span className="material-symbols-outlined">check</span>
         </button>
@@ -184,21 +179,21 @@ const MobileZoneConfig: React.FC = () => {
       <div className="px-4 space-y-6">
         {/* Zone Name */}
         <div className="space-y-3">
-          <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted block">
+          <label className="mobile-form-label">
             {t('mobileZoneConfig.zoneName')}
           </label>
           <input
             type="text"
             value={zoneName}
             onChange={(e) => setZoneName(e.target.value)}
-            className="w-full h-14 bg-mobile-surface-dark border border-mobile-border-dark rounded-xl px-4 text-white text-lg font-semibold placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary transition-colors"
+            className="mobile-form-field h-14 px-4 text-lg font-semibold"
             placeholder={t('mobileZoneConfig.zoneNamePlaceholder')}
           />
         </div>
 
         {/* Plant Type */}
         <div className="space-y-3">
-          <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted block">
+          <label className="mobile-form-label">
             {t('mobileZoneConfig.plantType')}
           </label>
           <button
@@ -206,26 +201,26 @@ const MobileZoneConfig: React.FC = () => {
             className="w-full flex items-center justify-between gap-4 h-16 bg-mobile-surface-dark border border-mobile-border-dark rounded-xl px-4 hover:border-mobile-primary/50 transition-colors"
           >
             <div className="flex items-center gap-3">
-              <div className="size-10 rounded-full bg-mobile-primary/10 flex items-center justify-center text-mobile-primary">
+              <div className="mobile-icon-chip mobile-icon-chip-md bg-mobile-primary/10 text-mobile-primary">
                 <span className="material-symbols-outlined">eco</span>
               </div>
               <span className="text-white text-base font-semibold">
-                {selectedPlant?.name || t('mobileZoneConfig.selectPlant')}
+                {getPlantName(selectedPlant) || t('mobileZoneConfig.selectPlant')}
               </span>
             </div>
             <span className="material-symbols-outlined text-mobile-text-muted">chevron_right</span>
           </button>
-          {selectedPlant?.kc && (
+          {typeof selectedPlant?.kc_mid === 'number' && (
             <p className="text-mobile-text-muted text-sm pl-1">
               {t('mobileZoneConfig.cropCoefficient')}{' '}
-              <span className="text-mobile-primary font-bold">{selectedPlant.kc}</span>
+              <span className="text-mobile-primary font-bold">{selectedPlant.kc_mid}</span>
             </p>
           )}
         </div>
 
         {/* Soil Type */}
         <div className="space-y-3">
-          <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted block">
+          <label className="mobile-form-label">
             {t('mobileZoneConfig.soilType')}
           </label>
           <button
@@ -233,11 +228,11 @@ const MobileZoneConfig: React.FC = () => {
             className="w-full flex items-center justify-between gap-4 h-16 bg-mobile-surface-dark border border-mobile-border-dark rounded-xl px-4 hover:border-mobile-primary/50 transition-colors"
           >
             <div className="flex items-center gap-3">
-              <div className="size-10 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500">
+              <div className="mobile-icon-chip mobile-icon-chip-md bg-yellow-500/10 text-yellow-500">
                 <span className="material-symbols-outlined">landscape</span>
               </div>
               <span className="text-white text-base font-semibold">
-                {selectedSoil?.name || t('mobileZoneConfig.selectSoil')}
+                {selectedSoil?.soil_type || t('mobileZoneConfig.selectSoil')}
               </span>
             </div>
             <span className="material-symbols-outlined text-mobile-text-muted">chevron_right</span>
@@ -246,7 +241,7 @@ const MobileZoneConfig: React.FC = () => {
 
         {/* Sun Exposure */}
         <div className="space-y-3">
-          <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted block">
+          <label className="mobile-form-label">
             {t('mobileZoneConfig.sunExposure')}
           </label>
           <div className="grid grid-cols-3 gap-3">
@@ -281,7 +276,7 @@ const MobileZoneConfig: React.FC = () => {
         {/* Area Size */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-bold uppercase tracking-wider text-mobile-text-muted">
+            <label className="mobile-form-label min-h-0 py-0">
               {t('mobileZoneConfig.areaSize')}
             </label>
             <span className="text-mobile-primary font-bold">{areaSize} {t('mobileZoneConfig.areaUnit')}</span>
@@ -292,7 +287,10 @@ const MobileZoneConfig: React.FC = () => {
             max="500"
             value={areaSize}
             onChange={(e) => setAreaSize(Number(e.target.value))}
-            className="w-full h-2 bg-mobile-surface-dark rounded-lg appearance-none cursor-pointer accent-mobile-primary"
+            className="mobile-range-slider w-full touch-none"
+            style={{
+              ['--mobile-range-pct' as any]: `${((areaSize - 1) / 499) * 100}%`,
+            }}
           />
           <div className="flex justify-between text-xs text-mobile-text-muted">
             <span>1 {t('mobileZoneConfig.areaUnit')}</span>
@@ -301,7 +299,7 @@ const MobileZoneConfig: React.FC = () => {
         </div>
 
         {/* Irrigation Method Preview */}
-        <div className="rounded-2xl bg-mobile-surface-dark border border-mobile-border-dark overflow-hidden">
+        <div className="mobile-card-surface overflow-hidden">
           <div className="p-4 border-b border-mobile-border-dark flex items-center justify-between">
             <span className="text-white font-bold">{t('mobileZoneConfig.calculatedSettings')}</span>
             <span className="text-xs text-mobile-text-muted bg-white/10 px-2 py-1 rounded-full">{t('mobileZoneConfig.autoBadge')}</span>
@@ -336,11 +334,11 @@ const MobileZoneConfig: React.FC = () => {
       </div>
 
       {/* Save Button - Fixed */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-mobile-bg-dark via-mobile-bg-dark to-transparent pt-12">
+      <div className="mobile-bottom-cta-bar">
         <button
           onClick={() => void handleSave()}
           disabled={isSaving}
-          className="w-full h-14 bg-mobile-primary text-mobile-bg-dark font-bold text-lg rounded-xl shadow-lg shadow-mobile-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60"
+          className="mobile-btn-primary h-14 text-lg font-bold"
         >
           <span className="material-symbols-outlined">{isSaving ? 'sync' : 'save'}</span>
           {isSaving ? t('common.loading') : t('mobileZoneConfig.save')}
@@ -363,7 +361,7 @@ const MobileZoneConfig: React.FC = () => {
               value={plantSearch}
               onChange={(e) => setPlantSearch(e.target.value)}
               placeholder={t('mobileZoneConfig.searchPlants')}
-              className="w-full h-12 bg-mobile-surface-dark border border-mobile-border-dark rounded-xl pl-12 pr-4 text-white placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary"
+              className="mobile-form-field pl-12 pr-4"
             />
           </div>
         </div>
@@ -384,11 +382,11 @@ const MobileZoneConfig: React.FC = () => {
                     selectedPlant?.id === plant.id ? 'bg-mobile-primary/10' : ''
                   }`}
                 >
-                  <div className="size-10 rounded-full bg-mobile-primary/10 flex items-center justify-center text-mobile-primary">
+                  <div className="mobile-icon-chip mobile-icon-chip-md bg-mobile-primary/10 text-mobile-primary">
                     <span className="material-symbols-outlined">eco</span>
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="text-white font-semibold">{plant.name}</p>
+                    <p className="text-white font-semibold">{getPlantName(plant)}</p>
                     {plant.category && (
                       <p className="text-mobile-text-muted text-sm">{plant.category}</p>
                     )}
@@ -419,7 +417,7 @@ const MobileZoneConfig: React.FC = () => {
               value={soilSearch}
               onChange={(e) => setSoilSearch(e.target.value)}
               placeholder={t('mobileZoneConfig.searchSoils')}
-              className="w-full h-12 bg-mobile-surface-dark border border-mobile-border-dark rounded-xl pl-12 pr-4 text-white placeholder:text-mobile-text-muted focus:outline-none focus:border-mobile-primary"
+              className="mobile-form-field pl-12 pr-4"
             />
           </div>
         </div>
@@ -440,13 +438,13 @@ const MobileZoneConfig: React.FC = () => {
                     selectedSoil?.id === soil.id ? 'bg-mobile-primary/10' : ''
                   }`}
                 >
-                  <div className="size-10 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500">
+                  <div className="mobile-icon-chip mobile-icon-chip-md bg-yellow-500/10 text-yellow-500">
                     <span className="material-symbols-outlined">landscape</span>
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="text-white font-semibold">{soil.name}</p>
-                    {soil.description && (
-                      <p className="text-mobile-text-muted text-sm line-clamp-1">{soil.description}</p>
+                    <p className="text-white font-semibold">{soil.soil_type}</p>
+                    {soil.texture && (
+                      <p className="text-mobile-text-muted text-sm line-clamp-1">{soil.texture}</p>
                     )}
                   </div>
                   {selectedSoil?.id === soil.id && (

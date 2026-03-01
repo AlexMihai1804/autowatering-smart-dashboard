@@ -5,6 +5,7 @@ import { useI18n } from '../../i18n';
 import { useAppStore } from '../../store/useAppStore';
 import { useKnownDevices } from '../../hooks/useKnownDevices';
 import { BleService } from '../../services/BleService';
+import { areRequiredPermissionsGrantedFromStorage } from '../../utils/onboardingRouteResolver';
 
 interface Device {
   id: string;
@@ -113,7 +114,8 @@ const MobileManageDevices: React.FC = () => {
   };
 
   const handleAddDevice = () => {
-    history.push('/scan');
+    const nextPath = areRequiredPermissionsGrantedFromStorage() ? '/scan' : '/permissions';
+    history.push(nextPath);
   };
 
   return (

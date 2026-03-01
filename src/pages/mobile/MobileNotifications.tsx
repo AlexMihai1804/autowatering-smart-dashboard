@@ -276,7 +276,7 @@ const MobileNotifications: React.FC = () => {
         {/* Empty State */}
         {filteredNotifications.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16">
-            <div className="size-20 rounded-full bg-mobile-surface-dark flex items-center justify-center mb-4">
+            <div className="mobile-icon-chip mobile-icon-chip-xl bg-mobile-surface-dark mb-4">
               <span className="material-symbols-outlined text-4xl text-mobile-text-muted">notifications_off</span>
             </div>
             <p className="text-white font-bold text-lg">{t('mobileNotifications.emptyTitle')}</p>

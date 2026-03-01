@@ -6,6 +6,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "generate:plant-aliases": "npx tsx scripts/generate_plant_aliases.ts",
     "i18n:extract": "npx i18next-parser --config i18next-parser.config.js",
     "i18n:check-hardcoded": "npx eslint --config eslint.hardcoded.config.mjs \"src/**/*.tsx\" --quiet",
     "test": "vitest",
