@@ -180,11 +180,15 @@ describe('useI18n', () => {
     });
 
     describe('error handling', () => {
-        it('should throw error when useI18n is used outside provider', () => {
-            // This should throw
-            expect(() => {
-                renderHook(() => useI18n());
-            }).toThrow('useI18n must be used within an I18nProvider');
+        it('should return a fallback context when useI18n is used outside provider', () => {
+            const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+            const { result } = renderHook(() => useI18n());
+
+            expect(result.current.language).toBe('en');
+            expect(result.current.t('common.next')).toBe('common.next');
+            expect(result.current.translations.common.next).toBe('Next');
+            expect(warnSpy).toHaveBeenCalledWith('[i18n] Context unavailable — using fallback (HMR?)');
         });
     });
 });

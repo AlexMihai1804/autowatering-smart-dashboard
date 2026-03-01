@@ -13,7 +13,6 @@ import Settings from '../../pages/Settings';
 // Mobile Pages
 import MobileDashboard from '../../pages/mobile/MobileDashboard';
 import MobileZones from '../../pages/mobile/MobileZones';
-import MobileZoneDetails from '../../pages/mobile/MobileZoneDetails';
 import MobileZoneDetailsFull from '../../pages/mobile/MobileZoneDetailsFull';
 import MobileZoneConfig from '../../pages/mobile/MobileZoneConfig';
 import MobileHistory from '../../pages/mobile/MobileHistory';
@@ -40,7 +39,6 @@ import MobileConnectionSuccess from '../../pages/mobile/MobileConnectionSuccess'
 import MobileManageDevices from '../../pages/mobile/MobileManageDevices';
 import MobileZoneAddWizard from '../../pages/mobile/MobileZoneAddWizard';
 import MobileAlarmHistory from '../../pages/mobile/MobileAlarmHistory';
-import MobilePacksSettings from '../../pages/mobile/MobilePacksSettings';
 import MobileCreatePlant from '../../pages/mobile/MobileCreatePlant';
 import MobileAiDoctor from '../../pages/mobile/MobileAiDoctor';
 import MobileAuth from '../../pages/mobile/MobileAuth';
@@ -171,9 +169,6 @@ const MobileRouteSwitch: React.FC<{ isConnected: boolean }> = ({ isConnected }) 
       </Route>
       <Route exact path="/device/reset">
         {isConnected ? <MobileDeviceReset /> : <Redirect to="/welcome" />}
-      </Route>
-      <Route exact path="/device/packs">
-        {isConnected ? <MobilePacksSettings /> : <Redirect to="/welcome" />}
       </Route>
       <Route exact path="/device/create-plant">
         {isConnected ? <MobileCreatePlant /> : <Redirect to="/welcome" />}
